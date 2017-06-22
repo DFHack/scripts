@@ -1,3 +1,4 @@
+--Use while viewing a unit to assume direct control. If not used with a historical figure it will be buggy, be careful!
 local utils = require 'gui'
 
 function assumeControl(new,old)
