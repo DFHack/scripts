@@ -80,11 +80,10 @@ local facts = df.global.world.artifacts.all
 		fake.item.fixed_temp = base.fixed_temp
 		fake.item.weight = base.weight
 		fake.item.weight_fraction = base.weight_fraction
-		fake.item.improvements:insert('#',{new = df.itemimprovement_spikesst,mat_type=41,mat_index=3,quality=6,skill_rating=15})
-		fake.item.improvements:insert('#',{new = df.itemimprovement_spikesst,mat_type=40,mat_index=3,quality=6,skill_rating=15})
-		fake.item.improvements:insert('#',{new = df.itemimprovement_art_imagest,mat_type=43,mat_index=3,quality=6,skill_rating=15})
-		fake.item.improvements:insert('#',{new = df.itemimprovement_art_imagest,mat_type=420,mat_index=230,quality=6,skill_rating=15})
-		fake.item.improvements:insert('#',{new = df.itemimprovement_art_imagest,mat_type=0,mat_index=9,quality=6,skill_rating=15})
+		fake.item.improvements:insert('#',{new = df.itemimprovement_spikesst,mat_type=0,mat_index=8,quality=6,skill_rating=15})
+		fake.item.improvements:insert('#',{new = df.itemimprovement_art_imagest,mat_type=0,mat_index=3,quality=6,skill_rating=15})
+		fake.item.improvements:insert('#',{new = df.itemimprovement_art_imagest,mat_type=0,mat_index=0,quality=6,skill_rating=15})
+		fake.item.improvements:insert('#',{new = df.itemimprovement_art_imagest,mat_type=0,mat_index=8,quality=6,skill_rating=15})
 	fake.flags:new()
 		for i = 0,7 do
 	if #fake.flags < 8 then
