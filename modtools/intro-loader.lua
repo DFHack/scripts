@@ -22,7 +22,7 @@ Usage:
 -help
     print this text
 -v
-    Activate verbose mode
+    Activate verbose mode, kinda spammy
 -folder
     Designate a folder to get the input intro files from relative to
     the DF directory
@@ -67,7 +67,7 @@ local utils = require 'utils'
 
 validArgs = validArgs or utils.invert({
     'help',
-    'v'
+    'v',
     'now',
     'folder',
     'file',
@@ -82,63 +82,64 @@ if args.help then
     return
 end
 
-local inputfolder = dfhack.getDFPath() .. "\\data\\announcement\\"
-if args.folder then
-    inputfolder = dfhack.getDFPath() ..  args.folder .. "\\"
-end
-
 local prefix = "INTRO"
 if args.file then
     prefix = args.file
 end
 
-if args.rand then
-    math.randomseed(os.time())
+local inputfolder = dfhack.getDFPath() .. "/data/announcement/"
+if args.folder then
+    inputfolder = dfhack.getDFPath() ..  args.folder .. "/"
 end
-
 
 --Build current index of files in directory
 do
-    local OS = dfhack.getOSType()
-    if OS == 'windows' then
-        os.execute("dir \"" .. inputfolder .. "\" /L /B >index.txt")
-    elseif OS == 'linux' or OS == 'darwin' then --apple's real name is darwin, apparently
-        os.execute("ls \"" .. inputfolder .. "\" -1 -A >index.txt")
-    end
-    
-    local list = io.open(dfhack.getDFPath() .. "\\data\\announcement\\index.txt","r")
-    indextext = list:read("*all")
-    io.close(list)
+    local index = io.open(dfhack.getDFPath() .. "/data/announcement/index.txt","w")
+	local files = dfhack.filesystem.listdir(inputfolder)
+    for foo,filename in pairs(files) do
+		index:write(filename .. "\n")
+	end
+    io.close(index)
 end
+
+rngesus = dfhack.random.new()
 
 
 --Code main body, this is where the magic happens
 local function introloader(folder,dorand,doent,verbose)
-    local entity = "_" .. df.historical_entity.find(df.global.ui.civ_id).entity_raw.code
-    if ~doent then entity = "" end
-    local inputfile = folder .. "\\" .. prefix .. entity
+    local entity = ""
+	if args.entity then
+		entity = "_" .. df.historical_entity.find(df.global.ui.civ_id).entity_raw.code
+	end
     
-    if dorand then
+    local inputfile = prefix .. entity
+    
+    if args.rand then
         --Determine number of usable files
+		index = io.open(dfhack.getDFPath() .. "/data/announcement/index.txt","r")
+		local indextext = index:read("*all")
         local filecount = 0
-        while string.gmatch(indextext,inputfile .. "_%d+") do
-            filecount++
+		print(indextext)
+        for foo in string.gmatch(indextext,inputfile .. "_%d+") do
+            filecount = filecount + 1
         end
         
         --Random decision
         if filecount > 0 then
-            local rand = math.random(1,filecount)
+            local rand = rngesus:random(filecount)+1
             inputfile = inputfile .. "_" .. rand
         end
     end
+	
+	inputfile = folder .. inputfile
     
-    if verbose then print("Loading intro text") end
+    if verbose then print("Loading intro text from " .. inputfile) end
     local input = assert(io.open(inputfile, "rb"),"No matching intro file, leaving as-is")
     if input == false then return end
-    local output = assert(io.open(dfhack.getDFPath() .. "\\data\\announcement\\fortressintro", "wb"),"Could not create or open data/announcement/fortressintro, somehow.")
+    local output = assert(io.open(dfhack.getDFPath() .. "/data/announcement/fortressintro", "wb"),"Could not create or open data/announcement/fortressintro, somehow.")
     if output == false then input:close() return end
     local t = input:read("*all")
-    t = string.gsub(t, "\r\n", "\n")
+    t = string.gsub(t, "\r\n", "\n") --You can never be too sure with these things; Windows is absolutely obsessive with its \r characters
     output:write(t)
     if verbose then print("Civilization intro text written") end
     output:close()
@@ -149,12 +150,12 @@ end
 
 --Flow control for the code; runs process code after embark selection has been made, to ensure proper operation.
 dfhack.onStateChange.loadNewFortressIntro = function(code)
-if(dorand|doent)
-    if args.v then print("Intro loader ready") end
-    if (code == SC_VIEWSCREEN_CHANGED and dfhack.gui.getCurFocus() == 'setupdwarfgame') or (args.now) then
-            dfhack.with_suspend(introloader,inputfolder,args.rand,args.entity, args.v)
-    end
-else
-    dfhack.printerr("Intro loader has invalid parameters, aborting")
-    end
+	if(args.rand or args.entity) then
+		if args.v then print("Intro loader ready") end
+		if (code == SC_VIEWSCREEN_CHANGED and dfhack.gui.getCurFocus() == 'setupdwarfgame') or (args.now) then
+			dfhack.with_suspend(introloader,inputfolder,args.rand,args.entity, args.v)
+		end
+	else
+		dfhack.printerr("Intro loader has invalid parameters, aborting")
+	end
 end
