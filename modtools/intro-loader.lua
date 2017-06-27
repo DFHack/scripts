@@ -7,9 +7,15 @@ intro-loader.lua
 
 Alters the fort mode intro text before embarking
 
-This script should be called in "dfhack.init" for proper operation. Attempting to call the script at any other point in execution will have unpredictable results.
+This script should be called in "dfhack.init" for proper operation. Attempting
+ to call the script at any other point in execution will have unpredictable
+ results.
+
 This script should not be called from the terminal outside of debug usage.
-The script requires either the -entity, -rand, or both parameters be included in the call to operate, and will indicate failure without
+
+The script requires either the -entity, -rand, or both parameters be included
+ in the call to operate, and will indicate failure without
+
 
 Usage:
 
@@ -38,14 +44,21 @@ Intro files must
     -Be in the custom format used by Toady, editable via the WTF tools
      developed by Andux. Available as of now at:
         http://dffd.bay12games.com/file.php?id=4175
-    -In plaintext, the file must begin with the word "fortressintro" followed by a newline. The first line must be exactly such, or it will fail to be loaded by the game.
+    -In plaintext, the file must begin with the word "fortressintro" followed
+     by a newline. The first line must be exactly such, or it will fail to be
+     loaded by the game.
     -The file must be named according to your chosen mode for the script:
-        - Parts of the filename are separated by underscores for readability purposes
-        - Filenames must start with the defined prefix, which defaults to INTRO, but can be changed with the -file parameter
-        - If the -entity argument is supplied, the entity name must be appeneded to the prefix, as in INTRO_MOUNTAIN for dwarves
-        - If the -rand argument is supplied, the filenames must each have a unique number appended, as in INTRO_MOUNTAIN_2
-        - Further, for the -rand argument, usable numbers start at 1 and all numbers must be consecutive.
-        - The files must not have file extensions
+      - Parts of the filename are separated by underscores for readability
+        purposes
+      - Filenames must start with the defined prefix, which defaults to INTRO,
+        but can be changed with the -file parameter
+      - If the -entity argument is supplied, the entity name must be appeneded
+        to the prefix, as in INTRO_MOUNTAIN for dwarves
+      - If the -rand argument is supplied, the filenames must each have a unique
+        number appended, as in INTRO_MOUNTAIN_2
+      - Further, for the -rand argument, usable numbers start at 1 and all
+	    numbers must be consecutive.
+      - The files must not have file extensions
 ]====]
 
 
@@ -123,7 +136,7 @@ local function introloader(folder,dorand,doent,verbose)
     local input = assert(io.open(inputfile, "rb"),"No matching intro file, leaving as-is")
     if input == false then return end
     local output = assert(io.open(dfhack.getDFPath() .. "\\data\\announcement\\fortressintro", "wb"),"Could not create or open data/announcement/fortressintro, somehow.")
-	if output == false then input:close() return end
+    if output == false then input:close() return end
     local t = input:read("*all")
     t = string.gsub(t, "\r\n", "\n")
     output:write(t)
