@@ -3,7 +3,7 @@
 
 local help = [====[
 intro-loader.lua
-===============
+================
 
 Alters the fort mode intro text before embarking
 
@@ -92,16 +92,6 @@ if args.folder then
     inputfolder = dfhack.getDFPath() ..  args.folder .. "/"
 end
 
---Build current index of files in directory
-do
-    local index = io.open(dfhack.getDFPath() .. "/data/announcement/index.txt","w")
-	local files = dfhack.filesystem.listdir(inputfolder)
-    for foo,filename in pairs(files) do
-		index:write(filename .. "\n")
-	end
-    io.close(index)
-end
-
 rngesus = dfhack.random.new()
 
 
@@ -116,11 +106,13 @@ local function introloader(folder,dorand,doent,verbose)
     
     if args.rand then
         --Determine number of usable files
-		index = io.open(dfhack.getDFPath() .. "/data/announcement/index.txt","r")
-		local indextext = index:read("*all")
+		local index = " "
+		for foo,filename in pairs(dfhack.filesystem.listdir(folder)) do
+			index = index .. "\n" .. filename
+		end
+		
         local filecount = 0
-		print(indextext)
-        for foo in string.gmatch(indextext,inputfile .. "_%d+") do
+        for foo in string.gmatch(index,inputfile .. "_%d+") do
             filecount = filecount + 1
         end
         
