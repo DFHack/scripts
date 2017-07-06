@@ -1,4 +1,3 @@
---Use while viewing a unit to assume direct control. If not used with a historical figure it will be buggy, be careful!
 local utils = require 'gui'
 
 function assumeControl(new,old)
@@ -38,9 +37,9 @@ local target = dfhack.units.getNemesis(new)
 		olnem.flags.RETIRED_ADVENTURER=true
 		olnem.unit.status.current_soul.personality.flags[1]=false
 	end
-	if nwem then
-		nwem.flags.ACTIVE_ADVENTURER=true
-		nwem.flags.RETIRED_ADVENTURER=false
+	if nwnem then
+		nwnem.flags.ACTIVE_ADVENTURER=true
+		nwnem.flags.RETIRED_ADVENTURER=false
 		nwnem.flags.ADVENTURER=true
 		nwnem.unit.status.current_soul.personality.flags[1]=true
 		for k,v in pairs(df.global.world.nemesis.all) do
