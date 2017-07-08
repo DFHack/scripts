@@ -1,3 +1,4 @@
+--Allows you to toggle dead_dwarf flag on an item for consumption/crafting purposes
 local scrn=dfhack.gui.getCurViewscreen()
 local meat
 if df.viewscreen_itemst:is_instance(scrn) then
