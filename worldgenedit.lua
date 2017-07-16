@@ -18,7 +18,7 @@ function genedit:init()
     self:addviews{
       widgets.Label{
         view_id="main",
-        frame = {t=18,l=0}, 
+        frame = {t=18,l=0},
         text={
             {text="Quit: Enter/Esc        "},{id="prec", text="Site Num: "}, {id="curs", text=self:callback("getSites")},NEWLINE,
             {text="Edit: Left/Right(Fast) "},{id="pres", text="Site Cap: "}, {id="caps", text=self:callback("getCaps")},NEWLINE,
@@ -55,7 +55,7 @@ function genedit:onInput(keys)
         if keys.LEAVESCREEN or keys.SELECT then
                    self:dismiss()
         end
-        if keys.CURSOR_LEFT then 
+        if keys.CURSOR_LEFT then
             wg.site_cap = wg.site_cap-25
         elseif keys.CURSOR_RIGHT then
             wg.site_cap = wg.site_cap+25
