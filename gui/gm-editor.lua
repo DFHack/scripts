@@ -94,7 +94,7 @@ function getTargetFromScreens()
     elseif df.global.ui_advmode.menu==26 then
         local armies=df.global.world.armies.all
     for k,v in ipairs(armies) do
-        if v.flags[0] then    
+        if v.flags[0] then
             my_trg=df.global.world.armies.all[k].pos
         end
     end
