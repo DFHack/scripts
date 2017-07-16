@@ -5,7 +5,8 @@ names
 =====
 Rename units or items.  Usage:
 
-:-help:     print this help message
+:-help:     
+    print this help message
 :-if a first name is desired press f, leave blank to clear current first name
 :-if viewing an artifact you can rename it
 :-if viewing a unit you can rename them
@@ -27,7 +28,7 @@ if args.help then
     print(
 [[names.lua
 arguments:
-    -help                
+    -help
         print this help message
     if a first name is desired press f, leave blank to clear current first name
     if viewing an artifact you can rename it
