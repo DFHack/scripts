@@ -4,9 +4,7 @@ local widgets = require 'gui.widgets'
 local wv = dfhack.gui.getCurViewscreen()
 local wd = df.global.world.world_data
 local wg = df.global.world.worldgen.worldgen_parms
-local epop = df.global.world.entity_populations
-local ents = df.global.world.entities.all
-local pent, dent, dnm, eent, enm, went, wnm, hent, hnm, gent, gnm, stn, stc, pop, eny
+local stn, stc, pop, eny
 
 genedit=defclass(genedit,gui.Screen)
 genedit.focus_path = 'worldgenedit'
@@ -25,12 +23,7 @@ function genedit:init()
             {text="Quit: Enter/Esc        "},{id="prec", text="Site Num: "}, {id="curs", text=self:callback("getSites")},NEWLINE,
             {text="Edit: Left/Right(Fast) "},{id="pres", text="Site Cap: "}, {id="caps", text=self:callback("getCaps")},NEWLINE,
             {text="Edit: Up/Down(Fast/Z)  "},{id="ends", text="End Year: "}, {id="endy", text=self:callback("getEny")},NEWLINE,
-            {text="Edit: PgUp/Dn(Fast)    "},{id="pops", text="Pop Cap: "}, {id="popc", text=self:callback("getPops")},NEWLINE,
-            {text="Dwarves: "},{id="drf", text=self:callback("getDwf")},NEWLINE,
-            {text="Elves:      "},{id="elf", text=self:callback("getElf")},NEWLINE,
-            {text="Humans:  "},{id="hmn", text=self:callback("getHum")},NEWLINE,
-            {text="Goblins:   "},{id="grb", text=self:callback("getGob")},NEWLINE,
-            {text="Total:       "},{id="pll", text=self:callback("getAll")},
+            {text="Edit: PgUp/Dn(Fast)    "},{id="pops", text="Pop Cap: "}, {id="popc", text=self:callback("getPops")},
             }
         }
     }
@@ -56,49 +49,6 @@ function genedit:getEny()
     return eny
 end
 
-function genedit:getAll()
-    for j = 0, #epop-1 do 
-        pent = epop[j].counts[0] + epop[j+1].counts[0]
-    end
-    return pent
-end
-
-function genedit:getDwf()
-    for j, k in  ipairs(epop) do
-        if df.historical_entity.find(epop[j].civ_id).type==0 and df.historical_entity.find(epop[j].civ_id).entity_raw.code=='MOUNTAIN' then
-            dent = epop[j].counts[0]
-            
-        end
-    end
-    return dent
-end
-
-function genedit:getElf()
-    for j = 0, #epop-1, 17 do
-        if df.historical_entity.find(epop[j].civ_id).type==0 and df.historical_entity.find(epop[j].civ_id).entity_raw.code=='FOREST' then
-            eent = epop[j].counts[0] + epop[j+1].counts[0]
-        end
-    end
-    return eent
-end
-
-function genedit:getHum()
-    for j = 0, #epop-1, 17 do
-        if df.historical_entity.find(epop[j].civ_id).type==0 and df.historical_entity.find(epop[j].civ_id).entity_raw.code=='PLAINS' then
-            hent = epop[j].counts[0] + epop[j+1].counts[0]
-        end
-    end
-    return hent
-end
-
-function genedit:getGob()
-    for j = 0, #epop-1, 17 do
-        if df.historical_entity.find(epop[j].civ_id).type==0 and df.historical_entity.find(epop[j].civ_id).entity_raw.code=='EVIL' then
-            gent = epop[j].counts[0] + epop[j+1].counts[0]
-        end
-    end    
-    return gent
-end
 
 function genedit:onInput(keys)
     if df.viewscreen_new_regionst:is_instance(wv) then
