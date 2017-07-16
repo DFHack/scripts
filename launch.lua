@@ -10,12 +10,12 @@ something first to ride them there.
 ]====]
 function launch(unitSource,unitTarget,unitRider)
 local curpos
-	if df.global.ui_advmode.menu == df.ui_advmode_menu.Look then
-		curpos = df.global.cursor
-	elseif df.global.gamemode == 1 then
-		qerror("No [l] cursor located!You would have slammed into the ground and exploded.")
-	else 
-	qerror("Must be used in adventurer mode or the arena!")
+    if df.global.ui_advmode.menu == df.ui_advmode_menu.Look then
+        curpos = df.global.cursor
+    elseif df.global.gamemode == 1 then
+        qerror("No [l] cursor located!You would have slammed into the ground and exploded.")
+    else 
+    qerror("Must be used in adventurer mode or the arena!")
 end
 
 
@@ -23,12 +23,12 @@ local count=0
 local l = df.global.world.proj_list
 local lastlist=l
 l=l.next
-	while l do
-		count=count+1
-	if l.next==nil then
-		lastlist=l
-	end
-	l = l.next
+    while l do
+        count=count+1
+    if l.next==nil then
+        lastlist=l
+    end
+    l = l.next
 end
 
 resultx = curpos.x - unitSource.pos.x
@@ -65,32 +65,32 @@ proj.flags.unk9=true
 proj.speed_x=resultx*10000
 proj.speed_y=resulty*10000
 proj.speed_z=resultz*15000 --higher z speed makes it easier to reach a target safely
-	if df.global.world.units.active[0].job.hunt_target==nil then
-		proj.flags.safe_landing=true
-	elseif df.global.world.units.active[0].job.hunt_target then
-		proj.flags.safe_landing=false
-	end
+    if df.global.world.units.active[0].job.hunt_target==nil then
+        proj.flags.safe_landing=true
+    elseif df.global.world.units.active[0].job.hunt_target then
+        proj.flags.safe_landing=false
+    end
 unitoccupancy = dfhack.maps.ensureTileBlock(unitSource.pos).occupancy[unitSource.pos.x%16][unitSource.pos.y%16]
-	if not unitSource.flags1.on_ground then
-		unitoccupancy.unit = false
-	else
-		unitoccupancy.unit_grounded = false
-	end
-	unitSource.flags1.projectile=true
-	unitSource.flags1.on_ground=false
+    if not unitSource.flags1.on_ground then
+        unitoccupancy.unit = false
+    else
+        unitoccupancy.unit_grounded = false
+    end
+    unitSource.flags1.projectile=true
+    unitSource.flags1.on_ground=false
 end
 
 unitTarget = curpos
 if df.global.world.units.active[0].job.hunt_target==nil then
-	unitSource = df.global.world.units.active[0]
+    unitSource = df.global.world.units.active[0]
 else
-	unitRider = df.global.world.units.active[0]
-	unitSource = df.global.world.units.active[0].job.hunt_target
-	unitSource.general_refs:insert("#",{new=df.general_ref_unit_riderst,unit_id=unitRider.id})
-	unitRider.relationship_ids.RiderMount=unitSource.id
-	unitRider.flags1.rider=true
-	unitSource.flags1.ridden=true
-	require("utils").insert_sorted(df.global.world.units.other.ANY_RIDER,unitRider,"id")
+    unitRider = df.global.world.units.active[0]
+    unitSource = df.global.world.units.active[0].job.hunt_target
+    unitSource.general_refs:insert("#",{new=df.general_ref_unit_riderst,unit_id=unitRider.id})
+    unitRider.relationship_ids.RiderMount=unitSource.id
+    unitRider.flags1.rider=true
+    unitSource.flags1.ridden=true
+    require("utils").insert_sorted(df.global.world.units.other.ANY_RIDER,unitRider,"id")
 end
 
 launch(unitSource,unitTarget,unitRider)
