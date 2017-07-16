@@ -1,4 +1,4 @@
---Like artifake but maybe with a little less of the shiny fancy stuff, might fall off truck once or six time, is good!
+--A half-assed way to get artifact quality gear without the actual artifact or artifake.
 local scrn=dfhack.gui.getCurViewscreen()
 local articrap
     if df.viewscreen_itemst:is_instance(scrn) then
