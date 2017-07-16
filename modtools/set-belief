@@ -1,4 +1,4 @@
- -- Change beliefs value of a unit
+-- Change beliefs value of a unit
 --[[ Issues/Potential changes
 - Doesn't cause needs to change
 - Changes don't respect creature's cultural weights (not sure how you'd model that, anyway)
