@@ -7,7 +7,7 @@ local curpos
         curpos=df.global.cursor
     elseif df.global.gamemode == 1 then
         qerror("No [l] cursor located!You would have slammed into the ground and exploded.")
-    else 
+    else
         qerror("Must be used in adventurer mode or the arena!")
 end
 
