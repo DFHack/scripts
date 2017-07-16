@@ -348,8 +348,7 @@ function SiegeEngine:onInput_main(keys)
     elseif keys.CUSTOM_T then
         self:showCursor(true)
         self.mode = self.mode_pile
-        self:sendInputToParent('CURSOR_DOWN_Z')
-        self:sendInputToParent('CURSOR_UP_Z')
+        guidm.refreshSidebar()
     elseif keys.CUSTOM_G then
         local prof = plugin.saveWorkshopProfile(self.building)
         prof.min_level = math.max(0, prof.min_level-1)

@@ -312,13 +312,14 @@ def get_interaction(interaction)
   #result = result + "m=#{interaction.unk_170} n=#{interaction.unk_18c} o=#{interaction.unk_1a8} p=#{interaction.unk_1c4} q=#{interaction.unk_1e8} r=#{interaction.unk_25c} "
   #result = result + "s=#{interaction.unk_278}"
 
-  if interaction.name == ""
+  interaction = interaction.interaction
+  if interaction.adv_name == ""
     name = "mystery"
   else
-    name = interaction.name
+    name = interaction.adv_name
   end
 
-  return "ability=#{get_display_name(interaction.name, interaction.verb[0])}, delay=#{interaction.usage_delay}, actionType=TODO, range=TODO, maxTargets=TODO"
+  return "ability=#{get_display_name(interaction.adv_name, interaction.verb_2nd)}, delay=#{interaction.wait_period}, actionType=TODO, range=TODO, maxTargets=TODO"
 end
 
 def get_effect_flags(flags)
@@ -729,8 +730,8 @@ def get_effect(logger, ce, ticks, showdisplayeffects)
   when "FLASH_TILE"
     if !showdisplayeffects then return "", Output::DEFAULT end
     name = "Flash"
-    color = ce.sym_color >> 8
-    tile = ce.sym_color - (color * 256)
+    color = ce.sym_color[1]
+    tile = ce.sym_color[0]
     desc = "tile = #{tile}, colour=#{color}, time=#{ce.period}, period=#{ce.time}"
     color = Output::DEFAULT
   when "SPEED_CHANGE"

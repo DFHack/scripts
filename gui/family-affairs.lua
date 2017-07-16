@@ -57,27 +57,27 @@ end
 
 function GetMarriageSummary (source)
     local familystate = ""
+    local source_name = dfhack.TranslateName(source.name)
 
-    if source.relationship_ids.Spouse ~= -1 then
-        if dfhack.units.isSane(df.unit.find(source.relationship_ids.Spouse)) then
-            familystate = dfhack.TranslateName(source.name).." has a spouse ("..dfhack.TranslateName(df.unit.find(source.relationship_ids.Spouse).name)..")"
-        end
-        if dfhack.units.isSane(df.unit.find(source.relationship_ids.Spouse)) == false then
-            familystate = dfhack.TranslateName(source.name).."'s spouse is dead or not sane, would you like to choose a new one?"
-        end
-    end
+    local spouse = df.unit.find(source.relationship_ids.Spouse)
+    local lover = df.unit.find(source.relationship_ids.Lover)
 
-    if source.relationship_ids.Spouse == -1 and  source.relationship_ids.Lover ~= -1 then
+    if spouse then
+        if dfhack.units.isSane(spouse) then
+            familystate = source_name.." has a spouse ("..dfhack.TranslateName(spouse.name)..")"
+        end
+        if dfhack.units.isSane(spouse) == false then
+            familystate = source_name.."'s spouse is dead or not sane, would you like to choose a new one?"
+        end
+    elseif lover then
         if dfhack.units.isSane(df.unit.find(source.relationship_ids.Lover)) then
-            familystate = dfhack.TranslateName(source.name).." already has a lover ("..dfhack.TranslateName(df.unit.find(source.relationship_ids.Spouse).name)..")"
+            familystate = source_name.." already has a lover ("..dfhack.TranslateName(lover.name)..")"
         end
         if dfhack.units.isSane(df.unit.find(source.relationship_ids.Lover)) == false then
-            familystate = dfhack.TranslateName(source.name).."'s lover is dead or not sane, would you like that love forgotten?"
+            familystate = source_name.."'s lover is dead or not sane, would you like that love forgotten?"
         end
-    end
-
-    if source.relationship_ids.Spouse == -1 and  source.relationship_ids.Lover == -1 then
-        familystate = dfhack.TranslateName(source.name).." is not involved in romantic relationships with anyone"
+    else
+        familystate = source_name.." is not involved in romantic relationships with anyone"
     end
 
     if source.pregnancy_timer > 0 then
@@ -95,7 +95,7 @@ function GetSpouseData (source)
     local spouse = df.unit.find(source.relationship_ids.Spouse)
     local spouse_hf
     if spouse then
-        spouse_hf = df.historical_figure.find (spouse.hist_figure_id)
+        spouse_hf = df.historical_figure.find(spouse.hist_figure_id)
     end
     return spouse,spouse_hf
 end

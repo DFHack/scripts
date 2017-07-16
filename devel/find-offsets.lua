@@ -292,7 +292,7 @@ function try_restore_cursor()
     if not dfhack.internal.getAddress('cursor') then return end
     if prev_cursor.x >= 0 then
         df.global.cursor:assign(prev_cursor)
-        dwarfmode_feed_input('CURSOR_DOWN_Z', 'CURSOR_UP_Z')
+        dfhack.gui.refreshSidebar()
     end
 end
 

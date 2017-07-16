@@ -281,8 +281,7 @@ function LiquidsUI:onInput(keys)
             return
         end
         self:dismiss()
-        self:sendInputToParent('CURSOR_DOWN_Z')
-        self:sendInputToParent('CURSOR_UP_Z')
+        guidm.refreshSidebar()
     elseif keys.SELECT then
         local cursor = guidm.getCursorPos()
         local sp = guidm.getSelection()

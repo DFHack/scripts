@@ -24,6 +24,8 @@ One comment in the file may contain the phrase ``start(3,5)``. It is interpreted
 as an offset for the pattern: instead of starting at the cursor, it will start
 3 tiles left and 5 tiles up from the cursor.
 
+additionally a comment can have a < for a rise in z level and a > for drop in z.
+
 The script takes the plan filename, starting from the root df folder (where
 ``Dwarf Fortress.exe`` is found).
 
@@ -58,6 +60,13 @@ planfile.each_line { |l|
         raise "Error: multiple start() comments" if offset != [0, 0]
         offset = [$1.to_i, $2.to_i]
     end
+    if l.chomp == '#<'
+        l = '<'
+    end
+
+    if l.chomp == '#>'
+        l = '>'
+    end
 
     l = l.chomp.sub(/#.*/, '')
     next if l == ''
@@ -70,6 +79,7 @@ planfile.each_line { |l|
 x = df.cursor.x - offset[0]
 y = df.cursor.y - offset[1]
 z = df.cursor.z
+starty = y - 1
 
 tiles.each { |line|
     next if line.empty? or line == ['']
@@ -84,6 +94,8 @@ tiles.each { |line|
         when 'h'; t.dig(:Channel) if s == :Wall or s == :Floor
         when 'r'; t.dig(:Ramp) if s == :Wall
         when 'x'; t.dig(:No)
+        when '<'; y=starty; z += 1
+        when '>'; y=starty; z -= 1
         end
         x += 1
     }
