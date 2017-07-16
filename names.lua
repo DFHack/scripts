@@ -1,4 +1,4 @@
---rename items or units
+--rename items or units with the native interface
 --[====[
 
 names
