@@ -1,4 +1,4 @@
--- You like artifact but no have artifact? Get artifake instead, just as good, is two more even!
+--Artifake an item and it will have properly inserted history/creator/properties.
 local utils = require 'utils'
 
 validArgs = validArgs or utils.invert({
