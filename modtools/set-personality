@@ -1,4 +1,4 @@
--- Change personality trait value of a unit
+--Change personality trait value of a unit
 --[[ Issues/Potential changes
 - Doesn't cause needs to change
 - Changes don't respect target creature's natural limits
