@@ -499,21 +499,23 @@ function editor_attributes:init( args )
     },
     widgets.Label{
                 frame = { b=0,l=1},
-                text ={{text= ": exit editor ",
-                    key  = "LEAVESCREEN",
-                    on_activate= self:callback("dismiss")
+                text ={
+		   {text= ": exit editor ",
+                     key  = "LEAVESCREEN",
+                     on_activate= self:callback("dismiss")
                     },
  		   {text=": +1000 ",
-                    key = "SECONDSCROLL_UP",
-                    on_activate=self:callback("step_value",1000)},
+                     key = "SECONDSCROLL_UP",
+                     on_activate=self:callback("step_value",1000)
+		    },
 		   {text=": -1000 ",
                      key = "SECONDSCROLL_DOWN",
-                     on_activate=self:callback("step_value",-1000)},
-                    {text=": set value ",
-                    key = "SELECT",
+                     on_activate=self:callback("step_value",-1000)
+		    },
+                   {text=": set value ",
+                     key = "SELECT",
                     }
-                   
-                    }
+                }
             },
         }
     self:update_attributes()
