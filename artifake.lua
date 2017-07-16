@@ -1,3 +1,4 @@
+-- You like artifact but no have artifact? Get artifake instead, just as good, is two more even!
 local utils = require 'utils'
 
 validArgs = validArgs or utils.invert({
