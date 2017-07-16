@@ -66,7 +66,7 @@ function getTargetFromScreens()
     if dfhack.gui.getCurFocus() == 'item' then
         my_trg=dfhack.gui.getCurViewscreen().item
     elseif dfhack.gui.getCurFocus() == 'joblist' then
-        local t_screen=dfhack.gui.getCurViewscreen()
+       local t_screen=dfhack.gui.getCurViewscreen()
         my_trg=t_screen.jobs[t_screen.cursor_pos]
     elseif dfhack.gui.getCurFocus() == 'createquota' then
         local t_screen=dfhack.gui.getCurViewscreen()
@@ -76,13 +76,30 @@ function getTargetFromScreens()
         my_trg=t_look.flow
 
     elseif dfhack.gui.getSelectedUnit(true) then
+    if dfhack.gui.getSelectedUnit(true).hist_figure_id==-1 then
         my_trg=dfhack.gui.getSelectedUnit(true)
+    else
+    local g_ref=dfhack.gui.getSelectedUnit(true).general_refs
+        if g_ref[0].nemesis_id then
+            my_trg=df.global.world.nemesis.all[g_ref[0].nemesis_id]
+        end
+    end
+    elseif df.global.ui_advmode.menu==1 then
+        local t_look=df.global.ui_look_list.items[df.global.ui_look_cursor]
+            my_trg=t_look.unit
     elseif dfhack.gui.getSelectedItem(true) then
         my_trg=dfhack.gui.getSelectedItem(true)
     elseif dfhack.gui.getSelectedJob(true) then
         my_trg=dfhack.gui.getSelectedJob(true)
+    elseif df.global.ui_advmode.menu==26 then
+        local armies=df.global.world.armies.all
+    for k,v in ipairs(armies) do
+        if v.flags[0] then
+            my_trg=df.global.world.armies.all[k].pos
+        end
+    end
     else
-        qerror("No valid target found")
+        my_trg=df.global
     end
     return my_trg
 end
@@ -544,4 +561,3 @@ if #args~=0 then
 else
     show_editor(getTargetFromScreens())
 end
-
