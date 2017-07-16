@@ -1,5 +1,4 @@
 --rename items or units with the native interface
-
 --[====[
 
 names
@@ -11,7 +10,6 @@ Rename units or items.  Usage:
 :-if viewing an artifact you can rename it
 :-if viewing a unit you can rename them
 ]====]
-
 local gui = require 'gui'
 local dlg = require 'gui.dialogs'
 local widgets = require 'gui.widgets'
