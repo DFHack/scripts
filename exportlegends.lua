@@ -418,6 +418,7 @@ function export_more_legends_xml()
             elseif refV:getType() == df.general_ref_type.KNOWLEDGE_SCHOLAR_FLAG then -- TODO KNOWLEDGE_SCHOLAR_FLAG
             elseif refV:getType() == df.general_ref_type.VALUE_LEVEL then -- TODO VALUE_LEVEL
             elseif refV:getType() == df.general_ref_type.LANGUAGE then -- TODO LANGUAGE
+            elseif refV:getType() == df.general_ref_type.ABSTRACT_BUILDING then -- TODO ABSTRACT_BUILDING
             else
                 print("unknown reference",refV:getType(),df_enums.general_ref_type[refV:getType()])
                 --for k,v in pairs(refV) do print(k,v) end

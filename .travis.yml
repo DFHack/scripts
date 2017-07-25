@@ -1,9 +1,9 @@
 sudo: false
 language: generic
-addons:
-  apt:
-    packages:
-      - lua5.2
+cache:
+  pip: true
+  directories:
+    - $HOME/lua53
 before_install:
 - pip install --user sphinx==1.4
 - mkdir -p $HOME/dfhack
@@ -15,11 +15,13 @@ before_install:
 - tar xzf $HOME/dfhack/plugins/stonesense/stonesense.tar.gz -C $HOME/dfhack/plugins/stonesense --strip-components 1
 - rmdir $HOME/dfhack/scripts
 - ln -s "$(pwd)" $HOME/dfhack/scripts
+- sh $HOME/dfhack/travis/build-lua.sh
 script:
+- export PATH="$PATH:$HOME/lua53/bin"
 - sphinx-build -qW -j3 $HOME/dfhack $HOME/dfhack/docs/html
 - python $HOME/dfhack/travis/lint.py
 - python $HOME/dfhack/travis/script-docs.py .
-- python $HOME/dfhack/travis/script-syntax.py --ext=lua --cmd="luac5.2 -p" || true
+- python $HOME/dfhack/travis/script-syntax.py --ext=lua --cmd="luac5.3 -p"
 - python $HOME/dfhack/travis/script-syntax.py --ext=rb --cmd="ruby -c"
 notifications:
   email: false
