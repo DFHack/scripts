@@ -160,15 +160,18 @@ end
 
 --Returns unit's current value for given belief
 local function getCurBeliefValue(unit, beliefId)
-    local upers = unit.status.current_soul.personality
-    if pointers[beliefId] then
-        return upers.values[pointers[beliefId]].strength
-    elseif upers.cultural_identity ~= -1 then
-        return df.cultural_identity.find(upers.cultural_identity).values[beliefId]
-    else
-        return 0 --outsiders have no culture
-    end    
+	local upers = unit.status.current_soul.personality
+	if pointers[beliefId] then
+		return upers.values[pointers[beliefId]].strength
+	elseif upers.cultural_identity ~= -1 then
+		return df.cultural_identity.find(upers.cultural_identity).values[beliefId]
+	elseif upers.civ_id ~= -1 then
+		return df.historical_entity.find(upers.civ_id).resources.values[beliefId]
+	else
+		return 0 --outsiders have no culture
+	end	
 end
+
 
 --Ultimately changes value strength. Changes an existing entry if possible, otherwise creates a new one. Uses pointers.
 local function changeBelief(beliefId, value)
