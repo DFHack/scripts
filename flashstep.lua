@@ -2,8 +2,8 @@
 --[====[
 
 flashstep
-=====
-A hotkey-friendly teleport that places you where your cursor is.        
+=========
+A hotkey-friendly teleport that places you where your cursor is.
 
 ]====]
 function flashstep(flash,step)

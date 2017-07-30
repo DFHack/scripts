@@ -2,7 +2,7 @@
 --[====[
 
 crithit
-=====
+=======
 Turns the most recently readied attack into an impossibly accurate and powerful strike.
 
 ]====]

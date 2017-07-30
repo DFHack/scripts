@@ -4,6 +4,7 @@
 artifake
 ========
 Create a new artifact with properly inserted historical links and properties.
+Uses the same item and material syntax as createitem does.
 
 ]====]
 local utils = require 'utils'

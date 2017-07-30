@@ -2,7 +2,7 @@
 --[====[
 
 ghostly
-=====
+=======
 Toggles being a ghost for walking through walls, avoiding attacks, or recovering after a death.
     
 ]====]
