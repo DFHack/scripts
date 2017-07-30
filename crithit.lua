@@ -1,4 +1,11 @@
 --Turns the previously readied attack into a super powerful critical hit.
+--[====[
+
+crithit
+=====
+Turns the most recently readied attack into an impossibly accurate and powerful strike.
+
+]====]
 local unit = df.global.world.units.active[0]
 local attks = unit.actions
 for k,v in ipairs(attks) do
