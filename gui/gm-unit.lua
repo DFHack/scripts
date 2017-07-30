@@ -1088,7 +1088,7 @@ function editor_beliefs:getCurBeliefValue(unit, beliefId)
         return df.historical_entity.find(upers.civ_id).resources.values[beliefId], true
     else
         return 0, true --outsiders have no culture
-	end
+    end
 end
 
 function editor_beliefs:update_choices()
