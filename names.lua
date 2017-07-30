@@ -79,7 +79,7 @@ function namescr:setName()
         trg.name.words[k] = vw.name.words[k]
         trg.name.parts_of_speech[k] = vw.name.parts_of_speech[k]
         trg.name.language = vw.name.language
-        trg .name.has_name = vw.name.has_name
+        trg.name.has_name = vw.name.has_name
     end
 end
 function namescr:setFirst()
