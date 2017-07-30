@@ -1079,16 +1079,16 @@ function editor_beliefs:buildPointers()
 end
 
 function editor_beliefs:getCurBeliefValue(unit, beliefId)
-	local upers = unit.status.current_soul.personality
-	if self.pointers[beliefId] then
-		return upers.values[self.pointers[beliefId]].strength
-	elseif upers.cultural_identity ~= -1 then
-		return df.cultural_identity.find(upers.cultural_identity).values[beliefId], true
-	elseif upers.civ_id ~= -1 then
-		return df.historical_entity.find(upers.civ_id).resources.values[beliefId], true
-	else
-		return 0, true --outsiders have no culture
-	end	
+    local upers = unit.status.current_soul.personality
+    if self.pointers[beliefId] then
+        return upers.values[self.pointers[beliefId]].strength
+    elseif upers.cultural_identity ~= -1 then
+        return df.cultural_identity.find(upers.cultural_identity).values[beliefId], true
+    elseif upers.civ_id ~= -1 then
+        return df.historical_entity.find(upers.civ_id).resources.values[beliefId], true
+    else
+        return 0, true --outsiders have no culture
+	end
 end
 
 function editor_beliefs:update_choices()
