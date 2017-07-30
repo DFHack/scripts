@@ -1,4 +1,11 @@
 --Need to get rid of a body? Hope you're hungry, because you can eat the whole thing with this.
+--[====[
+
+cannibalism
+=====
+Allows consumption of sapient corpses.
+
+]====]
 local scrn=dfhack.gui.getCurViewscreen()
 local meat
 if df.viewscreen_itemst:is_instance(scrn) then
