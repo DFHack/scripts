@@ -1,4 +1,9 @@
 --A half-assed way to get artifact quality gear without the actual artifact or artifake.
+--[====[
+articrap
+=====
+Changes an item or full inventory of items to artifact quality which prevents wear.
+]====]
 local scrn=dfhack.gui.getCurViewscreen()
 local articrap
     if df.viewscreen_itemst:is_instance(scrn) then
