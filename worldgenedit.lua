@@ -2,7 +2,7 @@
 --[====[
 
 worldgenedit
-=====
+============
 Perhaps of dubious utility in general, being able to alter an active worldgen is handy.
 Currently just has the end year, site count, and maximum population caps shown.
 Still a work in progress as I intend to add a display of non-histfig civilized units once I figure out how.
