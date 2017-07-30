@@ -1,4 +1,11 @@
 --Teleports unit to cursor
+--[====[
+
+flashstep
+=====
+A hotkey-friendly teleport that places you where your cursor is.        
+
+]====]
 function flashstep(flash,step)
     local flash = df.global.world.units.active[0]
     local step
