@@ -1,4 +1,11 @@
 --Use while viewing an item, unit inventory, or tile to start fires.
+--[====[
+
+firestarter
+=====
+Lights things on fire, items, locations, entire inventories even!
+
+]====]
 local tinder
 if dfhack.gui.getCurFocus() == 'item' then
     tinder=dfhack.gui.getCurViewscreen().item
