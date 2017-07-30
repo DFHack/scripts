@@ -1,4 +1,11 @@
 --Artifake an item and it will have properly inserted history/creator/properties.
+--[====[
+
+artifake
+=====
+Create a new artifact with properly inserted historical links and properties.
+
+]====]
 local utils = require 'utils'
 
 validArgs = validArgs or utils.invert({
