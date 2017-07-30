@@ -2,7 +2,7 @@
 --[====[
 
 cannibalism
-=====
+===========
 Allows consumption of sapient corpses.
 
 ]====]
