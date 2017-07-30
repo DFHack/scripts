@@ -2,7 +2,7 @@
 --[====[
 
 firestarter
-=====
+===========     
 Lights things on fire, items, locations, entire inventories even!
 
 ]====]
