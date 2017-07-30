@@ -2,7 +2,7 @@
 --[====[
 
 updatefinish
-=====
+============
 Run this while the game calendar is visible and move the end date selector around.
 
 ]====]
