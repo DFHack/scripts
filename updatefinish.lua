@@ -1,4 +1,11 @@
 --Alter the date which the updating region process finishes at.
+--[====[
+
+updatefinish
+=====
+Run this while the game calendar is visible and move the end date selector around.
+
+]====]
 local gui = require 'gui'
 local widgets = require 'gui.widgets'
 local vw = df.global.gview.view.child
