@@ -2,7 +2,7 @@
 --[====[
 
 flashstep
-=====
+=========
 A hotkey-friendly teleport that places you where your cursor is.        
 
 ]====]
