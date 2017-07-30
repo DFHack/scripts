@@ -1,4 +1,12 @@
 --Edit certain worldgen parameters while it is running.
+--[====[
+
+worldgenedit
+=====
+Perhaps of dubious utility in general, being able to alter an active worldgen is handy.
+Still a work in progress as I intend to add a display of non-histfig civilized units once I figure out how.
+
+]====]
 local gui = require 'gui'
 local widgets = require 'gui.widgets'
 local wv = dfhack.gui.getCurViewscreen()
