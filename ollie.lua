@@ -1,6 +1,14 @@
 -- Point the cursor to punt item under you, do this on a minecart to accelerate/turn/jump/stop.
 -- A new and dangerous member of the propel/launch/telekinesis/punt/etc family!
 -- By Roses, Rumrusher, and that Max™ guy.
+--[====[
+
+ollie
+=====
+Because minecarts aren't dangerous enough, now you can fling them at your cursor too.
+Also allows you to shoot items you're standing on but not riding.
+
+]====]
 function punt(itemSource,itemTarget)
 local curpos
     if df.global.ui_advmode.menu==1 then
