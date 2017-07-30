@@ -1,4 +1,12 @@
 --Assume Direct Control of the unit you're viewing. This Can Hurt You.
+--[====[
+
+assumecontrol
+=====
+Allows you to temporarily or permanently swap bodies with another unit.
+Animals and other non-historical figures can be glitchy if you travel as one, be careful!
+
+]====]
 local utils = require 'gui'
 
 function assumeControl(new,old)
