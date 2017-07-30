@@ -2,7 +2,7 @@
 --[====[
 
 articrap
-=====
+========
 Changes an item or full inventory of items to artifact quality which prevents wear.
 
 ]====]
