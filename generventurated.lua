@@ -2,7 +2,7 @@
 --[====[
 
 generventurated
-=====
+===============
 Adds randomly generated creatures to the adventurer race selection screen.
 
 ]====]
