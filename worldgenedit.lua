@@ -14,8 +14,7 @@ local wv = dfhack.gui.getCurViewscreen()
 local wd = df.global.world.world_data
 local wg = df.global.world.worldgen.worldgen_parms
 local sites = df.global.world.world_data.sites
-local ents = df.global.world.entities.all
-local pent, dent, dnm, eent, enm, wnm, hent, hnm, gent, gnm, stn, stc, pop, eny
+local pent, dent, eent, hent, gent, stn, stc, pop, eny
 
 genedit=defclass(genedit,gui.Screen)
 genedit.focus_path = 'worldgenedit'
