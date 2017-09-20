@@ -45,6 +45,9 @@ local target = dfhack.units.getNemesis(new)
         olnem.flags.ACTIVE_ADVENTURER=false
         olnem.flags.RETIRED_ADVENTURER=true
         olnem.unit.status.current_soul.personality.flags[1]=false
+        olnem.unit.idle_area.x=olnem.unit.pos.x
+        olnem.unit.idle_area.y=olnem.unit.pos.y
+        olnem.unit.idle_area.z=olnem.unit.pos.z
     end
     if nwnem then
         nwnem.flags.ACTIVE_ADVENTURER=true
