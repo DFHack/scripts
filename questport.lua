@@ -1,5 +1,14 @@
 --Sends you to the location of your quest log cursor.
 --Don't try to travel normally while in forbidden travel areas (mountains, lairs) and you can questport out.
+--[====[
+
+questport
+=========
+Use the quest log map and cursor to select a location you want to visit and go there.
+Usable from travel mode or on foot.
+Works unless you receive a travel restriction message, so don't do that.
+
+]====]
 local gui=require 'gui'
 local qp=df.global.gview.view.child
 local qmap=dfhack.gui.getCurViewscreen()

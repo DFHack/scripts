@@ -1,4 +1,11 @@
 --Use with a unit selected to make them focused and unstressed.
+--[====[
+
+fillneeds
+=========
+Like it says on the tin, it fills your focus level all the way up and destresses as well.
+
+]====]
 local utils=require('utils')
 local args = utils.processArgs({...}, validArgs)
 

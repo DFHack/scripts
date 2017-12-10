@@ -26,7 +26,7 @@ function genedit:init()
     self:addviews{
       widgets.Label{
         view_id="main",
-        frame = {t=18,l=0}, 
+        frame = {t=18,l=0},
         text={
             {text="Quit: Enter/Esc        "},{id="prec", text="Site Num: "}, {id="curs", text=self:callback("getSites")},NEWLINE,
             {text="Edit: Left/Right(Fast) "},{id="pres", text="Site Cap: "}, {id="caps", text=self:callback("getCaps")},NEWLINE,

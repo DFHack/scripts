@@ -1,4 +1,12 @@
--- You like artifact but no have artifact? Get artifake instead, just as good, is two more even!
+--Artifake an item and it will have properly inserted history/creator/properties.
+--[====[
+
+artifake
+========
+Create a new artifact with properly inserted historical links and properties.
+Uses the same item and material syntax as createitem does.
+
+]====]
 local utils = require 'utils'
 
 validArgs = validArgs or utils.invert({
@@ -7,7 +15,7 @@ validArgs = validArgs or utils.invert({
  'item',
  'name',
  'r',
- 'l' 
+ 'l'
 })
 
 local args = utils.processArgs({...}, validArgs)
@@ -76,7 +84,7 @@ local facts = df.global.world.artifacts.all
         fake.item.spec_heat = base.spec_heat
         fake.item.ignite_point = base.ignite_point
         fake.item.heatdam_point = base.heatdam_point
-        fake.item.colddam_point = base.colddam_point 
+        fake.item.colddam_point = base.colddam_point
         fake.item.boiling_point = base.boiling_point
         fake.item.fixed_temp = base.fixed_temp
         fake.item.weight = base.weight
@@ -117,7 +125,7 @@ local facts = df.global.world.artifacts.all
         hfid = args.creator.hist_figure_id,
         }
         )
- df.global.hist_event_next_id = df.global.hist_event_next_id+1 
+ df.global.hist_event_next_id = df.global.hist_event_next_id+1
 if args.r then
     base.handedness[0] = true
     fake.item.handedness[0] = true
@@ -129,7 +137,7 @@ end
  if args.name then do
 fake.name.first_name = args.name
 fake.name.language = 0
-fake.name.has_name = true 
+fake.name.has_name = true
             end
         end
      end

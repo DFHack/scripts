@@ -1,8 +1,10 @@
---Like artifake but maybe with a little less of the shiny fancy stuff, might fall off truck once or six time, is good!
+--A half-assed way to get artifact quality gear without the actual artifact or artifake.
 --[====[
+
 articrap
-=====
-Changes the selected item or inventory full of items into artifact quality items which don't accumulate wear.
+========
+Changes an item or full inventory of items to artifact quality which prevents wear.
+
 ]====]
 local scrn=dfhack.gui.getCurViewscreen()
 local articrap

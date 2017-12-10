@@ -1,15 +1,17 @@
---rename items or units
+--rename items or units with the native interface
 --[====[
 
 names
 =====
-Rename units or items.  Usage:
 
-:-help:     print this help message
+Rename units or items.  Usage:
+:-help:    print this help message
 :-if a first name is desired press f, leave blank to clear current first name
 :-if viewing an artifact you can rename it
 :-if viewing a unit you can rename them
+
 ]====]
+
 local gui = require 'gui'
 local dlg = require 'gui.dialogs'
 local widgets = require 'gui.widgets'
@@ -26,7 +28,7 @@ if args.help then
     print(
 [[names.lua
 arguments:
-    -help                
+    -help
         print this help message
     if a first name is desired press f, leave blank to clear current first name
     if viewing an artifact you can rename it
@@ -77,7 +79,7 @@ function namescr:setName()
         trg.name.words[k] = vw.name.words[k]
         trg.name.parts_of_speech[k] = vw.name.parts_of_speech[k]
         trg.name.language = vw.name.language
-        trg .name.has_name = vw.name.has_name
+        trg.name.has_name = vw.name.has_name
     end
 end
 function namescr:setFirst()

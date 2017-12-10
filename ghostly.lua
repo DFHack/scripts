@@ -1,4 +1,11 @@
 --Turn ghost on or off
+--[====[
+
+ghostly
+=======
+Toggles being a ghost for walking through walls, avoiding attacks, or recovering after a death.
+    
+]====]
 local unit = df.global.world.units.active[0]
 if unit then
     if unit.flags1.dead then

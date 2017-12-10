@@ -1,4 +1,11 @@
 --Use on the adventurer race selection screen to use generated creatures, and again on the entities screen to fill it out.
+--[====[
+
+generventurated
+===============
+Adds randomly generated creatures to the adventurer race selection screen.
+
+]====]
 local vw = dfhack.gui.getCurViewscreen()
 local current = df.global.world.raws.creatures.all
 local gent = df.global.world.entities.all
@@ -7,7 +14,7 @@ function generVent(gcas, vw)
 if not df.viewscreen_setupadventurest:is_instance(vw) then
     qerror("Kinda needed to do this before you finished setting up an adventurer.")
 elseif df.viewscreen_setupadventurest:is_instance(vw) then
-    if vw.page==0 then 
+    if vw.page==0 then
         for m, n in ipairs(current) do
             if current[m].flags.GENERATED == true then
               if not current[m].flags.CASTE_FEATURE_BEAST then
@@ -48,3 +55,4 @@ elseif df.viewscreen_setupadventurest:is_instance(vw) then
     end
 end
 generVent(gcas,vw)
+    
