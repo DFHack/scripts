@@ -71,7 +71,7 @@ function genedit:getDwf()
                 dent = dent + inh[v].count
             end
         end
-    end 
+    end
     return dent
 end
 
@@ -84,7 +84,7 @@ function genedit:getHum()
                 hent = hent + inh[v].count
             end
         end
-    end 
+    end
     return hent
 end
 
@@ -97,7 +97,7 @@ function genedit:getElf()
                 eent = eent + inh[v].count
             end
         end
-    end 
+    end
     return eent
 end
 
@@ -110,7 +110,7 @@ function genedit:getGob()
                 gent = gent + inh[v].count
             end
         end
-    end 
+    end
     return gent
 end
 
@@ -125,7 +125,7 @@ function genedit:onInput(keys)
                    self:dismiss()
                    wv.worldgen_paused = 0
         end
-        if keys.CURSOR_LEFT then 
+        if keys.CURSOR_LEFT then
             wg.site_cap = wg.site_cap-25
         elseif keys.CURSOR_RIGHT then
             wg.site_cap = wg.site_cap+25
