@@ -81,7 +81,7 @@ dorf_types = {
     leader = {
         p=0.14,
         attribs = {FOCUS={'superb'},ANALYTICAL_ABILITY={'amazing'},LINGUISTIC_ABILITY={'superb'},PATIENCE={'incredible'},MEMORY={'verygood'},INTUITION={'amazing'},SOCIAL_AWARENESS={'incredible'},RECUPERATION={'verygood'},DISEASE_RESISTANCE={'good'},CREATIVITY={'superb'}},
-        skills  = {LEADERSHIP={7,19},ORGANIZATION={7,17}}},
+        skills  = {LEADERSHIP={7,19},ORGANIZATION={7,17},TEACHING={12,18}}},
     adaptable = {
         p = 0.6666,
         attribs = {STRENGTH={'average'},AGILITY={'average'},ENDURANCE={'average'},RECUPERATION={'average'},FOCUS={'average'}},
@@ -139,7 +139,7 @@ dorf_jobs = {
     Farmer = { --3/24 max:5
         req={'PLANTER'},
         prio={'POTASH_MAKER','BREWER'},
-        MILLER=0.25, SHEARER=0.15, MILKER=0.25, CHEESE_MAKER=0.25,
+        MILLER=0.25, SHEARER=0.15, MILKER=0.25, CHEESE_MAKER=0.25, FARMER=0.5,
         types={'speedy','aware','intuitive'}},
     Clothier = { --2/24 max:4
         req={'CLOTHIER'},
@@ -169,13 +169,13 @@ dorf_jobs = {
         types={'agile','agile','smart','creative','social','resilient'}},
     Doctor = { --1/24 max:3
         req={'DOCTOR'},
-        prio={'DIAGNOSER','BONE_SETTER','SUTURER'},
-        SURGEON=0.38,
+        prio={'SURGEON','SUTURER'},
+        BONE_SETTER=0.42, DIAGNOSER=0.42,
         types={'smart','aware','agile','social','resilient'}},
     Leader = { --2/24 max:7
         req={'ADMINISTRATOR'},
-        BREWER=0.51, CLERK=0.51,
-        types={'leader','smart','social'}},
+        BREWER=0.23, CLERK=0.33, ENGRAVER=0.41, MERCHANT=0.23, SIEGE_OPERATOR=0.18, PUMP_OPERATOR=0.21, FURNACE_OPERATOR=0.14,
+        types={'leader','smart','social','fighter'}},
     Trader = { --0/24 max:4
         req={'TRADER'},
         prio={'CLERK','MERCHANT'},
@@ -197,6 +197,7 @@ dorf_jobs = {
 (this may not be a good idea)
 --]]
 professions = {
+    --todo: implement minimums (you start with 7 dwarves normally)
     MINER = {
         cur=0, max=8, ratio=0.1667,
         skills = {MINING=3}},
@@ -214,10 +215,10 @@ professions = {
         skills = {FORGE_WEAPON=4, FORGE_ARMOR=3}},
 
     STONEWORKER = {
-        cur=0, max=7, ratio=0.1187,
+        cur=0, max=7, ratio=0.1037,
         skills = {MASONRY=3, STONECRAFT=2}},
     WOODWORKER = {
-        cur=0, max=4, ratio=0.0482,
+        cur=0, max=4, ratio=0.0667,
         skills = {CARPENTRY=3, WOODCRAFT=1}},
     ARCHITECT = {
         cur=0, max=3, ratio=0.0511,
@@ -230,24 +231,24 @@ professions = {
         cur=0, max=4, ratio=0.0909,
         skills = {CLOTHESMAKING=2, WEAVING=1, PROCESSPLANTS=1}},
     ANIMAL_CARETAKER = {
-        cur=0, max=3, ratio=0.0770,
+        cur=0, max=3, ratio=0.0515,
         skills = {ANIMALCARE=3, SHEARING=2, MILK=1, ANIMALTRAIN=1}},
     HUNTER = {
-        cur=0, max=3, ratio=0.0417,
-        skills = {SNEAK=3, TRACKING=2, RANGED_COMBAT=2, CROSSBOW=1}},
+        cur=0, max=2, ratio=0.0417,
+        skills = {SNEAK=3, TRACKING=4, RANGED_COMBAT=2, CROSSBOW=1}},
     RANGER = {
         cur=0, max=2, ratio=0.0417,
         skills = {ANIMALCARE=3, ANIMALTRAIN=3, CROSSBOW=2, SNEAK=2, TRAPPING=2}},
     BUTCHER = {
         cur=0, max=2, ratio=0.0411,
-        skills = {BUTCHER=3, TANNER=2, COOK=1}},
+        skills = {BUTCHER=3, TANNER=2, COOK=1, GELD=-5}},
 
     CRAFTSMAN = {
         cur=0, max=7, ratio=0.0416,
         skills = {WOODCRAFT=1, STONECRAFT=1, METALCRAFT=1}},
     DOCTOR = {
-        cur=0, max=3, ratio=0.0444,
-        skills = {DIAGNOSE=1, DRESS_WOUNDS=1, SET_BONE=1, SUTURE=1, CRUTCH_WALK=1}},
+        cur=0, max=3, ratio=0.0544,
+        skills = {DRESS_WOUNDS=3, SUTURE=2, CRUTCH_WALK=1}},
     ADMINISTRATOR = {
         cur=0, max=7, ratio=0.0833,
         skills = {RECORD_KEEPING=3, ORGANIZATION=2, APPRAISAL=1}},
@@ -287,10 +288,10 @@ professions = {
         skills = {MASONRY=3, DESIGNBUILDING=2}},
     ENGRAVER = {
         cur=0, max=10,
-        skills = {DETAILSTONE=3}},
+        skills = {DETAILSTONE=5}},
     MECHANIC = {
         cur=0, max=7,
-        skills = {MECHANICS=3}},
+        skills = {MECHANICS=5}},
     STONECRAFTER = {
         cur=0, max=5,
         skills = {STONECRAFT=3}},
@@ -305,6 +306,9 @@ professions = {
         cur=0, max=2,
         skills = {ENCRUSTGEM=3}},
 
+    FARMER = {
+        cur=0, max=1,
+        skills = {GELD=4, BUTCHER=2, PLANT=2, MILLING=1, SHEARING=1, BREWING=1, MILK=1, HERBALISM=1, TANNER=1}},
     POTASH_MAKER = {
         cur=0, max=2,
         skills = {POTASH_MAKING=3}},
@@ -367,14 +371,14 @@ professions = {
         skills = {SUTURE=3}},
     SURGEON = {
         cur=0, max=2,
-        skills = {SURGERY=3}},
+        skills = {SURGERY=3, GELD=2}},
 
     BONE_CARVER = {
         cur=0, max=2,
         skills = {BONECARVE=3}},
     POTTER = {
         cur=0, max=1,
-        skills = {{POTTERY=3}}},
+        skills = {POTTERY=3}},
     GLAZER = {
         cur=0, max=1,
         skills = {GLAZING=3}},
@@ -398,7 +402,6 @@ professions = {
 
 --[[
     (not used)
-    FARMER--we don't talk about this
     METALCRAFTER
     HAMMERMAN
     SPEARMAN
@@ -409,10 +412,11 @@ professions = {
     MACEMAN
 --]]
 }
-function ResetProfessionTable()
+function ResetProfessionTable(bPrint)
     for prof, profTable in pairs(professions) do
         profTable.cur = 0
     end
+    if bPrint then print("professions table has been reset. (supposedly)") end
 end
 ResetProfessionTable()
 --return _ENV
