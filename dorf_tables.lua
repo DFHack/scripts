@@ -106,9 +106,10 @@ dorf_jobs = {
         (Whatever it be, the dorf should probably be printed to the console for the user to know about.)
     --]]
     Miner = { --4/24 max:8
+        cur={0}, min={2},
         req={'MINER'},
         types={'adaptable','fighter','strong','strong','agile','aware','resilient'}},
-    Grunt = { --3/24 max:20
+    _Grunt = { --3/24 max:20
         req={'RECRUIT'},
         types={'adaptable','fighter','soldier','strong','agile','aware','resilient','strong','agile','aware','resilient','strong','agile','aware','resilient'}},
     Smelter = { --1/24 max:6
@@ -121,6 +122,7 @@ dorf_jobs = {
         types={'buff','buff','intuitive','aware'}},
 
     Stoneworker = { --2/24 max:7
+        cur={0}, min={1},
         req={'STONEWORKER'}, 
         prio={'ENGRAVER'},
         MASON=0.42, MECHANIC=0.42,
@@ -137,6 +139,7 @@ dorf_jobs = {
         types={'genius','creative','speedy'}},
 
     Farmer = { --3/24 max:5
+        cur={0}, min={1},
         req={'PLANTER'},
         prio={'POTASH_MAKER','BREWER'},
         MILLER=0.25, SHEARER=0.15, MILKER=0.25, CHEESE_MAKER=0.25, FARMER=0.5,
@@ -147,6 +150,7 @@ dorf_jobs = {
         SPINNER=0.66, LEATHERWORKER=0.5, DYER=0.25,
         types={'speedy','speedy','social'}},
     Warden = { --1/24 max:3
+        cur={0}, min={1},
         req={'ANIMAL_CARETAKER'},
         prio={'SHEARER','MILKER','ANIMAL_TRAINER'},
         CHEESE_MAKER=0.41, BUTCHER=0.25, TANNER=0.38, BONE_CARVER=0.28,
@@ -168,13 +172,15 @@ dorf_jobs = {
         WOODCRAFTER=0.33, STONECRAFTER=0.33, JEWELER=0.33, GEM_CUTTER=0.33, GEM_SETTER=0.33, BONE_CARVER=0.33, POTTER=0.33,
         types={'agile','agile','smart','creative','social','resilient'}},
     Doctor = { --1/24 max:3
+        cur={0}, min={1},
         req={'DOCTOR'},
         prio={'SURGEON','SUTURER'},
         BONE_SETTER=0.42, DIAGNOSER=0.42,
         types={'smart','aware','agile','social','resilient'}},
     Leader = { --2/24 max:7
+        cur={0}, min={1},
         req={'ADMINISTRATOR'},
-        BREWER=0.23, CLERK=0.33, ENGRAVER=0.41, MERCHANT=0.23, SIEGE_OPERATOR=0.18, PUMP_OPERATOR=0.21, FURNACE_OPERATOR=0.14,
+        FARMER=0.38, BREWER=0.51, CLERK=0.33, ENGRAVER=0.51, MERCHANT=0.33, SIEGE_OPERATOR=0.66, PUMP_OPERATOR=0.33, FURNACE_OPERATOR=0.33,
         types={'leader','smart','social','fighter'}},
     Trader = { --0/24 max:4
         req={'TRADER'},
@@ -241,7 +247,7 @@ professions = {
         skills = {ANIMALCARE=3, ANIMALTRAIN=3, CROSSBOW=2, SNEAK=2, TRAPPING=2}},
     BUTCHER = {
         cur=0, max=2, ratio=0.0411,
-        skills = {BUTCHER=3, TANNER=2, COOK=1, GELD=-5}},
+        skills = {BUTCHER=3, TANNER=2, COOK=1, GELD=-3}},
 
     CRAFTSMAN = {
         cur=0, max=7, ratio=0.0416,
@@ -287,7 +293,7 @@ professions = {
         cur=0, max=7,
         skills = {MASONRY=3, DESIGNBUILDING=2}},
     ENGRAVER = {
-        cur=0, max=10,
+        cur=0, max=14,
         skills = {DETAILSTONE=5}},
     MECHANIC = {
         cur=0, max=7,
@@ -307,7 +313,7 @@ professions = {
         skills = {ENCRUSTGEM=3}},
 
     FARMER = {
-        cur=0, max=1,
+        cur=0, max=3,
         skills = {GELD=4, BUTCHER=2, PLANT=2, MILLING=1, SHEARING=1, BREWING=1, MILK=1, HERBALISM=1, TANNER=1}},
     POTASH_MAKER = {
         cur=0, max=2,
@@ -361,40 +367,40 @@ professions = {
         skills = {PROCESSPLANTS=3}},
 
     DIAGNOSER = {
-        cur=0, max=2,
+        cur=0, max=3,
         skills = {DIAGNOSE=3}},
     BONE_SETTER = {
-        cur=0, max=2,
+        cur=0, max=3,
         skills = {SET_BONE=3}},
     SUTURER = {
-        cur=0, max=2,
+        cur=0, max=4,
         skills = {SUTURE=3}},
     SURGEON = {
         cur=0, max=2,
         skills = {SURGERY=3, GELD=2}},
 
     BONE_CARVER = {
-        cur=0, max=2,
+        cur=0, max=3,
         skills = {BONECARVE=3}},
     POTTER = {
-        cur=0, max=1,
+        cur=0, max=2,
         skills = {POTTERY=3}},
     GLAZER = {
-        cur=0, max=1,
+        cur=0, max=2,
         skills = {GLAZING=3}},
 
     SIEGE_ENGINEER = {
         cur=0, max=2,
         skills = {SIEGECRAFT=3, SIEGEOPERATE=1}},
     SIEGE_OPERATOR = {
-        cur=0, max=4,
+        cur=0, max=5,
         skills = {SIEGEOPERATE=3}},
     PUMP_OPERATOR = {
-        cur=0, max=3,
+        cur=0, max=4,
         skills = {OPERATE_PUMP=3}},
 
     CLERK = {
-        cur=0, max=2,
+        cur=0, max=5,
         skills = {RECORD_KEEPING=3, ORGANIZATION=2}},
     MERCHANT = {
         cur=0, max=2,
@@ -412,11 +418,31 @@ professions = {
     MACEMAN
 --]]
 }
-function ResetProfessionTable(bPrint)
+function ResetDataTables(bPrint)
+    for jobName, jobTable in pairs(dorf_jobs) do
+        jobTable.cur = {0}
+    end
     for prof, profTable in pairs(professions) do
         profTable.cur = 0
     end
-    if bPrint then print("professions table has been reset. (supposedly)") end
+    if bPrint then print("dorf_tables have been reset") end
 end
-ResetProfessionTable()
+function Query(profession)
+    local prof = professions[profession]
+    if prof then
+        print("Currently " .. prof.cur .. " of profession: " .. profession, "max: " .. prof.max )
+    end
+end
+
+
+local utils = require('utils')
+local validArgs = utils.invert({
+    'query'
+})
+local args = utils.processArgs({...}, validArgs)
+if args.query and args.query ~= "" then
+    Query(args.query)
+end
+
+--ResetDataTables()
 --return _ENV
