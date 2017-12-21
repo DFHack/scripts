@@ -14,18 +14,10 @@ local validArgs = utils.invert({
     'selected',
     'clear', --selected --all --allnamed --allcustom --allpimped --allunpimped --allcustomunpimped --allprotected --allunprotected
     'clearfirst',       --all --allnamed --allcustom --allpimped --allunpimped --allcustomunpimped --allprotected --allunprotected
-    'query',
-    --'resetdata',
     'debug'
 })
 local args = utils.processArgs({...}, validArgs)
-if args.query and args.query ~= "" then
-    dorf_tables.Query(string.upper(args.query))
-    return
-end
-if args.resetdata or args.clear or options then
-    --dorf_tables.ResetDataTables(true)
-end
+
 protected_dwarf_signals = {'_', 'c', 'j', 'p'}
 
 function safecompare(a,b)
