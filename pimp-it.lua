@@ -145,7 +145,7 @@ function GetRandomTableEntry(tName, t)
     end
     -- now you can reliably return a random key
     local N = TableLength(t)
-    local i = rng.RollIndex(tName, N)
+    local i = rng.rollIndex(tName, N)
     local key = keyset[i]
     local R = t[key]
     if args.debug and tonumber(args.debug) >= 3 then print(N,i,key,R) end
@@ -154,10 +154,10 @@ end
 
 function GetRandomAttribLevel()
     local N = TableLength(dorf_tables.attrib_levels)
-    rng.ResetIndexRolls("attrib levels", N)
+    rng.resetIndexRolls("attrib levels", N)
     while true do
         local level = GetRandomTableEntry("attrib levels", dorf_tables.attrib_levels)
-        if rng.RollBool(level.p) then
+        if rng.rollBool(level.p) then
             return level
         end
     end
@@ -250,7 +250,7 @@ end
 function GenerateStatValue(stat, atr_lvl)
     atr_lvl = atr_lvl == nil and GetRandomAttribLevel() or dorf_tables.attrib_levels[atr_lvl]
     if args.debug and tonumber(args.debug) >= 4 then print(atr_lvl, atr_lvl[1], atr_lvl[2]) end
-    local value = math.floor(rng.RollNormal(atr_lvl[1], atr_lvl[2]))
+    local value = math.floor(rng.rollNormal(atr_lvl[1], atr_lvl[2]))
     value = value < 0 and 0 or value
     value = value > 5000 and 5000 or value
     stat.value = stat.value < value and value or stat.value
@@ -307,7 +307,7 @@ function ApplyType(dwf, dorf_type)
                 utils.insert_or_update(dwf.status.current_soul.skills, { new = true, id = df.job_skill[skill], rating = 0 }, 'id')
                 sTable = GetSkillTable(dwf, skill)
             end
-            local points = rng.RollInt(skillRange[1], skillRange[2])
+            local points = rng.rollInt(skillRange[1], skillRange[2])
             sTable.rating = sTable.rating < points and points or sTable.rating
             sTable.rating = sTable.rating > 20 and 20 or sTable.rating
             sTable.rating = sTable.rating < 0 and 0 or sTable.rating
@@ -327,7 +327,7 @@ function ApplyProfession(dwf, profession, min, max)
             utils.insert_or_update(dwf.status.current_soul.skills, { new = true, id = df.job_skill[skill], rating = 0 }, 'id')
             sTable = GetSkillTable(dwf, skill)
         end
-        local points = rng.RollInt(min, max)
+        local points = rng.rollInt(min, max)
         sTable.rating = sTable.rating < points and points or sTable.rating
         sTable.rating = sTable.rating + bonus
         sTable.rating = sTable.rating > 20 and 20 or sTable.rating
@@ -361,7 +361,7 @@ function ApplyJob(dwf, job) --job = dorf_jobs[X]
     -- Loop tertiary professions
     -- todo: Randomize, replace priority loop entirely (todo: replace priority professions with tertiary)
     --local jobsize = TableLength(job) --We can do this cause we still have to check each RandomElement for tonumber(p)
-    --rng.ResetIndexRolls(jobName, jobsize)
+    --rng.resetIndexRolls(jobName, jobsize)
     local points = 11
     for prof, p in pairs(job) do
         if tonumber(p) then
@@ -371,7 +371,7 @@ function ApplyJob(dwf, job) --job = dorf_jobs[X]
                 profession ratios unique to a dorf job, thus allowing
                 probability to be calculated here to achieve said ratios
                 Note: we need persistent profession counts first--]]
-            if points >= 1 and rng.RollBool(p) then
+            if points >= 1 and rng.rollBool(p) then
                 local max = points
                 local min = points - 5
                 min = min < 0 and 0 or min
@@ -399,7 +399,7 @@ function RollStats(dwf, types)
     for type, table in pairs(dorf_tables.dorf_types) do
         local p = table.p
         if p ~= nil then
-            if rng.RollBool(p) then
+            if rng.rollBool(p) then
                 ApplyType(dwf, type)
             end
         end
@@ -412,7 +412,7 @@ function FindJob(dwf, recursive)
         return false
     end
     --local totalJobs = TableLength(cloned.jobs)
-    --rng.ResetIndexRolls("find a job", totalJobs)
+    --rng.resetIndexRolls("find a job", totalJobs)
     for jobName, jd in spairs(cloned.distributions, 
     function(a,b)
         return twofield_compare(cloned.distributions, 
@@ -679,5 +679,5 @@ else
     end
 end
 
-rng.BlastDistributions()
+--rng.BlastDistributions()
 print('\n')
