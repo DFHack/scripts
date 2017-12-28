@@ -1,24 +1,56 @@
 utils = require('utils')
+json = require('json')
 local rng = require('plugins.cxxrandom')
+print("Loading data tables..")
 local dorf_tables = dfhack.script_environment('dorf_tables')
 cloned = {} --assurances I'm sure
 cloned = {    
-    jobs = utils.clone(dorf_tables.dorf_jobs, true),
+	jobs = utils.clone(dorf_tables.dorf_jobs, true),
     professions = utils.clone(dorf_tables.professions, true),
     distributions = utils.clone(dorf_tables.job_distributions, true),
 }
+print("Done.")
 local validArgs = utils.invert({
-    'applyjob',
+	'applyjob',
     'applyprofession',
     'applytype',
     'selected',
     'clear', --selected --all --allnamed --allcustom --allpimped --allunpimped --allcustomunpimped --allprotected --allunprotected
-    'clearfirst',       --all --allnamed --allcustom --allpimped --allunpimped --allcustomunpimped --allprotected --allunprotected
+	'clearfirst',       --all --allnamed --allcustom --allpimped --allunpimped --allcustomunpimped --allprotected --allunprotected
+	'reroll',
     'debug'
 })
 local args = utils.processArgs({...}, validArgs)
-
 protected_dwarf_signals = {'_', 'c', 'j', 'p'}
+
+
+function LoadPersistentData()
+	local gamePath = dfhack.getDFPath()
+	local fortName = dfhack.TranslateName(df.world_site.find(df.global.ui.site_id).name)
+	local savePath = dfhack.getSavePath()
+	local fileName = fortName .. ".json.dat"
+	local cur = json.open(gamePath .. "/data/save/current/" .. fileName)
+	local saved = json.open(savePath .. "/" .. fileName)
+	print("loading data...")
+	if saved.exists == true and cur.exists == false then
+		print("Previous session save data found.")
+		cur.data = saved.data
+	elseif saved.exists == false then
+		--saved:write()
+	elseif cur.exists == true then
+		print("Existing session data found.")
+	end
+	PimpData = cur.data
+end
+
+function SavePersistentData()
+	local gamePath = dfhack.getDFPath()
+	local fortName = dfhack.TranslateName(df.world_site.find(df.global.ui.site_id).name)
+	local fileName = fortName .. ".json.dat"
+	local cur = json.open(gamePath .. "/data/save/current/" .. fileName)
+	cur.data = PimpData
+	cur:write()
+end
 
 function safecompare(a,b)
     if a == b then
@@ -92,7 +124,7 @@ function DisplayTable(t,query,field)
     print('###########################')
 end
 
-function count_this(to_be_counted)
+function count_this(to_be_counted, field)
     local count = -1
     local var1 = ""
     while var1 ~= nil do
@@ -227,7 +259,7 @@ function isValidJob(job) --job is a dorf_jobs.<job> table
         if not jd then
             error("Job distribution not found. Job: " .. jobName)
         end
-        if jd.cur < jd.max then
+        if PimpData[jobName].count < jd.max then
             return true
         end
     end
@@ -338,10 +370,18 @@ end
 
 --Apply only after previously validating
 function ApplyJob(dwf, job) --job = dorf_jobs[X]
-    local jobName = FindValueKey(cloned.jobs, job)
-    local jd = cloned.distributions[jobName]
-    jd.cur = jd.cur + 1
-    dwf.custom_profession = jobName
+	local jobName = FindValueKey(cloned.jobs, job)
+	local jd = cloned.distributions[jobName]
+	PimpData[jobName].count = PimpData[jobName].count + 1
+	jd.cur = PimpData[jobName].count
+	local id = tostring(dwf.id)
+	DwarvesData[id] = {}
+	DwarvesData[id]['job'] = jobName
+	DwarvesData[id]['professions'] = {}
+	if not PimpData[jobName] then
+		PimpData[jobName] = {}
+	end
+	dwf.custom_profession = jobName
     RollStats(dwf, job.types)
     
     -- Apply required professions
@@ -359,34 +399,62 @@ function ApplyJob(dwf, job) --job = dorf_jobs[X]
     end
         
     -- Loop tertiary professions
-    -- todo: Randomize, replace priority loop entirely (todo: replace priority professions with tertiary)
-    --local jobsize = TableLength(job) --We can do this cause we still have to check each RandomElement for tonumber(p)
-    --rng.resetIndexRolls(jobName, jobsize)
-    local points = 11
-    for prof, p in pairs(job) do
-        if tonumber(p) then
-            --> proc probability and check points
-            --todo: calculate a moving probability to ensure probability ratios are achieved, since we have limited dwarves
-            --[[Doing this would make cause the probabilities to act like
-                profession ratios unique to a dorf job, thus allowing
-                probability to be calculated here to achieve said ratios
-                Note: we need persistent profession counts first--]]
-            if points >= 1 and rng.rollBool(p) then
-                local max = points
-                local min = points - 5
-                min = min < 0 and 0 or min
-                if not bAlreadySetProf2 then
-                    bAlreadySetProf2 = true
-                    dwf.profession2 = df.profession[prof]
-                end
-                ApplyProfession(dwf, prof, min, max)
-                points = points - 2
-            end
-        end
-    end
+	-- Sort loop (asc)
+	--[[]]
+	local points = 11
+	local base_dec = 11 / job.max[1]
+	local total = 0
+	for prof, t in spairs(PimpData[jobName].profs, 
+	function(a,b)
+		return twofield_compare(PimpData[jobName].profs, 
+		a, b, 'count', 'p',
+		function(f1,f2) return safecompare(f1,f2) end, 
+		function(f1,f2) return safecompare(f2,f1) end) 
+	end) 
+	do--]]
+		if total < job.max[1] then
+			local ratio = job[prof]
+			local max = math.ceil(points)
+			local min = math.ceil(points - 5)
+			min = min < 0 and 0 or min
+			--Firsts are special
+			if PimpData[jobName].profs[prof].count < (ratio * PimpData[jobName].count) and points > 7.7 then
+				ApplyProfession(dwf, prof, min, max)
+				table.insert(DwarvesData[id]['professions'], prof)
+				PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
+				if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
+				
+				if not bAlreadySetProf2 then
+					bAlreadySetProf2 = true
+					dwf.profession2 = df.profession[prof]
+				end
+				points = points - base_dec
+				total = total + 1
+			else
+				local p = PimpData[jobName].profs[prof].count > 0 and (1 - (ratio / ((ratio*PimpData[jobName].count) / PimpData[jobName].profs[prof].count))) or ratio
+				p = p < 0 and 0 or p
+				p = p > 1 and 1 or p
+				--p = (p - math.floor(p)) >= 0.5 and math.ceil(p) or math.floor(p)
+				--> proc probability and check points
+				if points >= 1 and rng.rollBool(p) then
+					ApplyProfession(dwf, prof, min, max)
+					table.insert(DwarvesData[id]['professions'], prof)
+					PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
+					if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
+					
+					if not bAlreadySetProf2 then
+						bAlreadySetProf2 = true
+						dwf.profession2 = df.profession[prof]
+					end
+					points = points - base_dec
+					total = total + 1
+				end
+			end
+		end
+	end
     if not bAlreadySetProf2 then
         dwf.profession2 = dwf.profession
-    end
+	end
 end
 
 function RollStats(dwf, types)
@@ -474,34 +542,39 @@ function TrySecondPassExpansion() --Tries to expand distribution maximums
     return false
 end
 
-function CountJob(dwf)
-    TryClearDwarf(dwf)
-    --We must count jobs for pimped dwarves, their unionized after all!!   Pimps be pimpin'
-    if isDwarfPimped(dwf) then
-        local jobName = dwf.custom_profession
-        local job = cloned.distributions[jobName]
-        job.cur = job.cur + 1
-        return true
-        --function increase_prof(p) if p then p.cur = p.cur + 1 end end
-        --increase_prof(cloned.professions[df.job_skill[dwf.profession]])
-        --increase_prof(cloned.professions[df.job_skill[dwf.profession2]])
-    end
-    return false
-end
-
 function ZeroDwarf(dwf)
-    zeroed_count = zeroed_count + 1
-    LoopStatsTable(dwf.body.physical_attrs, function(attribute) attribute.value = 0 end)
+	zeroed_count = zeroed_count + 1
+	
+	LoopStatsTable(dwf.body.physical_attrs, function(attribute) attribute.value = 0 end)
     LoopStatsTable(dwf.status.current_soul.mental_attrs, function(attribute) attribute.value = 0 end)
-    local count_max = count_this(df.job_skill)
+
+	local count_max = count_this(df.job_skill)
     utils.sort_vector(dwf.status.current_soul.skills, 'id')
     for i=0, count_max do
         utils.erase_sorted_key(dwf.status.current_soul.skills, i, 'id')
     end
-    dfhack.units.setNickname(dwf, "")
+
+	dfhack.units.setNickname(dwf, "")
     dwf.custom_profession = ""
     dwf.profession = df.profession['DRUNK']
-    dwf.profession2 = df.profession['DRUNK']
+	dwf.profession2 = df.profession['DRUNK']
+
+	for id, dwf_data in pairs(DwarvesData) do
+		if next(dwf_data) ~= nil and id == tostring(dwf.id) then
+			print("Clearing loaded dwf data for dwf id: " .. id)
+			local jobName = dwf_data.job
+			local job = cloned.jobs[jobName]
+			PimpData[jobName].count = PimpData[jobName].count - 1
+			for i, prof in pairs(dwf_data.professions) do
+				PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count - 1
+				if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
+			end
+			DwarvesData[tostring(id)] = {}
+		elseif next(dwf_data) == nil and id == tostring(dwf.id) then
+			print(":WARNING: ZeroDwarf(dwf) - dwf was zeroed, but had never been pimped before")
+			--error("this dwf_data shouldn't be nil, I think.. I guess maybe if you were clearing dwarves that weren't pimped")
+		end
+	end
 end
 
 function TryClearDwarf(dwf)
@@ -543,8 +616,6 @@ function TryClearDwarf(dwf)
             options ~= 'allunprotected'
             then
                 error(":ERROR: Please use a valid argument for -clearfirst\n{all, selected, allcustom, allpimped, allunpimped, allcustomunpimped, allprotected, allunprotected")
-            else
-                error(":ERROR: FUBAR!")
             end
         end
     else
@@ -553,7 +624,12 @@ function TryClearDwarf(dwf)
         elseif args.clearfirst then
             error(":ERROR: Please use a valid argument\n-clearfirst: {all, allnamed, allcustom, allpimped, allunpimped, allcustomunpimped, allprotected, allunprotected}")
         end
-    end
+	end
+	if args.reroll and cloned.jobs[args.reroll] then
+		if dwf.custom_profession == args.reroll then
+			ZeroDwarf(dwf)
+		end
+	end
 end
 
 function LoopUnits(units, check, fn)
@@ -577,39 +653,70 @@ function CanWork(dwf)
     return dfhack.units.isCitizen(dwf) and dfhack.units.isAdult(dwf)
 end
 
-function PrepareDistributions()
-    for jobName, job in pairs(cloned.jobs) do
-        local jd = cloned.distributions[jobName]
-        if not jd then
-            error("Job distribution not found. Job: " .. jobName)
-        end
-        if jd.max == nil then
-            local IndexMax = 0
-            for i, v in pairs(cloned.distributions.Thresholds) do
-                if work_force >= v then
-                    IndexMax = i
-                end
-            end
-            --print(cloned.distributions.Thresholds[IndexMax])
-            local max = 0
-            for i=1, IndexMax do
-                max = max + jd[i]
-            end 
-            jd.max = max
-        end
-    end
+function Prepare()
+	print("Preparing the tables..")
+	LoadPersistentData()
+	if not PimpData.Dwarves then
+		PimpData.Dwarves = {}
+	end
+	DwarvesData = PimpData.Dwarves
+
+	--Initialize PimpData
+	for jobName, job in pairs(cloned.jobs) do
+		PrepareDistribution(jobName)
+		if not PimpData[jobName] then
+			PimpData[jobName] = {}
+			PimpData[jobName].count = 0
+			PimpData[jobName].profs = {}
+		end
+		for prof, p in pairs(job) do
+			if tonumber(p) then
+				if not PimpData[jobName].profs[prof] then
+					--print("making " .. prof .. " in " .. jobName .. "'s table: " .. PimpData[jobName])
+					PimpData[jobName].profs[prof] = {}
+					PimpData[jobName].profs[prof].p = p
+					PimpData[jobName].profs[prof].count = 0
+				end
+			end
+		end
+	end
+	
+	--Count Professions from 'DwarvesData'
+	--[[for id, dwf_data in pairs(DwarvesData) do
+		local jobName = dwf_data.job
+		local job = cloned.jobs[jobName]
+		local profs = dwf_data.professions
+		PimpData[jobName].count = PimpData[jobName].count + 1
+		for i, prof in pairs(profs) do
+			PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
+		end
+	end--]]
+
+	--TryClearDwarf Loop (or maybe not)
+	print("Tables are set.")
 end
 
---[[
-    'applyjob',
-    'applyprofession',
-    'applytype',
-    'selected',
-    'clear', --selected --all --allnamed --allcustom --allpimped --allunpimped --allcustomunpimped --allprotected --allunprotected
-    'clearfirst',       --all --allnamed --allcustom --allpimped --allunpimped --allcustomunpimped --allprotected --allunprotected
-    'query',
-    'debug'
---]]
+function PrepareDistribution(jobName)
+	local jd = cloned.distributions[jobName]
+	if not jd then
+		error("Job distribution not found. Job: " .. jobName)
+	end
+	if jd.max == nil then
+		local IndexMax = 0
+		for i, v in pairs(cloned.distributions.Thresholds) do
+			if work_force >= v then
+				IndexMax = i
+			end
+		end
+		--print(cloned.distributions.Thresholds[IndexMax])
+		local max = 0
+		for i=1, IndexMax do
+			max = max + jd[i]
+		end 
+		jd.max = max
+	end
+end
+
 
 local SelectedUnit = nil
 local ActiveUnits = df.global.world.units.active
@@ -630,19 +737,21 @@ else
     selection = ActiveUnits
 end
 
+
 dwarf_count = LoopUnits(ActiveUnits, dfhack.units.isCitizen)
 work_force = LoopUnits(ActiveUnits, CanWork)
 --selection_count = LoopUnits(selection, function() return true end)
-print("Dwarf Population: " .. dwarf_count)
+print("\nDwarf Population: " .. dwarf_count)
 print("Work Force: " .. work_force)
-PrepareDistributions()
+Prepare()
+
 if args.clear then
     LoopUnits(selection, CanWork, TryClearDwarf)
     print(zeroed_count .. " dorf(s) have been reset to zero.")
 else
     if not (args.applyjob or args.applyprofession or args.applytype) then
         print("\nPimping Dwarves..")
-        LoopUnits(selection, CanWork, CountJob)
+        LoopUnits(selection, CanWork, TryClearDwarf)
         LoopUnits(selection, CanWork, FindJob)
         print("\n")
         print("cur", "max", "job", "\n  ~~~~~~~~~")
@@ -679,5 +788,7 @@ else
     end
 end
 
---rng.BlastDistributions()
+SavePersistentData()
 print('\n')
+function Query(table, query, parent) if not parent then parent = "" end for k,v in pairs(table) do if string.find(tostring(k), query) then print(parent .. "." .. k) end if type(v) == "table" and not string.find(parent, tostring(k)) then if parent then Query(v, query, parent .. "." .. k) else Query(v, query, k) end end end end 
+--Query(PimpData, "", "pd")
