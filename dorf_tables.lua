@@ -25,11 +25,11 @@ job_distributions = {
 }
 
 attrib_levels = {
-	incompetent =	{p=0.02,	100,	20},
-	verybad =		{p=0.04,	250,	25},
-	bad =			{p=0.08,	450,	30},
-	average =		{p=0.18,	810,	60},
-	good =			{p=0.24,	1350,   75},
+	incompetent =	{p=0.01,	100,	20},
+	verybad =		{p=0.02,	250,	25},
+	bad =			{p=0.04,	450,	30},
+	average =		{p=0.21,	810,	60},
+	good =			{p=0.28,	1350,   75},
 	verygood =		{p=0.22,	1700,   42},
 	superb =		{p=0.12,	1900,   88},
 	amazing =		{p=0.06,	2900,   188},
@@ -37,73 +37,73 @@ attrib_levels = {
 	unbelievable =	{p=0.01,	4829,   42}
 }
 
-dorf_jobs = {
+dorf_jobs = { --max -> max professions(ie. tertiary professions)
 	Miner = {
-		req={'MINER'},
+		req={'MINER'}, max={1988},
 		types={'adaptable','fighter','strong','strong','agile','aware','resilient'}},
 	_Grunt = {
-		req={'RECRUIT'},
+		req={'RECRUIT'}, max={1988},
 		types={'adaptable','fighter','soldier','strong','agile','aware','resilient','strong','agile','aware','resilient','strong','agile','aware','resilient'}},
 	Smelter = {
-		req={'FURNACE_OPERATOR','WOOD_BURNER'},
+		req={'FURNACE_OPERATOR','WOOD_BURNER'}, max={1988},
 		types={'fighter','agile','buff','aware','resilient','resilient','resilient'}},
 	Blacksmith = {
-		req={'BLACKSMITH'},
+		req={'BLACKSMITH'}, max={3},
 		WEAPONSMITH=0.75, ARMORER=0.7, METALSMITH=0.66, BOWYER=0.33,
 		types={'buff','buff','intuitive','aware'}},
 
 	Stoneworker = {
-		req={'STONEWORKER'},
-		ENGRAVER=0.75, MASON=0.66, MECHANIC=0.6,
+		req={'STONEWORKER'}, max={2},
+		ENGRAVER=0.58, MASON=0.66, MECHANIC=0.66,
 		types={'buff','speedy','aware','resilient'}},
 	Woodworker = {
-		req={'WOODWORKER'},
+		req={'WOODWORKER'}, max={3},
 		WOODCUTTER=0.8, CARPENTER=0.7, BOWYER=0.6,
 		types={'agile','agile','social','smart','creative'}},
 	Architect = {
-		req={'ARCHITECT'},
-		MASON=0.75, CARPENTER=0.75, MECHANIC=0.66,
+		req={'ARCHITECT'}, max={3},
+		MASON=0.75, CARPENTER=0.75, MECHANIC=0.5,
 		types={'genius','creative','speedy'}},
 
 	Farmer = {
-		req={'PLANTER'},
+		req={'PLANTER'}, max={5},
 		BREWER=0.65, FARMER=0.51, POTASH_MAKER=0.45, MILLER=0.25, MILKER=0.25, CHEESE_MAKER=0.25, SHEARER=0.15,
 		types={'speedy','aware','intuitive'}},
 	Clothier = {
-		req={'CLOTHIER'},
+		req={'CLOTHIER'}, max={4},
 		THRESHER=0.75, WEAVER=0.66, SPINNER=0.66, LEATHERWORKER=0.5, DYER=0.25,
 		types={'speedy','speedy','social'}},
 	Warden = {
-		req={'ANIMAL_CARETAKER'},
+		req={'ANIMAL_CARETAKER'}, max={5},
 		SHEARER=0.88, ANIMAL_TRAINER=0.8, MILKER=0.75, CHEESE_MAKER=0.41, TANNER=0.38, BUTCHER=0.25, BONE_CARVER=0.28,
 		types={'aware','social','speedy','buff'}},		
 	Hunter = {
-		req={'HUNTER','RANGER'},
+		req={'HUNTER','RANGER'}, max={4},
 		TANNER=0.88, HERBALIST=0.75, BUTCHER=0.66, TRAPPER=0.55,
 		types={'buff','agile','agile','agile','aware','intuitive','smart'}},
 	Butcher = {
-		req={'BUTCHER'},
+		req={'BUTCHER'}, max={3},
 		TANNER=0.75, COOK=0.66, BONE_CARVER=0.55,
 		types={'buff','speedy','aware'}},
 
 	Artison = {
-		req={'CRAFTSMAN'},
+		req={'CRAFTSMAN'}, max={7},
 		ENGRAVER=0.8, WOODCRAFTER=0.6, STONECRAFTER=0.4, JEWELER=0.4, GEM_CUTTER=0.4, GEM_SETTER=0.4, BONE_CARVER=0.2, POTTER=0.2,
 		types={'agile','agile','smart','creative','social','resilient'}},
 	Doctor = {
-		req={'DOCTOR'},
+		req={'DOCTOR'}, max={3},
 		SUTURER=0.8, SURGEON=0.66, BONE_SETTER=0.42, DIAGNOSER=0.42,
 		types={'smart','aware','agile','social','resilient'}},
 	Leader = {
-		req={'ADMINISTRATOR'},
+		req={'ADMINISTRATOR'}, max={6},
 		FARMER=0.38, BREWER=0.51, CLERK=0.33, ENGRAVER=0.51, MERCHANT=0.33, SIEGE_OPERATOR=0.66, PUMP_OPERATOR=0.33, FURNACE_OPERATOR=0.33, WOOD_BURNER=0.47,
 		types={'leader','smart','social','fighter'}},
 	Trader = {
-		req={'TRADER'},
+		req={'TRADER'}, max={5},
 		CLERK=0.75, MERCHANT=0.75, ADMINISTRATOR=0.42, JEWELER=0.51, CRAFTSMAN=0.33,
 		types={'smart','social'}},
 	Engineer = {
-		req={'ENGINEER'},
+		req={'ENGINEER'}, max={3},
 		SIEGE_ENGINEER=0.88, MECHANIC=0.88, METALSMITH=0.33,
 		types={'genius','intuitive'}}
 }
