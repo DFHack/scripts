@@ -124,7 +124,7 @@ function DisplayTable(t,query,field)
     print('###########################')
 end
 
-function count_this(to_be_counted, field)
+function count_this(to_be_counted)
     local count = -1
     local var1 = ""
     while var1 ~= nil do
@@ -676,6 +676,8 @@ function Prepare()
 					PimpData[jobName].profs[prof] = {}
 					PimpData[jobName].profs[prof].p = p
 					PimpData[jobName].profs[prof].count = 0
+				else
+					PimpData[jobName].profs[prof].p = p
 				end
 			end
 		end
