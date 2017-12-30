@@ -29,10 +29,47 @@ The ``building`` or ``unit`` options are automatically assumed when in relevant 
 ]====]
 local gui = require 'gui'
 local dlg = require 'gui.dialogs'
+local widgets = require 'gui.widgets'
 local plugin = require 'plugins.rename'
 
 local mode = ...
 local focus = dfhack.gui.getCurFocus()
+
+RenameDialog = defclass(RenameDialog, dlg.InputBox)
+function RenameDialog:init(info)
+    self:addviews{
+        widgets.Label{
+            view_id = 'controls',
+            text = {
+                {key = 'CUSTOM_ALT_C', text = ': Clear, ',
+                    on_activate = function()
+                        self.subviews.edit.text = ''
+                    end},
+                {key = 'CUSTOM_ALT_S', text = ': Special chars',
+                    on_activate = curry(dfhack.run_script, 'gui/cp437-table')},
+            },
+            frame = {b = 0, l = 0, r = 0, w = 70},
+        }
+    }
+    -- calculate text_width once
+    self.subviews.controls:getTextWidth()
+end
+
+function RenameDialog:getWantedFrameSize()
+    local x, y = self.super.getWantedFrameSize(self)
+    x = math.max(x, self.subviews.controls.text_width)
+    return x, y + 2
+end
+
+function showRenameDialog(title, text, input, on_input)
+    RenameDialog{
+        frame_title = title,
+        text = text,
+        text_pen = COLOR_GREEN,
+        input = input,
+        on_input = on_input,
+    }:show()
+end
 
 local function verify_mode(expected)
     if mode ~= nil and mode ~= expected then
@@ -47,9 +84,9 @@ if building and (not unit or mode == 'building') then
     verify_mode('building')
 
     if plugin.canRenameBuilding(building) then
-        dlg.showInputPrompt(
+        showRenameDialog(
             'Rename Building',
-            'Enter a new name for the building:', COLOR_GREEN,
+            'Enter a new name for the building:',
             building.name,
             curry(plugin.renameBuilding, building)
         )
@@ -61,9 +98,9 @@ if building and (not unit or mode == 'building') then
     end
 elseif unit then
     if mode == 'unit-profession' then
-        dlg.showInputPrompt(
+        showRenameDialog(
             'Rename Unit',
-            'Enter a new profession for the unit:', COLOR_GREEN,
+            'Enter a new profession for the unit:',
             unit.custom_profession,
             function(newval)
                 unit.custom_profession = newval
@@ -78,9 +115,9 @@ elseif unit then
             vnick = vname.nickname
         end
 
-        dlg.showInputPrompt(
+        showRenameDialog(
             'Rename Unit',
-            'Enter a new nickname for the unit:', COLOR_GREEN,
+            'Enter a new nickname for the unit:',
             vnick,
             curry(dfhack.units.setNickname, unit)
         )

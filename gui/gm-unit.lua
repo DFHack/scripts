@@ -42,12 +42,11 @@ editor_skills.ATTRS={
     learned_only= false,
 }
 function list_skills(unit,learned_only)
-    local s_=df.job_skill
     local u_skills=unit.status.current_soul.skills
     local ret={}
-    for i,v in ipairs(s_) do
-        if i>0 then
-            local u_skill=utils.binsearch(u_skills,i,"id")
+    for skill,v in ipairs(df.job_skill) do
+        if skill ~= df.job_skill.NONE then
+            local u_skill=utils.binsearch(u_skills,skill,"id")
             if u_skill or not learned_only then
                 if not u_skill then
                     u_skill={rating=-1,experience=0}
@@ -60,8 +59,15 @@ function list_skills(unit,learned_only)
                     rating={caption="<unlearned>",xp_threshold=0}
                 end
 
-                local text=string.format("%s: %s %d %d/%d",df.job_skill.attrs[i].caption,rating.caption,u_skill.rating,u_skill.experience,rating.xp_threshold)
-                table.insert(ret,{text=text,id=i})
+                local text=string.format("%s: %s %d %d/%d",
+                    df.job_skill.attrs[skill].caption,
+                    rating.caption,u_skill.rating,
+                    u_skill.experience,rating.xp_threshold)
+                table.insert(ret,{
+                    text=text,
+                    id=skill,
+                    search_key=text:lower()
+                })
             end
         end
     end
@@ -406,7 +412,7 @@ function editor_counters:init( args )
                     {text=": set counter ",
                     key = "SELECT",
                     }
-                    
+
                     }
             },
         }
@@ -425,11 +431,11 @@ function wound_creator:init( args )
     if self.target_wound==nil then
         qerror("invalid wound")
     end
-    
+
 
     self:addviews{
     widgets.List{
-        
+
         frame = {t=0, b=1,l=1},
         view_id="fields",
         on_submit=self:callback("edit_cur_wound"),
@@ -521,7 +527,7 @@ function editor_wounds:get_cur_wound()
     return choice,ret_wound
 end
 function editor_wounds:delete_current_wound(index,choice)
-    
+
     utils.erase_sorted(self.trg_wounds,choice.wound,"id")
     choice.wound:delete()
     self:dirty_unit()
@@ -531,7 +537,7 @@ function editor_wounds:create_new_wound()
     print("Creating")
 end
 function editor_wounds:edit_cur_wound(index,choice)
-    
+
 end
 function editor_wounds:init( args )
     if self.target_unit==nil then
@@ -541,7 +547,7 @@ function editor_wounds:init( args )
 
     self:addviews{
     widgets.List{
-        
+
         frame = {t=0, b=1,l=1},
         view_id="wounds",
         on_submit=self:callback("edit_cur_wound"),

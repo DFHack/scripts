@@ -20,6 +20,11 @@ addresses in-game. Passing "all" does this for all globals.
 ]====]
 
 GLOBALS = {
+    version = "version",
+    min_load_version = "min_load_version",
+    movie_version = "movie_version",
+    basic_seed = "basic_seed",
+    enabler = "enabler",
     cursor = "cursor",
     point = "selection_rect",
     gamemode = "gamemode",
@@ -32,6 +37,8 @@ GLOBALS = {
     itemmade_number = "created_item_count",
     mainview = "map_renderer",
     d_init = "d_init",
+    title = "title",
+    title2 = "title_spaced",
     event_flow = "flows",
     gps = "gps",
     gview = "gview",
@@ -66,6 +73,7 @@ GLOBALS = {
     buildjob_assignroom = "ui_building_in_assign",
     buildjob_sizeroom = "ui_building_in_resize",
     addingtask_sub = "ui_lever_target_type",
+    buildjob_sizerad = "ui_building_resize_radius",
     scrollx = "window_x",
     scrolly = "window_y",
     scrollz = "window_z",
@@ -201,8 +209,12 @@ while true do
     local g_addr = data.intptr_t[start + (index * 2) + 1]
     local df_name = read_cstr(p_name)
     local g_name = GLOBALS[df_name]
-    if not g_name then
-        -- dfhack.printerr('Unknown DF global: ' .. df_name)
+    if df_name:find('^index[12]_') then
+        -- skip
+    elseif not g_name then
+        if iargs.warn then
+            dfhack.printerr(('Unknown DF global: %s 0x%x'):format(df_name, g_addr))
+        end
     else
         save_addr(g_name, g_addr)
     end

@@ -101,18 +101,18 @@ function QCMDDialog:updateList()
         local hotkey = nil
         if i <= HOTKEYS:len() then
             hotkey = HOTKEYS:sub(i, i)
-        end
 
-        -- Store the entry.
-        table.insert(self.commands, {
-            text = {
-                    { text = hotkey or '', width = HOTKEYWIDTH }, ' ',
-                    { text = entry.value, width = COMMANDWIDTH },
-            },
-            entry = entry,
-            command = entry.value,
-            hotkey = 'CUSTOM_' .. hotkey:upper(),
-        })
+            -- Store the entry.
+            table.insert(self.commands, {
+                text = {
+                        { text = hotkey or '', width = HOTKEYWIDTH }, ' ',
+                        { text = entry.value, width = COMMANDWIDTH },
+                },
+                entry = entry,
+                command = entry.value,
+                hotkey = 'CUSTOM_' .. hotkey:upper(),
+            })
+        end
     end
     self.subviews.list:setChoices(self.commands);
 end

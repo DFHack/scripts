@@ -52,6 +52,9 @@ function Pathable:onAboutToShow(parent)
 end
 
 function Pathable:onRenderBody(p)
+    local cursor = df.global.cursor
+    local block = dfhack.maps.getTileBlock(pos2xyz(cursor))
+
     p:seek(1, 1)
     p:string("DFHack pathable tile viewer"):newline():newline(1)
     render_toggle(p, 'CUSTOM_L', 'Lock cursor', opts.lock_cursor)
@@ -64,8 +67,13 @@ function Pathable:onRenderBody(p)
     p:key_string('LEAVESCREEN', "Exit to cursor"):newline(1)
     p:key_string('LEAVESCREEN_ALL', "Exit to here"):newline(1)
 
+    p:newline(1)
+    p:string('Group: ' .. block.walkable[cursor.x % 16][cursor.y % 16])
+    p:newline(1)
+    p:string(df.tiletype[block.tiletype[cursor.x % 16][cursor.y % 16]], COLOR_CYAN)
+
     if opts.draw then
-        plugin.paintScreen(xyz2pos(pos2xyz(df.global.cursor)), opts.skip_unrevealed)
+        plugin.paintScreen(xyz2pos(pos2xyz(cursor)), opts.skip_unrevealed)
     end
 end
 
