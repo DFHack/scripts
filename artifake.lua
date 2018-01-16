@@ -1,7 +1,7 @@
---A half-assed way to get artifact quality gear without the actual artifact or artifake.
+--A half-assed way to get artifact quality gear without the actual artifact or artimake.
 --[====[
 
-articrap
+artifake
 ========
 Changes an item or full inventory of items to artifact quality which prevents wear.
 
