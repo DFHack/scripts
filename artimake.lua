@@ -1,7 +1,7 @@
---Artifake an item and it will have properly inserted history/creator/properties.
+--Artimake an item and it will have properly inserted history/creator/properties.
 --[====[
 
-artifake
+artimake
 ========
 Create a new artifact with properly inserted historical links and properties.
 Uses the same item and material syntax as createitem does.
@@ -22,7 +22,7 @@ local args = utils.processArgs({...}, validArgs)
 
 if args.help then
  print(
-[[artifake.lua
+[[artimake.lua
 arguments:
     -help
     print this help message
