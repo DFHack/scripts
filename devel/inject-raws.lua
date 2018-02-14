@@ -106,8 +106,8 @@ local item_types = {
     armor = { df.itemdef_armorst, itemdefs.armor, 'armor_type' },
     ammo = { df.itemdef_ammost, itemdefs.ammo, 'ammo_type' },
     siegeammo = { df.itemdef_siegeammost, itemdefs.siege_ammo, 'siegeammo_type' },
-    gloves = { df.itemdef_glovest, itemdefs.gloves, 'gloves_type' },
-    shoes = { df.itemdef_shoest, itemdefs.shoes, 'shoes_type' },
+    gloves = { df.itemdef_glovesst, itemdefs.gloves, 'gloves_type' },
+    shoes = { df.itemdef_shoesst, itemdefs.shoes, 'shoes_type' },
     shield = { df.itemdef_shieldst, itemdefs.shields, 'shield_type' },
     helm = { df.itemdef_helmst, itemdefs.helms, 'helm_type' },
     pants = { df.itemdef_pantsst, itemdefs.pants, 'pants_type' },
@@ -170,7 +170,7 @@ local mode = nil
 local ops = {}
 
 for _,kv in ipairs(args) do
-    if mode and string.match(kv, '^[%u_]+$') then
+    if mode and string.match(kv, '^[%u_ ]+$') then
         table.insert(ops, curry(mode, kv))
     elseif kv == 'reaction' then
         mode = inject_reaction

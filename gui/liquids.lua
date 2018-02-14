@@ -189,9 +189,9 @@ function LiquidsUI:onRenderBody(dc)
 
     dc:newline():pen(COLOR_GREY)
 
-    dc:newline(1):key('CUSTOM_B'):string(": ")
+    dc:newline(1):key('CUSTOM_B'):string(', '):key('CUSTOM_SHIFT_B'):string(": ")
     self.brush:render(dc)
-    dc:newline(1):key('CUSTOM_P'):string(": ")
+    dc:newline(1):key('CUSTOM_P'):string(', '):key('CUSTOM_SHIFT_P'):string(": ")
     self.paint:render(dc)
 
     local paint = self.paint:get()
@@ -199,7 +199,11 @@ function LiquidsUI:onRenderBody(dc)
     dc:newline()
     if paint.liquid then
         dc:newline(1):string("Amount: "..self.amount)
-        dc:advance(1):string("("):key('SECONDSCROLL_UP'):key('SECONDSCROLL_DOWN'):string(")")
+        dc:advance(1):string("(")
+            :key('SECONDSCROLL_UP'):key('SECONDSCROLL_DOWN')
+            :string(", ")
+            :key('STRING_A048'):string("-"):key('STRING_A055')
+            :string(")")
         dc:newline(3):key('CUSTOM_S'):string(": ")
         self.set:render(dc)
     else
@@ -263,14 +267,20 @@ function LiquidsUI:onInput(keys)
     local liquid = paint.liquid
     if keys.CUSTOM_B then
         self.brush:step()
+    elseif keys.CUSTOM_SHIFT_B then
+        self.brush:step(-1)
     elseif keys.CUSTOM_P then
         self.paint:step()
+    elseif keys.CUSTOM_SHIFT_P then
+        self.paint:step(-1)
     elseif liquid and keys.SECONDSCROLL_UP then
         self.amount = math.max(0, self.amount-1)
     elseif liquid and keys.SECONDSCROLL_DOWN then
         self.amount = math.min(7, self.amount+1)
     elseif liquid and keys.CUSTOM_S then
         self.set:step()
+    elseif liquid and keys._STRING and keys._STRING >= string.byte('0') and keys._STRING <= string.byte('7') then
+        self.amount = keys._STRING - string.byte('0')
     elseif paint.flow and keys.CUSTOM_F then
         self.flow:step()
     elseif paint.flow and keys.CUSTOM_R then

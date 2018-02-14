@@ -84,7 +84,7 @@ function progress_ipairs(vector, desc, interval)
             print(('        %s %i/%i (%0.f%%)'):format(desc, k, #vector, k * 100 / #vector))
         end
         return cb(vector, k)
-    end, vector, 0
+    end, vector, nil
 end
 
 -- wrapper that returns "unknown N" for df.enum_type[BAD_VALUE],

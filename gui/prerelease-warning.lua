@@ -93,6 +93,14 @@ if #pack_message > 0 and (path:find('lnp') or path:find('starter') or path:find(
     end
 end
 
+for _, v in pairs(utils.split_string([[
+
+REMINDER: Please REPORT any issues you encounter while
+using this DFHack build on GitHub or the Bay12 Forums.]], '\n')) do
+    table.insert(message, NEWLINE)
+    table.insert(message, {text=v, pen=COLOR_LIGHTCYAN})
+end
+
 dfhack.print('\n')
 
 for k,v in ipairs(message) do

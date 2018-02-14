@@ -9,44 +9,45 @@ An editor for various unit attributes.
 ]====]
 local gui = require 'gui'
 local dialog = require 'gui.dialogs'
-local widgets =require 'gui.widgets'
+local widgets = require 'gui.widgets'
 local guiScript = require 'gui.script'
 local utils = require 'utils'
-local args={...}
+local args = {...}
 
 
 local target
 --TODO: add more ways to guess what unit you want to edit
-if args[1]~= nil then
-    target=df.units.find(args[1])
+if args[1] ~= nil then
+    target = df.units.find(args[1])
 else
-    target=dfhack.gui.getSelectedUnit(true)
+    target = dfhack.gui.getSelectedUnit(true)
 end
 
-if target==nil then
+if target == nil then
     qerror("No unit to edit") --TODO: better error message
 end
-local editors={}
+local editors = {}
 function add_editor(editor_class)
-    table.insert(editors,{text=editor_class.ATTRS.frame_title,on_submit=function ( unit )
+    local title = editor_class.ATTRS.frame_title
+    table.insert(editors, {text=title, search_key=title:lower(), on_submit=function(unit)
         editor_class{target_unit=unit}:show()
     end})
 end
 -------------------------------various subeditors---------
---TODO set local sould or better yet skills vector to reduce long skill list access typing
-editor_skills=defclass(editor_skills,gui.FramedScreen)
-editor_skills.ATTRS={
+--TODO set local should or better yet skills vector to reduce long skill list access typing
+editor_skills = defclass(editor_skills, gui.FramedScreen)
+editor_skills.ATTRS = {
     frame_style = gui.GREY_LINE_FRAME,
     frame_title = "Skill editor",
     target_unit = DEFAULT_NIL,
-    learned_only= false,
+    learned_only = false,
 }
 function list_skills(unit,learned_only)
-    local u_skills=unit.status.current_soul.skills
-    local ret={}
+    local u_skills = unit.status.current_soul.skills
+    local ret = {}
     for skill,v in ipairs(df.job_skill) do
         if skill ~= df.job_skill.NONE then
-            local u_skill=utils.binsearch(u_skills,skill,"id")
+            local u_skill = utils.binsearch(u_skills, skill, "id")
             if u_skill or not learned_only then
                 if not u_skill then
                     u_skill={rating=-1,experience=0}
@@ -89,33 +90,33 @@ function editor_skills:init( args )
     local skill_list=list_skills(self.target_unit,self.learned_only)
 
     self:addviews{
-    widgets.FilteredList{
-        choices=skill_list,
-        frame = {t=0, b=1,l=1},
-        view_id="skills",
-    },
-    widgets.Label{
-                frame = { b=0,l=1},
-                text ={{text= ": exit editor ",
-                    key  = "LEAVESCREEN",
-                    on_activate= self:callback("dismiss")
-                    },
-                    {text=": remove level ",
-                    key = "SECONDSCROLL_UP",
-                    on_activate=self:callback("level_skill",-1)},
-                    {text=": add level ",
-                    key = "SECONDSCROLL_DOWN",
-                    on_activate=self:callback("level_skill",1)}
-                    ,
-                    {text=": show learned only ",
-                    key = "CHANGETAB",
-                    on_activate=function ()
-                        self.learned_only=not self.learned_only
-                        self:update_list(true)
-                    end}
-                    }
-            },
-        }
+        widgets.FilteredList{
+            choices=skill_list,
+            frame = {t=0, b=1,l=1},
+            view_id="skills",
+        },
+        widgets.Label{
+            frame = { b=0,l=1},
+            text ={{text= ": exit editor ",
+                key  = "LEAVESCREEN",
+                on_activate= self:callback("dismiss")
+                },
+                {text=": remove level ",
+                key = "SECONDSCROLL_UP",
+                on_activate=self:callback("level_skill",-1)},
+                {text=": add level ",
+                key = "SECONDSCROLL_DOWN",
+                on_activate=self:callback("level_skill",1)}
+                ,
+                {text=": show learned only ",
+                key = "CHANGETAB",
+                on_activate=function ()
+                    self.learned_only=not self.learned_only
+                    self:update_list(true)
+                end}
+            }
+        },
+    }
 end
 function editor_skills:get_cur_skill()
     local list_wid=self.subviews.skills
@@ -168,7 +169,7 @@ function RaceBox:preinit(info)
     if RaceBox.ATTRS.allow_none or info.allow_none then
         table.insert(choices,{text="<none>",num=-1})
     end
-    for i,v in ipairs(df.global.world.raws.creatures.all) do
+    for i, v in ipairs(df.global.world.raws.creatures.all) do
         local text=self:format_creature(v)
         table.insert(choices,{text=text,raw=v,num=i,search_key=text:lower()})
     end
@@ -211,9 +212,9 @@ function civ_name(id,format_name,format_no_name,name_other,name_invalid)
     end
     local t={NAME=dfhack.TranslateName(civ.name),ENGLISH=dfhack.TranslateName(civ.name,true),ID=civ.id} --TODO race?, maybe something from raws?
     if t.NAME=="" then
-        return string.gsub(format_no_name or "<unnamed>:$ID", "%$(%w+)", t)
+        return string.gsub(format_no_name or "<unnamed> ($ID)", "%$(%w+)", t)
     end
-    return string.gsub(format_name or "$NAME ($ENGLISH):$ID", "%$(%w+)", t)
+    return string.gsub(format_name or "$NAME ($ENGLISH) ($ID)", "%$(%w+)", t)
 end
 function CivBox:update_choices()
     local choices={}
@@ -221,7 +222,7 @@ function CivBox:update_choices()
         table.insert(choices,{text=self.name_other,num=-1})
     end
 
-    for i,v in ipairs(df.global.world.entities.all) do
+    for i, v in ipairs(df.global.world.entities.all) do
         if not self.race_filter or (v.race==self.race_filter) then --TODO filter type
             local text=civ_name(v,self.format_name,self.format_no_name,self.name_other,self.name_invalid)
             table.insert(choices,{text=text,raw=v,num=i})
@@ -278,7 +279,7 @@ editor_civ.ATTRS={
     frame_style = gui.GREY_LINE_FRAME,
     frame_title = "Civilization editor",
     target_unit = DEFAULT_NIL,
-    }
+}
 
 function editor_civ:update_curren_civ()
     self.subviews.civ_name:setText("Currently: "..civ_name(self.target_unit.civ_id))
@@ -292,7 +293,7 @@ function editor_civ:init( args )
     widgets.Label{view_id="civ_name",frame = { t=1,l=1}, text="Currently: "..civ_name(self.target_unit.civ_id)},
     widgets.Label{frame = { t=2,l=1}, text={{text=": set to other (-1, usually enemy)",key="CUSTOM_N",
         on_activate= function() self.target_unit.civ_id=-1;self:update_curren_civ() end}}},
-    widgets.Label{frame = { t=3,l=1}, text={{text=": set to current civ("..df.global.ui.civ_id..")",key="CUSTOM_C",
+    widgets.Label{frame = { t=3,l=1}, text={{text=": set to current civ ("..df.global.ui.civ_id..")",key="CUSTOM_C",
         on_activate= function() self.target_unit.civ_id=df.global.ui.civ_id;self:update_curren_civ() end}}},
     widgets.Label{frame = { t=4,l=1}, text={{text=": manually enter",key="CUSTOM_E",
         on_activate=function ()
@@ -358,24 +359,24 @@ editor_counters.ATTRS={
     }
 }
 function editor_counters:fill_counters()
-    local ret={}
-    local u=self.target_unit
-    for i,v in ipairs(self.counters1) do
-        table.insert(ret,{f=u.counters:_field(v),name=v})
+    local ret = {}
+    local u = self.target_unit
+    for i, v in ipairs(self.counters1) do
+        table.insert(ret, {f=u.counters:_field(v),name=v})
     end
-    for i,v in ipairs(self.counters2) do
-        table.insert(ret,{f=u.counters2:_field(v),name=v})
+    for i, v in ipairs(self.counters2) do
+        table.insert(ret, {f=u.counters2:_field(v),name=v})
     end
     return ret
 end
 function editor_counters:update_counters()
-    for i,v in ipairs(self.counter_list) do
-        v.text=string.format("%s:%d",v.name,v.f.value)
+    for i, v in ipairs(self.counter_list) do
+        v.text=string.format("%s: %d", v.name, v.f.value)
     end
     self.subviews.counters:setChoices(self.counter_list)
 end
 function editor_counters:set_cur_counter(value,index,choice)
-    choice.f.value=value
+    choice.f.value = value
     self:update_counters()
 end
 function editor_counters:choose_cur_counter(index,choice)
@@ -393,74 +394,86 @@ function editor_counters:init( args )
 
 
     self:addviews{
-    widgets.FilteredList{
-        choices=self.counter_list,
-        frame = {t=0, b=1,l=1},
-        view_id="counters",
-        on_submit=self:callback("choose_cur_counter"),
-        on_submit2=self:callback("set_cur_counter",0),--TODO some things need to be set to different defaults
-    },
-    widgets.Label{
-                frame = { b=0,l=1},
-                text ={{text= ": exit editor ",
-                    key  = "LEAVESCREEN",
-                    on_activate= self:callback("dismiss")
-                    },
-                    {text=": reset counter ",
-                    key = "SEC_SELECT",
-                    },
-                    {text=": set counter ",
-                    key = "SELECT",
-                    }
+        widgets.FilteredList{
+            choices=self.counter_list,
+            frame = {t=0, b=1,l=1},
+            view_id="counters",
+            on_submit=self:callback("choose_cur_counter"),
+            on_submit2=self:callback("set_cur_counter",0),--TODO some things need to be set to different defaults
+        },
+        widgets.Label{
+            frame = { b=0,l=1},
+            text = {{text= ": exit editor ",
+                key  = "LEAVESCREEN",
+                on_activate= self:callback("dismiss")
+                },
+                {text=": reset counter ",
+                key = "SEC_SELECT",
+                },
+                {text=": set counter ",
+                key = "SELECT",
+                }
 
-                    }
-            },
-        }
+            }
+        },
+    }
     self:update_counters()
 end
 add_editor(editor_counters)
 
-wound_creator=defclass(wound_creator,gui.FramedScreen)
-wound_creator.ATTRS={
+prof_editor = defclass(prof_editor, gui.FramedScreen)
+prof_editor.ATTRS = {
     frame_style = gui.GREY_LINE_FRAME,
-    frame_title = "Wound creator",
-    target_wound = DEFAULT_NIL,
-    --filter
+    frame_title = "Profession editor",
+    target_unit = DEFAULT_NIL,
 }
-function wound_creator:init( args )
-    if self.target_wound==nil then
-        qerror("invalid wound")
+
+function prof_editor:init()
+    local u = self.target_unit
+    local opts = {}
+    local craw = df.creature_raw.find(u.race)
+    for i in ipairs(df.profession) do
+        if i ~= df.profession.NONE then
+            local attrs = df.profession.attrs[i]
+            local caption = attrs.caption or '?'
+            local tile = string.char(attrs.military and craw.creature_soldier_tile ~= 0 and
+                craw.creature_soldier_tile or craw.creature_tile)
+            table.insert(opts, {
+                text = {
+                    (i == u.profession and '*' or ' ') .. ' ',
+                    {text = tile, pen = dfhack.units.getCasteProfessionColor(u.race, u.caste, i)},
+                    ' ' .. caption
+                },
+                profession = i,
+                search_key = caption:lower(),
+            })
+        end
     end
 
-
     self:addviews{
-    widgets.List{
-
-        frame = {t=0, b=1,l=1},
-        view_id="fields",
-        on_submit=self:callback("edit_cur_wound"),
-        on_submit2=self:callback("delete_current_wound")
-    },
-    widgets.Label{
-                frame = { b=0,l=1},
-                text ={{text= ": exit editor ",
-                    key  = "LEAVESCREEN",
-                    on_activate= self:callback("dismiss")},
-
-                    {text=": edit wound ",
-                    key = "SELECT"},
-
-                    {text=": delete wound ",
-                    key = "SEC_SELECT"},
-                    {text=": create wound ",
-                    key = "CUSTOM_CTRL_I",
-                    on_activate= self:callback("create_new_wound")},
-
-                    }
-            },
+        widgets.FilteredList{
+            frame = {t=1, l=1, b=2},
+            choices = opts,
+            view_id = 'professions',
+            on_submit = self:callback('save_profession'),
+        },
+        widgets.Label{
+            frame = {b=0,l=1},
+            text = {
+                {key = "LEAVESCREEN", text= ": exit editor ",
+                on_activate = self:callback("dismiss")},
+            }
         }
-    self:update_wounds()
+    }
 end
+
+function prof_editor:save_profession(_, choice)
+    self.target_unit.profession = choice.profession
+    self.target_unit.profession2 = choice.profession
+    self:dismiss()
+end
+
+add_editor(prof_editor)
 -------------------
 editor_wounds=defclass(editor_wounds,gui.FramedScreen)
 editor_wounds.ATTRS={
@@ -477,45 +490,72 @@ function format_flag_name( fname )
     return fname:sub(1,1):upper()..fname:sub(2):gsub("_"," ")
 end
 function name_from_flags( wp )
-    for i,v in ipairs(wp.flags1) do
+    for i, v in ipairs(wp.flags1) do
         if v then
             return format_flag_name(df.wound_damage_flags1[i])
         end
     end
-    for i,v in ipairs(wp.flags2) do
+    for i, v in ipairs(wp.flags2) do
         if v then
             return format_flag_name(df.wound_damage_flags2[i])
         end
     end
     return "<unnamed wound>"
 end
-function format_wound( list_id,wound, unit)
+function lookup_bodypart( wound_part,unit,is_singular )
+    local bp=unit.body.body_plan.body_parts
+    local part=bp[wound_part.body_part_id]
 
+    if is_singular then
+        return part.name_singular[0].value
+    else
+        return part.name_plural[0].value
+    end
+end
+function format_wound( list_id,wound, unit)
+    --TODO(warmist): what if there are more parts?
     local name="<unnamed wound>"
-    if #wound.parts>0 and #wound.parts[0].effect_type>0 then --try to make wound name by effect...
-        name=tostring(df.wound_effect_type[wound.parts[0].effect_type[0]])
-        if #wound.parts>1 then --cheap and probably incorrect...
-            name=name.."s"
+    local body_part=""
+    if wound.flags.severed_part then
+        name="severed"
+        if #wound.parts>0 then
+            body_part=lookup_bodypart(wound.parts[0],unit,true)
         end
-    elseif #wound.parts>0 and is_scar(wound.parts[0]) then
-        name="Scar"
-    elseif #wound.parts>0 then
-        local wp=wound.parts[0]
-        name=name_from_flags(wp)
+    else
+        if #wound.parts>0 then
+            if #wound.parts[0].effect_type>0 then --try to make wound name by effect...
+                name=tostring(df.wound_effect_type[wound.parts[0].effect_type[0]])
+                if #wound.parts>1 then --cheap and probably incorrect...
+                    name=name.."s"
+                end
+            elseif is_scar(wound.parts[0]) then
+                name="Scar"
+            else
+                local wp=wound.parts[0]
+                name=name_from_flags(wp)
+            end
+            body_part=lookup_bodypart(wound.parts[0],unit,true)
+        end
     end
 
-    return string.format("%d. %s id=%d",list_id,name,wound.id)
+    return string.format("%d. %s %s(%d)",list_id,body_part,name,wound.id)
 end
 function editor_wounds:update_wounds()
     local ret={}
-    for i,v in ipairs(self.trg_wounds) do
-        table.insert(ret,{text=format_wound(i,v,self.target_unit),wound=v})
+    for i, v in ipairs(self.trg_wounds) do
+        table.insert(ret,{text=format_wound(i, v,self.target_unit),wound=v})
     end
     self.subviews.wounds:setChoices(ret)
     self.wound_list=ret
 end
 function editor_wounds:dirty_unit()
-    print("todo: implement unit status recalculation")
+    self.target_unit.flags2={calculated_nerves=false,calculated_bodyparts=false,calculated_insulation=false}
+    --[=[
+        FIXME(warmist): testing required, this might be not enough:
+            * look into body.body_plan.flags
+            * all the "good" flags
+        worked kindof okay so maybe not?
+    --]=]
 end
 function editor_wounds:get_cur_wound()
     local list_wid=self.subviews.wounds
@@ -559,15 +599,15 @@ function editor_wounds:init( args )
                     key  = "LEAVESCREEN",
                     on_activate= self:callback("dismiss")},
 
+                    --[[ TODO(warmist): implement this and the create_new_wound
                     {text=": edit wound ",
-                    key = "SELECT"},
+                    key = "SELECT"},]]
 
                     {text=": delete wound ",
                     key = "SEC_SELECT"},
-                    {text=": create wound ",
+                    --[[{text=": create wound ",
                     key = "CUSTOM_CTRL_I",
-                    on_activate= self:callback("create_new_wound")},
-
+                    on_activate= self:callback("create_new_wound")},]]
                     }
             },
         }
@@ -577,33 +617,33 @@ add_editor(editor_wounds)
 
 -------------------------------main window----------------
 unit_editor = defclass(unit_editor, gui.FramedScreen)
-unit_editor.ATTRS={
+unit_editor.ATTRS = {
     frame_style = gui.GREY_LINE_FRAME,
     frame_title = "GameMaster's unit editor",
     target_unit = DEFAULT_NIL,
-    }
+}
 
 
 function unit_editor:init(args)
-
     self:addviews{
-    widgets.FilteredList{
-        choices=editors,
-        on_submit=function (idx,choice)
-            if choice.on_submit then
-                choice.on_submit(self.target_unit)
+        widgets.FilteredList{
+            frame = {l=1, t=1},
+            choices=editors,
+            on_submit=function (idx,choice)
+                if choice.on_submit then
+                    choice.on_submit(self.target_unit)
+                end
             end
-        end
-    },
-    widgets.Label{
-                frame = { b=0,l=1},
-                text ={{text= ": exit editor",
-                    key  = "LEAVESCREEN",
-                    on_activate= self:callback("dismiss")
-                    },
-                    }
-            },
+        },
+        widgets.Label{
+            frame = { b=0,l=1},
+            text = {{
+                text = ": exit editor",
+                key = "LEAVESCREEN",
+                on_activate = self:callback("dismiss")
+            }},
         }
+    }
 end
 
 

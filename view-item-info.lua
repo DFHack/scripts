@@ -129,7 +129,10 @@ function GetShieldPropertiesStringList (item)
     local list = {}
     append(list,"Shield properties:")
     append(list,"Base block chance: "..item.subtype.blockchance,1)
-    append(list,"Fit for "..df.creature_raw.find(item.maker_race).name[0],1)
+    local craw = df.creature_raw.find(item.maker_race)
+    if craw then
+        append(list,"Fit for "..craw.name[0],1)
+    end
     return list
 end
 

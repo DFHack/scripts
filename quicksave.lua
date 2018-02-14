@@ -8,6 +8,19 @@ normally used in seasonal auto-save.
 
 ]====]
 
+gui = require("gui")
+
+QuicksaveOverlay = defclass(QuicksaveOverlay, gui.Screen)
+
+function QuicksaveOverlay:render()
+    if not self.run then
+        self.run = true
+        save()
+        self:renderParent()
+        self:dismiss()
+    end
+end
+
 if not dfhack.isMapLoaded() then
     qerror("World and map aren't loaded.")
 end
@@ -27,13 +40,17 @@ local function restore_autobackup()
     end
 end
 
--- Request auto-save
-ui_main.autosave_request = true
+function save()
+    -- Request auto-save
+    ui_main.autosave_request = true
 
--- And since it will overwrite the backup, disable it temporarily
-if flags4.AUTOBACKUP then
-    flags4.AUTOBACKUP = false
-    restore_autobackup()
+    -- And since it will overwrite the backup, disable it temporarily
+    if flags4.AUTOBACKUP then
+        flags4.AUTOBACKUP = false
+        restore_autobackup()
+    end
+
+    print 'The game should save the state now.'
 end
 
-print 'The game should save the state now.'
+QuicksaveOverlay():show()

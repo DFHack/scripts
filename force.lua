@@ -18,6 +18,9 @@ See `modtools/force` for a complete list of event types.
 utils = require 'utils'
 args = {...}
 if #args < 1 then qerror('missing event type') end
+if args[1]:find('help') then
+    return print(dfhack.script_help())
+end
 eventType = nil
 for _, type in ipairs(df.timed_event_type) do
     if type:lower() == args[1]:lower() then
