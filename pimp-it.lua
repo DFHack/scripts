@@ -2,11 +2,10 @@ utils ={}
 utils = require('utils')
 json = require('json')
 local rng = require('plugins.cxxrandom')
-local engineID = rng.MakeNewEngine()
 print("Loading data tables..")
 local dorf_tables = dfhack.script_environment('dorf_tables')
 cloned = {} --assurances I'm sure
-cloned = {
+cloned = {    
     jobs = utils.clone(dorf_tables.dorf_jobs, true),
     professions = utils.clone(dorf_tables.professions, true),
     distributions = utils.clone(dorf_tables.job_distributions, true),
@@ -15,7 +14,6 @@ print("Done.")
 local validArgs = utils.invert({
     'help',
     'debug',
-    'show',
 
     'select', --highlighted --all --named --unnamed --employed --pimped --unpimped --protected --unprotected --drunks --jobs
     'clear',
@@ -28,12 +26,7 @@ local validArgs = utils.invert({
 })
 local args = utils.processArgs({...}, validArgs)
 if args.debug and tonumber(args.debug) >= 0 then print("Debug info [ON]") end
-protected_dwarf_signals = {'.', 'c', 'j', 'p'}
-if args.select and args.select == 'pimped' then
-    if args.pimpem and not args.clear then
-        error("Invalid arguments detected. You've selected only pimped dwarves, and are attempting to pimp them without clearing them. This will not work, so I'm warning you about it with this lovely error.")
-    end
-end
+protected_dwarf_signals = {'_', 'c', 'j', 'p'}
 
 function LoadPersistentData()
     local gamePath = dfhack.getDFPath()
@@ -59,13 +52,6 @@ function SavePersistentData()
     local fortName = dfhack.TranslateName(df.world_site.find(df.global.ui.site_id).name)
     local fileName = fortName .. ".json.dat"
     local cur = json.open(gamePath .. "/data/save/current/" .. fileName)
-    local newDwfTable = {}
-    for k,v in pairs(PimpData.Dwarves) do
-        if v~=nil then
-            newDwfTable[k] = v
-        end
-    end
-    PimpData.Dwarves = newDwfTable
     cur.data = PimpData
     cur:write()
 end
@@ -142,20 +128,6 @@ function DisplayTable(t,query,field)
     print('###########################')
 end
 
-function TableToString(t)
-    local s = '['
-    local n=0
-    for k,v in pairs(t) do
-        n=n+1
-        if n ~= 1 then
-            s = s .. ", "
-        end
-        s = s .. tostring(v)
-    end
-    s = s .. ']'
-    return s
-end
-
 function count_this(to_be_counted)
     local count = -1
     local var1 = ""
@@ -201,7 +173,7 @@ function FindKeyValue(t, key)
     end
 end
 
-function GetRandomTableEntry(gen, t)
+function GetRandomTableEntry(tName, t)
     -- iterate over whole table to get all keys
     local keyset = {}
     for k in pairs(t) do
@@ -209,20 +181,19 @@ function GetRandomTableEntry(gen, t)
     end
     -- now you can reliably return a random key
     local N = TableLength(t)
-    local i = gen:next()
+    local i = rng.rollIndex(tName, N)
     local key = keyset[i]
     local R = t[key]
     if args.debug and tonumber(args.debug) >= 3 then print(N,i,key,R) end
     return R
 end
 
-local attrib_seq = rng.num_sequence:new(1,TableLength(dorf_tables.attrib_levels))
 function GetRandomAttribLevel()
-    local gen = rng.crng:new(engineID,false,attrib_seq)
-    gen:shuffle()
+    local N = TableLength(dorf_tables.attrib_levels)
+    rng.resetIndexRolls("attrib levels", N)
     while true do
-        local level = GetRandomTableEntry(gen, dorf_tables.attrib_levels)
-        if rng.rollBool(engineID, level.p) then
+        local level = GetRandomTableEntry("attrib levels", dorf_tables.attrib_levels)
+        if rng.rollBool(level.p) then
             return level
         end
     end
@@ -259,7 +230,7 @@ end
 function GenerateStatValue(stat, atr_lvl)
     atr_lvl = atr_lvl == nil and GetRandomAttribLevel() or dorf_tables.attrib_levels[atr_lvl]
     if args.debug and tonumber(args.debug) >= 4 then print(atr_lvl, atr_lvl[1], atr_lvl[2]) end
-    local R = rng.rollNormal(engineID, atr_lvl[1], atr_lvl[2])
+    local R = rng.rollNormal(atr_lvl[1], atr_lvl[2])
     local value = math.floor(R)
     value = value < 0 and 0 or value
     value = value > 5000 and 5000 or value
@@ -318,14 +289,13 @@ function ApplyType(dwf, dorf_type)
                 utils.insert_or_update(dwf.status.current_soul.skills, { new = true, id = df.job_skill[skill], rating = 0 }, 'id')
                 sTable = GetSkillTable(dwf, skill)
             end
-            local points = rng.rollInt(engineID, skillRange[1], skillRange[2])
+            local points = rng.rollInt(skillRange[1], skillRange[2])
             sTable.rating = sTable.rating < points and points or sTable.rating
             sTable.rating = sTable.rating > 20 and 20 or sTable.rating
             sTable.rating = sTable.rating < 0 and 0 or sTable.rating
             if args.debug and tonumber(args.debug) >= 2 then print(skill .. ".rating = " .. sTable.rating) end
         end
     end
-    return true
 end
 
 --Apply only after previously validating
@@ -339,14 +309,13 @@ function ApplyProfession(dwf, profession, min, max)
             utils.insert_or_update(dwf.status.current_soul.skills, { new = true, id = df.job_skill[skill], rating = 0 }, 'id')
             sTable = GetSkillTable(dwf, skill)
         end
-        local points = rng.rollInt(engineID, min, max)
+        local points = rng.rollInt(min, max)
         sTable.rating = sTable.rating < points and points or sTable.rating
         sTable.rating = sTable.rating + bonus
         sTable.rating = sTable.rating > 20 and 20 or sTable.rating
         sTable.rating = sTable.rating < 0 and 0 or sTable.rating
         if args.debug and tonumber(args.debug) >= 2 then print(skill .. ".rating = " .. sTable.rating) end
     end
-    return true
 end
 
 --Apply only after previously validating
@@ -418,7 +387,7 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
                 p = p > 1 and 1 or p
                 --p = (p - math.floor(p)) >= 0.5 and math.ceil(p) or math.floor(p)
                 --> proc probability and check points
-                if points >= 1 and rng.rollBool(engineID, p) then
+                if points >= 1 and rng.rollBool(p) then
                     ApplyProfession(dwf, prof, min, max)
                     table.insert(DwarvesData[id]['professions'], prof)
                     PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
@@ -437,7 +406,6 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
     if not bAlreadySetProf2 then
         dwf.profession2 = dwf.profession
     end
-    return true
 end
 
 function RollStats(dwf, types)
@@ -450,7 +418,7 @@ function RollStats(dwf, types)
     for type, table in pairs(dorf_tables.dorf_types) do
         local p = table.p
         if p ~= nil then
-            if rng.rollBool(engineID, p) then
+            if rng.rollBool(p) then
                 ApplyType(dwf, type)
             end
         end
@@ -459,9 +427,6 @@ end
 
 --Returns true if a job was found and applied, returns false otherwise
 function FindJob(dwf, recursive)
-    if isDwarfPimped(dwf) then
-        return false
-    end
     for jobName, jd in spairs(cloned.distributions, 
     function(a,b)
         return twofield_compare(cloned.distributions, 
@@ -549,14 +514,12 @@ function ZeroDwarf(dwf)
                 PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count - 1
                 if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
             end
-            DwarvesData[id] = nil
-            --table.remove(DwarvesData,id)
+            DwarvesData[id] = {}
         elseif next(dwf_data) == nil and id == tostring(dwf.id) then
             print(":WARNING: ZeroDwarf(dwf) - dwf was zeroed, but had never been pimped before")
             --error("this dwf_data shouldn't be nil, I think.. I guess maybe if you were clearing dwarves that weren't pimped")
         end
     end
-    return true
 end
 
 function Reroll(dwf)
@@ -566,20 +529,7 @@ function Reroll(dwf)
             ZeroDwarf(dwf)
         end
         ApplyJob(dwf, jobName)
-        return true
     end
-    return false
-end
-
-function Show(dwf)
-    local name_ptr = dfhack.units.getVisibleName(dwf)
-    local name = dfhack.TranslateName(name_ptr)
-    local numspaces = 26 - string.len(name)
-    local spaces = ' '
-    for i=1,numspaces do
-        spaces = spaces .. " "
-    end
-    print('('..dwf.id..') - '..name..spaces..dwf.profession,dwf.custom_profession)
 end
 
 function LoopUnits(units, check, fn, checkoption, profmin, profmax) --cause nothing else will use arg 5 or 6
@@ -587,18 +537,14 @@ function LoopUnits(units, check, fn, checkoption, profmin, profmax) --cause noth
     for _, unit in pairs(units) do
         if check ~= nil then
             if check(unit, checkoption, profmin, profmax) then
+                count = count + 1
                 if fn ~= nil then
-                    if fn(unit) then
-                        count = count + 1
-                    end
-                else
-                    count = count + 1
+                    fn(unit)
                 end
             end
         elseif fn ~= nil then
-            if fn(unit) then
-                count = count + 1
-            end
+            count = count + 1
+            fn(unit)
         end
     end
     if args.debug and tonumber(args.debug) >= 1 then
@@ -608,17 +554,13 @@ function LoopUnits(units, check, fn, checkoption, profmin, profmax) --cause noth
 end
 
 function LoopTable_Apply_ToUnits(units, apply, applytable, checktable, profmin, profmax) --cause nothing else will use arg 5 or 6
-    local count = 0
-    local temp = 0
     for _,tvalue in pairs(applytable) do
         if checktable[tvalue] then
-            temp = LoopUnits(units, apply, nil, tvalue, profmin, profmax)
-            count = count < temp and temp or count
+            LoopUnits(units, apply, nil, tvalue, profmin, profmax)
         else
             error("\nInvalid option: " .. tvalue .. "\nLook-up table: " .. checktable)
         end
     end
-    return count
 end
 
 ------------
@@ -630,14 +572,9 @@ function isDwarfNamed(dwf)
     return dwf.status.current_soul.name.nickname ~= ""
 end
 
---Returns true if the DWARF has a custom_profession
-function isDwarfEmployed(dwf)
-    return dwf.custom_profession ~= ""
-end
-
 --Returns true if the DWARF has a custom_profession but isn't pimped
 function isDwarfEmployed(dwf)
-    return dwf.custom_profession ~= ""
+    return dwf.custom_profession ~= "" and (not isDwarfPimped(dwf))
 end
 
 --Returns true if the DWARF is in the DwarvesData table
@@ -713,7 +650,6 @@ function CheckWorker(dwf, option)
                     n=0
                     for _,v in pairs(option) do
                         n=n+1
-                        --print(dwf.custom_profession, v)
                         if n > 1 and dwf.custom_profession == v then
                             return true
                         end
@@ -803,7 +739,6 @@ end
 
 function SelectDwarf(dwf)
     table.insert(selection, dwf)
-    return true
 end
 
 function ShowHelp()
@@ -866,84 +801,73 @@ print("Existing Pimps: " .. ArrayLength(PimpData.Dwarves))
 function exists(thing)
     if thing then return true else return false end
 end
-args.b_clear = exists(args.clear) if args.debug and tonumber(args.debug) >= 0 then print(        "args.b_clear:    " .. tostring(args.b_clear)) end
-args.b_pimpem = exists(args.pimpem) if args.debug and tonumber(args.debug) >= 0 then print(      "args.b_pimpem:   " .. tostring(args.b_pimpem)) end
-args.b_reroll = exists(args.reroll) if args.debug and tonumber(args.debug) >= 0 then print(      "args.b_reroll:   " .. tostring(args.b_reroll)) end
-args.b_applyjobs = exists(args.applyjobs) if args.debug and tonumber(args.debug) >= 0 then print("args.b_applyjob: " .. tostring(args.b_applyjobs)) end
+args.b_clear = exists(args.clear) if args.debug and tonumber(args.debug) >= 0 then print(      "args.b_clear:    " .. tostring(args.b_clear)) end
+args.b_pimpem = exists(args.pimpem) if args.debug and tonumber(args.debug) >= 0 then print(    "args.b_pimpem:   " .. tostring(args.b_pimpem)) end
+args.b_reroll = exists(args.reroll) if args.debug and tonumber(args.debug) >= 0 then print(    "args.b_reroll:   " .. tostring(args.b_reroll)) end
+args.b_applyjob = exists(args.applyjob) if args.debug and tonumber(args.debug) >= 0 then print("args.b_applyjob: " .. tostring(args.b_applyjob)) end
 if args.help then
     ShowHelp()
-elseif args.select and (args.debug or args.clear or args.pimpem or args.reroll or args.applyjobs or args.applyprofessions or args.applytypes) then
+elseif args.select and (args.debug or args.clear or args.pimpem or args.reroll or args.applyjob or args.applyprofession or args.applytype) then
     selection = {}
     count = 0
     print("Selected Dwarves: " .. LoopUnits(ActiveUnits, CheckWorker, SelectDwarf, args.select))
     
     if args.b_clear ~= args.b_reroll or not args.b_clear then
         --error("Clear is implied with Reroll. Choose one, not both.")
-        if args.b_reroll and args.b_pimpem and args.b_applyjobs then
+        if args.b_reroll and args.b_pimpem and args.b_applyjob then
             error("options: pimpem, reroll, applyjob. Choose one, and only one.")
-        elseif args.b_reroll ~= args.b_pimpem ~= args.b_applyjobs or not args.b_reroll then
+        elseif args.b_reroll ~= args.b_pimpem ~= args.b_applyjob or not args.b_reroll then
             --
             --Valid options were entered
             --
-            local affected = 0
-            local temp = 0
             if args.clear then
                 print("\nResetting selected dwarves..")
-                temp = LoopUnits(selection, nil, ZeroDwarf)
-                affected = affected < temp and temp or affected
+                LoopUnits(selection, nil, ZeroDwarf)
             end
             
             if args.pimpem then
                 print("\nPimping selected dwarves..")
-                temp = LoopUnits(selection, nil, FindJob)
-                affected = affected < temp and temp or affected
+                LoopUnits(selection, nil, FindJob)
             elseif args.reroll then
                 print("\nRerolling selected dwarves..")
-                temp = LoopUnits(selection, nil, Reroll)
-                affected = affected < temp and temp or affected
-            elseif args.applyjobs then
-                if type(args.applyjobs) == 'table' then
-                    print("Applying jobs:" .. TableToString(args.applyjobs) .. ", to selected dwarves")
-                    temp = LoopTable_Apply_ToUnits(selection, ApplyJob, args.applyjobs, cloned.jobs)
+                LoopUnits(selection, nil, Reroll)
+            elseif args.applyjob then
+                print("Applying job:" .. args.applyjob .. ", to selected dwarves")
+                if type(args.applyjob) == 'table' then
+                    LoopTable_Apply_ToUnits(selection, ApplyJob, args.applyjob, cloned.jobs)
                 else
-                    print("Applying job:" .. args.applyjobs .. ", to selected dwarves")
-                    if cloned.jobs[args.applyjobs] then
-                        temp = LoopUnits(selection, ApplyJob, nil, args.applyjobs)
+                    if cloned.jobs[args.applyjob] then
+                        LoopUnits(selection, ApplyJob, nil, args.applyjob)
                     else
-                        error("Invalid job: " .. args.applyjobs)
+                        error("Invalid job: " .. args.applyjob)
                     end
                 end
-                affected = affected < temp and temp or affected
             end
             
-            if args.applyprofessions then
-                if type(args.applyprofessions) == 'table' then
-                    print("Applying professions:" .. TableToString(args.applyprofessions) .. ", to selected dwarves")
-                    temp = LoopTable_Apply_ToUnits(selection, ApplyProfession, args.applyprofessions, cloned.professions,1,5)
+            if args.applyprofession then
+                print("Applying profession:" .. args.applyprofession .. ", to selected dwarves")
+                if type(args.applyprofession) == 'table' then
+                    LoopTable_Apply_ToUnits(selection, ApplyProfession, args.applyprofession, cloned.professions,1,5)
                 else
-                    print("Applying professions:" .. args.applyprofessions .. ", to selected dwarves")
-                    if cloned.professions[args.applyprofessions] then
-                        temp = LoopUnits(selection, ApplyProfession, nil, args.applyprofessions,1,5)
+                    if cloned.professions[args.applyprofession] then
+                        LoopUnits(selection, ApplyProfession, nil, args.applyprofession,1,5)
                     else
-                        error("Invalid profession: " .. args.applyprofessions)
+                        error("Invalid profession: " .. args.applyprofession)
                     end
                 end
-                affected = affected < temp and temp or affected
-            elseif args.applytypes then
-                if type(args.applytypes) == 'table' then
-                    print("Applying types:" .. TableToString(args.applytypes) .. ", to selected dwarves")
-                    temp = LoopTable_Apply_ToUnits(selection, ApplyType, args.applytypes, dorf_tables.dorf_types)
+            elseif args.applytype then
+                print("Applying type:" .. args.applytype .. ", to selected dwarves")
+                if type(args.applytype) == 'table' then
+                    LoopTable_Apply_ToUnits(selection, ApplyType, args.applytype, dorf_tables.dorf_types)
                 else
-                    print("Applying type:" .. args.applytypes .. ", to selected dwarves")
-                    if dorf_tables.dorf_types[args.applytypes] then
-                        temp = LoopUnits(selection, ApplyType, nil, args.applytypes)
+                    if dorf_tables.dorf_types[args.applytype] then
+                        LoopUnits(selection, ApplyType, nil, args.applytype)
                     else
-                        error("Invalid type: " .. args.applytypes)
+                        error("Invalid type: " .. args.applytype)
                     end
                 end
-                affected = affected < temp and temp or affected
             end    
-            print(affected .. " dwarves affected.")
+            print(TableLength(selection) .. " dwarves affected.")
 
             if args.debug and tonumber(args.debug) >= 1 then
                 print("\n")
@@ -962,20 +886,53 @@ elseif args.select and (args.debug or args.clear or args.pimpem or args.reroll o
         error("Clear is implied with Reroll. Choose one, not both.")
     end
 else
-    if args.show then
-        selection = {}
-        print("Selected Dwarves: " .. LoopUnits(ActiveUnits, CheckWorker, SelectDwarf, args.select))
-        LoopUnits(selection, nil, Show)
-    else
-        ShowHint()
-    end
+    ShowHint()
 end
 SavePersistentData()
 print('\n')
 
+function safe_pairs(item, keys_only)
+    if keys_only then
+        local mt = debug.getmetatable(item)
+        if mt and mt._index_table then
+            local idx = 0
+            return function()
+                idx = idx + 1
+                if mt._index_table[idx] then
+                    return mt._index_table[idx]
+                end
+            end
+        end
+    end
+    local ret = table.pack(pcall(function() return pairs(item) end))
+    local ok = ret[1]
+    table.remove(ret, 1)
+    if ok then
+        return table.unpack(ret)
+    else
+        return function() end
+    end
+end
+
+function Query(table, query, parent)
+    if not parent then
+        parent = ""
+    end
+    for k,v in safe_pairs(table) do
+        if not tonumber(k) and type(k) ~= "table" and not string.find(tostring(k), 'script') then
+            if string.find(tostring(k), query) then
+                print(parent .. "." .. k)
+            end
+            --print(parent .. "." .. k)
+            if not string.find(parent, tostring(k)) then
+                if parent then
+                    Query(v, query, parent .. "." .. k)
+                else
+                    Query(v, query, k)
+                end
+            end
+        end
+    end
+end
 --Query(dfhack, '','dfhack')
 --Query(PimpData, '', 'pd')
-
-attrib_seq = nil
-rng.DestroyEngine(engineID)
-collectgarbage()
