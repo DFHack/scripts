@@ -18,7 +18,8 @@ local validArgs = utils.invert({
     'clear', --selected --all --allnamed --allcustom --allpimped --allunpimped --allcustomunpimped --allprotected --allunprotected
 	'clearfirst',       --all --allnamed --allcustom --allpimped --allunpimped --allcustomunpimped --allprotected --allunprotected
 	'reroll',
-    'debug'
+    'debug',
+    'help'
 })
 local args = utils.processArgs({...}, validArgs)
 protected_dwarf_signals = {'_', 'c', 'j', 'p'}
@@ -31,11 +32,11 @@ function LoadPersistentData()
 	local fileName = fortName .. ".json.dat"
 	local cur = json.open(gamePath .. "/data/save/current/" .. fileName)
 	local saved = json.open(savePath .. "/" .. fileName)
-	print("loading data...")
 	if saved.exists == true and cur.exists == false then
 		print("Previous session save data found.")
 		cur.data = saved.data
-	elseif saved.exists == false then
+    elseif saved.exists == false then
+        print("No session data found. All dwarves will be treated as non-pimped.")
 		--saved:write()
 	elseif cur.exists == true then
 		print("Existing session data found.")
@@ -282,10 +283,12 @@ end
 function GenerateStatValue(stat, atr_lvl)
     atr_lvl = atr_lvl == nil and GetRandomAttribLevel() or dorf_tables.attrib_levels[atr_lvl]
     if args.debug and tonumber(args.debug) >= 4 then print(atr_lvl, atr_lvl[1], atr_lvl[2]) end
-    local value = math.floor(rng.rollNormal(atr_lvl[1], atr_lvl[2]))
+    local R = rng.rollNormal(atr_lvl[1], atr_lvl[2])
+    local value = math.floor(R)
     value = value < 0 and 0 or value
     value = value > 5000 and 5000 or value
     stat.value = stat.value < value and value or stat.value
+    if args.debug and tonumber(args.debug) >= 3 then print(R, stat.value) end
 end
 
 function LoopStatsTable(statsTable, callback)
@@ -301,7 +304,7 @@ function ApplyType(dwf, dorf_type)
     local type = dorf_tables.dorf_types[dorf_type]
     assert(type, "Invalid dorf type.")
     for attribute, atr_lvl in pairs(type.attribs) do
-        if args.debug and tonumber(args.debug) >= 3 then print(attribute, atr_lvl) end
+        if args.debug and tonumber(args.debug) >= 3 then print(attribute, atr_lvl[1]) end
         if 
         attribute == 'STRENGTH' or
         attribute == 'AGILITY' or
@@ -587,7 +590,7 @@ function TryClearDwarf(dwf)
         if isDwarfNamed(dwf) then
             if args.clear and (options == 'all' or options == 'selected' or options == 'allnamed') then
                 ZeroDwarf(dwf)
-            elseif args.clearfirst and options == 'allnamed' then
+            elseif args.clearfirst and (options == 'all' or options == 'selected' or options == 'allnamed') then
                 ZeroDwarf(dwf)
             end
         elseif options == 'all' then
@@ -605,7 +608,7 @@ function TryClearDwarf(dwf)
         elseif options == 'allunprotected' and isDwarfUnprotected(dwf) then
             ZeroDwarf(dwf)
         elseif args.clear and options == 'selected' then
-            TryClearDwarf(dwf)
+            ZeroDwarf(dwf)
         elseif options ~= 'allnamed' then
             if 
             options ~= 'allcustom' and 
@@ -654,7 +657,7 @@ function CanWork(dwf)
 end
 
 function Prepare()
-	print("Preparing the tables..")
+	print("Loading persistent data..")
 	LoadPersistentData()
 	if not PimpData.Dwarves then
 		PimpData.Dwarves = {}
@@ -695,7 +698,7 @@ function Prepare()
 	end--]]
 
 	--TryClearDwarf Loop (or maybe not)
-	print("Tables are set.")
+	print("Data load complete.")
 end
 
 function PrepareDistribution(jobName)
@@ -731,27 +734,46 @@ local selection = nil
 if args.selected or (args.clear and args.clear == "selected") or args.applyjob or args.applyprofession or args.applytype then
     SelectedUnit = dfhack.gui.getSelectedUnit()
     assert(SelectedUnit, "Error: you must select a unit")
-    if args.selected or args.cleardwarf then
-        selection = {}
-        table.insert(selection, SelectedUnit)
-    end
+    selection = {}
+    table.insert(selection, SelectedUnit)
 else
     selection = ActiveUnits
 end
 
 
+Prepare()
 dwarf_count = LoopUnits(ActiveUnits, dfhack.units.isCitizen)
 work_force = LoopUnits(ActiveUnits, CanWork)
---selection_count = LoopUnits(selection, function() return true end)
+selection_count = LoopUnits(selection, CanWork)
 print("\nDwarf Population: " .. dwarf_count)
 print("Work Force: " .. work_force)
-Prepare()
+print("Existing Pimps: " .. ArrayLength(PimpData.Dwarves))
+print("Selected Dwarves: " .. selection_count)
 
 if args.clear then
     LoopUnits(selection, CanWork, TryClearDwarf)
     print(zeroed_count .. " dorf(s) have been reset to zero.")
 else
-    if not (args.applyjob or args.applyprofession or args.applytype) then
+    if args.help then
+        print("pimp-it script")
+        print("============")
+        print("View scripts/dorf-tables.lua for configuration details, tweak at your own risk. Here you will find all the tables used in pimp-it [job_distributions, dorf_jobs, professions, dorf_types, attrib_levels].")
+        print("If you want details on how each table is used, seek scripts/pimp-it.lua")
+        print("-------")
+        print("This script will cycle through the selected dorf(s) and attempt to find a suitable job, and generate the appropriate professions for that job. A job will be selected based on the job distribution table, the first job found with available positions will be assigned.")
+        print("Before this happens each dwarf will attempt a reset of all stats, which will only happen if a dorf matches the reroll profession provided OR the clearfirst argument is provided.")
+        print("\tArguments:")
+        print("\t\thelp - displays this help information.")
+        print("\t\tdebug - enables debugging print lines")
+        print("\t\treroll - allows rerolling of a specified profession, must be in dorf_jobs table")
+        print("\t\tclearfirst - will find jobs for unpimped dorfs, but clear their stats & labours beforehand")
+        print("\t\tclear - will simply clear stats of dorfs")
+        print("\t\tselected - will perform actions on the highlighted dorf")
+        print("\t\tapplytype - applies a dorf_type to selected dorf")
+        print("\t\tapplyprofession - applies a profession to selected dorf")
+        print("\t\tapplyjob - applies a dorf_job to selected dorf")
+        print("No dorfs were harmed in the building of this help screen.")
+    elseif not (args.applyjob or args.applyprofession or args.applytype) then
         print("\nPimping Dwarves..")
         LoopUnits(selection, CanWork, TryClearDwarf)
         LoopUnits(selection, CanWork, FindJob)
@@ -792,5 +814,49 @@ end
 
 SavePersistentData()
 print('\n')
-function Query(table, query, parent) if not parent then parent = "" end for k,v in pairs(table) do if string.find(tostring(k), query) then print(parent .. "." .. k) end if type(v) == "table" and not string.find(parent, tostring(k)) then if parent then Query(v, query, parent .. "." .. k) else Query(v, query, k) end end end end 
---Query(PimpData, "", "pd")
+
+function safe_pairs(item, keys_only)
+    if keys_only then
+        local mt = debug.getmetatable(item)
+        if mt and mt._index_table then
+            local idx = 0
+            return function()
+                idx = idx + 1
+                if mt._index_table[idx] then
+                    return mt._index_table[idx]
+                end
+            end
+        end
+    end
+    local ret = table.pack(pcall(function() return pairs(item) end))
+    local ok = ret[1]
+    table.remove(ret, 1)
+    if ok then
+        return table.unpack(ret)
+    else
+        return function() end
+    end
+end
+
+function Query(table, query, parent)
+	if not parent then
+		parent = ""
+	end
+	for k,v in safe_pairs(table) do
+		if not tonumber(k) and type(k) ~= "table" and not string.find(tostring(k), 'script') then
+			if string.find(tostring(k), query) then
+				print(parent .. "." .. k)
+			end
+			--print(parent .. "." .. k)
+			if not string.find(parent, tostring(k)) then
+				if parent then
+					Query(v, query, parent .. "." .. k)
+				else
+					Query(v, query, k)
+				end
+			end
+		end
+	end
+end
+--Query(dfhack, '','dfhack')
+--Query(PimpData, '', 'pd')
