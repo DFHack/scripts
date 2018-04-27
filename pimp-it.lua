@@ -427,11 +427,6 @@ end
 
 --Returns true if a job was found and applied, returns false otherwise
 function FindJob(dwf, recursive)
-    if isDwarfProtected(dwf) then
-        return false
-    end
-    --local totalJobs = TableLength(cloned.jobs)
-    --rng.resetIndexRolls("find a job", totalJobs)
     for jobName, jd in spairs(cloned.distributions, 
     function(a,b)
         return twofield_compare(cloned.distributions, 
@@ -629,33 +624,35 @@ end
 function CheckWorker(dwf, option)
     if CanWork(dwf) then
         --selection options
-        if option == 'all' then
-            return true
-        elseif option == 'highlighted' then
-            return dwf == dfhack.gui.getSelectedUnit()
-        elseif option == 'named' then
-            return isDwarfNamed(dwf)
-        elseif option == 'unnamed' then
-            return not isDwarfNamed(dwf)
-        elseif option == 'employed' then
-            return isDwarfEmployed(dwf)
-        elseif option == 'pimped' then
-            return isDwarfPimped(dwf)
-        elseif option == 'unpimped' then
-            return not isDwarfPimped(dwf)
-        elseif option == 'protected' then
+        if option == 'protected' then
             return isDwarfProtected(dwf)
-        elseif option == 'unprotected' then
-            return not isDwarfProtected(dwf)
-        elseif option == 'drunks' or option == 'drunk' then
-            return dwf.profession == df.profession['DRUNK'] and dwf.profession2 == df.profession['DRUNK']
-        elseif type(option) == 'table' then
-            if option[1] == 'job' or option[1] == 'jobs' then
-                n=0
-                for _,v in pairs(option) do
-                    n=n+1
-                    if n > 1 and dwf.custom_profession == v then
-                        return true
+        elseif isDwarfUnprotected(dwf) then
+            if option == 'all' then
+                return true
+            elseif option == 'highlighted' then
+                return dwf == dfhack.gui.getSelectedUnit()
+            elseif option == 'named' then
+                return isDwarfNamed(dwf)
+            elseif option == 'unnamed' then
+                return (not isDwarfNamed(dwf))
+            elseif option == 'employed' then
+                return isDwarfEmployed(dwf)
+            elseif option == 'pimped' then
+                return isDwarfPimped(dwf)
+            elseif option == 'unpimped' then
+                return isDwarfUnpimped(dwf)
+            elseif option == 'unprotected' then
+                return isDwarfUnprotected(dwf)
+            elseif option == 'drunks' or option == 'drunk' then
+                return dwf.profession == df.profession['DRUNK'] and dwf.profession2 == df.profession['DRUNK']
+            elseif type(option) == 'table' then
+                if option[1] == 'job' or option[1] == 'jobs' then
+                    n=0
+                    for _,v in pairs(option) do
+                        n=n+1
+                        if n > 1 and dwf.custom_profession == v then
+                            return true
+                        end
                     end
                 end
             end
@@ -749,7 +746,7 @@ function ShowHelp()
     print("               -select <sel-opt> -<command> <args>")
     ShowHint()
     print("~~~~~~~~~~~~")
-    print(" select options:")
+    print(" select options:\n  (protected is the only option which will select PROTECTED dwarves)")
     print("    all         - selects all dwarves.")
     print("    highlighted - selects only the in-game highlighted dwarf (from any screen).")
     print("    named       - selects dwarves with user-given names.")
@@ -891,7 +888,7 @@ elseif args.select and (args.debug or args.clear or args.pimpem or args.reroll o
 else
     ShowHint()
 end
---SavePersistentData()
+SavePersistentData()
 print('\n')
 
 function safe_pairs(item, keys_only)
