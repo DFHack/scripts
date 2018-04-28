@@ -27,6 +27,11 @@ local validArgs = utils.invert({
 local args = utils.processArgs({...}, validArgs)
 if args.debug and tonumber(args.debug) >= 0 then print("Debug info [ON]") end
 protected_dwarf_signals = {'_', 'c', 'j', 'p'}
+if args.select and args.select == 'pimped' then
+    if args.pimpem and not args.clear then
+        error("Invalid arguments detected. You've selected only pimped dwarves, and are attempting to pimp them without clearing them. This will not work, so I'm warning you about it with this lovely error.")
+    end
+end
 
 function LoadPersistentData()
 	local gamePath = dfhack.getDFPath()
@@ -126,6 +131,20 @@ function DisplayTable(t,query,field)
         end
     end
     print('###########################')
+end
+
+function TableToString(t)
+    local s = '['
+    local n=0
+    for k,v in pairs(t) do
+        n=n+1
+        if n ~= 1 then
+            s = s .. ", "
+        end
+        s = s .. tostring(v)
+    end
+    s = s .. ']'
+    return s
 end
 
 function count_this(to_be_counted)
@@ -296,6 +315,7 @@ function ApplyType(dwf, dorf_type)
             if args.debug and tonumber(args.debug) >= 2 then print(skill .. ".rating = " .. sTable.rating) end
         end
     end
+    return true
 end
 
 --Apply only after previously validating
@@ -316,6 +336,7 @@ function ApplyProfession(dwf, profession, min, max)
         sTable.rating = sTable.rating < 0 and 0 or sTable.rating
         if args.debug and tonumber(args.debug) >= 2 then print(skill .. ".rating = " .. sTable.rating) end
     end
+    return true
 end
 
 --Apply only after previously validating
@@ -405,7 +426,8 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
 	end
     if not bAlreadySetProf2 then
         dwf.profession2 = dwf.profession
-	end
+    end
+    return true
 end
 
 function RollStats(dwf, types)
@@ -427,6 +449,9 @@ end
 
 --Returns true if a job was found and applied, returns false otherwise
 function FindJob(dwf, recursive)
+    if isDwarfPimped(dwf) then
+        return false
+    end
     for jobName, jd in spairs(cloned.distributions, 
     function(a,b)
         return twofield_compare(cloned.distributions, 
@@ -537,14 +562,18 @@ function LoopUnits(units, check, fn, checkoption, profmin, profmax) --cause noth
     for _, unit in pairs(units) do
         if check ~= nil then
             if check(unit, checkoption, profmin, profmax) then
-                count = count + 1
                 if fn ~= nil then
-                    fn(unit)
+                    if fn(unit) then
+                        count = count + 1
+                    end
+                else
+                    count = count + 1
                 end
             end
         elseif fn ~= nil then
-            count = count + 1
-            fn(unit)
+            if fn(unit) then
+                count = count + 1
+            end
         end
     end
     if args.debug and tonumber(args.debug) >= 1 then
@@ -554,13 +583,17 @@ function LoopUnits(units, check, fn, checkoption, profmin, profmax) --cause noth
 end
 
 function LoopTable_Apply_ToUnits(units, apply, applytable, checktable, profmin, profmax) --cause nothing else will use arg 5 or 6
+    local count = 0
+    local temp = 0
     for _,tvalue in pairs(applytable) do
         if checktable[tvalue] then
-            LoopUnits(units, apply, nil, tvalue, profmin, profmax)
+            temp = LoopUnits(units, apply, nil, tvalue, profmin, profmax)
+            count = count < temp and temp or count
         else
             error("\nInvalid option: " .. tvalue .. "\nLook-up table: " .. checktable)
         end
     end
+    return count
 end
 
 ------------
@@ -801,73 +834,84 @@ print("Existing Pimps: " .. ArrayLength(PimpData.Dwarves))
 function exists(thing)
     if thing then return true else return false end
 end
-args.b_clear = exists(args.clear) if args.debug and tonumber(args.debug) >= 0 then print(      "args.b_clear:    " .. tostring(args.b_clear)) end
-args.b_pimpem = exists(args.pimpem) if args.debug and tonumber(args.debug) >= 0 then print(    "args.b_pimpem:   " .. tostring(args.b_pimpem)) end
-args.b_reroll = exists(args.reroll) if args.debug and tonumber(args.debug) >= 0 then print(    "args.b_reroll:   " .. tostring(args.b_reroll)) end
-args.b_applyjob = exists(args.applyjob) if args.debug and tonumber(args.debug) >= 0 then print("args.b_applyjob: " .. tostring(args.b_applyjob)) end
+args.b_clear = exists(args.clear) if args.debug and tonumber(args.debug) >= 0 then print(        "args.b_clear:    " .. tostring(args.b_clear)) end
+args.b_pimpem = exists(args.pimpem) if args.debug and tonumber(args.debug) >= 0 then print(      "args.b_pimpem:   " .. tostring(args.b_pimpem)) end
+args.b_reroll = exists(args.reroll) if args.debug and tonumber(args.debug) >= 0 then print(      "args.b_reroll:   " .. tostring(args.b_reroll)) end
+args.b_applyjobs = exists(args.applyjobs) if args.debug and tonumber(args.debug) >= 0 then print("args.b_applyjob: " .. tostring(args.b_applyjobs)) end
 if args.help then
     ShowHelp()
-elseif args.select and (args.debug or args.clear or args.pimpem or args.reroll or args.applyjob or args.applyprofession or args.applytype) then
+elseif args.select and (args.debug or args.clear or args.pimpem or args.reroll or args.applyjobs or args.applyprofessions or args.applytypes) then
     selection = {}
     count = 0
     print("Selected Dwarves: " .. LoopUnits(ActiveUnits, CheckWorker, SelectDwarf, args.select))
     
     if args.b_clear ~= args.b_reroll or not args.b_clear then
         --error("Clear is implied with Reroll. Choose one, not both.")
-        if args.b_reroll and args.b_pimpem and args.b_applyjob then
+        if args.b_reroll and args.b_pimpem and args.b_applyjobs then
             error("options: pimpem, reroll, applyjob. Choose one, and only one.")
-        elseif args.b_reroll ~= args.b_pimpem ~= args.b_applyjob or not args.b_reroll then
+        elseif args.b_reroll ~= args.b_pimpem ~= args.b_applyjobs or not args.b_reroll then
             --
             --Valid options were entered
             --
+            local affected = 0
+            local temp = 0
             if args.clear then
                 print("\nResetting selected dwarves..")
-                LoopUnits(selection, nil, ZeroDwarf)
+                temp = LoopUnits(selection, nil, ZeroDwarf)
+                affected = affected < temp and temp or affected
             end
             
             if args.pimpem then
                 print("\nPimping selected dwarves..")
-                LoopUnits(selection, nil, FindJob)
+                temp = LoopUnits(selection, nil, FindJob)
+                affected = affected < temp and temp or affected
             elseif args.reroll then
                 print("\nRerolling selected dwarves..")
-                LoopUnits(selection, nil, Reroll)
-            elseif args.applyjob then
-                print("Applying job:" .. args.applyjob .. ", to selected dwarves")
-                if type(args.applyjob) == 'table' then
-                    LoopTable_Apply_ToUnits(selection, ApplyJob, args.applyjob, cloned.jobs)
+                temp = LoopUnits(selection, nil, Reroll)
+                affected = affected < temp and temp or affected
+            elseif args.applyjobs then
+                if type(args.applyjobs) == 'table' then
+                    print("Applying jobs:" .. TableToString(args.applyjobs) .. ", to selected dwarves")
+                    temp = LoopTable_Apply_ToUnits(selection, ApplyJob, args.applyjobs, cloned.jobs)
                 else
-                    if cloned.jobs[args.applyjob] then
-                        LoopUnits(selection, ApplyJob, nil, args.applyjob)
+                    print("Applying job:" .. args.applyjobs .. ", to selected dwarves")
+                    if cloned.jobs[args.applyjobs] then
+                        temp = LoopUnits(selection, ApplyJob, nil, args.applyjobs)
                     else
-                        error("Invalid job: " .. args.applyjob)
+                        error("Invalid job: " .. args.applyjobs)
                     end
                 end
+                affected = affected < temp and temp or affected
             end
             
-            if args.applyprofession then
-                print("Applying profession:" .. args.applyprofession .. ", to selected dwarves")
-                if type(args.applyprofession) == 'table' then
-                    LoopTable_Apply_ToUnits(selection, ApplyProfession, args.applyprofession, cloned.professions,1,5)
+            if args.applyprofessions then
+                if type(args.applyprofessions) == 'table' then
+                    print("Applying professions:" .. TableToString(args.applyprofessions) .. ", to selected dwarves")
+                    temp = LoopTable_Apply_ToUnits(selection, ApplyProfession, args.applyprofessions, cloned.professions,1,5)
                 else
-                    if cloned.professions[args.applyprofession] then
-                        LoopUnits(selection, ApplyProfession, nil, args.applyprofession,1,5)
+                    print("Applying professions:" .. args.applyprofessions .. ", to selected dwarves")
+                    if cloned.professions[args.applyprofessions] then
+                        temp = LoopUnits(selection, ApplyProfession, nil, args.applyprofessions,1,5)
                     else
-                        error("Invalid profession: " .. args.applyprofession)
+                        error("Invalid profession: " .. args.applyprofessions)
                     end
                 end
-            elseif args.applytype then
-                print("Applying type:" .. args.applytype .. ", to selected dwarves")
-                if type(args.applytype) == 'table' then
-                    LoopTable_Apply_ToUnits(selection, ApplyType, args.applytype, dorf_tables.dorf_types)
+                affected = affected < temp and temp or affected
+            elseif args.applytypes then
+                if type(args.applytypes) == 'table' then
+                    print("Applying types:" .. TableToString(args.applytypes) .. ", to selected dwarves")
+                    temp = LoopTable_Apply_ToUnits(selection, ApplyType, args.applytypes, dorf_tables.dorf_types)
                 else
-                    if dorf_tables.dorf_types[args.applytype] then
-                        LoopUnits(selection, ApplyType, nil, args.applytype)
+                    print("Applying type:" .. args.applytypes .. ", to selected dwarves")
+                    if dorf_tables.dorf_types[args.applytypes] then
+                        temp = LoopUnits(selection, ApplyType, nil, args.applytypes)
                     else
-                        error("Invalid type: " .. args.applytype)
+                        error("Invalid type: " .. args.applytypes)
                     end
                 end
+                affected = affected < temp and temp or affected
             end    
-            print(TableLength(selection) .. " dwarves affected.")
+            print(affected .. " dwarves affected.")
 
             if args.debug and tonumber(args.debug) >= 1 then
                 print("\n")
