@@ -2,10 +2,11 @@ utils ={}
 utils = require('utils')
 json = require('json')
 local rng = require('plugins.cxxrandom')
+local engineID = rng.MakeNewEngine()
 print("Loading data tables..")
 local dorf_tables = dfhack.script_environment('dorf_tables')
 cloned = {} --assurances I'm sure
-cloned = {    
+cloned = {
 	jobs = utils.clone(dorf_tables.dorf_jobs, true),
     professions = utils.clone(dorf_tables.professions, true),
     distributions = utils.clone(dorf_tables.job_distributions, true),
@@ -192,7 +193,7 @@ function FindKeyValue(t, key)
     end
 end
 
-function GetRandomTableEntry(tName, t)
+function GetRandomTableEntry(gen, t)
     -- iterate over whole table to get all keys
     local keyset = {}
     for k in pairs(t) do
@@ -200,19 +201,20 @@ function GetRandomTableEntry(tName, t)
     end
     -- now you can reliably return a random key
     local N = TableLength(t)
-    local i = rng.rollIndex(tName, N)
+    local i = gen:next()
     local key = keyset[i]
     local R = t[key]
     if args.debug and tonumber(args.debug) >= 3 then print(N,i,key,R) end
     return R
 end
 
+local attrib_seq = rng.num_sequence:new(1,TableLength(dorf_tables.attrib_levels))
 function GetRandomAttribLevel()
-    local N = TableLength(dorf_tables.attrib_levels)
-    rng.resetIndexRolls("attrib levels", N)
+    local gen = rng.crng:new(engineID,false,attrib_seq)
+    gen:shuffle()
     while true do
-        local level = GetRandomTableEntry("attrib levels", dorf_tables.attrib_levels)
-        if rng.rollBool(level.p) then
+        local level = GetRandomTableEntry(gen, dorf_tables.attrib_levels)
+        if rng.rollBool(engineID, level.p) then
             return level
         end
     end
@@ -249,7 +251,7 @@ end
 function GenerateStatValue(stat, atr_lvl)
     atr_lvl = atr_lvl == nil and GetRandomAttribLevel() or dorf_tables.attrib_levels[atr_lvl]
     if args.debug and tonumber(args.debug) >= 4 then print(atr_lvl, atr_lvl[1], atr_lvl[2]) end
-    local R = rng.rollNormal(atr_lvl[1], atr_lvl[2])
+    local R = rng.rollNormal(engineID, atr_lvl[1], atr_lvl[2])
     local value = math.floor(R)
     value = value < 0 and 0 or value
     value = value > 5000 and 5000 or value
@@ -308,7 +310,7 @@ function ApplyType(dwf, dorf_type)
                 utils.insert_or_update(dwf.status.current_soul.skills, { new = true, id = df.job_skill[skill], rating = 0 }, 'id')
                 sTable = GetSkillTable(dwf, skill)
             end
-            local points = rng.rollInt(skillRange[1], skillRange[2])
+            local points = rng.rollInt(engineID, skillRange[1], skillRange[2])
             sTable.rating = sTable.rating < points and points or sTable.rating
             sTable.rating = sTable.rating > 20 and 20 or sTable.rating
             sTable.rating = sTable.rating < 0 and 0 or sTable.rating
@@ -329,7 +331,7 @@ function ApplyProfession(dwf, profession, min, max)
             utils.insert_or_update(dwf.status.current_soul.skills, { new = true, id = df.job_skill[skill], rating = 0 }, 'id')
             sTable = GetSkillTable(dwf, skill)
         end
-        local points = rng.rollInt(min, max)
+        local points = rng.rollInt(engineID, min, max)
         sTable.rating = sTable.rating < points and points or sTable.rating
         sTable.rating = sTable.rating + bonus
         sTable.rating = sTable.rating > 20 and 20 or sTable.rating
@@ -408,7 +410,7 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
 				p = p > 1 and 1 or p
 				--p = (p - math.floor(p)) >= 0.5 and math.ceil(p) or math.floor(p)
 				--> proc probability and check points
-				if points >= 1 and rng.rollBool(p) then
+				if points >= 1 and rng.rollBool(engineID, p) then
 					ApplyProfession(dwf, prof, min, max)
 					table.insert(DwarvesData[id]['professions'], prof)
 					PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
@@ -440,7 +442,7 @@ function RollStats(dwf, types)
     for type, table in pairs(dorf_tables.dorf_types) do
         local p = table.p
         if p ~= nil then
-            if rng.rollBool(p) then
+            if rng.rollBool(engineID, p) then
                 ApplyType(dwf, type)
             end
         end
@@ -544,7 +546,8 @@ function ZeroDwarf(dwf)
 			print(":WARNING: ZeroDwarf(dwf) - dwf was zeroed, but had never been pimped before")
 			--error("this dwf_data shouldn't be nil, I think.. I guess maybe if you were clearing dwarves that weren't pimped")
 		end
-	end
+    end
+    return true
 end
 
 function Reroll(dwf)
@@ -554,7 +557,9 @@ function Reroll(dwf)
             ZeroDwarf(dwf)
         end
         ApplyJob(dwf, jobName)
+        return true
     end
+    return false
 end
 
 function LoopUnits(units, check, fn, checkoption, profmin, profmax) --cause nothing else will use arg 5 or 6
@@ -980,3 +985,7 @@ function Query(table, query, parent)
 end
 --Query(dfhack, '','dfhack')
 --Query(PimpData, '', 'pd')
+
+attrib_seq = nil
+rng.DestroyEngine(engineID)
+collectgarbage()
