@@ -7,7 +7,7 @@ print("Loading data tables..")
 local dorf_tables = dfhack.script_environment('dorf_tables')
 cloned = {} --assurances I'm sure
 cloned = {
-	jobs = utils.clone(dorf_tables.dorf_jobs, true),
+    jobs = utils.clone(dorf_tables.dorf_jobs, true),
     professions = utils.clone(dorf_tables.professions, true),
     distributions = utils.clone(dorf_tables.job_distributions, true),
 }
@@ -15,6 +15,7 @@ print("Done.")
 local validArgs = utils.invert({
     'help',
     'debug',
+    'show',
 
     'select', --highlighted --all --named --unnamed --employed --pimped --unpimped --protected --unprotected --drunks --jobs
     'clear',
@@ -35,31 +36,31 @@ if args.select and args.select == 'pimped' then
 end
 
 function LoadPersistentData()
-	local gamePath = dfhack.getDFPath()
-	local fortName = dfhack.TranslateName(df.world_site.find(df.global.ui.site_id).name)
-	local savePath = dfhack.getSavePath()
-	local fileName = fortName .. ".json.dat"
-	local cur = json.open(gamePath .. "/data/save/current/" .. fileName)
-	local saved = json.open(savePath .. "/" .. fileName)
-	if saved.exists == true and cur.exists == false then
-		print("Previous session save data found.")
-		cur.data = saved.data
+    local gamePath = dfhack.getDFPath()
+    local fortName = dfhack.TranslateName(df.world_site.find(df.global.ui.site_id).name)
+    local savePath = dfhack.getSavePath()
+    local fileName = fortName .. ".json.dat"
+    local cur = json.open(gamePath .. "/data/save/current/" .. fileName)
+    local saved = json.open(savePath .. "/" .. fileName)
+    if saved.exists == true and cur.exists == false then
+        print("Previous session save data found.")
+        cur.data = saved.data
     elseif saved.exists == false then
         print("No session data found. All dwarves will be treated as non-pimped.")
-		--saved:write()
-	elseif cur.exists == true then
-		print("Existing session data found.")
-	end
-	PimpData = cur.data
+        --saved:write()
+    elseif cur.exists == true then
+        print("Existing session data found.")
+    end
+    PimpData = cur.data
 end
 
 function SavePersistentData()
-	local gamePath = dfhack.getDFPath()
-	local fortName = dfhack.TranslateName(df.world_site.find(df.global.ui.site_id).name)
-	local fileName = fortName .. ".json.dat"
-	local cur = json.open(gamePath .. "/data/save/current/" .. fileName)
-	cur.data = PimpData
-	cur:write()
+    local gamePath = dfhack.getDFPath()
+    local fortName = dfhack.TranslateName(df.world_site.find(df.global.ui.site_id).name)
+    local fileName = fortName .. ".json.dat"
+    local cur = json.open(gamePath .. "/data/save/current/" .. fileName)
+    cur.data = PimpData
+    cur:write()
 end
 
 function safecompare(a,b)
@@ -346,16 +347,16 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
     local jd = cloned.distributions[jobName]
     local job = cloned.jobs[jobName]
     if args.debug and tonumber(args.debug) >= 3 then print(dwf,job,jobName, PimpData[jobName]) end
-	PimpData[jobName].count = PimpData[jobName].count + 1
-	jd.cur = PimpData[jobName].count
-	local id = tostring(dwf.id)
-	DwarvesData[id] = {}
-	DwarvesData[id]['job'] = jobName
-	DwarvesData[id]['professions'] = {}
-	if not PimpData[jobName] then
-		PimpData[jobName] = {}
-	end
-	dwf.custom_profession = jobName
+    PimpData[jobName].count = PimpData[jobName].count + 1
+    jd.cur = PimpData[jobName].count
+    local id = tostring(dwf.id)
+    DwarvesData[id] = {}
+    DwarvesData[id]['job'] = jobName
+    DwarvesData[id]['professions'] = {}
+    if not PimpData[jobName] then
+        PimpData[jobName] = {}
+    end
+    dwf.custom_profession = jobName
     RollStats(dwf, job.types)
     
     -- Apply required professions
@@ -373,59 +374,59 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
     end
         
     -- Loop tertiary professions
-	-- Sort loop (asc)
-	--[[]]
-	local points = 11
-	local base_dec = 11 / job.max[1]
-	local total = 0
-	for prof, t in spairs(PimpData[jobName].profs, 
-	function(a,b)
-		return twofield_compare(PimpData[jobName].profs, 
-		a, b, 'count', 'p',
-		function(f1,f2) return safecompare(f1,f2) end, 
-		function(f1,f2) return safecompare(f2,f1) end) 
-	end) 
-	do--]]
-		if total < job.max[1] then
-			local ratio = job[prof]
-			local max = math.ceil(points)
-			local min = math.ceil(points - 5)
-			min = min < 0 and 0 or min
-			--Firsts are special
-			if PimpData[jobName].profs[prof].count < (ratio * PimpData[jobName].count) and points > 7.7 then
-				ApplyProfession(dwf, prof, min, max)
-				table.insert(DwarvesData[id]['professions'], prof)
-				PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
-				if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
-				
-				if not bAlreadySetProf2 then
-					bAlreadySetProf2 = true
-					dwf.profession2 = df.profession[prof]
-				end
-				points = points - base_dec
-				total = total + 1
-			else
-				local p = PimpData[jobName].profs[prof].count > 0 and (1 - (ratio / ((ratio*PimpData[jobName].count) / PimpData[jobName].profs[prof].count))) or ratio
-				p = p < 0 and 0 or p
-				p = p > 1 and 1 or p
-				--p = (p - math.floor(p)) >= 0.5 and math.ceil(p) or math.floor(p)
-				--> proc probability and check points
-				if points >= 1 and rng.rollBool(engineID, p) then
-					ApplyProfession(dwf, prof, min, max)
-					table.insert(DwarvesData[id]['professions'], prof)
-					PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
-					if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
-					
-					if not bAlreadySetProf2 then
-						bAlreadySetProf2 = true
-						dwf.profession2 = df.profession[prof]
-					end
-					points = points - base_dec
-					total = total + 1
-				end
-			end
-		end
-	end
+    -- Sort loop (asc)
+    --[[]]
+    local points = 11
+    local base_dec = 11 / job.max[1]
+    local total = 0
+    for prof, t in spairs(PimpData[jobName].profs, 
+    function(a,b)
+        return twofield_compare(PimpData[jobName].profs, 
+        a, b, 'count', 'p',
+        function(f1,f2) return safecompare(f1,f2) end, 
+        function(f1,f2) return safecompare(f2,f1) end) 
+    end) 
+    do--]]
+        if total < job.max[1] then
+            local ratio = job[prof]
+            local max = math.ceil(points)
+            local min = math.ceil(points - 5)
+            min = min < 0 and 0 or min
+            --Firsts are special
+            if PimpData[jobName].profs[prof].count < (ratio * PimpData[jobName].count) and points > 7.7 then
+                ApplyProfession(dwf, prof, min, max)
+                table.insert(DwarvesData[id]['professions'], prof)
+                PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
+                if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
+                
+                if not bAlreadySetProf2 then
+                    bAlreadySetProf2 = true
+                    dwf.profession2 = df.profession[prof]
+                end
+                points = points - base_dec
+                total = total + 1
+            else
+                local p = PimpData[jobName].profs[prof].count > 0 and (1 - (ratio / ((ratio*PimpData[jobName].count) / PimpData[jobName].profs[prof].count))) or ratio
+                p = p < 0 and 0 or p
+                p = p > 1 and 1 or p
+                --p = (p - math.floor(p)) >= 0.5 and math.ceil(p) or math.floor(p)
+                --> proc probability and check points
+                if points >= 1 and rng.rollBool(engineID, p) then
+                    ApplyProfession(dwf, prof, min, max)
+                    table.insert(DwarvesData[id]['professions'], prof)
+                    PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
+                    if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
+                    
+                    if not bAlreadySetProf2 then
+                        bAlreadySetProf2 = true
+                        dwf.profession2 = df.profession[prof]
+                    end
+                    points = points - base_dec
+                    total = total + 1
+                end
+            end
+        end
+    end
     if not bAlreadySetProf2 then
         dwf.profession2 = dwf.profession
     end
@@ -517,35 +518,35 @@ function TrySecondPassExpansion() --Tries to expand distribution maximums
 end
 
 function ZeroDwarf(dwf)
-	LoopStatsTable(dwf.body.physical_attrs, function(attribute) attribute.value = 0 end)
+    LoopStatsTable(dwf.body.physical_attrs, function(attribute) attribute.value = 0 end)
     LoopStatsTable(dwf.status.current_soul.mental_attrs, function(attribute) attribute.value = 0 end)
 
-	local count_max = count_this(df.job_skill)
+    local count_max = count_this(df.job_skill)
     utils.sort_vector(dwf.status.current_soul.skills, 'id')
     for i=0, count_max do
         utils.erase_sorted_key(dwf.status.current_soul.skills, i, 'id')
     end
 
-	dfhack.units.setNickname(dwf, "")
+    dfhack.units.setNickname(dwf, "")
     dwf.custom_profession = ""
     dwf.profession = df.profession['DRUNK']
-	dwf.profession2 = df.profession['DRUNK']
+    dwf.profession2 = df.profession['DRUNK']
 
-	for id, dwf_data in pairs(DwarvesData) do
-		if next(dwf_data) ~= nil and id == tostring(dwf.id) then
-			print("Clearing loaded dwf data for dwf id: " .. id)
-			local jobName = dwf_data.job
-			local job = cloned.jobs[jobName]
-			PimpData[jobName].count = PimpData[jobName].count - 1
-			for i, prof in pairs(dwf_data.professions) do
-				PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count - 1
-				if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
-			end
-			DwarvesData[id] = {}
-		elseif next(dwf_data) == nil and id == tostring(dwf.id) then
-			print(":WARNING: ZeroDwarf(dwf) - dwf was zeroed, but had never been pimped before")
-			--error("this dwf_data shouldn't be nil, I think.. I guess maybe if you were clearing dwarves that weren't pimped")
-		end
+    for id, dwf_data in pairs(DwarvesData) do
+        if next(dwf_data) ~= nil and id == tostring(dwf.id) then
+            print("Clearing loaded dwf data for dwf id: " .. id)
+            local jobName = dwf_data.job
+            local job = cloned.jobs[jobName]
+            PimpData[jobName].count = PimpData[jobName].count - 1
+            for i, prof in pairs(dwf_data.professions) do
+                PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count - 1
+                if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
+            end
+            DwarvesData[id] = {}
+        elseif next(dwf_data) == nil and id == tostring(dwf.id) then
+            print(":WARNING: ZeroDwarf(dwf) - dwf was zeroed, but had never been pimped before")
+            --error("this dwf_data shouldn't be nil, I think.. I guess maybe if you were clearing dwarves that weren't pimped")
+        end
     end
     return true
 end
@@ -560,6 +561,17 @@ function Reroll(dwf)
         return true
     end
     return false
+end
+
+function Show(dwf)
+    local name_ptr = dfhack.units.getVisibleName(dwf)
+    local name = dfhack.TranslateName(name_ptr)
+    local numspaces = 26 - string.len(name)
+    local spaces = ' '
+    for i=1,numspaces do
+        spaces = spaces .. " "
+    end
+    print('('..dwf.id..') - '..name..spaces..dwf.profession,dwf.custom_profession)
 end
 
 function LoopUnits(units, check, fn, checkoption, profmin, profmax) --cause nothing else will use arg 5 or 6
@@ -704,79 +716,80 @@ end
 ----------------
 
 function Prepare()
-	print("Loading persistent data..")
-	LoadPersistentData()
-	if not PimpData.Dwarves then
-		PimpData.Dwarves = {}
-	end
-	DwarvesData = PimpData.Dwarves
+    print("Loading persistent data..")
+    LoadPersistentData()
+    if not PimpData.Dwarves then
+        PimpData.Dwarves = {}
+    end
+    DwarvesData = PimpData.Dwarves
 
-	--Initialize PimpData
-	for jobName, job in pairs(cloned.jobs) do
-		PrepareDistribution(jobName)
-		if not PimpData[jobName] then
-			PimpData[jobName] = {}
-			PimpData[jobName].count = 0
-			PimpData[jobName].profs = {}
+    --Initialize PimpData
+    for jobName, job in pairs(cloned.jobs) do
+        PrepareDistribution(jobName)
+        if not PimpData[jobName] then
+            PimpData[jobName] = {}
+            PimpData[jobName].count = 0
+            PimpData[jobName].profs = {}
         end
         if PimpData[jobName].count == nil then
             PimpData[jobName].count = 0
         end
-		for prof, p in pairs(job) do
-			if tonumber(p) then
-				if not PimpData[jobName].profs[prof] then
-					--print("making " .. prof .. " in " .. jobName .. "'s table: " .. PimpData[jobName])
-					PimpData[jobName].profs[prof] = {}
-					PimpData[jobName].profs[prof].p = p
-					PimpData[jobName].profs[prof].count = 0
-				else
-					PimpData[jobName].profs[prof].p = p
-				end
-			end
-		end
+        for prof, p in pairs(job) do
+            if tonumber(p) then
+                if not PimpData[jobName].profs[prof] then
+                    --print("making " .. prof .. " in " .. jobName .. "'s table: " .. PimpData[jobName])
+                    PimpData[jobName].profs[prof] = {}
+                    PimpData[jobName].profs[prof].p = p
+                    PimpData[jobName].profs[prof].count = 0
+                else
+                    PimpData[jobName].profs[prof].p = p
+                end
+            end
+        end
     end
     if args.debug and tonumber(args.debug) >= 4 then
         print("PimpData, job counts")
         DisplayTable(PimpData,nil,'count')
     end
-	--Count Professions from 'DwarvesData'
-	--[[for id, dwf_data in pairs(DwarvesData) do
-		local jobName = dwf_data.job
-		local job = cloned.jobs[jobName]
-		local profs = dwf_data.professions
-		PimpData[jobName].count = PimpData[jobName].count + 1
-		for i, prof in pairs(profs) do
-			PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
-		end
-	end--]]
+    --Count Professions from 'DwarvesData'
+    --[[for id, dwf_data in pairs(DwarvesData) do
+        local jobName = dwf_data.job
+        local job = cloned.jobs[jobName]
+        local profs = dwf_data.professions
+        PimpData[jobName].count = PimpData[jobName].count + 1
+        for i, prof in pairs(profs) do
+            PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
+        end
+    end--]]
 
-	--TryClearDwarf Loop (or maybe not)
-	print("Data load complete.")
+    --TryClearDwarf Loop (or maybe not)
+    print("Data load complete.")
 end
 
 function PrepareDistribution(jobName)
-	local jd = cloned.distributions[jobName]
-	if not jd then
-		error("Job distribution not found. Job: " .. jobName)
+    local jd = cloned.distributions[jobName]
+    if not jd then
+        error("Job distribution not found. Job: " .. jobName)
     end
-	if jd.max == nil then
-		local IndexMax = 0
+    if jd.max == nil then
+        local IndexMax = 0
         for i, v in pairs(cloned.distributions.Thresholds) do
-			if work_force >= v then
-				IndexMax = i
-			end
-		end
-		--print(cloned.distributions.Thresholds[IndexMax])
-		local max = 0
-		for i=1, IndexMax do
-			max = max + jd[i]
-		end 
-		jd.max = max
-	end
+            if work_force >= v then
+                IndexMax = i
+            end
+        end
+        --print(cloned.distributions.Thresholds[IndexMax])
+        local max = 0
+        for i=1, IndexMax do
+            max = max + jd[i]
+        end 
+        jd.max = max
+    end
 end
 
 function SelectDwarf(dwf)
     table.insert(selection, dwf)
+    return true
 end
 
 function ShowHelp()
@@ -935,54 +948,17 @@ elseif args.select and (args.debug or args.clear or args.pimpem or args.reroll o
         error("Clear is implied with Reroll. Choose one, not both.")
     end
 else
-    ShowHint()
+    if args.show then
+        selection = {}
+        print("Selected Dwarves: " .. LoopUnits(ActiveUnits, CheckWorker, SelectDwarf, args.select))
+        LoopUnits(selection, nil, Show)
+    else
+        ShowHint()
+    end
 end
 SavePersistentData()
 print('\n')
 
-function safe_pairs(item, keys_only)
-    if keys_only then
-        local mt = debug.getmetatable(item)
-        if mt and mt._index_table then
-            local idx = 0
-            return function()
-                idx = idx + 1
-                if mt._index_table[idx] then
-                    return mt._index_table[idx]
-                end
-            end
-        end
-    end
-    local ret = table.pack(pcall(function() return pairs(item) end))
-    local ok = ret[1]
-    table.remove(ret, 1)
-    if ok then
-        return table.unpack(ret)
-    else
-        return function() end
-    end
-end
-
-function Query(table, query, parent)
-	if not parent then
-		parent = ""
-	end
-	for k,v in safe_pairs(table) do
-		if not tonumber(k) and type(k) ~= "table" and not string.find(tostring(k), 'script') then
-			if string.find(tostring(k), query) then
-				print(parent .. "." .. k)
-			end
-			--print(parent .. "." .. k)
-			if not string.find(parent, tostring(k)) then
-				if parent then
-					Query(v, query, parent .. "." .. k)
-				else
-					Query(v, query, k)
-				end
-			end
-		end
-	end
-end
 --Query(dfhack, '','dfhack')
 --Query(PimpData, '', 'pd')
 
