@@ -15,6 +15,7 @@ print("Done.")
 local validArgs = utils.invert({
     'help',
     'debug',
+    'show',
 
     'select', --highlighted --all --named --unnamed --employed --pimped --unpimped --protected --unprotected --drunks --jobs
     'clear',
@@ -562,6 +563,17 @@ function Reroll(dwf)
     return false
 end
 
+function Show(dwf)
+    local name_ptr = dfhack.units.getVisibleName(dwf)
+    local name = dfhack.TranslateName(name_ptr)
+    local numspaces = 26 - string.len(name)
+    local spaces = ' '
+    for i=1,numspaces do
+        spaces = spaces .. " "
+    end
+    print('('..dwf.id..') - '..name..spaces..dwf.profession,dwf.custom_profession)
+end
+
 function LoopUnits(units, check, fn, checkoption, profmin, profmax) --cause nothing else will use arg 5 or 6
     local count = 0
     for _, unit in pairs(units) do
@@ -777,6 +789,7 @@ end
 
 function SelectDwarf(dwf)
     table.insert(selection, dwf)
+    return true
 end
 
 function ShowHelp()
@@ -935,54 +948,17 @@ elseif args.select and (args.debug or args.clear or args.pimpem or args.reroll o
         error("Clear is implied with Reroll. Choose one, not both.")
     end
 else
-    ShowHint()
+    if args.show then
+        selection = {}
+        print("Selected Dwarves: " .. LoopUnits(ActiveUnits, CheckWorker, SelectDwarf, args.select))
+        LoopUnits(selection, nil, Show)
+    else
+        ShowHint()
+    end
 end
 SavePersistentData()
 print('\n')
 
-function safe_pairs(item, keys_only)
-    if keys_only then
-        local mt = debug.getmetatable(item)
-        if mt and mt._index_table then
-            local idx = 0
-            return function()
-                idx = idx + 1
-                if mt._index_table[idx] then
-                    return mt._index_table[idx]
-                end
-            end
-        end
-    end
-    local ret = table.pack(pcall(function() return pairs(item) end))
-    local ok = ret[1]
-    table.remove(ret, 1)
-    if ok then
-        return table.unpack(ret)
-    else
-        return function() end
-    end
-end
-
-function Query(table, query, parent)
-    if not parent then
-        parent = ""
-    end
-    for k,v in safe_pairs(table) do
-        if not tonumber(k) and type(k) ~= "table" and not string.find(tostring(k), 'script') then
-            if string.find(tostring(k), query) then
-                print(parent .. "." .. k)
-            end
-            --print(parent .. "." .. k)
-            if not string.find(parent, tostring(k)) then
-                if parent then
-                    Query(v, query, parent .. "." .. k)
-                else
-                    Query(v, query, k)
-                end
-            end
-        end
-    end
-end
 --Query(dfhack, '','dfhack')
 --Query(PimpData, '', 'pd')
 
