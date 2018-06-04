@@ -47,6 +47,8 @@ local categories = {
   pants = {resources.pants_type, civ.equipment.pants_id, itemDefs.pants }
 }
 
+local diggers = resources.digger_type
+
 function checkKnown(known, itemType)
   --checks if the item with the given subtype is already known to the civ
   --params:
@@ -86,21 +88,27 @@ function addItems(category, exotic)
   
   for _, item in ipairs(all) do
     subtype = item.subtype
-    --we don't want procedural items with adjectives such as "wavy spears"
-    --(because they don't seem to be craftable even if added)
-    --nor do we want known items or training items (because adding training
-    --items seems to allow them to be made out of metals)
     itemOk = false
     
     --check if it's a training weapon
     t1, t2 = pcall(function () return item.flags.TRAINING == false end)
     training = not(not t1 or t2)
     
+    --we don't want procedural items with adjectives such as "wavy spears"
+    --(because they don't seem to be craftable even if added)
+    --nor do we want known items or training items (because adding training
+    --items seems to allow them to be made out of metals)
     if (item.adjective == "" and not training and not checkKnown(known, subtype)) then
       itemOk = true
     end
     
     if (not exotic and not checkNative(native, subtype)) then
+      itemOk = false
+    end
+    
+    --check that the weapon we're adding is not already known to the civ as
+    --a digging implement so picks don't get duplicated
+    if (checkKnown(diggers, subtype)) then
       itemOk = false
     end
     
