@@ -28,7 +28,7 @@ local validArgs = utils.invert({
 })
 local args = utils.processArgs({...}, validArgs)
 if args.debug and tonumber(args.debug) >= 0 then print("Debug info [ON]") end
-protected_dwarf_signals = {'_', 'c', 'j', 'p'}
+protected_dwarf_signals = {'.', 'c', 'j', 'p'}
 if args.select and args.select == 'pimped' then
     if args.pimpem and not args.clear then
         error("Invalid arguments detected. You've selected only pimped dwarves, and are attempting to pimp them without clearing them. This will not work, so I'm warning you about it with this lovely error.")
@@ -59,6 +59,13 @@ function SavePersistentData()
     local fortName = dfhack.TranslateName(df.world_site.find(df.global.ui.site_id).name)
     local fileName = fortName .. ".json.dat"
     local cur = json.open(gamePath .. "/data/save/current/" .. fileName)
+    local newDwfTable = {}
+    for k,v in pairs(PimpData.Dwarves) do
+        if v~=nil then
+            newDwfTable[k] = v
+        end
+    end
+    PimpData.Dwarves = newDwfTable
     cur.data = PimpData
     cur:write()
 end
@@ -542,7 +549,8 @@ function ZeroDwarf(dwf)
                 PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count - 1
                 if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
             end
-            DwarvesData[id] = {}
+            DwarvesData[id] = nil
+            --table.remove(DwarvesData,id)
         elseif next(dwf_data) == nil and id == tostring(dwf.id) then
             print(":WARNING: ZeroDwarf(dwf) - dwf was zeroed, but had never been pimped before")
             --error("this dwf_data shouldn't be nil, I think.. I guess maybe if you were clearing dwarves that weren't pimped")
@@ -622,9 +630,14 @@ function isDwarfNamed(dwf)
     return dwf.status.current_soul.name.nickname ~= ""
 end
 
+--Returns true if the DWARF has a custom_profession
+function isDwarfEmployed(dwf)
+    return dwf.custom_profession ~= ""
+end
+
 --Returns true if the DWARF has a custom_profession but isn't pimped
 function isDwarfEmployed(dwf)
-    return dwf.custom_profession ~= "" and (not isDwarfPimped(dwf))
+    return dwf.custom_profession ~= ""
 end
 
 --Returns true if the DWARF is in the DwarvesData table
@@ -700,6 +713,7 @@ function CheckWorker(dwf, option)
                     n=0
                     for _,v in pairs(option) do
                         n=n+1
+                        --print(dwf.custom_profession, v)
                         if n > 1 and dwf.custom_profession == v then
                             return true
                         end
