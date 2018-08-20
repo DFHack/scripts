@@ -1,3 +1,11 @@
+--[====[
+
+not-a-script
+============
+This is a configuration file.
+
+]====]
+
 --local _ENV = mkmodule('dorf_tables')
 local O = 0
 job_distributions = {

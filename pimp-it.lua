@@ -1,3 +1,22 @@
+-- Allows balancing fort workloads based on allocations defined in dorf_tables.lua
+-- Also allows manual dwarf boosting [give your dwarves jobs, traits, and stuf]
+-- Read the script's command line help, far more useful
+
+--[====[
+
+pimp-it
+=======
+Allows balancing fort workloads based on allocations defined in dorf_tables.lua
+Also allows manual dwarf boosting [give your dwarves jobs, traits, and stuf]
+Read the script's command line help, far more useful `pimp-it -help`
+
+]====]
+
+--[[
+Authored by: Josh Cooper
+Last Modified: 2018.08.20
+--]]
+
 utils ={}
 utils = require('utils')
 json = require('json')
