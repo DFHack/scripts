@@ -252,6 +252,8 @@ function isValidJob(job) --job is a dorf_jobs.<job> table
     if job ~= nil and job.req ~= nil then
         local jobName = FindValueKey(cloned.jobs, job)
         local jd = cloned.distributions[jobName]
+        if args.debug and tonumber(args.debug) >= 1 then print(string.format("job: %s, cur: %d, max: %d",jobName, PimpData[jobName].count, jd.max)) end
+        if args.debug and tonumber(args.debug) >= 2 then DisplayTable(job.req) end
         if not jd then
             error("Job distribution not found. Job: " .. jobName)
         end
@@ -271,7 +273,7 @@ function GetSkillTable(dwf, skill)
             return skillTable
         end
     end
-    if args.debug and tonumber(args.debug) >= 0 then print("Could not find skill: " .. skill) end
+    if args.debug and tonumber(args.debug) >= 2 then print("Could not find skill: " .. skill) end
     return nil
 end
 
@@ -423,7 +425,7 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
                 ApplyProfession(dwf, prof, min, max)
                 table.insert(DwarvesData[id]['professions'], prof)
                 PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
-                if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
+                if args.debug and tonumber(args.debug) >= 0 then print(string.format("dwf id: %d (%s)   \tcount: %d [%s]", dwf.id, jobName, PimpData[jobName].profs[prof].count, prof)) end
                 
                 if not bAlreadySetProf2 then
                     bAlreadySetProf2 = true
@@ -441,7 +443,7 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
                     ApplyProfession(dwf, prof, min, max)
                     table.insert(DwarvesData[id]['professions'], prof)
                     PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count + 1
-                    if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
+                    if args.debug and tonumber(args.debug) >= 0 then print(string.format("dwf id: %d (%s)   \tcount: %d [%s]", dwf.id, jobName, PimpData[jobName].profs[prof].count, prof)) end
                     
                     if not bAlreadySetProf2 then
                         bAlreadySetProf2 = true
@@ -492,7 +494,7 @@ function FindJob(dwf, recursive)
         if args.debug and tonumber(args.debug) >= 4 then print("FindJob() ", jobName) end
         local job = cloned.jobs[jobName]
         if isValidJob(job) then
-            if args.debug and tonumber(args.debug) >= 1 then print("Found a job!") end
+            if args.debug and tonumber(args.debug) >= 1 then print(string.format("Found a job! [%s]",jobName)) end
             ApplyJob(dwf, jobName)
             --pimped_count = pimped_count + 1
             return true
@@ -550,6 +552,7 @@ function ZeroDwarf(dwf)
     local count_max = count_this(df.job_skill)
     utils.sort_vector(dwf.status.current_soul.skills, 'id')
     for i=0, count_max do
+        --print("zerodwf:",dwf,dwf.status.current_soul.skills)
         utils.erase_sorted_key(dwf.status.current_soul.skills, i, 'id')
     end
 
@@ -566,7 +569,7 @@ function ZeroDwarf(dwf)
             PimpData[jobName].count = PimpData[jobName].count - 1
             for i, prof in pairs(dwf_data.professions) do
                 PimpData[jobName].profs[prof].count = PimpData[jobName].profs[prof].count - 1
-                if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", PimpData[jobName].profs[prof].count, jobName, prof) end
+                if args.debug and tonumber(args.debug) >= 0 then print(string.format("dwf id: %d (%s)   \tcount: %d [%s]", dwf.id, jobName, PimpData[jobName].profs[prof].count, prof)) end
             end
             DwarvesData[id] = nil
             --table.remove(DwarvesData,id)
@@ -760,11 +763,13 @@ function Prepare()
     for jobName, job in pairs(cloned.jobs) do
         PrepareDistribution(jobName)
         if not PimpData[jobName] then
+            if args.debug and tonumber(args.debug) >= 0 then print(string.format("PimpData[%s] does not exist.",jobName)) end
             PimpData[jobName] = {}
             PimpData[jobName].count = 0
             PimpData[jobName].profs = {}
         end
         if PimpData[jobName].count == nil then
+            if args.debug and tonumber(args.debug) >= 0 then print(string.format("PimpData[%s].count does not exist.",jobName)) end
             PimpData[jobName].count = 0
         end
         for prof, p in pairs(job) do
@@ -804,20 +809,21 @@ function PrepareDistribution(jobName)
     if not jd then
         error("Job distribution not found. Job: " .. jobName)
     end
-    if jd.max == nil then
-        local IndexMax = 0
-        for i, v in pairs(cloned.distributions.Thresholds) do
-            if work_force >= v then
-                IndexMax = i
-            end
+    local IndexMax = 0
+    for i, v in pairs(cloned.distributions.Thresholds) do
+        if work_force >= v then
+            IndexMax = i
         end
-        --print(cloned.distributions.Thresholds[IndexMax])
-        local max = 0
-        for i=1, IndexMax do
-            max = max + jd[i]
-        end 
-        jd.max = max
     end
+    --print(cloned.distributions.Thresholds[IndexMax])
+    local max = 0
+    for i=1, IndexMax do
+        max = max + jd[i]
+    end 
+    if args.debug and tonumber(args.debug) >= 0 then print(string.format("%s distribution, index: %d, max: %d",jobName, IndexMax, max)) end
+    jd.max = max
+    return
+    --end
 end
 
 function SelectDwarf(dwf)
@@ -964,7 +970,7 @@ elseif args.select and (args.debug or args.clear or args.pimpem or args.reroll o
             end    
             print(affected .. " dwarves affected.")
 
-            if args.debug and tonumber(args.debug) >= 1 then
+            if args.debug and tonumber(args.debug) >= 0 then
                 print("\n")
                 print("cur", "max", "job", "\n  ~~~~~~~~~")
                 for k,v in pairs(cloned.distributions) do
