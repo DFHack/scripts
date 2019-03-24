@@ -2,7 +2,7 @@
 --[====[
 
 allneeds
-=========
+========
 Show which neesd are high for all dwarfs
 
 ]====]
@@ -72,13 +72,13 @@ function compare(a,b)
 end
 sorted = {}
 i = 1
-for k,v in pairs(need) do 
+for k,v in pairs(need) do
     sorted[i] = {v[1], v[2], ENUM[k]}
     i = i + 1
 end
 
 table.sort(sorted, compare)
 print(string.format("%20s %8s %8s", "Need", "Weight", "Focus"))
-for k,v in ipairs(sorted) do 
+for k,v in ipairs(sorted) do
     print(string.format("%20s %8.1f %8.1f",  v[3], v[1]/n, v[2]/n))
 end
