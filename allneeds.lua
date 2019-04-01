@@ -3,7 +3,8 @@
 
 allneeds
 ========
-Show which neesd are high for all dwarfs
+Show which needs are high for all dwarfs.
+Weight and Focus are divided by the number of dwarves that have that need.
 
 ]====]
 local ENUM = {}
@@ -53,9 +54,9 @@ for _, unit in ipairs(df.global.world.units.all) do
         -- sum need_level and focus_level for each need
         for k,v in pairs(mind) do
             if need[v.id] == nil then
-                need[v.id] = {0, 0}
+                need[v.id] = {0, 0, 0}
             end
-            need[v.id] = {need[v.id][1] + v.need_level, need[v.id][2] + v.focus_level}
+            need[v.id] = {need[v.id][1] + v.need_level, need[v.id][2] + v.focus_level, need[v.id][3] + 1}
         end
     end
 end
@@ -68,13 +69,13 @@ end
 sorted = {}
 i = 1
 for k,v in pairs(need) do
-    sorted[i] = {v[1], v[2], ENUM[k]}
+    sorted[i] = {v[1], v[2], v[3], ENUM[k]}
     i = i + 1
 end
 table.sort(sorted, compare)
 
 -- Print sorted output
-print(string.format("%20s %8s %8s", "Need", "Weight", "Focus"))
+print(string.format("%20s %8s %8s %9s", "Need", "Weight", "Focus", "# Dwarves"))
 for k,v in ipairs(sorted) do
-    print(string.format("%20s %8.1f %8.1f",  v[3], v[1]/n, v[2]/n))
+    print(string.format("%20s %8.1f %8.1f %9d",  v[3], v[1]/v[3], v[2]/v[3], v[3]))
 end
