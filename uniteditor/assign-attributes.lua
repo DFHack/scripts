@@ -12,7 +12,6 @@ standard level and represents the average values for that attribute,
 tier 4 is the maximum level, and tier -4 is the minimum level.
 
 An example of the attribute "Strength":
-
 Tier | Description
 ---- | -----------
   4  | unbelievably strong
