@@ -11,7 +11,7 @@ Attributes are divided into tiers from -4 to 4. Tier 0 is the
 standard level and represents the average values for that attribute,
 tier 4 is the maximum level, and tier -4 is the minimum level.
 
-An example of the attribute "Strength":
+An example of the attribute "Strength".
 Tier | Description
 ---- | -----------
   4  | unbelievably strong
@@ -35,7 +35,7 @@ Usage:
                     the target unit ID. If not present, the
                     currently selected unit will be the target.
 
-* ``-attributes <ATTRIBUTE TIER [ATTRIBUTE TIER] [...]>``: 
+* ``-attributes <ATTRIBUTE TIER [ATTRIBUTE TIER] [...]>``:
                     the list of the attributes to modify and their tiers.
                     The valid attribute names can be found in the wiki:
                     `<https://dwarffortresswiki.org/index.php/DF2014:Attribute>`_
