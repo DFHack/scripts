@@ -69,11 +69,16 @@ Creates a unit.  Usage::
 
     -age howOld
         set the birth date of the unit by current age
-        chosen randomly if not specified
+        chosen randomly if this argument is omitted
+
+    -duration ticks
+        if this is included, the unit will vanish in a puff of smoke
+        once the specified number of ticks has elapsed
+        "ticks" must be an integer greater than 0
 
     -quantity howMany
         replace "howMany" with the number of creatures you want to create
-        defaults to 1 if not specified
+        defaults to 1 if this argument is omitted
 
     -flagSet [ flag1 flag2 ... ]
         set the specified unit flags in the new unit to true
@@ -89,7 +94,7 @@ Creates a unit.  Usage::
 
 local utils = require 'utils'
 
-function createUnit(raceStr, casteStr, pos, age, domesticate, civ_id, group_id, entityRawName, nickname, quantity, flagSet, flagClear)
+function createUnit(raceStr, casteStr, pos, age, domesticate, civ_id, group_id, entityRawName, nickname, vanishDelay, quantity, flagSet, flagClear)
 --  creates the desired unit(s) at the specified location
 --  returns a table containing the created unit(s)
   if not pos then
@@ -103,6 +108,11 @@ function createUnit(raceStr, casteStr, pos, age, domesticate, civ_id, group_id, 
       qerror('Invalid age: ' .. age)
     end
   end
+  if vanishDelay then
+    if not tonumber(vanishDelay) or tonumber(vanishDelay) < 1 then
+      qerror('Invalid duration: ' .. vanishDelay)
+    end
+  end
   local spawnNumber = 1
   if quantity then
     spawnNumber = tonumber(quantity)
@@ -111,7 +121,7 @@ function createUnit(raceStr, casteStr, pos, age, domesticate, civ_id, group_id, 
     end
   end
   local race_id, caste_id, caste_id_choices = getRaceCasteIDs(raceStr, casteStr)
-  return createUnitBase(race_id, caste_id, caste_id_choices, pos, age, domesticate, civ_id, group_id, entityRawName, nickname, flagSet, flagClear, spawnNumber)
+  return createUnitBase(race_id, caste_id, caste_id_choices, pos, age, domesticate, civ_id, group_id, entityRawName, nickname, vanishDelay, flagSet, flagClear, spawnNumber)
 end
 
 function createUnitBase(...)
@@ -138,7 +148,7 @@ function createUnitBase(...)
   return ret
 end
 
-function createUnitInner(race_id, caste_id, caste_id_choices, pos, age, domesticate, civ_id, group_id, entityRawName, nickname, flagSet, flagClear, spawnNumber)
+function createUnitInner(race_id, caste_id, caste_id_choices, pos, age, domesticate, civ_id, group_id, entityRawName, nickname, vanishDelay, flagSet, flagClear, spawnNumber)
   local gui = require 'gui'
 
   local view_x = df.global.window_x
@@ -240,7 +250,7 @@ function createUnitInner(race_id, caste_id, caste_id_choices, pos, age, domestic
 --  Process the created unit:
     local unit = df.unit.find(df.global.unit_next_id-1)
     table.insert(createdUnits, unit)
-    processNewUnit(unit, age, domesticate, civ_id, group_id, entityRawName, nickname, flagSet, flagClear, isArena)
+    processNewUnit(unit, age, domesticate, civ_id, group_id, entityRawName, nickname, vanishDelay, flagSet, flagClear, isArena)
   end
 
   dfhack.screen.dismiss(dwarfmodeScreen)
@@ -515,7 +525,7 @@ function nameUnit(unit, entityRawName)
   end
 end
 
-function processNewUnit(unit, age, domesticate, civ_id, group_id, entityRawName, nickname, flagSet, flagClear, isArena) -- isArena boolean is used for determining whether or not the arena name should be cleared
+function processNewUnit(unit, age, domesticate, civ_id, group_id, entityRawName, nickname, vanishDelay, flagSet, flagClear, isArena) -- isArena boolean is used for determining whether or not the arena name should be cleared
   if entityRawName and type(entityRawName) == 'string' then
     nameUnit(unit, entityRawName)
   elseif not isArena then -- arena mode ONLY displays the first_name of units; removing it would result in a blank space where you'd otherwise expect the caste name to show up
@@ -542,6 +552,9 @@ function processNewUnit(unit, age, domesticate, civ_id, group_id, entityRawName,
     domesticateUnit(unit)
   elseif not civ_id then
     wildUnit(unit)
+  end
+  if vanishDelay then
+    setVanishCountdown(unit, vanishDelay)
   end
   enableDefaultLabors(unit)
   handleUnitFlags(unit,flagSet,flagClear)
@@ -666,6 +679,13 @@ function enableDefaultLabors(unit)
   end
 end
 
+function setVanishCountdown(unit, ticks)
+  if not tonumber(ticks) or tonumber(ticks) < 1 then
+    qerror('Invalid vanish delay: ' .. ticks)
+  end
+  unit.animal.vanish_countdown = ticks
+end
+
 function handleUnitFlags(unit,flagSet,flagClear)
   if flagSet or flagClear then
     local flagsToSet = {}
@@ -714,7 +734,8 @@ validArgs = utils.invert({
   'location',
   'age',
   'setUnitToFort', -- added by amostubal to get past an issue with \\LOCAL
-  'quantity'
+  'quantity',
+  'duration'
 })
 
 if moduleMode then
@@ -770,4 +791,4 @@ if args.name then
   end
 end
 
-createUnit(args.race, args.caste, pos, tonumber(args.age), args.domesticate, tonumber(civ_id), tonumber(group_id), entityRawName, args.nick, tonumber(args.quantity), args.flagSet, args.flagClear)
+createUnit(args.race, args.caste, pos, tonumber(args.age), args.domesticate, tonumber(civ_id), tonumber(group_id), entityRawName, args.nick, tonumber(args.duration), tonumber(args.quantity), args.flagSet, args.flagClear)
