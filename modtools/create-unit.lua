@@ -359,17 +359,20 @@ end
 
 function getLocationChoices(pos, offset_x, offset_y, offset_z)
   local spawnCoords = {}
-  local map = df.global.world.map
   local min_x = pos.x - offset_x
   local max_x = pos.x + offset_x
   local min_y = pos.y - offset_y
   local max_y = pos.y + offset_y
   local min_z = pos.z - offset_z
   local max_z = pos.z + offset_z
+  local map = df.global.world.map
+  local map_x = map.x_count-1 -- maximum local coordinates on the loaded map
+  local map_y = map.y_count-1
+  local map_z = map.z_count-1
 
-  for x = min_x >= 0 and min_x or 0, max_x <= map.x_count and max_x or map.x_count do
-    for y = min_y >= 0 and min_y or 0, max_y <= map.y_count and max_y or map.y_count do
-      for z = min_z >= 0 and min_z or 0, max_z <= map.z_count and max_z or map.z_count do
+  for x = min_x >= 0 and min_x or 0, max_x <= map_x and max_x or map_x do
+    for y = min_y >= 0 and min_y or 0, max_y <= map_y and max_y or map_y do
+      for z = min_z >= 0 and min_z or 0, max_z <= map_z and max_z or map_z do
         table.insert(spawnCoords,{x = x, y = y, z = z})
       end
     end
