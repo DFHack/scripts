@@ -98,12 +98,13 @@ Creates a unit.  Usage::
     -locationType type
         may be used with -locationRange
         to specify what counts as a valid tile for unit spawning
+        unit creation will not occur if no valid tiles are available
         replace "type" with one of the following:
             Walkable
                 units will only be placed on walkable ground tiles
                 this is the default used if -locationType is omitted
             Open
-                open spaces are valid spawn points
+                open spaces are also valid spawn points
                 this is intended for flying units
             Any
                 all tiles, including solid walls, are valid
@@ -272,18 +273,16 @@ function createUnitInner(race_id, caste_id, caste_id_choices, pos, locationChoic
     df.global.cursor.x = tonumber(pos.x)
     df.global.cursor.y = tonumber(pos.y)
     df.global.cursor.z = tonumber(pos.z)
-  else
-    local noValidLocationChoices = false
   end
 
   local createdUnits = {}
-  for n = 1,spawnNumber do -- loop here to avoid having to handle spawn data each time when creating multiple units
+  for n = 1, spawnNumber do -- loop here to avoid having to handle spawn data each time when creating multiple units
     if not caste_id then -- choose a random caste ID each time
       arenaSpawn.caste:insert(0, caste_id_choices[math.random(1, #caste_id_choices)])
     end
 
-    if locationChoices and not noValidLocationChoices then
-      -- select a random spawn position within the specified location range, if available
+    if locationChoices then
+--    select a random spawn position within the specified location range, if available
       local randomPos
       for n = 1, #locationChoices do
         local i = math.random(1, #locationChoices)
@@ -295,13 +294,12 @@ function createUnitInner(race_id, caste_id, caste_id_choices, pos, locationChoic
         end
       end
       if randomPos then
-        pos = randomPos -- if no valid tiles are found, the -location pos is used instead
+        df.global.cursor.x = tonumber(randomPos.x)
+        df.global.cursor.y = tonumber(randomPos.y)
+        df.global.cursor.z = tonumber(randomPos.z)
       else
-        noValidLocationChoices = true -- prevent futile searches in the next spawning sequence
+        break -- no valid tiles available; terminate the spawn loop without creating any units
       end
-      df.global.cursor.x = tonumber(pos.x)
-      df.global.cursor.y = tonumber(pos.y)
-      df.global.cursor.z = tonumber(pos.z)
     end
 
     gui.simulateInput(dwarfmodeScreen, 'D_LOOK_ARENA_CREATURE') -- open the arena spawning menu
