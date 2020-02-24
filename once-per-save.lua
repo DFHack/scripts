@@ -21,7 +21,8 @@ Parameters:
 
 ]====]
 
-local STORAGEKEY = 'once-per-save'
+local STORAGEKEY_PREFIX = 'once-per-save'
+local storagekey = STORAGEKEY_PREFIX .. ':' .. tostring(df.global.ui.site_id)
 
 local args = {...}
 local rerun = false
@@ -42,19 +43,30 @@ elseif arg_reset[args[1]] then
 end
 if #args == 0 then return end
 
+local age = df.global.ui.fortress_age
+
 local once_run = {}
 if not rerun then
-    local entries = dfhack.persistent.get_all(STORAGEKEY) or {}
+    local entries = dfhack.persistent.get_all(storagekey) or {}
     for i, entry in ipairs(entries) do
-        once_run[entry.value]=entry
+        if entry.ints[1] > age then
+            -- probably unretiered fortress
+            entry:delete()
+        else
+            once_run[entry.value]=entry
+        end
     end
 end
 
+local save = dfhack.persistent.save
 for cmd in table.concat(args, ' '):gmatch("%s*([^;]+);?%s*") do
     if not once_run[cmd] then
         local ok = dfhack.run_command(cmd) == 0
         if ok then
-            once_run[cmd] = dfhack.persistent.save({key = STORAGEKEY, value = cmd}, true)
+            once_run[cmd] = save({key = storagekey,
+                                  value = cmd,
+                                  ints = { age }},
+                                 true)
         elseif rerun and once_run[cmd] then
             once_run[cmd]:delete()
         end
