@@ -25,14 +25,19 @@ local STORAGEKEY = 'once-per-save'
 
 local args = {...}
 local rerun = false
-if args[1] == "--help" or args[1] == "-?" or args[1] == "?" then
+
+local utils = require 'utils'
+local arg_help = utils.invert({"?", "-?", "-help", "--help"})
+local arg_rerun = utils.invert({"-rerun", "--rerun"})
+local arg_reset = utils.invert({"-reset", "--reset"})
+if arg_help[args[1]] then
     print(HELP)
     return
-elseif args[1] == "--rerun" then
+elseif arg_rerun[args[1]] then
     rerun = true
     table.remove(args, 1)
-elseif args[1] == "--reset" then
-    while dfhack.persistent.delete(STORAGEKEY) do end
+elseif arg_reset[args[1]] then
+    while dfhack.persistent.delete(storagekey) do end
     table.remove(args, 1)
 end
 if #args == 0 then return end
