@@ -17,7 +17,7 @@ Parameters:
 
 --help            display this help
 --rerun commands  ignore saved commands
---reset           deleted saved commands
+--reset           deletes saved commands
 
 ]====]
 
@@ -28,9 +28,9 @@ local args = {...}
 local rerun = false
 
 local utils = require 'utils'
-local arg_help = utils.invert({"?", "-?", "-help", "--help"})
-local arg_rerun = utils.invert({"-rerun", "--rerun"})
-local arg_reset = utils.invert({"-reset", "--reset"})
+local arg_help = utils.invert{"?", "-?", "-help", "--help"}
+local arg_rerun = utils.invert{"-rerun", "--rerun"}
+local arg_reset = utils.invert{"-reset", "--reset"}
 if arg_help[args[1]] then
     print(HELP)
     return
