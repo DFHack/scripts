@@ -44,13 +44,32 @@ end
 if #args == 0 then return end
 
 local age = df.global.ui.fortress_age
+local year = df.global.cur_year
+local year_tick = df.global.cur_year_tick
+local year_tick_advmode = df.global.cur_year_tick_advmode
+
+local function is_later(a, b)
+    for i, v in ipairs(a) do
+        if v < b[i] then
+            return true
+        elseif v > b[i] then
+            return false
+        --else: v == b[i] so keep iterating
+        end
+    end
+    return false
+end
 
 local once_run = {}
 if not rerun then
     local entries = dfhack.persistent.get_all(storagekey) or {}
     for i, entry in ipairs(entries) do
-        if entry.ints[1] > age then
-            -- probably unretiered fortress
+        local ints = entry.ints
+        if ints[1] > age
+        or age == 0 and is_later({ints[2], ints[3], ints[4]}, {year, year_tick, year_tick_advmode})
+        then
+            print (dfhack.current_script_name() .. ': unretired fortress, deleting `' .. entry.value .. '`')
+            --printall_recurse(entry) -- debug
             entry:delete()
         else
             once_run[entry.value]=entry
@@ -65,7 +84,7 @@ for cmd in table.concat(args, ' '):gmatch("%s*([^;]+);?%s*") do
         if ok then
             once_run[cmd] = save({key = storagekey,
                                   value = cmd,
-                                  ints = { age }},
+                                  ints = { age, year, year_tick, year_tick_advmode }},
                                  true)
         elseif rerun and once_run[cmd] then
             once_run[cmd]:delete()
