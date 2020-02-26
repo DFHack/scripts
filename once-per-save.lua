@@ -4,12 +4,9 @@ local HELP = [====[
 
 once-per-save
 =============
-Runs commands like ``multicmd``, but only unless
-not already ran once in current save.
-
-Use this in ``onMapLoad.init`` with f.e. ``ban-cooking``::
-
-  once-per-save ban-cooking tallow; ban-cooking honey; ban-cooking oil; ban-cooking seeds; ban-cooking brew; ban-cooking fruit; ban-cooking mill; ban-cooking thread; ban-cooking milk;
+Runs commands like :ref:`multicmd`, but only unless
+not already ran once in current save. You may actually
+want :ref:`on-new-fortress`.
 
 Only successfully ran commands are saved.
 
