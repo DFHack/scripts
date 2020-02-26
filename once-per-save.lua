@@ -4,9 +4,9 @@ local HELP = [====[
 
 once-per-save
 =============
-Runs commands like :ref:`multicmd`, but only unless
+Runs commands like `multicmd`, but only unless
 not already ran once in current save. You may actually
-want :ref:`on-new-fortress`.
+want `on-new-fortress`.
 
 Only successfully ran commands are saved.
 
