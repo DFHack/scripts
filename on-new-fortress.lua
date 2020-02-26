@@ -18,7 +18,7 @@ if not (...) then
     return
 end
 
-if df.global.ui.fortress_age ~= 0 then return end
+if not (dfhack.world.isFortressMode() and df.global.ui.fortress_age == 0) then return end
 
 for cmd in table.concat({...}, ' '):gmatch("%s*([^;]+);?%s*") do
     dfhack.run_command(cmd)
