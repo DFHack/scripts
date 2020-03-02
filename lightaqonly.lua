@@ -1,0 +1,34 @@
+-- Changes heavy aquifers to light pre embark
+local help = [====[
+
+lightaqonly
+======
+Changes the Drainage of all world tiles that would generate Heavy aquifers into
+a value that results in Light aquifers instead.
+
+Note that the script has to be run before embarking to have any effect on an embark.
+
+]====]
+function lightaqonly ()
+  if not dfhack.isWorldLoaded () then
+    dfhack.printerr ("Error: This script requires a world to be loaded.")
+    return
+  end
+
+  if dfhack.isMapLoaded () then
+    dfhack.printerr ("Error: This script requires a world to be loaded, but not a map.")
+     return
+  end
+
+  for i = 0, df.global.world.world_data.world_width - 1 do
+    for k = 0, df.global.world.world_data.world_height - 1 do
+      local tile = df.global.world.world_data.region_map [i]:_displace (k)
+      
+      if tile.drainage % 20 == 7 then
+        tile.drainage = tile.drainage + 1
+      end
+    end
+  end
+end
+
+lightaqonly ()
