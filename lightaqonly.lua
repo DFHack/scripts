@@ -2,7 +2,7 @@
 local help = [====[
 
 lightaqonly
-======
+===========
 Changes the Drainage of all world tiles that would generate Heavy aquifers into
 a value that results in Light aquifers instead.
 
@@ -11,13 +11,11 @@ Note that the script has to be run before embarking to have any effect on an emb
 ]====]
 function lightaqonly ()
   if not dfhack.isWorldLoaded () then
-    dfhack.printerr ("Error: This script requires a world to be loaded.")
-    return
+    qerror ("Error: This script requires a world to be loaded.")
   end
 
   if dfhack.isMapLoaded () then
-    dfhack.printerr ("Error: This script requires a world to be loaded, but not a map.")
-     return
+    qerror ("Error: This script requires a world to be loaded, but not a map.")
   end
 
   for i = 0, df.global.world.world_data.world_width - 1 do
