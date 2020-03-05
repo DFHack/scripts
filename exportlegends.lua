@@ -350,6 +350,11 @@ function export_more_legends_xml()
                 end
             end
         end
+        if entityV.type == df.historical_entity_type.Guild then -- Get profession
+           for professionK,professionV in pairs(entityV.guild_professions) do
+              file:write("\t\t<profession>"..df_enums.profession[professionV.profession]:lower().."</profession>\n")
+           end
+        end
         for id, link in pairs(entityV.entity_links) do
             file:write("\t\t<entity_link>\n")
                 for k, v in pairs(link) do
