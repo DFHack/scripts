@@ -1,5 +1,6 @@
 -- Displays the raw memory of a structure, separated by field.
 --author BenLubar
+--luacheck:skip-entirely
 --
 --[====[
 

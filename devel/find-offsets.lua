@@ -1,4 +1,5 @@
 -- Find some global addresses
+--luacheck:skip-entirely
 --[====[
 
 devel/find-offsets

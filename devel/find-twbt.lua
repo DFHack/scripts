@@ -1,4 +1,5 @@
 -- Find some TWBT-related offsets
+--luacheck:skip-entirely
 --[====[
 
 devel/find-twbt

@@ -1,5 +1,6 @@
 -- Query is a script useful for finding and reading values of data structure fields. Purposes will likely be exclusive to writing lua script code.
 -- Written by Josh Cooper(cppcooper) on 2017-12-21, last modified: 2018-10-19
+--luacheck:skip-entirely
 local utils=require('utils')
 local validArgs = utils.invert({
  'unit',

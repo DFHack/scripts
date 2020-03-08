@@ -1,5 +1,6 @@
 -- Size Check
 --author mifki
+--luacheck:skip-entirely
 --
 --[====[
 
