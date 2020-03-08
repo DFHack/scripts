@@ -115,7 +115,6 @@ function getUnitNeed(unit, need, deityId)
   end
 
   -- If we get here, unit doesn't have it
-  return false
 end
 
 -- Returns the unit's focus level for the given need, or false if they don't have that need
@@ -146,8 +145,8 @@ end
 function addNeed(unit, need, focus, level, deityId)
   -- Setup default values
   local need = need
-  if not tonumber(need) then
-    need = df.need_type[need]
+  if type(need) == "string" then
+    need = df.need_type[need] --luacheck:retype
   end
 
   local focus = focus or focusDefault -- focusDefault defined earlier in script: default is 0
@@ -217,7 +216,7 @@ end
 
 -- Replicates the base game calculations that determine the strength of a unit's needs based on their personality traits, beliefs, and devotion to gods.
 -- Returns appropriate need strength value, or 0 if the unit shouldn't have the need.
-local needDefaultsInfo = {
+local needDefaultsInfo = { --as:{_type:table,trait:{_type:table,id:string},belief:{_type:table,id:string},special:bool,negative:bool}[]
   [df.need_type.Socialize] = {trait = {id = "GREGARIOUSNESS"}},
   [df.need_type.DrinkAlcohol] = {trait = {id = "IMMODERATION"}},
   [df.need_type.PrayOrMeditate] = {special = true},
@@ -250,6 +249,7 @@ local needDefaultsInfo = {
   [df.need_type.AdmireArt] = {belief = {id = "ARTWORK"}}
 }
 local needLevelValues = {1, 2, 5, 10} --Value for need level for each need level tier
+--luacheck: out=number
 function getUnitDefaultNeedStrength(unit, need, deityId)
   local entry = needDefaultsInfo[need]
   if entry == nil then return 0 end
@@ -500,7 +500,7 @@ function main(...)
   end
 
   -- Valid target check
-  local unitsList = {}
+  local unitsList = {} --as:df.unit[]
   if not args.citizens then
     -- Assume trying to target a unit
     local unit

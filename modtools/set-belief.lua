@@ -220,7 +220,7 @@ end
 -- Gives a list of all the unit's beliefs and their values.
 -- Returns a table where the keys are the belief names and its values are its strength
 -- If tiers is true, the value is the tier of the belief instead of the trait's strength
-function getUnitBeliefList(unit, tiers)
+local function getUnitBeliefList(unit, tiers)
   local list = {}
 
   for id, beliefName in ipairs(df.value_type) do
@@ -305,7 +305,7 @@ end
 -- Currently a hack solution to randomisation.
 -- Doesn't respect culture weights (if they have any impact)
 function randomBeliefTier()
-  local weightedTable = {}
+  local weightedTable = {} --as:{_type:table,id:number,weight:number}[]
 
   for rangeIndex, data in ipairs(tierRanges) do
     local addition = {}
@@ -366,7 +366,7 @@ function main(...)
   end
 
   -- Valid target check
-  local unitsList = {}
+  local unitsList = {} --as:df.unit[]
   if not args.citizens then
     -- Assume trying to target a unit
     local unit
@@ -404,7 +404,7 @@ function main(...)
   end
 
   -- Belief check
-  local beliefsList = {}
+  local beliefsList = {} --as:number[]
   if not args.belief and not args.all and not args.listunit then
     qerror("Please specify a belief to edit using -belief <ID> or -all.")
   end

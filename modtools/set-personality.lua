@@ -96,7 +96,7 @@ local validArgs = utils.invert({
 })
 
 -- These ranges represent the bounds at which the description for a personality trait changes
-tierRanges = {{min = 0, max = 9, weight = 4}, {min = 10, max = 24, weight = 20}, {min = 25, max = 39, weight = 85}, {min = 40, max = 60, weight = 780}, {min = 61, max = 75, weight = 85}, {min = 76, max = 90, weight = 20}, {min = 91, max = 100, weight = 4}}
+local tierRanges = {{min = 0, max = 9, weight = 4}, {min = 10, max = 24, weight = 20}, {min = 25, max = 39, weight = 85}, {min = 40, max = 60, weight = 780}, {min = 61, max = 75, weight = 85}, {min = 76, max = 90, weight = 20}, {min = 91, max = 100, weight = 4}}
 
 rng = rng or dfhack.random.new(nil, 10)
 
@@ -290,7 +290,7 @@ end
 -- Returns a trait tier based on the probabilities listed on the wiki
 -- Doesn't account for the creature's PERSONALITY weighting!
 function randomTraitTier()
-  local weightedTable = {}
+  local weightedTable = {} --as:{_type:table,id:number,weight:number}[]
 
   for rangeIndex, data in ipairs(tierRanges) do
     local addition = {}
