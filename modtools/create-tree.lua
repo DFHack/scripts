@@ -33,7 +33,7 @@ local utils = require 'utils'
 function createTree(...)
   local old_gametype = df.global.gametype
   local old_mode = df.global.ui.main.mode
-  local old_popups = {}
+  local old_popups = {} --as:df.popup_message[]
   for _, popup in pairs(df.global.world.status.popups) do
     table.insert(old_popups, popup)
   end
@@ -105,7 +105,7 @@ function createTreeInner(treeRaw, treeAge, treePos)
   df.global.window_z = view_z
 end
 
-validArgs = utils.invert({
+local validArgs = utils.invert({
   'help',
   'tree',
   'age',

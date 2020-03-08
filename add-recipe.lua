@@ -36,7 +36,7 @@ end
   --1: the currently known recipes to the player civ
   --2: the native (non-exotic) recipes to the player civ
   --3: all possible recipes including exotic
-local categories = {
+local categories = { --as:{1:'number[]',2:'number[]',3:'df.itemdef[]'}[]
   weapon = {resources.weapon_type, civ.equipment.weapon_id, itemDefs.weapons },
   shield = {resources.shield_type, civ.equipment.shield_id, itemDefs.shields },
   ammo = {resources.ammo_type, civ.equipment.ammo_id, itemDefs.ammo },
@@ -81,18 +81,19 @@ function addItems(category, exotic)
     --category: the category of items we're adding
     --exotic: whether to add exotic items
   --returns: list of item objects that were added
-  known = category[1]
-  native = category[2]
-  all = category[3]
-  added = {}
+  local known = category[1]
+  local native = category[2]
+  local all = category[3]
+  local added = {} --as:df.itemdef[]
   
   for _, item in ipairs(all) do
-    subtype = item.subtype
-    itemOk = false
+    local item = item --as:df.itemdef_weaponst
+    local subtype = item.subtype
+    local itemOk = false
     
     --check if it's a training weapon
-    t1, t2 = pcall(function () return item.flags.TRAINING == false end)
-    training = not(not t1 or t2)
+    local t1, t2 = pcall(function () return item.flags.TRAINING == false end)
+    local training = not(not t1 or t2)
     
     --we don't want procedural items with adjectives such as "wavy spears"
     --(because they don't seem to be craftable even if added)
@@ -123,7 +124,8 @@ end
 
 
 function printItems(itemList)
-  for _, v in ipairs(added) do
+  for _, v in ipairs(itemList) do
+    local v = v --as:df.itemdef_weaponst
     print("Added recipe " .. v.id .. " (" .. v.name .. ")")
   end
 end
@@ -140,14 +142,14 @@ function addAllItems(exotic)
 end
 
 function addSingleItem(itemstring)
-  itemType, itemId = string.match(itemstring, "(.*):(.*)")
+  local itemType, itemId = string.match(itemstring, "(.*):(.*)")
   if (itemType == nil or itemId == nil) then return end
-  category = categories[string.lower(itemType)]
+  local category = categories[string.lower(itemType)]
   if (category == nil) then return end
-  known = category[1]
-  all = category[3]
+  local known = category[1]
+  local all = category[3]
   
-  addedItem = nil
+  local addedItem = nil
   --assume the user knows what they're doing, so no need for sanity checks
   for _, item in ipairs(all) do
     if (item.id == itemId) then
@@ -158,6 +160,7 @@ function addSingleItem(itemstring)
   end
   
   if (addedItem ~= nil) then
+    local addedItem = addedItem --as:df.itemdef_weaponst
     print("Added recipe " .. addedItem.id .. " (" .. addedItem.name .. ")")
   end
 end
