@@ -87,7 +87,7 @@ local validArgs = utils.invert({
 -- Check if unit has a preference matching all the criteria
 -- Note: This may give some false positives if filters aren't as precise as they should be
 -- Returns the preference's index if found, otherwise returns false
-hasPreference = function(unit, details)
+function hasPreference(unit, details)
   for index, preference in ipairs(unit.status.current_soul.preferences) do
     local valid = true
     for variable, value in pairs(details) do
@@ -115,7 +115,7 @@ function addPreference(unit, details)
   end
 
   -- The same ID is used across multiple variables. Even if only wanting to modify the creature_id, you must set all others to the same value
-  local id = details.id or details.item_type or details.creature_id or details.color_id or details.shape_id or details.plant_id or details.poetic_form_id or details.musical_form_id or details.dance_form_id or -1
+  local id = details.item_type or details.creature_id or details.color_id or details.shape_id or details.plant_id or details.poetic_form_id or details.musical_form_id or details.dance_form_id or -1
 
   local info = {
     new = true,
@@ -133,7 +133,7 @@ function addPreference(unit, details)
     matindex = details.matindex or -1,
     mat_state = details.mat_state or 0,
     active = details.active or true,
-    prefstring_seed = details.prefstring_seed or 1, --?
+    prefstring_seed = 1, --?
   }
 
   -- Do prefstring_seed randomisation?
@@ -143,7 +143,7 @@ function addPreference(unit, details)
 end
 
 -- Changes the provided details of a unit's existing preference at the given index
-function modifyPreference(unit, details, index)
+local function modifyPreference(unit, details, index)
   for k, v in pairs(details) do
     unit.status.current_soul.preferences[index][k] = v
   end
@@ -284,7 +284,7 @@ function main(...)
   if args.state and tonumber(args.state) then
     state = tonumber(args.state)
   elseif args.mat_state then
-    state = df.matter_state[state]
+    state = df.matter_state[args.mat_state]
   end
 
   -- Handle active
@@ -301,7 +301,7 @@ function main(...)
   -- It's fine (and expected) if entries in here are nil
   local details = {
     type = type,
-    subtype = args.subtype,
+    item_subtype = args.subtype,
     mattype = mattype,
     matindex = matindex,
     mat_state = state,
