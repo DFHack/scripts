@@ -25,6 +25,7 @@ UnretireNemesisBox.ATTRS{
   with_filter = true
 }
 
+--luacheck: in=df.viewscreen_setupadventurest,df.nemesis_record
 function addNemesisToUnretireList(advSetUpScreen,nemesis)
   local unretireOption = false
   for i = #advSetUpScreen.race_ids-1,0,-1 do
@@ -54,6 +55,7 @@ function getGenderString(gender)
   return string.char(40)..genderStr..string.char(41) -- ( )
 end
 
+--luacheck: in=table
 function UnretireNemesisBox:preinit(info)
   local choices = {}
   for _,nemesis in ipairs(df.global.world.nemesis.all) do
