@@ -51,11 +51,11 @@ function weightedRoll(weightedTable)
   for index, result in ipairs(weightedTable) do
     maxWeight = maxWeight + result.weight
   end
-  
+
   local roll = rng:random(maxWeight) + 1
   local currentNum = roll
   local result
-  
+
   for index, currentResult in ipairs(weightedTable) do
     currentNum = currentNum - currentResult.weight
     if currentNum <= 0 then
@@ -63,7 +63,7 @@ function weightedRoll(weightedTable)
       break
     end
   end
-  
+
   return result
 end
 
@@ -98,15 +98,30 @@ function getInterest(unit, type)
   else
     sexname = type
   end
-  
+
+  local romancename
+  local marryname
+
+  if sexname == "none" then
+    return 0
+  elseif sexname == "male" then
+    romancename = "romance_male"
+    marryname = "marry_male"
+  elseif sexname == "female" then
+    romancename = "romance_female"
+    marryname = "marry_female"
+  else
+    qerror("unexpected sex: " .. sexname)
+  end
+
   local ori = unit.status.current_soul.orientation_flags
   local interest = 0
-  if ori["romance_" .. sexname] == true then
+  if ori[romancename] == true then
     interest = 1
-  elseif ori["marry_" .. sexname] == true then
+  elseif ori[marryname] == true then
     interest = 2
   end
-  
+
   return interest
 end
 
@@ -116,7 +131,7 @@ function setOrientation(unit, sex, interest)
   -- Store the unit's orientation flags in a form that's quicker to type :p
   local ori = unit.status.current_soul.orientation_flags
   ori.indeterminate = false
-  
+
   -- Check if unit is a historical figure.
   -- Their historical figure entry also has a set of orientation flags to edit.
   local hori
@@ -124,30 +139,40 @@ function setOrientation(unit, sex, interest)
     hori = df.historical_figure.find(unit.hist_figure_id).orientation_flags
     hori.indeterminate = false
   end
-  
+
   local sexname = getSexString(sex)
-  
-  -- Alas, there are no flags for attraction to sexless beings
+  local romancename
+  local marryname
+
   if sexname == "none" then
+    -- Alas, there are no flags for attraction to sexless beings
     return
+  elseif sexname == "male" then
+    romancename = "romance_male"
+    marryname = "marry_male"
+  elseif sexname == "female" then
+    romancename = "romance_female"
+    marryname = "marry_female"
+  else
+    qerror("unexpected sex: " .. sexname)
   end
-  
-  ori["romance_" .. sexname] = false
-  ori["marry_" .. sexname] = false
+
+  ori[romancename] = false
+  ori[marryname] = false
   if hori then
-    hori["romance_" .. sexname] = false
-    hori["marry_" .. sexname] = false
+    hori[romancename] = false
+    hori[marryname] = false
   end
-  
+
   if interest == 1 then
-    ori["romance_" .. sexname] = true
+    ori[romancename] = true
     if hori then
-      hori["romance_" .. sexname] = true
+      hori[romancename] = true
     end
   elseif interest == 2 then
-    ori["marry_" .. sexname] = true
+    ori[marryname] = true
     if hori then
-      hori["marry_" .. sexname] = true
+      hori[marryname] = true
     end
   end
 end
@@ -159,29 +184,38 @@ function randomiseOrientation(unit, sex)
   if sex == -1 then
     return
   end
-  
+
   local caste = df.creature_raw.find(unit.race).caste[unit.caste]
-  
+
   -- Build a weighted table for use in the weighted roll function
   local sexname = getSexString(sex)
+  local orientationname
+  if sexname == "male" then
+    orientationname = "orientation_male"
+  elseif sexname == "female" then
+    orientationname = "orientation_female"
+  else
+    qerror("unexpected sex: " .. sexname)
+  end
   local rolltable = {
-    {id = 0, weight = caste["orientation_" .. sexname][0]}, -- Uninterested
-    {id = 1, weight = caste["orientation_" .. sexname][1]}, -- Romance
-    {id = 2, weight = caste["orientation_" .. sexname][2]} -- Marry
+    {id = 0, weight = caste[orientationname][0]}, -- Uninterested
+    {id = 1, weight = caste[orientationname][1]}, -- Romance
+    {id = 2, weight = caste[orientationname][2]} -- Marry
   }
-  
+
   -- Roll a value for interest, and use that
   local result = weightedRoll(rolltable)
   setOrientation(unit, sex, result)
 end
 
 -- Takes sex number (listed in unit.sex), returns number for opposite sex
--- Sexless creatures (sex = -1) will be treated as being female by this
 function oppositeSex(sex)
   if sex == 1 then
     return 0
-  else
+  elseif sex == 0 then
     return 1
+  else
+    return -1
   end
 end
 
@@ -193,7 +227,7 @@ function main(...)
     print(help)
     return
   end
-  
+
   -- Unit
   local unit
   if args.unit and tonumber(args.unit) then
@@ -207,7 +241,7 @@ function main(...)
   if unit == nil then
     qerror("Couldn't find unit.")
   end
-  
+
   -- View
   if args.view then
     print("Orientation of " .. dfhack.TranslateName(unit.name) .. ":")
@@ -215,19 +249,19 @@ function main(...)
     print("Female: " .. getInterestString(getInterest(unit, "female")))
     return
   end
-  
+
   -- Random check
   if args.random then
     randomiseOrientation(unit, 0) -- Randomise female attraction
     randomiseOrientation(unit, 1) -- Randomise male attraction
     return
   end
-  
+
   -- Determine target sex
   if not args.male and not args.female and not args.opposite and not args.same then
     qerror("Please provide a sex and value to edit. Valid sexes are -male, -female, -opposite, and -same.")
   end
-  
+
   local maleInterest
   local femaleInterest
   if args.male then
@@ -241,6 +275,8 @@ function main(...)
       femaleInterest = tonumber(args.same)
     elseif unit.sex == 1 then
       maleInterest = tonumber(args.same)
+    else
+      qerror("asexual creatures do not have a same sex")
     end
   end
   if args.opposite then
@@ -249,9 +285,11 @@ function main(...)
       femaleInterest = tonumber(args.opposite)
     elseif opposite == 1 then
       maleInterest = tonumber(args.opposite)
+    else
+      qerror("there is no opposite sex")
     end
   end
-  
+
   -- Run function
   if maleInterest then
     setOrientation(unit, 1, maleInterest)
