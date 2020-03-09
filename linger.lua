@@ -41,9 +41,9 @@ function getHistoricalSlayer(unit)
 
   local deathEvents = df.global.world.history.events_death
   for i = #deathEvents-1,0,-1 do
-    if deathEvents[i].victim_hf == unit.hist_figure_id then
-      local slayerHistFig = deathEvents[i].slayer_hf ~= -1 and df.historical_figure.find(deathEvents[i].slayer_hf)
-      return slayerHistFig
+    local event = deathEvents[i] --as:df.history_event_hist_figure_diedst
+    if event.victim_hf == unit.hist_figure_id then
+      return df.historical_figure.find(event.slayer_hf)
     end
   end
 end

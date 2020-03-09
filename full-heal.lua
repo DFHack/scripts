@@ -53,7 +53,7 @@ end
 
 function isCitizen(unit)
 --  required as dfhack.units.isCitizen() returns false for dead units
-    local hf = unit.hist_figure_id ~= -1 and df.historical_figure.find(unit.hist_figure_id)
+    local hf = df.historical_figure.find(unit.hist_figure_id)
     if not hf then
         return false
     end
@@ -290,6 +290,7 @@ if not dfhack_flags.module then
         if args.unit then
             unit = df.unit.find(tonumber(args.unit))
         elseif df.item_corpsest:is_instance(item) then
+            local item = item --as:df.item_corpsest
             unit = df.unit.find(item.unit_id)
         else
             unit = dfhack.gui.getSelectedUnit()

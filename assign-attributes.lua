@@ -79,7 +79,7 @@ local valid_args = utils.invert({
 
 
 -- ----------------------------------------------- UTILITY FUNCTIONS ------------------------------------------------ --
-local function print_yellow(text)
+function print_yellow(text)
     dfhack.color(COLOR_YELLOW)
     print(text)
     dfhack.color(-1)
@@ -146,7 +146,7 @@ function assign(attributes, unit, reset)
     reset = reset or false
 
     if type(unit) == "number" then
-        unit = df.unit.find(tonumber(unit))
+        unit = df.unit.find(tonumber(unit)) --luacheck:retype
     else
         unit = unit or dfhack.gui.getSelectedUnit(true)
     end

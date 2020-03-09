@@ -219,8 +219,9 @@ local preference_functions = {
     -- ---------------- LIKEMATERIAL ---------------- --
     LIKEMATERIAL = function(token)
         local mat_info = dfhack.matinfo.find(token)
+        local ret = {}
         if mat_info then
-            return {
+            ret = { --luacheck:retype
                 type = df.unit_preference.T_type.LikeMaterial,
                 item_type = -1,
                 creature_id = -1,
@@ -239,8 +240,8 @@ local preference_functions = {
             }
         else
             print_yellow("WARNING: '" .. token .. "' does not seem to be a valid material token. Skipping...")
-            return {}
         end
+        return ret
     end,
     -- ---------------- LIKECREATURE ---------------- --
     LIKECREATURE = function(token)
@@ -572,11 +573,11 @@ function assign(preferences, unit, reset)
     assert(not unit or type(unit) == "number" or type(unit) == "userdata")
     assert(not reset or type(reset) == "boolean")
 
-    preferences = preferences or {}
+    local preferences = preferences or {} --as:string[][]
     reset = reset or false
 
     if type(unit) == "number" then
-        unit = df.unit.find(tonumber(unit))
+        unit = df.unit.find(tonumber(unit)) --luacheck:retype
     end
     unit = unit or dfhack.gui.getSelectedUnit(true)
     if not unit then
@@ -594,8 +595,8 @@ function assign(preferences, unit, reset)
     for preference_type, preference_tokens in pairs(preferences) do
         assert(type(preference_tokens) == "table" or type(preference_tokens) == "string")
         local funct = preference_functions[preference_type:upper()]
-        if type(preference_tokens) == "string" then
-            preference_tokens = {preference_tokens} --retype string as table with only one item
+        if type(preference_tokens) == "string" then --luacheck:skip
+            preference_tokens = {preference_tokens}
         end
         for _, token in ipairs(preference_tokens) do
             assert(type(token) == "string")

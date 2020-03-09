@@ -81,7 +81,7 @@ function assign(goals, unit, reset)
     reset = reset or false
 
     if type(unit) == "number" then
-        unit = df.unit.find(tonumber(unit))
+        unit = df.unit.find(tonumber(unit)) --luacheck:retype
     end
     unit = unit or dfhack.gui.getSelectedUnit(true)
     if not unit then

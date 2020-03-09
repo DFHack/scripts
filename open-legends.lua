@@ -62,6 +62,7 @@ function Wrapper:onInput(keys)
 end
 
 function show_screen()
+    local old_view = dfhack.gui.getCurViewscreen(true)
     local ok, err = pcall(function()
         dfhack.screen.show(df.viewscreen_legendsst:new())
         Wrapper():show()

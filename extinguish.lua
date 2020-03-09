@@ -76,6 +76,7 @@ function extinguishContaminant(spatter)
 end
 
 function extinguishItem(item)
+  local item = item --as:df.item_actual
   if item.flags.on_fire then
     item.flags.on_fire = false
     item.temperature.whole = 10050
@@ -172,7 +173,7 @@ if not dfhack_flags.module then
     extinguishAll()
   elseif args.location then
     if dfhack.maps.isValidTilePos(args.location[1],args.location[2],args.location[3]) then
-      extinguishLocation(args.location[1],args.location[2],args.location[3])
+      extinguishLocation(tonumber(args.location[1]), tonumber(args.location[2]), tonumber(args.location[3]))
     else
       qerror("Invalid location coordinates!")
     end

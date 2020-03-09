@@ -89,7 +89,7 @@ function getFeatureID(cavernType)
 end
 
 function getFeatureBlocks(featureID)
-  local featureBlocks = {}
+  local featureBlocks = {} --as:number[]
   for i,block in ipairs(df.global.world.map.map_blocks) do
     if block.global_feature == featureID and block.local_feature == -1 then
       table.insert(featureBlocks, i)
@@ -122,7 +122,7 @@ function isValidTiletype(tiletype)
 end
 
 function getValidEmbarkTiles(block)
-  local validTiles = {}
+  local validTiles = {} --as:{_type:table,x:number,y:number,z:number}[]
   for xi = 0,15 do
     for yi = 0,15 do
       if block.designation[xi][yi].flow_size == 0
@@ -230,7 +230,7 @@ function moveEmbarkStuff(selectedBlock, embarkTiles)
 
 -- Move wagon contents:
   local wagonFound = false
-  for _, wagon in ipairs(df.global.world.buildings.other.WAGON) do
+  for _, wagon in ipairs(df.global.world.buildings.other.WAGON) do --as:df.building_wagonst
     if wagon.age == 0 then -- just in case there's an older wagon present for some reason
       local contained = wagon.contained_items
       for i = #contained-1, 0, -1 do

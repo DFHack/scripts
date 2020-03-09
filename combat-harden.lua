@@ -79,7 +79,7 @@ function main(...)
         value = tonumber(args.value) or 100
     end
 
-    local unitsList = {}
+    local unitsList = {} --as:df.unit[]
 
     if not args.all and not args.citizens then
         -- Assume trying to target a unit

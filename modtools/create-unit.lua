@@ -166,7 +166,7 @@ end
 function createUnitBase(...)
   local old_gametype = df.global.gametype
   local old_mode = df.global.ui.main.mode
-  local old_popups = {}
+  local old_popups = {} --as:df.popup_message[]
   for _, popup in pairs(df.global.world.status.popups) do
     table.insert(old_popups, popup)
   end
@@ -216,37 +216,37 @@ function createUnitInner(race_id, caste_id, caste_id_choices, pos, locationChoic
 
   local equipment = arenaSpawn.equipment
 
-  local old_item_types = {}
+  local old_item_types = {} --as:df.item_type[]
   for _, item_type in pairs(equipment.item_types) do
     table.insert(old_item_types, item_type)
   end
   equipment.item_types:resize(0)
 
-  local old_item_subtypes = {}
+  local old_item_subtypes = {} --as:number[]
   for _, item_subtype in pairs(equipment.item_subtypes) do
     table.insert(old_item_subtypes, item_subtype)
   end
   equipment.item_subtypes:resize(0)
 
-  local old_item_mat_types = {}
+  local old_item_mat_types = {} --as:number[]
   for _, item_mat_type in pairs(equipment.item_materials.mat_type) do
     table.insert(old_item_mat_types, item_mat_type)
   end
   equipment.item_materials.mat_type:resize(0)
 
-  local old_item_mat_indexes = {}
+  local old_item_mat_indexes = {} --as:number[]
   for _, item_mat_index in pairs(equipment.item_materials.mat_index) do
     table.insert(old_item_mat_indexes, item_mat_index)
   end
   equipment.item_materials.mat_index:resize(0)
 
-  local old_item_counts = {}
+  local old_item_counts = {} --as:number[]
   for _, item_count in pairs(equipment.item_counts) do
     table.insert(old_item_counts, item_count)
   end
   equipment.item_counts:resize(0)
 
-  local old_skill_levels = {}
+  local old_skill_levels = {} --as:number[]
   for k, skill_level in ipairs(equipment.skill_levels) do
     table.insert(old_skill_levels, skill_level)
     equipment.skill_levels[k] = 0
@@ -419,7 +419,7 @@ function getRaceCasteIDs(raceStr, casteStr)
   end
 
   local casteIndex
-  local caste_id_choices = {}
+  local caste_id_choices = {} --as:number[]
   if casteStr then
     for i,c in ipairs(race.caste) do
       if c.caste_id == casteStr then
@@ -625,7 +625,7 @@ function nameUnit(unit, entityRawName)
   if unit.status.current_soul then
     unit.status.current_soul.name:assign(name)
   end
-  local hf = unit.hist_figure_id ~= -1 and df.historical_figure.find(unit.hist_figure_id)
+  local hf = df.historical_figure.find(unit.hist_figure_id)
   if hf then
     hf.name:assign(name)
   end
@@ -670,7 +670,7 @@ function setAge(unit, age)
 --  Shifts the unit's birth and death dates to match the specified age.
 --  Also checks for [BABY] and [CHILD] tokens and turns the unit into a baby/child if age-appropriate.
 
-  local hf = unit.hist_figure_id ~= -1 and df.historical_figure.find(unit.hist_figure_id)
+  local hf = df.historical_figure.find(unit.hist_figure_id)
 
   if age then
     if not tonumber(age) or age < 0 then -- this check is repeated for the sake of module usage
@@ -887,6 +887,7 @@ elseif args.civId and tonumber(args.civId) then
   civ_id = tonumber(args.civId)
 end
 
+local group_id
 if args.setUnitToFort or args.groupId == '\\LOCAL' then
   if not isFortressMode then
     qerror("The LOCAL group cannot be specified outside of Fortress mode!")

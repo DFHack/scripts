@@ -42,7 +42,7 @@ end
 
 function main(args)
     local current_year, newbirthyear
-    local units = {}
+    local units = {} --as:df.unit[]
     if args.all then
         for _, u in ipairs(df.global.world.units.all) do
             if dfhack.units.isCitizen(u) then

@@ -11,7 +11,7 @@ Removes emotions associated with seeing a dead body.
 
 local utils = require 'utils'
 
-validArgs = utils.invert({
+local validArgs = utils.invert({
     'help',
     'all',
 })

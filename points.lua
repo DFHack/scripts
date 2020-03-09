@@ -14,6 +14,7 @@ if dfhack.isWorldLoaded() then
     df.global.world.worldgen.worldgen_parms.embark_points = tonumber(...)
     local scr = dfhack.gui.getCurViewscreen()
     if df.viewscreen_setupdwarfgamest:is_instance(scr) then
+        local scr = scr --as:df.viewscreen_setupdwarfgamest
         scr.points_remaining = tonumber(...)
     end
 else

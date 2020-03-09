@@ -107,6 +107,7 @@ end
 ---             See the modules documentation for more details.
 ---   :unit: a valid unit id, a df.unit object, or nil. If nil, the currently selected unit will be targeted.
 ---   :reset: nil, or a table value/boolean. See this script documentation for valid values.
+--luacheck: in=string[],df.unit,bool[]
 function apply_profile(profile, unit, reset_table)
     assert(not profile or type(profile) == "table")
     assert(not unit or type(unit) == "number" or type(unit) == "userdata")
@@ -132,11 +133,12 @@ end
 --- The filename must begin with a slash and must be a relative path starting from the root DF
 --- directory and ending at the desired file.
 --- Return the parsed profile as a table.
+--luacheck: in=string,string
 function load_profile(profile_name, filename)
     assert(profile_name ~= nil)
 
     local json_file = string.format("%s%s", dfhack.getDFPath(), filename or default_filename)
-    local profiles
+    local profiles = {} --as:string[][]
     if dfhack.filesystem.isfile(json_file) then
         profiles = json.decode_file(json_file)
     else

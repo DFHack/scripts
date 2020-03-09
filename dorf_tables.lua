@@ -21,6 +21,7 @@ print("Loading data tables..")
 
 -- p denotes probability, always.
 local O = 0
+--luacheck:global
 job_distributions = {
     Thresholds      = { 7,  14, 21, 28, 30, 35, 42, 49, 56, 63, 70, 77, 80, 110, 1000 }, --Don't touch unless you wanna recalculate the distributions,
     _Grunt          = { O,  1,  2,  O,  O,  1,  2,  O,  4,  1,  1,  4,  O,  10,  880; cur = 0; max = nil },
@@ -74,6 +75,7 @@ Stat Rolling:
 
 
 --probability is used for generating all dwarf stats, some jobs include dorf_types which will upgrade particular stats
+--luacheck:global
 attrib_levels = { -- prob,      avg,    std deviation
     incompetent =   {p=0.01,    100,    20},
     verybad =       {p=0.02,    250,    25},
@@ -98,6 +100,7 @@ dorf_jobs = {
     and also the probability that the profession will be applied during the algorithm's execution.
 }
 --]]
+--luacheck:global
 jobs = {
     _Grunt = {
         req={'RECRUIT'}, max={1988},
@@ -183,6 +186,7 @@ jobs = {
         types={'genius3','intuitive2','leader'}}
 }
 
+--luacheck:global
 professions = {
 --Basic Dwarfing
     MINER =             { skills = {MINING=3} },
@@ -288,6 +292,7 @@ professions = {
 }
 
 --probability is used for randomly applying types to any and all dwarves
+--luacheck:global
 types = {
     resilient1 = {
         p = 0.2,
