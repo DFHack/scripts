@@ -19,12 +19,6 @@ if viewscreen._type ~= df.viewscreen_setupadventurest then
   qerror("This script can only be used during adventure mode setup!")
 end
 
-local UnretireNemesisBox = defclass(UnretireNemesisBox,dialogs.ListBox)
-UnretireNemesisBox.focus_path = 'UnretireNemesisBox'
-UnretireNemesisBox.ATTRS{
-  with_filter = true
-}
-
 --luacheck: in=df.viewscreen_setupadventurest,df.nemesis_record
 function addNemesisToUnretireList(advSetUpScreen,nemesis)
   local unretireOption = false
@@ -56,7 +50,7 @@ function getGenderString(gender)
 end
 
 --luacheck: in=table
-function UnretireNemesisBox:preinit(info)
+function showNemesisPrompt(advSetUpScreen)
   local choices = {}
   for _,nemesis in ipairs(df.global.world.nemesis.all) do
     if not nemesis.flags.RETIRED_ADVENTURER and nemesis.figure then -- these are already available for unretiring
@@ -76,17 +70,9 @@ function UnretireNemesisBox:preinit(info)
       end
     end
   end
-  info.choices = choices
-end
-
-function showNemesisPrompt(advSetUpScreen)
-  UnretireNemesisBox{
-    frame_title = "unretire-anyone",
-    text = "Select someone to add to the 'Specific Person' list:",
-    on_select = function(id,choice)
-      addNemesisToUnretireList(advSetUpScreen,choice.nemesis)
-    end,
-  }:show()
+  dialogs.showListPrompt('unretire-anyone', "Select someone to add to the 'Specific Person' list:", COLOR_WHITE, choices, function(id, choice)
+    addNemesisToUnretireList(advSetUpScreen, choice.nemesis)
+  end, nil, nil, true)
 end
 
 showNemesisPrompt(viewscreen)
