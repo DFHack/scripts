@@ -25,13 +25,14 @@ end
 log('DFHack ', dfhack.getDFHackVersion(), ' on ', dfhack.getOSType(),
     '/', dfhack.getArchitectureName())
 
-log('\nVersion information')
+log('\nVersion information:')
 function log_version(text, func_name)
     log('    ', text, ': ', tostring(dfhack[func_name]()))
 end
 log_version('DF version', 'getDFVersion')
 log_version('DFHack version', 'getDFHackVersion')
 log_version('DFHack release', 'getDFHackRelease')
+log_version('DFHack build ID', 'getDFHackBuildID')
 log_version('Compiled DF version', 'getCompiledDFVersion')
 log_version('Git description', 'getGitDescription')
 log_version('Git commit', 'getGitCommit')
