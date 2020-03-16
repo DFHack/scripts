@@ -14,6 +14,7 @@ local gui = require 'gui'
 local function processTravelNoArmy(advmode, advScreen, target_x, target_y)
     advmode.travel_origin_x = target_x
     advmode.travel_origin_y = target_y
+    advmode.travel_origin_z = 0 -- ensure that the adventurer is teleported to the surface
     gui.simulateInput(advScreen.child, 'LEAVESCREEN') -- close map
     gui.simulateInput(advScreen.child, 'LEAVESCREEN') -- close log
     advmode.site_level_zoom = 1 -- zoom in to shrink the following travel movement, reducing the risk of failure
