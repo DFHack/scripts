@@ -14,7 +14,11 @@ Basically the Drainage is used as an "RNG" to cause an aquifer to be heavy
 about 5% of the time. The script shifts the matching numbers to a neighboring
 one, which does not result in any change of the biome.
 ]====]
-function lightaqonly ()
+function lightaqonly (arg)
+  if arg and arg:match('help') then
+    print(help)
+    return
+  end
   if not dfhack.isWorldLoaded () then
     qerror ("Error: This script requires a world to be loaded.")
   end
@@ -34,4 +38,4 @@ function lightaqonly ()
   end
 end
 
-lightaqonly ()
+lightaqonly (...)
