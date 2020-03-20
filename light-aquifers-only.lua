@@ -1,8 +1,8 @@
 -- Changes heavy aquifers to light pre embark
 local help = [====[
 
-lightaqonly
-===========
+light-aquifers-only
+===================
 Changes the Drainage of all world tiles that would generate Heavy aquifers into
 a value that results in Light aquifers instead.
 
@@ -26,7 +26,7 @@ function lightaqonly ()
   for i = 0, df.global.world.world_data.world_width - 1 do
     for k = 0, df.global.world.world_data.world_height - 1 do
       local tile = df.global.world.world_data.region_map [i]:_displace (k)
-      
+
       if tile.drainage % 20 == 7 then
         tile.drainage = tile.drainage + 1
       end
