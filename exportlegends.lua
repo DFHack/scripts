@@ -587,11 +587,12 @@ function export_more_legends_xml()
                             file:write("\t\t<dye_mat>"..dfhack.matinfo.toString(dfhack.matinfo.decode(event.dye_mat_type, event.dye_mat_index)).."</dye_mat>\n")
                         end
                     end
-
                 elseif df.history_event_item_stolenst:is_instance(event) and k == "matindex" then
                     --skip
                 elseif df.history_event_item_stolenst:is_instance(event) and k == "item" and v == -1 then
                     --skip
+                elseif df.history_event_item_stolenst:is_instance(event) and (k == "reason" or k == "circumstance") then
+                   file:write("\t\t<"..k..">"..v.type.."</"..k..">\n")
                 elseif (df.history_event_masterpiece_created_itemst:is_instance(event) or
                         df.history_event_masterpiece_created_item_improvementst:is_instance(event)
                         ) and k == "mat_index" then
