@@ -157,10 +157,18 @@ function export_more_legends_xml()
         file:write("\t<region>\n")
         file:write("\t\t<id>"..regionV.index.."</id>\n")
         file:write("\t\t<coords>")
-            for xK, xVal in ipairs(regionV.region_coords.x) do
-                file:write(xVal..","..regionV.region_coords.y[xK].."|")
-            end
+        for xK, xVal in ipairs(regionV.region_coords.x) do
+           file:write(xVal..","..regionV.region_coords.y[xK].."|")
+        end
         file:write("</coords>\n")
+        if regionV.evil then
+           file:write("\t\t<evilness>evil</evilness>\n")
+        elseif regionV.good then
+           file:write("\t\t<evilness>good</evilness>\n")
+        end
+        for forceK, forceVal in ipairs(regionV.forces) do
+           file:write("\t\t<force_id>"..forceVal.."</force_id>\n")
+        end
         file:write("\t</region>\n")
     end
     file:write("</regions>\n")
