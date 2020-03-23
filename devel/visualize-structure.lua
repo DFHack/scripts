@@ -102,7 +102,8 @@ local function key_pairs(item)
 end
 if ref._field then
     for k in key_pairs(ref) do
-        local fsize, faddr = ref:_field(k):sizeof()
+        local field = ref:_field(k)
+        local fsize, faddr = field:sizeof()
         local foff = faddr - baseaddr
         if offset < foff then
             print()
@@ -116,8 +117,11 @@ if ref._field then
         end
 
         print()
-        print(tostring(ref:_field(k)._type) .. ' ' .. k)
+        print(tostring(field._type) .. ' ' .. k)
         bytes_until(foff + fsize)
+        if field._kind == 'container' then
+            print('length: ' .. #field)
+        end
     end
 end
 
