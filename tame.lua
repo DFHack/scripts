@@ -21,8 +21,13 @@ Usage: ``tame -read`` OR ``tame -set <level>``
 
 local utils = require('utils')
 local selected = dfhack.gui.getSelectedUnit()
-local validArgs = utils.invert({'set','read'})
+local validArgs = utils.invert({'set','read','help'})
 local args = utils.processArgs({...}, validArgs)
+
+if args.help then
+    print(help)
+    return
+end
 
 if selected ~= nil then
     if args.set and tonumber(args.set) then

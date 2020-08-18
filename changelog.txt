@@ -17,28 +17,50 @@ that repo.
 - `quickfort`: DFHack-native implementation of quickfort with many new features and integrations.
 
 ## Fixes
+- `ban-cooking`: fixed an error in several subcommands
+
+# 0.47.04-r2
+
+## New Scripts
+- `animal-control`: helps manage the butchery and gelding of animals
+- `devel/kill-hf`: kills a historical figure
+- `geld`: gelds or ungelds animals
+- `list-agreements`: lists all guildhall and temple agreements
+- `list-waves`: displays migration wave information for citizens/units
+- `ungeld`: ungelds animals (wrapper around `geld`)
+
+## Fixes
 - `digfort`: fixed y-line tracking when .csv files contain lines with only commas
 - `digfort`: fixed an issue causing blueprints touching the southern or eastern edges of the map to be rejected (northern and western edges were already allowed). This allows blueprints that span the entire embark area.
 - `exportlegends`: fixed an issue where two different ``<reason>`` tags could be included in a ``<historical_event>``
 - `exportlegends`: stopped including some tags with ``-1`` values which don't provide useful information
 - `gui/advfort`: fixed "operate pump" job
 - `gui/load-screen`: fixed an issue causing longer timezones to be cut off
+- `names`: fixed an error preventing the script from working
+- `names`: fixed an issue causing renamed units to display their old name in legends mode and some other places
 - `modtools/moddable-gods`: fixed an error when creating the historical figure
 - `modtools/moddable-gods`: removed unused ``-domain`` and ``-description`` arguments
 - `modtools/moddable-gods`: made ``-depictedAs`` argument work
+- `pref-adjust`: fixed some compatibility issues and a potential crash
 
 ## Misc Improvements
 - `add-recipe`: added tool recipes (minecarts, wheelbarrows, stepladders, etc.)
 - `add-recipe`: added a command explanation or error message when entering an invalid command
+- `armoks-blessing`: added adjustments to values and needs
+- `devel/query`: added many new query options
 - `digfort`: handled double quotes (") at the start of a string, allowing .csv files exported from spreadsheets to work without manual modification
 - `digfort`: documented that removing ramps, cutting trees, and gathering plants are indeed supported
 - `digfort`: added a ``force`` option to truncate blueprints if the full blueprint would extend off the edge of the map
+- `dwarf-op`: added ability to select dwarves based on migration wave
+- `dwarf-op`: added ability to protect dwarves based on symbols in their custom professions
 - `exportlegends`: changed some flags to be represented by self-closing tags instead of true/false strings (e.g. ``<is_volcano/>``) - note that this may require changes to other XML-parsing utilities
 - `exportlegends`: changed some enum values from numbers to their string representations
 - `exportlegends`: added ability to save all files to a subfolder, named after the region folder and date by default
 - `gui/advfort`: added support for specifying the entity used to determine available resources
 - `gui/gm-editor`: added support for automatically following ref-targets when pressing the ``i`` key
 - `modtools/moddable-gods`: added support for ``neuter`` gender
+- `pref-adjust`: added support for adjusting just the selected dwarf
+- `pref-adjust`: added a new ``goth`` profile
 - `remove-stress`: added a ``-value`` argument to enable setting stress level directly
 - `workorder`: changed default frequency from "Daily" to "OneTime"
 

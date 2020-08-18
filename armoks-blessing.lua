@@ -60,12 +60,111 @@ function brainwash_unit(unit)
         print ("No unit available!  Aborting with extreme prejudice.")
         return
     end
+--  ~unit.status.current_soul.personality.traits
+    unit.status.current_soul.personality.traits.LOVE_PROPENSITY          = 75
+    unit.status.current_soul.personality.traits.HATE_PROPENSITY          = 25
+    unit.status.current_soul.personality.traits.ENVY_PROPENSITY          = 25
+    unit.status.current_soul.personality.traits.CHEER_PROPENSITY         = 75
+    unit.status.current_soul.personality.traits.DEPRESSION_PROPENSITY    = 25
+    unit.status.current_soul.personality.traits.ANGER_PROPENSITY         = 25
+    unit.status.current_soul.personality.traits.ANXIETY_PROPENSITY       = 25
+    unit.status.current_soul.personality.traits.LUST_PROPENSITY          = 99
+    unit.status.current_soul.personality.traits.STRESS_VULNERABILITY     = 25
+    unit.status.current_soul.personality.traits.GREED                    = 25
+    unit.status.current_soul.personality.traits.IMMODERATION             = 25
+    unit.status.current_soul.personality.traits.VIOLENT                  = 50
+    unit.status.current_soul.personality.traits.PERSEVERENCE             = 75
+    unit.status.current_soul.personality.traits.WASTEFULNESS             = 50
+    unit.status.current_soul.personality.traits.DISCORD                  = 25
+    unit.status.current_soul.personality.traits.FRIENDLINESS             = 75
+    unit.status.current_soul.personality.traits.POLITENESS               = 75
+    unit.status.current_soul.personality.traits.DISDAIN_ADVICE           = 50
+    unit.status.current_soul.personality.traits.BRAVERY                  = 75
+    unit.status.current_soul.personality.traits.CONFIDENCE               = 75
+    unit.status.current_soul.personality.traits.VANITY                   = 25
+    unit.status.current_soul.personality.traits.AMBITION                 = 75
+    unit.status.current_soul.personality.traits.GRATITUDE                = 75
+    unit.status.current_soul.personality.traits.IMMODESTY                = 50
+    unit.status.current_soul.personality.traits.HUMOR                    = 75
+    unit.status.current_soul.personality.traits.VENGEFUL                 = 25
+    unit.status.current_soul.personality.traits.PRIDE                    = 50
+    unit.status.current_soul.personality.traits.CRUELTY                  = 25
+    unit.status.current_soul.personality.traits.SINGLEMINDED             = 75
+    unit.status.current_soul.personality.traits.HOPEFUL                  = 75
+    unit.status.current_soul.personality.traits.CURIOUS                  = 75
+    unit.status.current_soul.personality.traits.BASHFUL                  = 25
+    unit.status.current_soul.personality.traits.PRIVACY                  = 75
+    unit.status.current_soul.personality.traits.PERFECTIONIST            = 75
+    unit.status.current_soul.personality.traits.CLOSEMINDED              = 25
+    unit.status.current_soul.personality.traits.TOLERANT                 = 75
+    unit.status.current_soul.personality.traits.EMOTIONALLY_OBSESSIVE    = 25
+    unit.status.current_soul.personality.traits.SWAYED_BY_EMOTIONS       = 25
+    unit.status.current_soul.personality.traits.ALTRUISM                 = 75
+    unit.status.current_soul.personality.traits.DUTIFULNESS              = 75
+    unit.status.current_soul.personality.traits.THOUGHTLESSNESS          = 25
+    unit.status.current_soul.personality.traits.ORDERLINESS              = 75
+    unit.status.current_soul.personality.traits.TRUST                    = 75
+    unit.status.current_soul.personality.traits.GREGARIOUSNESS           = 75
+    unit.status.current_soul.personality.traits.ASSERTIVENESS            = 25
+    unit.status.current_soul.personality.traits.ACTIVITY_LEVEL           = 75
+    unit.status.current_soul.personality.traits.EXCITEMENT_SEEKING       = 75
+    unit.status.current_soul.personality.traits.IMAGINATION              = 25
+    unit.status.current_soul.personality.traits.ABSTRACT_INCLINED        = 25
+    unit.status.current_soul.personality.traits.ART_INCLINED             = 50
 
-    local profile ={75,25,25,75,25,25,25,99,25,25,25,50,75,50,25,75,75,50,75,75,25,75,75,50,75,25,50,25,75,75,75,25,75,75,25,75,25,25,75,75,25,75,75,75,25,75,75,25,25,50}
-    local i
+    unit.status.current_soul.personality.values:resize(0)
+    local list_of_values={
+        [df.value_type.LAW]=-11,
+        [df.value_type.FAMILY]=11,
+        [df.value_type.FRIENDSHIP]=41,
+        [df.value_type.DECORUM]=11,
+        [df.value_type.TRADITION]=11,
+        [df.value_type.ARTWORK]=41,
+        [df.value_type.COOPERATION]=41,
+        [df.value_type.STOICISM]=11,
+        [df.value_type.INTROSPECTION]=41,
+        [df.value_type.SELF_CONTROL]=41,
+        [df.value_type.HARMONY]=11,
+        [df.value_type.MERRIMENT]=21,
+        [df.value_type.SKILL]=41,
+        [df.value_type.HARD_WORK]=41,
+        [df.value_type.SACRIFICE]=41,
+        [df.value_type.COMPETITION]=-41,
+        [df.value_type.PERSEVERENCE]=41,
+        [df.value_type.LEISURE_TIME]=-11,
+        [df.value_type.COMMERCE]=41,
+        [df.value_type.ROMANCE]=41,
+        [df.value_type.PEACE]=-11,
+        [df.value_type.KNOWLEDGE]=41,
+    }
+    for k,v in pairs(list_of_values) do
+        unit.status.current_soul.personality.values:insert("#",{new=true,type=k,strength=v})
+    end
 
-    for i=1, #profile do
-        unit.status.current_soul.personality.traits[i-1]=profile[i]
+    unit.status.current_soul.personality.needs:resize(0)
+    local list_of_needs={
+        [df.need_type.Socialize]=2,
+        [df.need_type.BeWithFriends]=2,
+        [df.need_type.TakeItEasy]=2,
+        [df.need_type.MakeMerry]=2,
+        [df.need_type.AdmireArt]=2,
+    --  [df.need_type.EatGoodMeal]=0, -- open bug 10262 as of 20200218
+        [df.need_type.PrayOrMeditate]=0,
+        [df.need_type.DrinkAlcohol]=1,
+    }
+    for k,v in pairs(list_of_needs) do
+        if k == df.need_type.PrayOrMeditate then -- handle deity id, otherwise, the deity is set to -1
+            if unit.hist_figure_id ~= -1 then
+                for index, link in ipairs(df.historical_figure.find(unit.hist_figure_id).histfig_links) do
+                    if df.histfig_hf_link_deityst:is_instance(link) and link.target_hf ~= nil then
+                        unit.status.current_soul.personality.needs:insert("#",{new=true,id=k,deity_id=link.target_hf,need_level=v})
+                        link.link_strength=1 -- casual worshipper
+                    end
+                end
+            end
+        else
+            unit.status.current_soul.personality.needs:insert("#",{new=true,id=k,need_level=v})
+        end
     end
 
 end
@@ -180,8 +279,8 @@ end
 -- ---------------------------------------------------------------------------
 function adjust_all_dwarves(skillname)
     for _,v in ipairs(df.global.world.units.all) do
-        if v.race == df.global.ui.race_id then
-            print("Adjusting "..dfhack.TranslateName(dfhack.units.getVisibleName(v)))
+        if v.race == df.global.ui.race_id and v.status.current_soul then
+            print("Adjusting "..dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(v))))
             brainwash_unit(v)
             elevate_attributes(v)
             rejuvenate(v)

@@ -1,23 +1,7 @@
--- Optimize dwarves for fort-mode work. Buff your dwarves and make your life easier in managing labours.
--- written by josh cooper(cppcooper) [created: 12-2017 | last edited: 12-2018]
---[====[
-dwarf-op
-========
-Optimize dwarves for fort-mode work.
-The core function takes dwarves and allocates a "job" to each dwarf.
-This decision takes into account current counts for each job, in
-relation to how many should be allocated based on the working population
-size. Jobs involve required professions, tertiary professions (may or
-may not be applied), and types which come along with attribute buffs
-and characteristics (eg. strength, speed, focus, dodging, etc)
+-- Optimizes dwarves for labor. Very flexible. Very robust. Check the help.
+-- written by josh cooper(cppcooper) [created: Dec. 2017 | last modified: 2020-03-01]
 
-Usage: ``dwarf-op -help`` or ``dwarf-op -select <sel-opt> -<command> <args>``
-
-:help:               Highly detailed help documentation.
-:select <option>:    Indicates the next parameter will be indicate which dwarves to select
-]====]
-
-print("v1.2")
+print(dfhack.current_script_name() .. " v1.4")
 utils ={}
 utils = require('utils')
 json = require('json')
@@ -32,7 +16,7 @@ cloned = {
     jobs = utils.clone(dorf_tables.jobs, true),
     professions = utils.clone(dorf_tables.professions, true),
 }
-print("Done.")
+protected_dwarf_signals = {'.', ','}
 local validArgs = utils.invert({
     'help',
     'debug',
@@ -41,17 +25,176 @@ local validArgs = utils.invert({
     'resetall',
 
     'select', --highlighted --all --named --unnamed --employed --optimized --unoptimized --protected --unprotected --drunks --jobs
+    'clean',
     'clear',
     'reroll',
     'optimize',
 
     'applyjobs',
     'applyprofessions',
-    'applytypes'
+    'applytypes',
+    'renamejob'
 })
 local args = utils.processArgs({...}, validArgs)
+
+local help = [====[
+
+dwarf-op
+========
+Dwarf optimization is a script designed to provide a robust solution
+to hacking dwarves to be better at work. The primary use case is as follows:
+
+ 1) take a dwarf
+ 2) delete their ability to do anything, even walk (job skills, phyiscal/mental attributes)
+ 3) load the job distribution table from dorf_tables
+ 4) update values in said table so the table accurately represents the distribution of your dwarves
+ 5) pick an under-represented job from the table
+ 6) apply the job to the dwarf, which means:
+
+    - apply professions
+    - provide custom profession name
+    - add job skills
+    - apply dwarf types
+    - etc.
+
+Beyond this use case of optimizing dwarves according to the tables in
+`dorf_tables`, this script makes each step in the process available to use
+separately, if you so choose.
+
+There are two basic steps to using this script: selecting a subset of your dwarves,
+and running commands on those dwarves.
+
+
+Usage::
+
+    dwarf-op -help
+    dwarf-op -select <select-option> -<command> <args>
+
+Examples::
+
+  dwarf-op -select [ jobs Trader Miner Leader Rancher ] -applytype adaptable
+  dwarf-op -select all -clear -optimize
+  dwarf-op -select pall -clear -optimize
+  dwarf-op -select optimized -reroll
+  dwarf-op -select named -reroll inclusive -applyprofession RECRUIT
+
+**Select options:**
+
+.. note::
+
+    Prepend the letter ``p`` to any option to include protected dwarves in your selection
+
+
+:(none):        same as typing '-select highlighted'
+:all:           selects all dwarves.
+
+:highlighted:   selects only the in-game highlighted dwarf (from any screen).
+                [Ignores protection status]
+
+:<name>:        selects any dwarf with <name> in their name or nickname.
+                (sub-string match) [Ignores protection status]
+
+:named:         selects dwarves with user-given names.
+:unnamed:       selects dwarves without user-given names.
+:employed:      selects dwarves with custom professions. Excludes optimized dwarves.
+
+:optimized:     selects dwarves based on session data. Dwarves who have been
+                optimized should be listed in this data.
+
+:unoptimized:   selects any dwarves that don't appear in session data.
+
+:protected:     selects any dwarves which use protection signals in their name
+                or profession. (i.e. ``.``, ``,``)
+
+:unprotected:   selects any dwarves which don't use protection signals in their
+                name or profession.
+
+:drunks:        selects any dwarves which are currently zeroed, or were
+                originally drunks as their profession.
+
+:jobs:          selects any dwarves with the listed jobs. This will only match
+                with custom professions, or optimized dwarves (for optimized
+                dwarves see jobs in `dorf_tables`).
+
+                Usage::
+
+                    dwarf-op -select [ jobs job1 job2 etc. ]
+
+                Example::
+
+                    dwarf-op -select [ jobs Miner Trader ]
+
+:waves:         selects dwarves from the specified migration waves. Waves are
+                enumerated starting at 0 and increasing by 1 with each wave. The
+                waves go by season and year and thus should match what you see
+                in `list-waves` or Dwarf Therapist. It is recommended that you
+                ``-show`` the selected dwarves before modifying.
+
+                Example::
+
+                    dwarf-op -select [ waves 0 1 3 5 7 13 ]
+
+
+**General commands:**
+
+- ``-reset``: deletes json file containing session data (bug: might not delete
+  session data)
+
+- ``-resetall``: deletes both json files. session data and existing persistent
+  data (bug: might not delete session data)
+
+- ``-show``: displays affected dwarves (id, name, migration wave, primary job).
+  Useful for previewing selected dwarves before modifying them, or looking up
+  the migration wave number for a group of dwarves.
+
+
+**Dwarf commands:**
+
+``clean <value>``:    Cleans selected dwarves.
+                        Checks for skills with a rating of ``<value>`` and
+                        deletes them from the dwarf's skill list
+
+``-clear``:           Zeroes selected dwarves, or zeroes all dwarves if no selection is given.
+                        No attributes, no labours. Assigns ``DRUNK`` profession.
+
+``-reroll [inclusive]``: zeroes selected dwarves, then rerolls that dwarf based on its job.
+
+                        - Ignores dwarves with unlisted jobs.
+                        - optional argument: ``inclusive`` - means your dorf(s) get the best of N rolls.
+                        - See attrib_levels table in `dorf_tables` for ``p`` values describing the
+                          normal distribution of stats (each p value has a sub-distribution, which
+                          makes the bell curve not so bell-shaped). Labours do not follow the same
+                          stat system and are more uniformly random, which are compensated for in
+                          the description of jobs/professions.
+
+``-optimize``:        Performs a job search for unoptimized dwarves.
+                        Each dwarf will be found a job according to the
+                        job_distribution table in `dorf_tables`.
+
+``-applyjobs``:       Applies the listed jobs to the selected dwarves.
+                        - List format: ``[ job1 job2 jobn ]`` (brackets and jobs all separated by spaces)
+                        - See jobs table in `dorf_tables` for available jobs."
+
+``-applyprofessions``: Applies the listed professions to the selected dwarves.
+                        - List format: ``[ prof1 prof2 profn ]`` (brackets and professions all separated by spaces)
+                        - See professions table in `dorf_tables` for available professions.
+
+``-applytypes``:      Applies the listed types to the selected dwarves.
+                        - List format: ``[ type1 type2 typen ]`` (brackets and types all separated by spaces)
+                        - See dwf_types table in `dorf_tables` for available types.
+
+``renamejob <name>``: Renames the selected dwarves' custom profession to whatever is specified
+
+**Other Arguments:**
+
+``-help``: displays this help information.
+
+``-debug``: enables debugging print lines
+
+]====]
+
+
 if args.debug and tonumber(args.debug) >= 0 then print("Debug info [ON]") end
-protected_dwarf_signals = {'.', 'c', 'j', 'p'}
 if args.select and args.select == 'optimized' then
     if args.optimize and not args.clear then
         error("Invalid arguments detected. You've selected only optimized dwarves, and are attempting to optimize them without clearing them. This will not work, so I'm warning you about it with this lovely error.")
@@ -125,8 +268,10 @@ function ClearPersistentData(all)
     local fileName = fortName .. ".json.dat"
     local file_cur = gamePath .. "/data/save/current/" .. fileName
     local file_sav = savePath .. "/" .. fileName
+    local cur = json.open(gamePath .. "/data/save/current/" .. fileName)
     print("Deleting " .. file_cur)
-    os.remove(file_cur)
+    cur.data = {}
+    cur:write() --can't seem to find a way to fully nuke this file, unless manually done
     if all then
         print("Deleting " .. file_sav)
         os.remove(file_sav)
@@ -169,7 +314,7 @@ function spairs(t, cmp)
     end
 
     utils.sort_vector(keys, nil, cmp)
-    
+
     -- return the iterator function
     local i = 0
     return function()
@@ -187,7 +332,7 @@ function rpairs(t, gen)
     for k,v in pairs(t) do
         table.insert(keys,k)
     end
-    
+
     -- return the iterator function
     return function()
         local i = gen:next()
@@ -270,20 +415,34 @@ function ArrayLength(t)
     return count
 end
 
-function TableLength(table)
-    local count = 0
-    for i,k in pairs(table) do
-        count = count + 1
+function TableLength(table) local count = 0 for i,k in pairs(table) do count = count + 1 end return
+count end
+
+function TableContainsValue(t,value)
+    for _,v in pairs(t) do
+        if v == value then
+            return true
+        end
     end
-    return count
+    return false
 end
 
-function FindValueKey(t, value)
+function FindValueKey(t, value, depth)
+    if depth == nil then
+        depth = 0
+    elseif depth == 10 then
+        return nil
+    end
     for k,v in pairs(t) do
         if v == value then
             return k
+        elseif type(v) == 'table' then
+            if FindValueKey(v, value, depth + 1) ~= nil then
+                return k
+            end
         end
     end
+    return nil
 end
 
 function FindKeyValue(t, key)
@@ -327,7 +486,7 @@ function isValidJob(job)
         local jobName = FindValueKey(cloned.jobs, job)
         local jd = cloned.distributions[jobName]
         if not jd then
-            error("Job distribution not found. Job: " .. jobName)
+            error(string.format("Job distribution not found. Job: %s; jobName: %s",job,jobName))
         end
         if OpData[jobName].count < jd.max then
             return true
@@ -414,7 +573,7 @@ function ApplyType(dwf, dwf_type)
             local points = rng.rollInt(engineID, skillRange[1], skillRange[2])
             sTable.rating = sTable.rating < points and points or sTable.rating
             sTable.rating = sTable.rating > 20 and 20 or sTable.rating
-            sTable.rating = sTable.rating < 0 and 0 or sTable.rating
+            sTable.rating = sTable.rating <= 1 and 1 or sTable.rating
             if args.debug and tonumber(args.debug) >= 2 then print(skill .. ".rating = " .. sTable.rating) end
         end
     end
@@ -433,9 +592,10 @@ function ApplyProfession(dwf, profession, min, max)
         end
         local points = rng.rollInt(engineID, min, max)
         sTable.rating = sTable.rating < points and points or sTable.rating
+        --sTable.natural_skill_lvl =
         sTable.rating = sTable.rating + bonus
-        sTable.rating = sTable.rating > 20 and 20 or sTable.rating
-        sTable.rating = sTable.rating < 0 and 0 or sTable.rating
+        sTable.rating = sTable.rating >= 20 and 20 or sTable.rating
+        sTable.rating = sTable.rating <= 2 and 2 or sTable.rating
         if args.debug and tonumber(args.debug) >= 2 then print(skill .. ".rating = " .. sTable.rating) end
     end
     return true
@@ -457,7 +617,7 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
     end
     dwf.custom_profession = jobName
     RollStats(dwf, job.types)
-    
+
     -- Apply required professions
     local bAlreadySetProf2 = false
     local job_req_sequence = rng.num_sequence:new()
@@ -472,7 +632,7 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
     job_req_sequence:add(0) --adding an out of bounds key (ie. 0) to ensure rpairs won't keep going forever
     --[note it is added after shuffling]
     local i = 0
-    for _, prof in rpairs(job.req, gen) do
+    for _, prof in pairs(job.req) do
         --> Set Profession(s) (by #)
         i = i + 1 --since the key can't tell us what iteration we're on
         if i == 1 then
@@ -484,7 +644,7 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
         --These are required professions for this job class
         ApplyProfession(dwf, prof, 11, 17)
     end
-        
+
     -- Loop tertiary professions
     -- Sort loop (asc)
     local points = 11
@@ -515,7 +675,7 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
                     table.insert(DwarvesData[id]['professions'], prof)
                     OpData[jobName].profs[prof].count = OpData[jobName].profs[prof].count + 1
                     if args.debug and tonumber(args.debug) >= 1 then print("count: ", OpData[jobName].profs[prof].count) end
-                    
+
                     if not bAlreadySetProf2 then
                         bAlreadySetProf2 = true
                         dwf.profession2 = df.profession[prof]
@@ -533,7 +693,7 @@ function ApplyJob(dwf, jobName) --job = dorf_jobs[X]
                         table.insert(DwarvesData[id]['professions'], prof)
                         OpData[jobName].profs[prof].count = OpData[jobName].profs[prof].count + 1
                         if args.debug and tonumber(args.debug) >= 1 then print("dwf id:", dwf.id, "count: ", OpData[jobName].profs[prof].count, jobName, prof) end
-                        
+
                         if not bAlreadySetProf2 then
                             bAlreadySetProf2 = true
                             dwf.profession2 = df.profession[prof]
@@ -570,6 +730,7 @@ end
 
 --Returns true if a job was found and applied, returns false otherwise
 function FindJob(dwf, recursive)
+
     if isDwarfOptimized(dwf) then
         return false
     end
@@ -634,6 +795,27 @@ function TrySecondPassExpansion() --Tries to expand distribution maximums
     return false
 end
 
+function CleanDwarf(dwf)
+    threshold=tonumber(args.clean)
+    if threshold then
+        N=-1
+        for _,_ in ipairs(dwf.status.current_soul.skills) do
+            N = N + 1
+        end
+        utils.sort_vector(dwf.status.current_soul.skills, 'id')
+        for i=N,0,-1 do
+            v=dwf.status.current_soul.skills[i]
+            --print(i)
+            --print(v.rating,v.id,df.job_skill[v.id])
+            if v.rating <= threshold then
+                utils.erase_sorted_key(dwf.status.current_soul.skills, v.id, 'id')
+            end
+        end
+        return true
+    end
+    error("invalid value given for argument '-clean <value>'")
+end
+
 function ZeroDwarf(dwf)
     LoopStatsTable(dwf.body.physical_attrs, function(attribute) attribute.value = 0 end)
     LoopStatsTable(dwf.status.current_soul.mental_attrs, function(attribute) attribute.value = 0 end)
@@ -670,7 +852,8 @@ function ZeroDwarf(dwf)
 end
 
 function Reroll(dwf)
-    local jobName = dwf.custom_profession
+    local id = tostring(dwf.id)
+    local jobName = DwarvesData[id].job
     if cloned.jobs[jobName] then
         if args.reroll ~= 'inclusive' then
             ZeroDwarf(dwf)
@@ -681,15 +864,44 @@ function Reroll(dwf)
     return false
 end
 
+function RenameJob(dwf)
+    if args.renamejob ~= nil then
+        dwf.custom_profession = args.renamejob
+        return true
+    end
+    return false
+end
+
+waves={}
+local ticks_per_day = 1200;
+local ticks_per_month = 28 * ticks_per_day;
+local ticks_per_season = 3 * ticks_per_month;
+local ticks_per_year = 12 * ticks_per_month;
+local current_tick = df.global.cur_year_tick
+local seasons = {
+    'spring',
+    'summer',
+    'autumn',
+    'winter',
+}
+function GetWave(dwf)
+    arrival_time = current_tick - dwf.curse.time_on_site;
+    --print(string.format("Current year %s, arrival_time = %s, ticks_per_year = %s", df.global.cur_year, arrival_time, ticks_per_year))
+    arrival_year = df.global.cur_year + (arrival_time // ticks_per_year);
+    arrival_season = 1 + (arrival_time % ticks_per_year) // ticks_per_season;
+    wave = 10 * arrival_year + arrival_season
+    if waves[wave] == nil then
+        waves[wave] = {}
+    end
+    table.insert(waves[wave],dwf)
+    --print(string.format("Arrived in the %s of the year %s. Wave %s, arrival time %s",seasons[season+1],year, wave, arrival_month))
+end
+
 function Show(dwf)
     local name_ptr = dfhack.units.getVisibleName(dwf)
     local name = dfhack.TranslateName(name_ptr)
-    local numspaces = 26 - string.len(name)
-    local spaces = ' '
-    for i=1,numspaces do
-        spaces = spaces .. " "
-    end
-    print('('..dwf.id..') - '..name..spaces..dwf.profession,dwf.custom_profession)
+    print(string.format("%6d [wave:%2d] - %-23s (%3d,%3d) %s", dwf.id, tonumber(FindValueKey(zwaves,dwf)), name, dwf.profession, dwf.profession2, dwf.custom_profession))
+    --print('('..dwf.id..') - '..name..spaces..dwf.profession,dwf.custom_profession)
 end
 
 function LoopUnits(units, check, fn, checkoption, profmin, profmax) --cause nothing else will use arg 5 or 6
@@ -761,14 +973,14 @@ end
 function isDwarfProtected(dwf)
     if dwf.custom_profession ~= "" then
         for _,signal in pairs(protected_dwarf_signals) do
-            if GetChar(dwf.custom_profession, 1) == signal then
+            if string.find(dwf.custom_profession, signal, 1, true) then
                 return true
             end
         end
     end
     if dwf.status.current_soul.name.nickname ~= "" then
         for _,signal in pairs(protected_dwarf_signals) do
-            if GetChar(dwf.status.current_soul.name.nickname, 1) == signal then
+            if string.find(dwf.status.current_soul.name.nickname, signal, 1, true) then
                 return true
             end
         end
@@ -789,42 +1001,84 @@ function CanWork(dwf)
     return dfhack.units.isCitizen(dwf) and dfhack.units.isAdult(dwf)
 end
 
+local includeProtectedDwfs = false
 function CheckWorker(dwf, option)
     if CanWork(dwf) then
-        --selection options
-        if option == 'protected' then
-            return isDwarfProtected(dwf)
-        elseif isDwarfUnprotected(dwf) then
-            if option == 'all' then
+        --check option data type (string/table)
+            --string:
+                --check if option specifies a pattern which matches the name of this dwf
+                --check if we want highlighted dwf & whether that is this dwf
+                --check if option starts with 'p'
+                --check all the possible options
+            --table:
+                --check if option[1] starts with 'p'
+                --check all possible options
+        if type(option) == 'string' then
+            local name = dfhack.TranslateName(dfhack.units.getVisibleName(dwf))
+            local nickname = dwf.status.current_soul.name.nickname
+            if string.match(name,option) or string.match(nickname,option) then
                 return true
             elseif option == 'highlighted' then
-                return dwf == dfhack.gui.getSelectedUnit()
-            elseif option == 'named' then
-                return isDwarfNamed(dwf)
-            elseif option == 'unnamed' then
-                return (not isDwarfNamed(dwf))
-            elseif option == 'employed' then
-                return isDwarfEmployed(dwf)
-            elseif option == 'optimized' then
-                return isDwarfOptimized(dwf)
-            elseif option == 'unoptimized' then
-                return isDwarfUnoptimized(dwf)
-            elseif option == 'unprotected' then
-                return isDwarfUnprotected(dwf)
-            elseif option == 'drunks' or option == 'drunk' then
-                return dwf.profession == df.profession['DRUNK'] and dwf.profession2 == df.profession['DRUNK']
-            elseif type(option) == 'table' then
-                if option[1] == 'job' or option[1] == 'jobs' then
-                    n=0
+                if CanWork(dfhack.gui.getSelectedUnit()) then
+                    return dwf == dfhack.gui.getSelectedUnit()
+                else
+                    error("The selected unit isn't a dwarf, or can't work. This script is not intended for such units.")
+                end
+            elseif GetChar(option,1) == 'p' then
+                includeProtectedDwfs = true
+                if option ~= 'protected' then
+                    option = string.sub(option,2)
+                end
+            end
+            if includeProtectedDwfs or isDwarfUnprotected(dwf) then
+                if option == 'all' then
+                    return true
+                elseif option == 'named' then
+                    return isDwarfNamed(dwf)
+                elseif option == 'unnamed' then
+                    return (not isDwarfNamed(dwf))
+                elseif option == 'employed' then
+                    return isDwarfEmployed(dwf)
+                elseif option == 'optimized' then
+                    return isDwarfOptimized(dwf)
+                elseif option == 'unoptimized' then
+                    return isDwarfUnoptimized(dwf)
+                elseif option == 'protected' then
+                    return isDwarfProtected(dwf)
+                elseif option == 'unprotected' then
+                    return isDwarfUnprotected(dwf)
+                elseif option == 'drunks' or option == 'drunk' then
+                    return dwf.profession == df.profession['DRUNK'] and dwf.profession2 == df.profession['DRUNK']
+                end
+            end
+        elseif type(option) == 'table' then
+            if GetChar(option[1],1) == 'p' then
+                includeProtectedDwfs = true
+                option[1] = string.sub(option[1],2)
+            end
+            --print(includeProtectedDwfs)
+            if option[1] == 'job' or option[1] == 'jobs' then
+                n=0
+                for _,v in pairs(option) do
+                    n=n+1
+                    --print(dwf.custom_profession, v)
+                    if n > 1 and dwf.custom_profession == v then
+                        return true
+                    end
+                end
+            elseif option[1] == 'wave' or option[1] == 'waves' then
+                n=0
+                if includeProtectedDwfs or isDwarfUnprotected(dwf) then
                     for _,v in pairs(option) do
                         n=n+1
-                        --print(dwf.custom_profession, v)
-                        if n > 1 and dwf.custom_profession == v then
+                        if n > 1 and TableContainsValue(zwaves[tonumber(v)],dwf) then
                             return true
                         end
                     end
                 end
             end
+        else
+            error("The select option entered is not a table, or a string. I have no idea what you've done.")
         end
     end
     return false
@@ -880,6 +1134,9 @@ function Prepare()
 
     --TryClearDwarf Loop (or maybe not)
     print("Data load complete.")
+    print("Calculating wave enumerations..")
+    GetWaves()
+    print("Done calculating.")
 end
 
 function PrepareDistributionMax(jobName)
@@ -908,58 +1165,20 @@ function SelectDwarf(dwf)
     return true
 end
 
-function ShowHelp()
-    print([====[
-usage: dwarf-op [-help|-select]
-               -select <sel-opt> -<command> <args>
-============
-dwarf-op script
-~~~~~~~~~~~~
-To use this script, you need to select a subset of your dwarves. Then run commands on those dwarves.
-Please report any bugs or crashes you experience here [https://github.com/cppcooper/dfhack-scripts/issues]
-Examples:
-  [DFHack]# dwarf-op -select [ jobs Trader Miner Leader Warden ] -applytype adaptable
-  [DFHack]# dwarf-op -select all -clear -optimize
-  [DFHack]# dwarf-op -select optimized -reroll
-  [DFHack]# dwarf-op -select named -reroll inclusive -applyprofession RECRUIT
-~~~~~~~~~~~~
- select options:
-   (protected is the only option which will select PROTECTED dwarves)
-    all         - selects all dwarves.
-    highlighted - selects only the in-game highlighted dwarf (from any screen).
-    named       - selects dwarves with user-given names.
-    unnamed     - selects dwarves without user-given names.
-    employed    - selects dwarves with custom professions. Excludes optimized dwarves.
-    optimized   - selects dwarves based on session data. Dwarves who have been optimized, should be listed in this data.
-    unoptimized - selects any dwarves that don't appear in session data.
-    protected   - selects any dwarves which use protection signals in their name or profession. (ie. {'.', 'c', 'j', 'p'})
-    unprotected - selects any dwarves which don't use protection signals in their name or profession.
-    drunks      - selects any dwarves which are currently zeroed, or were originally drunks as their profession.
-    jobs        - selects any dwarves with the listed jobs. This will only match with custom professions, or optimized dwarves (for optimized dwarves see: jobs in dorf_tables.lua).
-                - usage `-select [ jobs job1 job2 etc. ]` eg. `-select [ jobs Miner Trader ]`
-~~~~~~~~~~~~
-Commands will run on the selected dwarves
- available commands:
-    reset              - deletes json file containing session data
-    resetall           - deletes both json files. session data and existing persistent data
-    clear              - zeroes selected dwarves, or zeroes all dwarves if no selection is given. No attributes, no labours. Assigns 'DRUNK' profession.
-    reroll <inclusive> - zeroes selected dwarves, then rerolls that dwarf based on its job. Ignores dwarves with unlisted jobs.
-                       - optional argument: inclusive. Only performs the reroll, will no zero the dwarf first. Benefit: stats can only go higher, not lower.
-    optimize           - performs a job search for unoptimized dwarves. Each dwarf will be found a job according to the job_distribution table in dorf_tables.lua
-    applyjobs          - applies the listed jobs to the selected dwarves. list format: `[ job1 job2 jobn ]` brackets and jobs all separated by spaces.
-                       - see jobs table in dorf_tables.lua for available jobs."
-    applyprofessions   - applies the listed professions to the selected dwarves. list format: `[ prof1 prof2 profn ]` brackets and professions all separated by spaces.
-                       - see professions table in dorf_tables.lua for available professions.
-    applytypes         - applies the listed types to the selected dwarves. list format: `[ type1 type2 typen ]` brackets and types all separated by spaces.
-                       - see dwf_types table in dorf_tables.lua for available types.
-~~~~~~~~~~~~
-    Other Arguments:
-      help - displays this help information.
-      debug - enables debugging print lines
-      show - displays affected dwarves (id, name, primary job)
+zwaves={}
+function GetWaves()
+    LoopUnits(df.global.world.units.active, CanWork, GetWave)
+    i = 0
+    for k,v in spairs(waves, utils.compare) do
+        --print(string.format("zwave[%s] = wave[%s]",i,k))
+        zwaves[i] = waves[k]
+        i = i + 1
+    end
+end
 
-No dorfs were harmed in the building of this help screen.
-]====])
+function ShowHelp()
+    print(help)
+    print("No dorfs were harmed in the building of this help screen.")
 end
 
 function ShowHint()
@@ -967,10 +1186,15 @@ function ShowHint()
     print("~~~~~~~~~~~~")
     print("To use this script, you need to select a subset of your dwarves. Then run commands on those dwarves.")
     print("Examples:")
-    print("  [DFHack]# dwarf-op -select [ jobs Trader Miner Leader Warden ] -applytype adaptable")
+    print("  [DFHack]# dwarf-op -select [ jobs Trader Miner Leader Rancher ] -applytype adaptable")
     print("  [DFHack]# dwarf-op -select all -clear -optimize")
     print("  [DFHack]# dwarf-op -select optimized -reroll")
-    print("  [DFHack]# dwarf-op -select named -reroll inclusive -applyprofession RECRUIT")
+    print("  [DFHack]# dwarf-op -select Urist -reroll inclusive -applyprofession RECRUIT")
+end
+
+if args.help then
+    ShowHelp()
+    return
 end
 
 local ActiveUnits = df.global.world.units.active
@@ -986,31 +1210,24 @@ function exists(thing)
     if thing then return true else return false end
 end
 args.b_clear = exists(args.clear) if args.debug and tonumber(args.debug) >= 0 then print(        "args.b_clear:    " .. tostring(args.b_clear)) end
-args.b_optimize = exists(args.optimize) if args.debug and tonumber(args.debug) >= 0 then print(      "args.b_optimize:   " .. tostring(args.b_optimize)) end
+args.b_optimize = exists(args.optimize) if args.debug and tonumber(args.debug) >= 0 then print(  "args.b_optimize: " .. tostring(args.b_optimize)) end
 args.b_reroll = exists(args.reroll) if args.debug and tonumber(args.debug) >= 0 then print(      "args.b_reroll:   " .. tostring(args.b_reroll)) end
 args.b_applyjobs = exists(args.applyjobs) if args.debug and tonumber(args.debug) >= 0 then print("args.b_applyjob: " .. tostring(args.b_applyjobs)) end
-if args.help then
-    ShowHelp()
-elseif not args.select and (args.reset or args.resetall or args.clear) then
+if not args.select then
     if args.reset or args.resetall then
         ClearPersistentData(exists(args.resetall))
+    else
+        args.select = 'highlighted'
     end
-    if args.clear then
-        selection = {}
-        print("Selected Dwarves: " .. LoopUnits(ActiveUnits, CheckWorker, SelectDwarf, 'all'))
-        print("\nResetting selected dwarves..")
-        temp = LoopUnits(selection, nil, ZeroDwarf)
-        print(temp .. " dwarves affected.")
-        if args.show then
-            print("Affected Dwarves: ")
-            LoopUnits(selection, nil, Show)
-        end
-    end
-elseif args.select and (args.debug or args.clear or args.optimize or args.reroll or args.applyjobs or args.applyprofessions or args.applytypes) then
+end
+
+bRanCommands=true
+
+if args.select and (args.debug or args.clean or args.clear or args.optimize or args.reroll or args.applyjobs or args.applyprofessions or args.applytypes or args.renamejob) then
     selection = {}
     count = 0
     print("Selected Dwarves: " .. LoopUnits(ActiveUnits, CheckWorker, SelectDwarf, args.select))
-    
+
     if args.b_clear ~= args.b_reroll or not args.b_clear then
         --error("Clear is implied with Reroll. Choose one, not both.")
         if args.b_reroll and args.b_optimize then
@@ -1029,7 +1246,7 @@ elseif args.select and (args.debug or args.clear or args.optimize or args.reroll
                 temp = LoopUnits(selection, nil, ZeroDwarf)
                 affected = affected < temp and temp or affected
             end
-            
+
             if args.optimize then
                 print("\nOptimizing selected dwarves..")
                 temp = LoopUnits(selection, nil, FindJob)
@@ -1037,6 +1254,12 @@ elseif args.select and (args.debug or args.clear or args.optimize or args.reroll
             elseif args.reroll then
                 print("\nRerolling selected dwarves..")
                 temp = LoopUnits(selection, nil, Reroll)
+                affected = affected < temp and temp or affected
+            end
+
+            if args.clean then
+                print("\nCleaning skills list of selected dwarves..")
+                temp = LoopUnits(selection, nil, CleanDwarf)
                 affected = affected < temp and temp or affected
             end
 
@@ -1082,6 +1305,10 @@ elseif args.select and (args.debug or args.clear or args.optimize or args.reroll
                 end
                 affected = affected < temp and temp or affected
             end
+            if args.renamejob and type(args.renamejob) == 'string' then
+                temp = LoopUnits(selection, nil, RenameJob)
+                affected = affected < temp and temp or affected
+            end
             print(affected .. " dwarves affected.")
 
             if args.debug and tonumber(args.debug) >= 1 then
@@ -1098,18 +1325,16 @@ elseif args.select and (args.debug or args.clear or args.optimize or args.reroll
     else
         error("Clear is implied with Reroll. Choose one, not both.")
     end
-    if args.show then
-        print("Affected Dwarves: ")
-        LoopUnits(selection, nil, Show)
-    end
 else
-    if args.show then
-        selection = {}
-        print("Selected Dwarves: " .. LoopUnits(ActiveUnits, CheckWorker, SelectDwarf, args.select))
-        LoopUnits(selection, nil, Show)
-    else
-        ShowHint()
-    end
+    bRanCommands=false
+end
+
+if args.show then
+    selection = {}
+    print("Selected Dwarves: " .. LoopUnits(ActiveUnits, CheckWorker, SelectDwarf, args.select))
+    LoopUnits(selection, nil, Show)
+elseif not bRanCommands then
+    print("It looks like you may have entered an invalid combination of arguments. Check -help or report a bug.")
 end
 SavePersistentData()
 print('\n')

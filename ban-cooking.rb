@@ -118,9 +118,9 @@ $script_args.each do |arg|
     when 'seeds'
         df.world.raws.plants.all.each_with_index do |p, i|
             # skip over plants without seeds and tree seeds (as you can't currently farm trees with their seeds)
-            if p.material_defs.type[:seed] != -1 and p.material_defs.idx[:seed] != -1 and not p.flags.inspect.include?('TREE')
+            if p.material_defs.type[:Seed] != -1 and p.material_defs.idx[:Seed] != -1 and not p.flags.inspect.include?('TREE')
                 # Bans the seeds themselves
-                ban_cooking[p.name + ' seeds', p.material_defs.type[:seed], p.material_defs.idx[:seed], :SEEDS, -1]
+                ban_cooking[p.name + ' seeds', p.material_defs.type[:Seed], p.material_defs.idx[:Seed], :SEEDS, -1]
                 # This section handles banning the structural plant parts that produce seeds.
                 # -- There's no guarantee I can find that the STRUCTURAL material will be array item zero in the materials array
                 #  thus I'm playing it safe with a possibly wasteful loop here
@@ -149,7 +149,7 @@ $script_args.each do |arg|
     when 'brew'
         df.world.raws.plants.all.each_with_index do |p, i|
             # skip over any plants that don't have an alcohol listed
-            if p.material_defs.type[:drink] != -1 and p.material_defs.idx[:drink] != -1
+            if p.material_defs.type[:Drink] != -1 and p.material_defs.idx[:Drink] != -1
                 p.material.each_with_index do |m, j|
                     # only operate here on STRUCTURAL materials, as the rest will be :PLANT_GROWTH, instead of just :PLANT
                     # which then means that the subtype won't be -1
@@ -175,7 +175,7 @@ $script_args.each do |arg|
     when 'mill'
         df.world.raws.plants.all.each_with_index do |p, i|
             # skip over plants that don't have a millable part listed
-            if p.material_defs.idx[:mill] != -1
+            if p.material_defs.idx[:Mill] != -1
                 p.material.each_with_index do |m, j|
                     if m.id == "STRUCTURAL" and m.flags[:EDIBLE_COOKED]
                         ban_cooking[p.name + ' ' + m.id, j + DFHack::MaterialInfo::PLANT_BASE, i, :PLANT, -1]
@@ -191,7 +191,7 @@ $script_args.each do |arg|
     when 'thread'
         df.world.raws.plants.all.each_with_index do |p, i|
             # skip over plants that don't have a threadable part listed
-            if p.material_defs.idx[:thread] != -1
+            if p.material_defs.idx[:Thread] != -1
                 p.material.each_with_index do |m, j|
                     # only operate here on STRUCTURAL materials, as the rest will be :PLANT_GROWTH, instead of just :PLANT
                     # which then means that the subtype won't be -1
@@ -244,30 +244,30 @@ $script_args.each do |arg|
             # The below three if statements initialize the dictionary/hash tables for their respective (cookable) plant/drink/seed
             # And yes, this will create and then overwrite an entry when there is no (cookable) plant/drink/seed item for a specific plant,
             # but since the -1 type and -1 index can't be added to the ban list, it's inconsequential to check for non-existent (cookable) plant/drink/seed items here
-            if not type_list[[p.material_defs.type[:basic_mat], p.material_defs.idx[:basic_mat]]]
-                type_list[[p.material_defs.type[:basic_mat], p.material_defs.idx[:basic_mat]]] = {}
+            if not type_list[[p.material_defs.type[:BasicMat], p.material_defs.idx[:BasicMat]]]
+                type_list[[p.material_defs.type[:BasicMat], p.material_defs.idx[:BasicMat]]] = {}
             end
-            if not type_list[[p.material_defs.type[:drink], p.material_defs.idx[:drink]]]
-                type_list[[p.material_defs.type[:drink], p.material_defs.idx[:drink]]] = {}
+            if not type_list[[p.material_defs.type[:Drink], p.material_defs.idx[:Drink]]]
+                type_list[[p.material_defs.type[:Drink], p.material_defs.idx[:Drink]]] = {}
             end
-            if not type_list[[p.material_defs.type[:seed], p.material_defs.idx[:seed]]]
-                type_list[[p.material_defs.type[:seed], p.material_defs.idx[:seed]]] = {}
+            if not type_list[[p.material_defs.type[:Seed], p.material_defs.idx[:Seed]]]
+                type_list[[p.material_defs.type[:Seed], p.material_defs.idx[:Seed]]] = {}
             end
-            type_list[[p.material_defs.type[:basic_mat], p.material_defs.idx[:basic_mat]]]['text'] = p.name + ' basic'
+            type_list[[p.material_defs.type[:BasicMat], p.material_defs.idx[:BasicMat]]]['text'] = p.name + ' basic'
             # basic materials for plants always appear to use the :PLANT item type tag
-            type_list[[p.material_defs.type[:basic_mat], p.material_defs.idx[:basic_mat]]]['type'] = :PLANT
+            type_list[[p.material_defs.type[:BasicMat], p.material_defs.idx[:BasicMat]]]['type'] = :PLANT
             # item subtype of :PLANT types appears to always be -1, as there is no growth array entry for the :PLANT
-            type_list[[p.material_defs.type[:basic_mat], p.material_defs.idx[:basic_mat]]]['subtype'] = -1
-            type_list[[p.material_defs.type[:drink], p.material_defs.idx[:drink]]]['text'] = p.name + ' drink'
+            type_list[[p.material_defs.type[:BasicMat], p.material_defs.idx[:BasicMat]]]['subtype'] = -1
+            type_list[[p.material_defs.type[:Drink], p.material_defs.idx[:Drink]]]['text'] = p.name + ' drink'
             # drink materials for plants always appear to use the :DRINK item type tag
-            type_list[[p.material_defs.type[:drink], p.material_defs.idx[:drink]]]['type'] = :DRINK
+            type_list[[p.material_defs.type[:Drink], p.material_defs.idx[:Drink]]]['type'] = :DRINK
             # item subtype of :DRINK types appears to always be -1, as there is no growth array entry for the :DRINK
-            type_list[[p.material_defs.type[:drink], p.material_defs.idx[:drink]]]['subtype'] = -1
-            type_list[[p.material_defs.type[:seed], p.material_defs.idx[:seed]]]['text'] = p.name + ' seed'
+            type_list[[p.material_defs.type[:Drink], p.material_defs.idx[:Drink]]]['subtype'] = -1
+            type_list[[p.material_defs.type[:Seed], p.material_defs.idx[:Seed]]]['text'] = p.name + ' seed'
             # seed materials for plants always appear to use the :SEEDS item type tag
-            type_list[[p.material_defs.type[:seed], p.material_defs.idx[:seed]]]['type'] = :SEEDS
+            type_list[[p.material_defs.type[:Seed], p.material_defs.idx[:Seed]]]['type'] = :SEEDS
             # item subtype of :SEEDS types appears to always be -1, as there is no growth array entry for the :SEEDS
-            type_list[[p.material_defs.type[:seed], p.material_defs.idx[:seed]]]['subtype'] = -1
+            type_list[[p.material_defs.type[:Seed], p.material_defs.idx[:Seed]]]['subtype'] = -1
             p.growths.each_with_index do |g, r|
                 m = df.decode_mat(g).material
                 # Search only growths that are cookable (:EDIBLE_COOKED), and listed as :LEAF_MAT,
