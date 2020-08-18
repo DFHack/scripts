@@ -28,7 +28,7 @@ local function scan_csv_blueprint(path)
         blueprint_cache[path] = {modeline=get_modeline(filepath), mtime=mtime}
     end
     if not blueprint_cache[path].modeline then
-        print(string.format('skipping "%s": no #mode marker detected', v.path))
+        print(string.format('skipping "%s": no #mode marker detected', path))
     end
     return blueprint_cache[path].modeline
 end
@@ -46,11 +46,12 @@ local function get_xlsx_sheet_modeline(xlsx_file, sheet_name)
 end
 
 local function get_xlsx_file_sheet_infos(filepath)
+    local sheet_infos = {}
     local xlsx_file = xlsxreader.open_xlsx_file(filepath)
+    if not xlsx_file then return sheet_infos end
     return dfhack.with_finalize(
         function() xlsxreader.close_xlsx_file(xlsx_file) end,
         function()
-            local sheet_infos = {}
             for _, sheet_name in ipairs(xlsxreader.list_sheets(xlsx_file)) do
                 local modeline = get_xlsx_sheet_modeline(xlsx_file, sheet_name)
                 if modeline then
@@ -72,7 +73,7 @@ local function scan_xlsx_blueprint(path)
     local sheet_infos = get_xlsx_file_sheet_infos(filepath)
     if #sheet_infos == 0 then
         print(string.format(
-                'skipping "%s": no sheet with a #mode marker detected', v.path))
+                'skipping "%s": no sheet with #mode markers detected', path))
     end
     blueprint_cache[path] = {sheet_infos=sheet_infos, mtime=mtime}
     return sheet_infos

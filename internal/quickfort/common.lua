@@ -84,7 +84,7 @@ end
 -- specified is true when an extent was explicitly specified
 function parse_cell(text)
     local _, _, keys, width, height =
-            string.find(text, '^%s*(.-)%s*%(?%s*(%d*)%s*x?%s*(%d*)%s*%)?$')
+            string.find(text, '^%s*([^(]+)%s*%(?%s*(%d*)%s*x?%s*(%d*)%s*%)?$')
     width = tonumber(width)
     height = tonumber(height)
     local specified = width and height and true

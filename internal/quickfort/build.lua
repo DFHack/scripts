@@ -300,7 +300,8 @@ local building_db = {
     Mrsssqq=make_roller_entry(df.screw_pump_direction.FromWest, 30000),
     Mrsssqqq=make_roller_entry(df.screw_pump_direction.FromWest, 20000),
     Mrsssqqqq=make_roller_entry(df.screw_pump_direction.FromWest, 10000),
-    I={label='Instrument', type=df.building_type.Instrument},
+    -- Instruments are not yet supported by DFHack
+    --I={label='Instrument', type=df.building_type.Instrument},
     S={label='Support', type=df.building_type.Support,
        is_valid_tile_fn=is_valid_tile_has_space},
     m={label='Animal Trap', type=df.building_type.AnimalTrap},
@@ -308,11 +309,14 @@ local building_db = {
     j={label='Cage', type=df.building_type.Cage},
     A={label='Archery Target', type=df.building_type.ArcheryTarget},
     R={label='Traction Bench', type=df.building_type.TractionBench},
-    N={label='Nest Box', type=df.building_type.NextBox},
+    N={label='Nest Box', type=df.building_type.NestBox},
     ['{Alt}h']={label='Hive', type=df.building_type.Hive},
-    ['{Alt}a']={label='Offering Place', type=df.building_type.OfferingPlace},
-    ['{Alt}c']={label='Bookcase', type=df.building_type.Bookcase},
-    F={label='Display Furniture', type=df.building_type.DisplayFurniture},
+    -- Offering Places, Bookcases, and Display Furniture are not yet supported
+    -- by dfhack
+    --['{Alt}a']={label='Offering Place', type=df.building_type.OfferingPlace},
+    --['{Alt}c']={label='Bookcase', type=df.building_type.Bookcase},
+    --F={label='Display Furniture', type=df.building_type.DisplayFurniture},
+
     -- basic building types with extents
     -- in the UI, these are required to be connected regions, which we could
     -- easily enforce with a flood fill check. However, requiring connected
@@ -694,6 +698,11 @@ local building_aliases = {
     trackrampnew='trackrampNEW',
     trackrampsew='trackrampSEW',
     trackrampnsew='trackrampNSEW',
+    ['~h']='{Alt}h',
+    ['~a']='{Alt}a',
+    ['~c']='{Alt}c',
+    ['~b']='{Alt}b',
+    ['~s']='{Alt}s',
 }
 
 --

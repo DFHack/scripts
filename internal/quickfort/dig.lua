@@ -33,6 +33,10 @@ local function is_wall(tileattrs)
     return tileattrs.shape == df.tiletype_shape.WALL
 end
 
+local function is_tree(tileattrs)
+    return tileattrs.material == df.tiletype_material.TREE
+end
+
 local function is_fortification(tileattrs)
     return tileattrs.shape == df.tiletype_shape.FORTIFICATION
 end
@@ -180,6 +184,7 @@ local function do_channel(ctx)
     if ctx.on_map_edge then return false end
     if not ctx.flags.hidden then -- always designate if the tile is hidden
         if is_construction(ctx.tileattrs) or
+                is_tree(ctx.tileattrs) or
                 (not is_wall(ctx.tileattrs) and
                  not is_fortification(ctx.tileattrs) and
                  not is_diggable_floor(ctx.tileattrs) and
@@ -211,10 +216,13 @@ local function do_down_stair(ctx)
     if ctx.on_map_edge then return false end
     if not ctx.flags.hidden then -- always designate if the tile is hidden
         if is_construction(ctx.tileattrs) or
+                is_tree(ctx.tileattrs) or
                 (not is_wall(ctx.tileattrs) and
                  not is_fortification(ctx.tileattrs) and
                  not is_diggable_floor(ctx.tileattrs) and
-                 not is_removable_shape(ctx.tileattrs)) then
+                 not is_removable_shape(ctx.tileattrs) and
+                 not is_gatherable(ctx.tileattrs) and
+                 not is_sapling(ctx.tileattrs)) then
             return false
         end
     end
