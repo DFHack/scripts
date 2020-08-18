@@ -55,16 +55,15 @@ end
 
 -- translates item_type names into something we can find in the job names,
 -- adding some strategic prefixes so we choose materials in this order:
--- rock, wood, iron. we'll rewrite this later once we have the materials
--- preference API defined.
+-- rock, wood, iron.
 local function process_filter(order_specs, filter, reactions)
     local label = nil
     if filter.flags2 and filter.flags2.building_material then
         if filter.flags2.magma_safe then
-            -- restrict this to magma-safe materials
+            -- is it worth trying to restrict this to magma-safe rock types?
             label = 'blocks'
         elseif filter.flags2.fire_safe then
-            -- restrict this to fire-safe materials
+            -- is it worth trying to restrict this to fire-safe rock types?
             label = 'blocks'
         else label = 'blocks' end
     elseif filter.item_type == df.item_type.TOOL then
@@ -100,7 +99,7 @@ local function process_filter(order_specs, filter, reactions)
     if not label then
         print('unhandled filter:')
         printall_recurse(filter)
-        error('unhandled filter')
+        error('quickfort out of sync with DFHack filters; please file a bug')
     end
     inc_order_spec(order_specs, filter, reactions, label)
 end
