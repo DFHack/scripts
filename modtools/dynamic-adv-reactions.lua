@@ -20,7 +20,7 @@ modtools/dynamic-adv-reactions
 ==============================
 Tool to allow dynamically enabling / disabling adventure mode reactions based on certain conditions.
 When a reaction is registered with this script, its usage by adventurers will be disabled by default. Each usage of this command creates its own set of conditions to check, and the reaction will be enabled for the player if they satisfy all the criteria of one of those sets of conditions.
-Registered reactions are cleared when the world is unloaded, and so it is best to include any commands for this within an `onLoad*.init` file.
+Registered reactions are cleared when the world is unloaded, and so it is best to include any commands for this within an ``onLoad*.init`` file.
 Checks with multiple instances of the same type of condition are possible if registered via code rather than with commands.
 
 :-reaction reactionCode:
