@@ -1,6 +1,5 @@
 -- Tool to allow dynamically enabling / disabling adventure mode reactions based on circumstances
 --@ module = true
--- Created for dfhack version 0.44.12-r3
 
 --[[ HOW IT WORKS:
 Commands / scripts register a set of conditional checks associated with a reaction (the set of conditions is referred to a "condition blob").
@@ -23,93 +22,104 @@ When a reaction is registered with this script, its usage by adventurers will be
 Registered reactions are cleared when the world is unloaded, and so it is best to include any commands for this within an ``onLoad*.init`` file.
 Checks with multiple instances of the same type of condition are possible if registered via code rather than with commands.
 
-:-reaction reactionCode:
+* ``-reaction reactionCode``
   (Required)
   Specify the reaction the conditions will allow.
-  Examples:
+  Examples::
+
     MAKE_SHARP_ROCK
     "ASSEMBLE STONE AXE"
 
 Conditions:
 Most conditions can optionally be a table of conditions, rather than a single argument. That condition is satisfied if any of them are met.
 
-:-creature token:
+* ``-creature token``
   Require the adventurer to be the specified creature.
   Can optionally be a table of arguments.
   Example: DWARF
 
-:-caste token:
+* ``-caste token``
   Require the adventurer to be the specified caste.
   Can optionally be a table of arguments.
-  Examples:
+  Examples::
+
     FEMALE
     DRONE
 
-:-creatureCaste tokens:
+* ``-creatureCaste tokens``
   Require the adventurer to be the specified creature + caste combination.
   Can optionally be a table of arguments.
   Example: DWARF:MALE
 
-:-creatureClass class:
+* ``-creatureClass class``
   Require the adventurer to be a creature with the specified creature class.
   Can optionally be a table of arguments.
-  Examples:
+  Examples::
+
     GENERAL_POISON
     MAMMAL
 
-:-sphere sphere:
+* ``-sphere sphere``
   Require the adventurer to be a creature with the specified sphere.
   Can optionally be a table of arguments.
-  Examples:
+  Examples::
+
     METALS
     MUCK
 
-:-syndrome name:
+* ``-syndrome name``
   Require the adventurer to be under the effects of the specified syndrome.
   Can optionally be a table of arguments.
-  Examples:
+  Examples::
+
     "giant cave spider bite"
     "night sickness"
 
-:-syndromeClass class:
+* ``-syndromeClass class``
   Require the adventurer to be under the effects of a syndrome with the specified SYN_CLASS.
   Can optionally be a table of arguments.
   Example: RAISED_UNDEAD
 
-:-syndromeIdentifier identifier:
+* ``-syndromeIdentifier identifier``
   Require the adventurer to be under the effects of a syndrome with the specified SYN_IDENTIFIER.
   Can optionally be a table of arguments.
   Example: INEBRIATION
 
-:-secret id:
+* ``-secret id``
   Require the adventurer to know the specified secret.
   Can optionally be a table of arguments.
   Since game-generated secrets have unique names, this is more likely for use with mod-made secrets, which keep the same ids between worlds.
 
-:-item token:
+* ``-item token``
   Require the adventurer to be holding the specified item in their hands.
   Can optionally be a table of arguments.
-  Examples:
+  Examples::
+
     WEAPON:ITEM_WEAPON_PICK
     BUCKET:NONE
 
-:-itemType token:
+* ``-itemType token``
   Require the adventurer to be holding the an item of the specified item type in their hands.
   Can optionally be a table of arguments.
-  Examples:
+  Examples::
+
     WEAPON
     COIN
     BOX
 
-:-moon [ startPhase endPhase ]:
+``-moon [ startPhase endPhase ]``
   Require the moon to be within a set bound of phases.
   See the wiki entry for what numbers correspond to which phases: https://dwarffortresswiki.org/index.php/DF2014:Syndrome#MOON_PHASE
 
 Example Usage:
-Restrict stone axe making to only drunken elves:
-  `modtools/dynamic-adv-reactions -reaction "ASSEMBLE STONE AXE" -creature ELF -syndromeIdentifier INEBRIATION`
-Only allow beings related to an appropriate to sharpen rocks:
-  `modtools/dynamic-adv-reactions -reaction MAKE_SHARP_ROCK -sphere [ EARTH MINERALS METALS ]
+Restrict stone axe making to only drunken elves::
+
+    modtools/dynamic-adv-reactions -reaction "ASSEMBLE STONE AXE" -creature ELF -syndromeIdentifier INEBRIATION
+
+Only allow beings related to an appropriate to sharpen rocks::
+
+    modtools/dynamic-adv-reactions -reaction MAKE_SHARP_ROCK -sphere [ EARTH MINERALS METALS ]
+
 ]====]
 
 local utils = require "utils"
