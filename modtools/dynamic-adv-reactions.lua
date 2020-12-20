@@ -112,11 +112,11 @@ Most conditions can optionally be a table of conditions, rather than a single ar
   See the wiki entry for what numbers correspond to which phases: https://dwarffortresswiki.org/index.php/DF2014:Syndrome#MOON_PHASE
 
 Example Usage:
-Restrict stone axe making to only drunken elves::
+* Restrict stone axe making to only drunken elves::
 
     modtools/dynamic-adv-reactions -reaction "ASSEMBLE STONE AXE" -creature ELF -syndromeIdentifier INEBRIATION
 
-Only allow beings related to an appropriate to sharpen rocks::
+* Only allow beings related to an appropriate sphere to sharpen rocks::
 
     modtools/dynamic-adv-reactions -reaction MAKE_SHARP_ROCK -sphere [ EARTH MINERALS METALS ]
 
