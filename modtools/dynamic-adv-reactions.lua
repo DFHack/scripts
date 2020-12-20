@@ -107,7 +107,7 @@ Most conditions can optionally be a table of conditions, rather than a single ar
     COIN
     BOX
 
-``-moon [ startPhase endPhase ]``
+* ``-moon [ startPhase endPhase ]``
   Require the moon to be within a set bound of phases.
   See the wiki entry for what numbers correspond to which phases: https://dwarffortresswiki.org/index.php/DF2014:Syndrome#MOON_PHASE
 
