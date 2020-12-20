@@ -112,6 +112,7 @@ Most conditions can optionally be a table of conditions, rather than a single ar
   See the wiki entry for what numbers correspond to which phases: https://dwarffortresswiki.org/index.php/DF2014:Syndrome#MOON_PHASE
 
 Example Usage:
+
 * Restrict stone axe making to only drunken elves::
 
     modtools/dynamic-adv-reactions -reaction "ASSEMBLE STONE AXE" -creature ELF -syndromeIdentifier INEBRIATION
