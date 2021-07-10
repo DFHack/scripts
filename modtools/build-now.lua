@@ -1,8 +1,8 @@
 -- instantly completes unsuspended building construction jobs
 --[====[
 
-build-now
-=========
+modtools/build-now
+==================
 
 Instantly completes unsuspended building construction jobs. By default, all
 buildings on the map are completed, but the area of effect is configurable.
@@ -327,6 +327,12 @@ local function build_building(bld)
     end
     bld:setBuildStage(bld:getMaxBuildStage())
     bld.flags.exists = true
+    -- update occupancy flags
+    for x = bld.x1,bld.x2 do
+        for y = bld.y1,bld.y2 do
+            bld:updateOccupancy(x, y)
+        end
+    end
 end
 
 local function throw(bld, msg)
