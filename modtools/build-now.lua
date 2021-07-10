@@ -35,6 +35,8 @@ Options:
 
 :``-h``, ``--help``:
     Show help text.
+:``-q``, ``--quiet``:
+    Suppress informational output (error messages are still printed).
 ]====]
 
 local argparse = require('argparse')
@@ -51,6 +53,7 @@ local function parse_commandline(args)
     local opts = {}
     local positionals = argparse.processArgsGetopt(args, {
             {'h', 'help', handler=function() opts.help = true end},
+            {'q', 'quiet', handler=function() opts.quiet = true end},
         })
 
     if positionals[1] == 'help' then opts.help = true end
@@ -81,10 +84,13 @@ end
 --   is not suspended
 --   target building is within the processing area
 local function get_jobs(opts)
-    local jobs = {}
+    local num_suspended, num_incomplete, num_clipped, jobs = 0, 0, 0, {}
     for _,job in utils.listpairs(df.global.world.jobs.list) do
         if job.job_type ~= df.job_type.ConstructBuilding then goto continue end
-        if job.flags.suspend then goto continue end
+        if job.flags.suspend then
+            num_suspended = num_suspended + 1
+            goto continue
+        end
 
         -- job_items are not items, they're filters that describe the kinds of
         -- items that need to be attached.
@@ -92,7 +98,10 @@ local function get_jobs(opts)
             -- we have to check for quantity != 0 instead of just the existence
             -- of the job_item since buildingplan leaves 0-quantity job_items in
             -- place to protect against persistence errors.
-            if job_item.quantity > 0 then goto continue end
+            if job_item.quantity > 0 then
+                num_incomplete = num_incomplete + 1
+                goto continue
+            end
         end
 
         local bld = dfhack.job.getHolder(job)
@@ -105,13 +114,34 @@ local function get_jobs(opts)
         if bld.z < opts.start.z or bld.z > opts['end'].z
                 or bld.x2 < opts.start.x or bld.x1 > opts['end'].z
                 or bld.y2 < opts.start.y or bld.y1 > opts['end'].y then
+            num_clipped = num_clipped + 1
             goto continue
         end
 
         table.insert(jobs, job)
         ::continue::
     end
+    if not opts.quiet then
+        if num_suspended > 0 then
+            print(('Skipped %d suspended building%s')
+                  :format(num_suspended, num_suspended ~= 1 and 's' or ''))
+        end
+        if num_incomplete > 0 then
+            print(('Skipped %d building%s with missing items')
+                  :format(num_incomplete, num_incomplete ~= 1 and 's' or ''))
+        end
+        if num_clipped > 0 then
+            print(('Skipped %d building%s out of processing range')
+                  :format(num_clipped, num_clipped ~= 1 and 's' or ''))
+        end
+    end
     return jobs
+end
+
+-- move items away from the construction site
+-- moves items to nearest walkable tile that is not occupied by a building
+local function clear_footprint(bld)
+    return true
 end
 
 -- retrieve the items from the job before we destroy the references
@@ -300,7 +330,7 @@ local function build_building(bld)
 end
 
 local function throw(bld, msg)
-    msg = msg .. ('; please remove and recreate the %s at (%d,%d,%d)')
+    msg = msg .. ('; please remove and recreate the %s at (%d, %d, %d)')
                  :format(df.building_type[bld:getType()],
                          bld.centerx, bld.centery, bld.z)
     qerror(msg)
@@ -313,6 +343,14 @@ if opts.help then print(dfhack.script_help()) return end
 local num_jobs = 0
 for _,job in ipairs(get_jobs(opts)) do
     local bld = dfhack.job.getHolder(job)
+
+    -- clear items from the planned building footprint
+    if not clear_footprint(bld) then
+        printerr(('cannot move items blocking building at (%d, %d, %d)')
+                 :format(bld.centerx, bld.centery, bld.z))
+        goto continue
+    end
+
     local items = get_items(job)
 
     -- remove job data and clean up ref links. we do this first because
@@ -338,5 +376,7 @@ end
 
 df.global.world.reindex_pathfinding = true
 
-print(('Completed %d construction job%s')
-      :format(num_jobs, num_jobs ~= 1 and 's' or ''))
+if not opts.quiet then
+    print(('Completed %d construction job%s')
+        :format(num_jobs, num_jobs ~= 1 and 's' or ''))
+end
