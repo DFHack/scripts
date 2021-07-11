@@ -32,6 +32,11 @@ Valid options:
 
 unit=nil
 
+if args.help then
+    print(help)
+    return
+end
+
 if args.unit then
     id=tonumber(args.unit)
     if id then
@@ -92,11 +97,6 @@ function Ungeld(unit)
     unit.flags3.gelded = false
     FindBodyPart(unit,false)
     print(string.format("unit %s ungelded.",unit.id))
-end
-
-if args.help then
-    print(help)
-    return
 end
 
 if args.find then

@@ -42,6 +42,19 @@ that repo.
 ## Misc Improvements
 - `devel/annc-monitor`: added ``report enable|disable`` subcommand to filter combat reports
 - `gui/advfort`: added workshop name to workshop UI
+- `devel/query`: updated script to v3.1.4 - ie. major rewrite. improved [dramatically] script maintainability and readability.
+- `devel/query`: merged options ``-query`` and ``-querykeys`` into ``-query``
+- `devel/query`: merged options ``-depth`` and ``-keydepth`` into ``-maxdepth``
+- `devel/query`: replaced option ``-safer`` with ``-excludetypes`` and ``-excludekinds``
+- `devel/query`: improved how tile data is dealt with [identification, iteration, and searching]
+- `devel/query`: added option ``-findvalue``
+- `devel/query`: added option ``-showpaths`` to print full data paths instead of nested fields
+- `devel/query`: added options ``-oneline`` and alias ``-1`` to avoid using two lines for fields with metadata
+- `devel/query`: added support for selecting the highlighted job data
+- `devel/query`: added support for selecting the highlighted plant data
+- `devel/query`: added support for selecting the highlighted building data
+- `devel/query`: added support for selecting the highlighted block data (ie. without a specific tile in mind)
+- `devel/query`: removed options ``-listall`` ``-listfields`` ``-listkeys`` this is now simply default behaviour
 - `quickfort`: added the ``--cursor`` option for running a blueprint at specific coordinates instead of starting at the game cursor position
 - `quickfort`: added more helpful error messages for invalid modeline markers
 - `quickfort`: added support for extra space characters in blueprints
