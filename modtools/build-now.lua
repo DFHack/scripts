@@ -107,7 +107,8 @@ local function get_jobs(opts)
 
         local bld = dfhack.job.getHolder(job)
         if not bld then
-            printerr('skipping construction job without attached building')
+            dfhack.printerr(
+                'skipping construction job without attached building')
             goto continue
         end
 
@@ -172,11 +173,76 @@ local function get_items_within_footprint(blocks, bld)
     return true, items
 end
 
--- does a flood search (essentially an A* algorithm) to find the nearest
--- unhidden, walkable tile that is not occupied by a building. if no tile can
--- be found, moves items to the position of the first fort citizen.
+-- returns whether this is a match and whether we should continue searching
+-- beyond this tile
+local function is_good_dump_pos(pos)
+    local tt = dfhack.maps.getTileType(pos)
+    -- reject bad coordinates (or map blocks that haven't been loaded)
+    if not tt then return false, false end
+    local flags, occupancy = dfhack.maps.getTileFlags(pos)
+    local attrs = df.tiletype.attrs[tt]
+    local shape_attrs = df.tiletype_shape.attrs[attrs.shape]
+    -- reject hidden tiles
+    if flags.hidden then return false, false end
+    -- reject unwalkable or open tiles
+    if not shape_attrs.walkable then return false, false end
+    if shape_attrs.basic_shape == df.tiletype_shape_basic.Open then
+        return false, false
+    end
+    -- reject footprints within other buildings. this could potentially be
+    -- relaxed a bit since we can technically dump items on passable tiles
+    -- within other buildings, but that would look messy.
+    if occupancy.building ~= df.tile_building_occ.None then
+        return false, true
+    end
+    -- success!
+    return true
+end
+
+-- noop if pos is in the seen map. otherwise marks pos in the seen map and
+-- enqueues pos in queue
+local function enqueue_if_unseen(seen, queue, pos)
+    if seen[pos.x] and seen[pos.x][pos.y] then return end
+    seen[pos.x] = seen[pos.x] or {}
+    seen[pos.x][pos.y] = true
+    table.insert(queue, pos)
+end
+
+local function check_and_flood(seen, queue, pos)
+    local is_match, should_flood = is_good_dump_pos(pos)
+    if is_match then return pos end
+    if not should_flood then return end
+    local x, y, z = pos.x, pos.y, pos.z
+    enqueue_if_unseen(seen, queue, xyz2pos(x-1, y-1, z))
+    enqueue_if_unseen(seen, queue, xyz2pos(x,   y-1, z))
+    enqueue_if_unseen(seen, queue, xyz2pos(x+1, y-1, z))
+    enqueue_if_unseen(seen, queue, xyz2pos(x-1, y,   z))
+    enqueue_if_unseen(seen, queue, xyz2pos(x+1, y,   z))
+    enqueue_if_unseen(seen, queue, xyz2pos(x-1, y+1, z))
+    enqueue_if_unseen(seen, queue, xyz2pos(x,   y+1, z))
+    enqueue_if_unseen(seen, queue, xyz2pos(x+1, y+1, z))
+end
+
+-- does a flood search to find the nearest tile where we can freely dump items
+local function search_dump_pos(bld)
+    local seen = {[bld.centerx]={[bld.centery]=true}}
+    local queue, i = {xyz2pos(bld.centerx, bld.centery, bld.z)}, 1
+    while queue[i] do
+        local good_pos = check_and_flood(seen, queue, queue[i])
+        if good_pos then return good_pos end
+        queue[i] = nil
+        i = i + 1
+    end
+end
+
+-- uses the flood search algorithm to find a free tile. if that fails, returns
+-- the position of the first fort citizen. if that fails, returns the position
+-- of the first active unit.
 local function get_dump_pos(bld)
-    -- TODO
+    local dump_pos = search_dump_pos(bld)
+    if dump_pos then
+        return dump_pos
+    end
     for _,unit in ipairs(df.global.world.units.active) do
         if dfhack.units.isCitizen(unit) then
             return unit.pos
@@ -223,7 +289,7 @@ local function disconnect_clutter(item)
         end
     end
     if not found then
-        printerr('failed to find clutter item in expected building')
+        dfhack.printerr('failed to find clutter item in expected building')
         return false
     end
     -- remove building ref from item and move item into containing map block
@@ -408,8 +474,8 @@ for _,job in ipairs(get_jobs(opts)) do
 
     -- clear items from the planned building footprint
     if not clear_footprint(bld) then
-        printerr(('cannot move items blocking building at (%d, %d, %d)')
-                 :format(bld.centerx, bld.centery, bld.z))
+        dfhack.printerr(('cannot move items blocking building at (%d, %d, %d)')
+                        :format(bld.centerx, bld.centery, bld.z))
         goto continue
     end
 
