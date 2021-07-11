@@ -455,7 +455,9 @@ local function build_construction(bld)
     dfhack.items.remove(item)
 end
 
--- complete architecture, if required, and mark the building as built
+-- complete architecture, if required, and perform the adjustments the game
+-- normally does when a building is built. this logic is reverse engineered from
+-- observing game behavior and may be incomplete.
 local function build_building(bld)
     if bld:needsDesign() then
         -- unlike "natural" builds, we don't set the architect or builder unit
@@ -496,8 +498,9 @@ for _,job in ipairs(get_jobs(opts)) do
 
     -- clear non-job items from the planned building footprint
     if not clear_footprint(bld, items) then
-        dfhack.printerr(('cannot move items blocking building at (%d, %d, %d)')
-                        :format(bld.centerx, bld.centery, bld.z))
+        dfhack.printerr(
+            ('cannot move items blocking building site at (%d, %d, %d)')
+            :format(bld.centerx, bld.centery, bld.z))
         goto continue
     end
 
@@ -509,7 +512,8 @@ for _,job in ipairs(get_jobs(opts)) do
     end
 
     if not attach_items(bld, items) then
-        throw(bld, 'failed to attach items; building state may be inconsistent')
+        throw(bld,
+              'failed to attach items to building; state may be inconsistent')
     end
 
     if bld:getType() == df.building_type.Construction then
@@ -522,7 +526,9 @@ for _,job in ipairs(get_jobs(opts)) do
     ::continue::
 end
 
-df.global.world.reindex_pathfinding = true
+if num_jobs > 0 then
+    df.global.world.reindex_pathfinding = true
+end
 
 if not opts.quiet then
     print(('Completed %d construction job%s')
