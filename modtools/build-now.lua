@@ -156,7 +156,21 @@ local function get_map_blocks_with_items_in_footprint(bld)
     return blocks
 end
 
-local function get_items_within_footprint(blocks, bld)
+local function transform(tab, transform_fn)
+    local ret = {}
+    for k,v in pairs(tab) do
+        ret[k] = transform_fn(v)
+    end
+    return ret
+end
+
+local function get_item_id(item)
+    return item.id
+end
+
+local function get_items_within_footprint(blocks, bld, ignore_items)
+    -- can't compare userdata items directly, so we'll compare ids
+    local ignore_set = utils.invert(transform(ignore_items, get_item_id))
     local items = {}
     for _,block in ipairs(blocks) do
         for _,itemid in ipairs(block.items) do
@@ -164,9 +178,15 @@ local function get_items_within_footprint(blocks, bld)
             local pos = item.pos
             if item.flags.on_ground and gui.is_in_rect(bld, pos.x, pos.y) then
                 if item.flags.in_job then
-                    return false
+                    -- if the job that the item is associated with is the one
+                    -- for building this building, then that's ok. it will be
+                    -- moved directly into the building later.
+                    if not ignore_set[item.id] then
+                        return false
+                    end
+                else
+                    table.insert(items, item)
                 end
-                table.insert(items, item)
             end
         end
     end
@@ -253,11 +273,11 @@ local function get_dump_pos(bld)
 end
 
 -- move items away from the construction site
-local function clear_footprint(bld)
+local function clear_footprint(bld, ignore_items)
     -- check building tiles for items. if none exist, exit early with success
     local blocks = get_map_blocks_with_items_in_footprint(bld)
     if #blocks == 0 then return true end
-    local ok, items = get_items_within_footprint(blocks, bld)
+    local ok, items = get_items_within_footprint(blocks, bld, ignore_items)
     if not ok then return false end
     local dump_pos = get_dump_pos(bld)
     for _,item in ipairs(items) do
@@ -266,7 +286,6 @@ local function clear_footprint(bld)
     return true
 end
 
--- retrieve the items from the job before we destroy the references
 local function get_items(job)
     local items = {}
     for _,item_ref in ipairs(job.items) do
@@ -472,14 +491,15 @@ local num_jobs = 0
 for _,job in ipairs(get_jobs(opts)) do
     local bld = dfhack.job.getHolder(job)
 
-    -- clear items from the planned building footprint
-    if not clear_footprint(bld) then
+    -- retrieve the items attached to the job before we destroy the references
+    local items = get_items(job)
+
+    -- clear non-job items from the planned building footprint
+    if not clear_footprint(bld, items) then
         dfhack.printerr(('cannot move items blocking building at (%d, %d, %d)')
                         :format(bld.centerx, bld.centery, bld.z))
         goto continue
     end
-
-    local items = get_items(job)
 
     -- remove job data and clean up ref links. we do this first because
     -- dfhack.items.moveToBuilding() refuses to work with items that already
