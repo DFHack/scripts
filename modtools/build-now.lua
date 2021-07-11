@@ -41,6 +41,7 @@ Options:
 
 local argparse = require('argparse')
 local dig_now = require('plugins.dig-now')
+local gui = require('gui')
 local utils = require('utils')
 
 local function min_to_max(...)
@@ -138,9 +139,64 @@ local function get_jobs(opts)
     return jobs
 end
 
+-- returns a list of map blocks that contain items that are in the footprint
+local function get_map_blocks_with_items_in_footprint(bld)
+    local blockset = {}
+    for x = bld.x1,bld.x2 do
+        for y = bld.y1,bld.y2 do
+            local block = dfhack.maps.ensureTileBlock(x, y, bld.z)
+            if block.occupancy[x%16][y%16].item ~= 0 then
+                blockset[block] = true
+            end
+        end
+    end
+    local blocks = {}
+    for block in pairs(blockset) do table.insert(blocks, block) end
+    return blocks
+end
+
+local function get_items_within_footprint(blocks, bld)
+    local items = {}
+    for _,block in ipairs(blocks) do
+        for _,itemid in ipairs(block.items) do
+            local item = df.item.find(itemid)
+            local pos = item.pos
+            if item.flags.on_ground and gui.is_in_rect(bld, pos.x, pos.y) then
+                if item.flags.in_job then
+                    return false
+                end
+                table.insert(items, item)
+            end
+        end
+    end
+    return true, items
+end
+
+-- does a flood search (essentially an A* algorithm) to find the nearest
+-- unhidden, walkable tile that is not occupied by a building. if no tile can
+-- be found, moves items to the position of the first fort citizen.
+local function get_dump_pos(bld)
+    -- TODO
+    for _,unit in ipairs(df.global.world.units.active) do
+        if dfhack.units.isCitizen(unit) then
+            return unit.pos
+        end
+    end
+    -- fall back to position of first active unit
+    return df.global.world.units.active[0].pos
+end
+
 -- move items away from the construction site
--- moves items to nearest walkable tile that is not occupied by a building
 local function clear_footprint(bld)
+    -- check building tiles for items. if none exist, exit early with success
+    local blocks = get_map_blocks_with_items_in_footprint(bld)
+    if #blocks == 0 then return true end
+    local ok, items = get_items_within_footprint(blocks, bld)
+    if not ok then return false end
+    local dump_pos = get_dump_pos(bld)
+    for _,item in ipairs(items) do
+        if not dfhack.items.moveToGround(item, dump_pos) then return false end
+    end
     return true
 end
 
