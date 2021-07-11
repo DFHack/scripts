@@ -14,9 +14,10 @@ that repo.
 # Future
 
 ## New Scripts
+- `autonick`: gives dwarves unique nicknames
+- `modtools/build-now`: instantly completes unsuspended planned building constructions
 - `prioritize`: automatically boosts the priority of current and/or future jobs of the selected types
 - `reveal-adv-map`: exposes/hides all world map tiles in adventure mode
-- `autonick`: gives dwarves unique nicknames
 
 ## Fixes
 - `devel/export-dt-ini`: fixed incorrect vtable address on Windows
