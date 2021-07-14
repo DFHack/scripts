@@ -12,6 +12,9 @@ thus making them visible on the map.
 
 Usable in both fortress and adventure mode.
 
+See `reveal-adv-map` if you also want to expose
+hidden world map tiles in adventure mode.
+
 ]====]
 
 local count = 0

@@ -13,6 +13,9 @@ that repo.
 
 # Future
 
+## New Scripts
+- `reveal-adv-map`: exposes/hides all world map tiles in adventure mode
+
 # 0.47.05-r2
 
 ## New Scripts
