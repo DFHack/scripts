@@ -476,6 +476,10 @@ local function build_building(bld)
             bld:updateOccupancy(x, y)
         end
     end
+    -- doors link to adjacent smooth walls
+    if bld:getType() == df.building_type.Door then
+        dig_now.link_adjacent_smooth_walls(bld.centerx, bld.centery, bld.z)
+    end
 end
 
 local function throw(bld, msg)
