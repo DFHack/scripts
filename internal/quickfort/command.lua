@@ -1,4 +1,4 @@
--- command routing logic for the quickfort script
+-- command sequencing and routing logic for the quickfort script
 --@ module = true
 
 if not dfhack_flags.module then
@@ -6,7 +6,6 @@ if not dfhack_flags.module then
 end
 
 local argparse = require('argparse')
-local utils = require('utils')
 local guidm = require('gui.dwarfmode')
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_list = reqscript('internal/quickfort/list')
@@ -76,41 +75,8 @@ function finish_command(ctx, section_name, quiet)
     end
 end
 
-function do_command(args)
-    local command = args.action
-    if not command or not command_switch[command] then
-        qerror(string.format('invalid command: "%s"', command))
-    end
-    local cursor = guidm.getCursorPos()
-    local quiet, verbose, dry_run, section_name = false, false, false, nil
-    local other_args = argparse.processArgsGetopt(args, {
-            {'c', 'cursor', hasArg=true,
-             handler=function(optarg) cursor = argparse.coords(optarg) end},
-            {'d', 'dry-run', handler=function() dry_run = true end},
-            {'n', 'name', hasArg=true,
-             handler=function(optarg) section_name = optarg end},
-            {'q', 'quiet', handler=function() quiet = true end},
-            {'v', 'verbose', handler=function() verbose = true end},
-        })
-    local blueprint_name = other_args[1]
-    if not blueprint_name or blueprint_name == '' then
-        qerror('expected <list_num> or <blueprint_name> parameter')
-    end
-    if #other_args > 1 then
-        local extra = other_args[2]
-        qerror(('unexpected argument: "%s"; did you mean "-n %s"?')
-               :format(extra, extra))
-    end
-
-    local mode = nil
-    local list_num = tonumber(blueprint_name)
-    if list_num then
-        blueprint_name, section_name, mode =
-                quickfort_list.get_blueprint_by_number(list_num)
-    else
-        mode = quickfort_list.get_blueprint_mode(blueprint_name, section_name)
-    end
-
+local function do_one_command(command, cursor, blueprint_name, section_name,
+                              mode, quiet, dry_run)
     if not cursor then
         if command == 'orders' or mode == 'notes' then
             cursor = {x=0, y=0, z=0}
@@ -135,4 +101,62 @@ function do_command(args)
                 end
             end
         end)
+end
+
+local function do_bp_name(commands, cursor, bp_name, sec_names, quiet, dry_run)
+    for _,sec_name in ipairs(sec_names) do
+        local mode = quickfort_list.get_blueprint_mode(bp_name, sec_name)
+        for _,command in ipairs(commands) do
+            do_one_command(command, cursor, bp_name, sec_name, mode,
+                           quiet, dry_run)
+        end
+    end
+end
+
+local function do_list_num(commands, cursor, list_nums, quiet, dry_run)
+    for _,list_num in ipairs(list_nums) do
+        local bp_name, sec_name, mode =
+                quickfort_list.get_blueprint_by_number(list_num)
+        for _,command in ipairs(commands) do
+            do_one_command(command, cursor, bp_name, sec_name, mode,
+                           quiet, dry_run)
+        end
+    end
+end
+
+function do_command(args)
+    for _,command in ipairs(args.commands) do
+        if not command or not command_switch[command] then
+            qerror(string.format('invalid command: "%s"', command))
+        end
+    end
+    local cursor = guidm.getCursorPos()
+    local quiet, verbose, dry_run, section_names = false, false, false, {''}
+    local other_args = argparse.processArgsGetopt(args, {
+            {'c', 'cursor', hasArg=true,
+             handler=function(optarg) cursor = argparse.coords(optarg) end},
+            {'d', 'dry-run', handler=function() dry_run = true end},
+            {'n', 'name', hasArg=true,
+             handler=function(optarg)
+                section_names = argparse.stringList(optarg) end},
+            {'q', 'quiet', handler=function() quiet = true end},
+            {'v', 'verbose', handler=function() verbose = true end},
+        })
+    local blueprint_name = other_args[1]
+    if not blueprint_name or blueprint_name == '' then
+        qerror('expected <list_num>[,<list_num>...] or <blueprint_name>')
+    end
+    if #other_args > 1 then
+        local extra = other_args[2]
+        qerror(('unexpected argument: "%s"; did you mean "-n %s"?')
+               :format(extra, extra))
+    end
+
+    local ok, list_nums = pcall(argparse.numberList, blueprint_name)
+    if not ok then
+        do_bp_name(args.commands, cursor, blueprint_name, section_names,
+                   quiet, dry_run)
+    else
+        do_list_num(args.commands, cursor, list_nums, quiet, dry_run)
+    end
 end

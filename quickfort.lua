@@ -17,8 +17,8 @@ upper-left cell of the spreadsheet (e.g.: ``#dig`` in cell ``A1``).
 You can create these blueprints by hand or by using any spreadsheet application,
 saving them as ``.xlsx`` or ``.csv`` files. You can also build your plan "for
 real" in Dwarf Fortress, and then export your map using the DFHack
-`blueprint` plugin for later replay. Blueprint files should go in the
-``blueprints`` subfolder in the main DF folder.
+`blueprint` plugin (or `gui/blueprint` script) for later replay. Blueprint files
+should go in the ``blueprints`` subfolder in the main DF folder.
 
 For more details on blueprint file syntax, see the `quickfort-blueprint-guide`
 or browse through the ready-to-use examples in the `quickfort-library-guide`.
@@ -45,17 +45,17 @@ Usage:
     Starts the quickfort dialog, where you can run blueprints from an
     interactive list. The optional arguments have the same meanings as they do
     in the list command, and can be used to preset the gui dialog state.
-**quickfort <command> <list_num> [<options>]**
+**quickfort <command>[,<command>...] <list_num>[,<list_num>...] [<options>]**
     Applies the blueprint with the number from the list command.
-**quickfort <command> <filename> [-n|-\-name <name>] [<options>]**
+**quickfort <command>[,<command>...] <filename> [-n|-\-name <name>[,<name>...]] [<options>]**
     Applies a blueprint in the specified file. The optional ``name`` parameter
     can select a specific blueprint from a file that contains multiple
     blueprints with the format "sheetname/label", or just "/label" for .csv
-    files. The label is defined in the blueprint modeline, defaulting to its
-    order in the sheet or file if not defined. If the -n parameter is not
-    specified, the first blueprint in the first sheet is used.
+    files. The label is defined in the blueprint modeline, or, if not define,
+    defaults to its order in the sheet or file (e.g. "/2"). If the ``-n``
+    parameter is not specified, the first blueprint in the first sheet is used.
 
-**<command>** can be one of:
+**<command>** is one of:
 
 :run:     Applies the blueprint at your current in-game cursor position.
 :orders:  Uses the manager interface to queue up orders to manufacture items for
@@ -86,7 +86,7 @@ Example commands::
     quickfort list
     quickfort list -l dreamfort help
     quickfort run library/dreamfort.csv
-    quickfort orders library/dreamfort.csv -n /industry2
+    quickfort run,orders library/dreamfort.csv -n /industry2
     quickfort run 10 -v
 
 Configuration:
@@ -131,9 +131,11 @@ on are available in the `quickfort-alias-library`. Some quickfort library
 aliases require the `search-plugin` plugin to be enabled.
 ]====]
 
+local argparse = require('argparse')
+
 -- reqscript all internal files here, even if they're not directly used by this
--- top-level file. this ensures transitive dependencies are reloaded if any
--- files have changed.
+-- top-level file. this ensures modified transitive dependencies are properly
+-- reloaded when this script is run.
 local quickfort_aliases = reqscript('internal/quickfort/aliases')
 local quickfort_build = reqscript('internal/quickfort/build')
 local quickfort_building = reqscript('internal/quickfort/building')
@@ -156,7 +158,7 @@ local quickfort_zone = reqscript('internal/quickfort/zone')
 
 -- keep this in sync with the full help text above
 local function print_short_help()
-    print [[
+    print [=[
 Usage:
 
 quickfort set [<key> <value>]
@@ -173,15 +175,15 @@ quickfort gui [-l|--library] [-h|--hidden] [search string]
     Starts the quickfort dialog, where you can run blueprints from an
     interactive list. The optional arguments have the same meanings as they do
     in the list command, and can be used to preset the gui dialog state.
-quickfort <command> <list_num> [<options>]
+quickfort <command>[,<command>...] <list_num>[,<list_num>...] [<options>]
     Applies the blueprint with the number from the list command.
-quickfort <command> <filename> [-n|--name <name>] [<options>]
+quickfort <command>[,<command>...] <filename> [-n|--name <name>[,<name>...]] [<options>]
     Applies a blueprint in the specified file. The optional name parameter can
     select a specific blueprint from a file that contains multiple blueprints
     with the format "sheetname/label", or just "/label" for .csv files. If -n is
     not specified, the first blueprint in the first sheet is used.
 
-<command> can be one of:
+<command> is one of:
 
 run     Applies the blueprint at your current in-game cursor position.
 orders  Uses the manager interface to queue up orders to manufacture items for
@@ -210,14 +212,14 @@ undo    Applies the inverse of the specified blueprint. Dig tiles are
 For more info, see:
 https://docs.dfhack.org/en/stable/docs/_auto/base.html#quickfort and
 https://docs.dfhack.org/en/stable/docs/guides/quickfort-user-guide.html
-]]
+]=]
 end
 
 local action_switch = {
     set=quickfort_set.do_set,
     reset=quickfort_set.do_reset,
-    gui=quickfort_dialog.do_dialog,
     list=quickfort_list.do_list,
+    gui=quickfort_dialog.do_dialog,
     run=quickfort_command.do_command,
     orders=quickfort_command.do_command,
     undo=quickfort_command.do_command
@@ -226,6 +228,6 @@ setmetatable(action_switch, {__index=function() return print_short_help end})
 
 local args = {...}
 local action = table.remove(args, 1) or 'help'
-args['action'] = action
+args.commands = argparse.stringList(action)
 
-action_switch[action](args)
+action_switch[args.commands[1]](args)

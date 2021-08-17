@@ -165,7 +165,7 @@ function get_blueprint_by_number(list_num)
     list_num = tonumber(list_num)
     local blueprint = blueprints[list_num]
     if not blueprint then
-        qerror(string.format('invalid list index: %d', list_num))
+        qerror(string.format('invalid list index: "%s"', tostring(list_num)))
     end
     local section_name =
             get_section_name(blueprint.sheet_name, blueprint.modeline.label)
