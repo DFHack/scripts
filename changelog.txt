@@ -15,7 +15,7 @@ that repo.
 
 ## New Scripts
 - `reveal-adv-map`: exposes/hides all world map tiles in adventure mode
-- `autonick`: automatically nicknames dwarves
+- `autonick`: gives dwarves unique nicknames
 
 ## Fixes
 - `devel/export-dt-ini`: fixed incorrect vtable address on Windows
@@ -24,6 +24,7 @@ that repo.
 
 ## Misc Improvements
 - `gui/gm-editor`: made search case-insensitive
+- `quickfort`: accept multiple commands, list numbers, and/or blueprint lables on a single commandline
 - `unretire-anyone`: replaced the 'undead' descriptor with 'reanimated' to make it more mod-friendly
 
 ## Internals
