@@ -114,7 +114,7 @@ local function get_jobs(opts)
 
         -- accept building if if any part is within the processing area
         if bld.z < opts.start.z or bld.z > opts['end'].z
-                or bld.x2 < opts.start.x or bld.x1 > opts['end'].z
+                or bld.x2 < opts.start.x or bld.x1 > opts['end'].x
                 or bld.y2 < opts.start.y or bld.y1 > opts['end'].y then
             num_clipped = num_clipped + 1
             goto continue
