@@ -500,6 +500,21 @@ for _,job in ipairs(get_jobs(opts)) do
     -- retrieve the items attached to the job before we destroy the references
     local items = get_items(job)
 
+    -- skip jobs whose attached items are already owned by the target building
+    -- but are not already part of the building. They are actively being used to
+    -- construct the building and we can't safely change the building's state.
+    for _,item in ipairs(items) do
+        if not item.flags.in_building and
+                bld == dfhack.items.getHolderBuilding(item) then
+            if not opts.quiet then
+                print(
+                    ('skipping building that is actively being constructed at'..
+                     ' (%d, %d, %d)'):format(bld.centerx, bld.centery, bld.z))
+            end
+            goto continue
+        end
+    end
+
     -- clear non-job items from the planned building footprint
     if not clear_footprint(bld, items) then
         dfhack.printerr(
