@@ -15,7 +15,7 @@ that repo.
 
 ## New Scripts
 - `autonick`: gives dwarves unique nicknames
-- `build-now`: instantly completes unsuspended planned building constructions
+- `build-now`: instantly completes planned building constructions
 - `prioritize`: automatically boosts the priority of current and/or future jobs of the selected types
 - `reveal-adv-map`: exposes/hides all world map tiles in adventure mode
 
