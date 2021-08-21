@@ -26,7 +26,7 @@ that repo.
 
 ## Misc Improvements
 - `devel/query`: updated script to v3.2 (i.e. major rewrite for maintainability/readability)
-- `devel/query`: merged options ``-query`` and ``-querykeys`` into ``-query``
+- `devel/query`: merged options ``-query`` and ``-querykeys`` into ``-search``
 - `devel/query`: merged options ``-depth`` and ``-keydepth`` into ``-maxdepth``
 - `devel/query`: replaced option ``-safer`` with ``-excludetypes`` and ``-excludekinds``
 - `devel/query`: improved how tile data is dealt with identification, iteration, and searching
