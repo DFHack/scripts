@@ -37,7 +37,7 @@ that repo.
 - `quickfort`: blueprints can now be repeated up and down a specified number of z-levels via ``repeat`` markers in meta blueprints or the ``--repeat`` commandline option
 - `quickfort`: blueprints can now be rotated, flipped, and shifted via ``transform`` and ``shift`` markers in meta blueprints or the corresponding commandline options
 
-## Removed Scripts
+## Removed
 - `digfort`: code has been removed; please use `quickfort` instead
 
 # 0.47.05-r3
