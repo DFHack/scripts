@@ -550,3 +550,11 @@ function test.splitby_phase()
             delay_until(view:callback('isDismissed'))
         end)
 end
+
+function test.preset_splitby()
+    dfhack.run_script('gui/blueprint', '--splitby=phase')
+    local view = b.active_screen
+    local splitby = view.subviews.splitby
+    expect.eq('phase', splitby.options[splitby.option_idx])
+    send_keys('LEAVESCREEN') -- leave UI
+end
