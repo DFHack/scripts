@@ -13,6 +13,13 @@ that repo.
 
 # Future
 
+## New Scripts
+
+## Fixes
+
+## Misc Improvements
+- `gui/blueprint`: support the new ``--splitby`` option for `blueprint`
+
 # 0.47.05-r3
 
 ## New Scripts
