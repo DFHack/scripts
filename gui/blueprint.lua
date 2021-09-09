@@ -147,6 +147,9 @@ function NamePanel:get_help_pen()
     return self.has_name_collision and COLOR_RED or COLOR_GREY
 end
 
+-- each option in the options list can be a simple string or a table of
+-- {label=string, value=string}. simple string options use the same string for
+-- the label and value.
 CycleHotkeyLabel = defclass(CycleHotkeyLabel, widgets.Label)
 CycleHotkeyLabel.ATTRS{
     key=DEFAULT_NIL,
@@ -162,7 +165,7 @@ function CycleHotkeyLabel:init()
         {text=self.label, width=self.label_width, key=self.key, key_sep=': ',
          on_activate=self:callback('cycle')},
         '  ',
-        {text=function() return self.options[self.option_idx] end},
+        {text=self:callback('get_current_option_label')},
     }
     if self.help then
         table.insert(contents, '\n')
@@ -180,6 +183,20 @@ function CycleHotkeyLabel:cycle()
         self.option_idx = self.option_idx + 1
     end
     if self.on_change then self.on_change() end
+end
+function CycleHotkeyLabel:get_current_option_label()
+    local option = self.options[self.option_idx]
+    if type(option) == 'table' then
+        return option.label
+    end
+    return option
+end
+function CycleHotkeyLabel:get_current_option_value()
+    local option = self.options[self.option_idx]
+    if type(option) == 'table' then
+        return option.value
+    end
+    return option
 end
 
 ToggleHotkeyLabel = defclass(ToggleHotkeyLabel, CycleHotkeyLabel)
@@ -199,7 +216,7 @@ function PhasesPanel:init()
             frame={t=0},
             key='CUSTOM_A',
             label='phases',
-            options={'autodetect','custom'},
+            options={'Autodetect', 'Custom'},
             option_idx=self.phases.auto_phase and 1 or 2,
             help={'Select blueprint phases',
                   'to export.'},
@@ -253,8 +270,9 @@ function BlueprintUI:init()
         CycleHotkeyLabel{
             view_id='splitby',
             key='CUSTOM_T',
-            label='split strategy',
-            options={'none','phase'},
+            label='split',
+            options={{label='No', value='none'},
+                     {label='By phase', value='phase'}},
             option_idx=self.presets.split_strategy == 'none' and 1 or 2,
             help={'Split blueprints into',
                   'multiple files.'},
@@ -429,9 +447,9 @@ function BlueprintUI:commit(pos)
     local params = {tostring(width), tostring(height), tostring(depth), name}
 
     local phases_view = self.subviews.phases
-    if phases_view.options[phases_view.option_idx] == 'custom' then
+    if phases_view:get_current_option_value() == 'Custom' then
         for _,sv in ipairs(self.subviews.phases_panel.subviews) do
-            if sv.options and sv.options[sv.option_idx] == 'On' then
+            if sv.options and sv:get_current_option_value() == 'On' then
                 table.insert(params, sv.label)
             end
         end
@@ -442,10 +460,9 @@ function BlueprintUI:commit(pos)
             math.max(mark.z, pos.z)
     table.insert(params, ('--cursor=%d,%d,%d'):format(x, y, z))
 
-    local splitby = self.subviews.splitby
-    if splitby.option_idx ~= 1 then
-        table.insert(params, ('--splitby=%s')
-                             :format(splitby.options[splitby.option_idx]))
+    local splitby = self.subviews.splitby:get_current_option_value()
+    if splitby ~= 'none' then
+        table.insert(params, ('--splitby=%s'):format(splitby))
     end
 
     print('running: blueprint ' .. table.concat(params, ' '))

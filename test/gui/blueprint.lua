@@ -451,14 +451,14 @@ function test.phase_preset()
     local view = b.active_screen
 
     local phases_view = view.subviews.phases
-    expect.eq('custom', phases_view.options[phases_view.option_idx])
+    expect.eq('Custom', phases_view:get_current_option_value())
 
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label ~= 'phases' then
             expect.true_(sv.visible)
             -- only build should be on; everything else should be off
             expect.eq(sv.label == 'build' and 'On' or 'Off',
-                      sv.options[sv.option_idx])
+                      sv:get_current_option_value())
         end
     end
     send_keys('LEAVESCREEN') -- leave UI
@@ -491,19 +491,19 @@ function test.phase_cycle()
     send_keys('CUSTOM_A')
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label == 'dig' then
-            expect.eq('On', sv.options[sv.option_idx])
+            expect.eq('On', sv:get_current_option_value())
         end
     end
     send_keys('CUSTOM_D')
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label == 'dig' then
-            expect.eq('Off', sv.options[sv.option_idx])
+            expect.eq('Off', sv:get_current_option_value())
         end
     end
     send_keys('CUSTOM_D')
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label == 'dig' then
-            expect.eq('On', sv.options[sv.option_idx])
+            expect.eq('On', sv:get_current_option_value())
         end
     end
     send_keys('LEAVESCREEN') -- leave UI
@@ -554,7 +554,6 @@ end
 function test.preset_splitby()
     dfhack.run_script('gui/blueprint', '--splitby=phase')
     local view = b.active_screen
-    local splitby = view.subviews.splitby
-    expect.eq('phase', splitby.options[splitby.option_idx])
+    expect.eq('phase', view.subviews.splitby:get_current_option_value())
     send_keys('LEAVESCREEN') -- leave UI
 end
