@@ -199,7 +199,7 @@ function PhasesPanel:init()
             frame={t=0},
             key='CUSTOM_A',
             label='phases',
-            options={'Autodetect','Custom'},
+            options={'autodetect','custom'},
             option_idx=self.phases.auto_phase and 1 or 2,
             help={'Select blueprint phases',
                   'to export.'},
@@ -250,6 +250,15 @@ function BlueprintUI:init()
         PhasesPanel{phases=self.presets,
                     view_id='phases_panel',
                     on_layout_change=self:callback('updateLayout')},
+        CycleHotkeyLabel{
+            view_id='splitby',
+            key='CUSTOM_T',
+            label='split strategy',
+            options={'none','phase'},
+            option_idx=self.presets.split_strategy == 'none' and 1 or 2,
+            help={'Split blueprints into',
+                  'multiple files.'},
+        },
         widgets.Label{view_id='cancel_label',
                       text={{text=function() return self:get_cancel_label() end,
                              key='LEAVESCREEN', key_sep=': ',
@@ -420,7 +429,7 @@ function BlueprintUI:commit(pos)
     local params = {tostring(width), tostring(height), tostring(depth), name}
 
     local phases_view = self.subviews.phases
-    if phases_view.options[phases_view.option_idx] == 'Custom' then
+    if phases_view.options[phases_view.option_idx] == 'custom' then
         for _,sv in ipairs(self.subviews.phases_panel.subviews) do
             if sv.options and sv.options[sv.option_idx] == 'On' then
                 table.insert(params, sv.label)
@@ -432,6 +441,12 @@ function BlueprintUI:commit(pos)
     local x, y, z = math.min(mark.x, pos.x), math.min(mark.y, pos.y),
             math.max(mark.z, pos.z)
     table.insert(params, ('--cursor=%d,%d,%d'):format(x, y, z))
+
+    local splitby = self.subviews.splitby
+    if splitby.option_idx ~= 1 then
+        table.insert(params, ('--splitby=%s')
+                             :format(splitby.options[splitby.option_idx]))
+    end
 
     print('running: blueprint ' .. table.concat(params, ' '))
     local files = blueprint.run(table.unpack(params))

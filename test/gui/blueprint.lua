@@ -451,7 +451,7 @@ function test.phase_preset()
     local view = b.active_screen
 
     local phases_view = view.subviews.phases
-    expect.eq('Custom', phases_view.options[phases_view.option_idx])
+    expect.eq('custom', phases_view.options[phases_view.option_idx])
 
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label ~= 'phases' then
@@ -530,5 +530,23 @@ function test.phase_set()
             expect.table_eq({'1', '1', '1', 'blueprint', 'dig',
                              '--cursor=1,2,3'}, mock_run.call_args[1])
             send_keys('SELECT') -- dismiss the success messagebox
+            delay_until(view:callback('isDismissed'))
+        end)
+end
+
+function test.splitby_phase()
+    local mock_print, mock_run = mock.func(), mock.func({'blueprints/dig.csv'})
+    mock.patch({
+            {b, 'print', mock_print},
+            {blueprint, 'run', mock_run},
+        },
+        function()
+            local view = load_ui()
+            send_keys('CUSTOM_T')
+            guidm.setCursorPos({x=1, y=2, z=3})
+            send_keys('SELECT', 'SELECT') -- a once-tile blueprint, why not?
+            expect.str_find('%-%-splitby=phase', mock_print.call_args[1][1])
+            send_keys('SELECT') -- dismiss the success messagebox
+            delay_until(view:callback('isDismissed'))
         end)
 end
