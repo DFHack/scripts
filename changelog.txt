@@ -18,7 +18,7 @@ that repo.
 ## Fixes
 
 ## Misc Improvements
-- `gui/blueprint`: support the new ``--splitby`` option for `blueprint`
+- `gui/blueprint`: support the new ``--splitby`` and ``--format`` options for `blueprint`
 
 # 0.47.05-r3
 
