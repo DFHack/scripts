@@ -268,6 +268,15 @@ function BlueprintUI:init()
                     view_id='phases_panel',
                     on_layout_change=self:callback('updateLayout')},
         CycleHotkeyLabel{
+            view_id='format',
+            key='CUSTOM_F',
+            label='format',
+            options={{label='Minimal text .csv', value='minimal'},
+                     {label='Pretty text .csv', value='pretty'}},
+            option_idx=self.presets.format == 'minimal' and 1 or 2,
+            help={'File output format.'},
+        },
+        CycleHotkeyLabel{
             view_id='splitby',
             key='CUSTOM_T',
             label='split',
@@ -459,6 +468,11 @@ function BlueprintUI:commit(pos)
     local x, y, z = math.min(mark.x, pos.x), math.min(mark.y, pos.y),
             math.max(mark.z, pos.z)
     table.insert(params, ('--cursor=%d,%d,%d'):format(x, y, z))
+
+    local format = self.subviews.format:get_current_option_value()
+    if format ~= 'minimal' then
+        table.insert(params, ('--format=%s'):format(format))
+    end
 
     local splitby = self.subviews.splitby:get_current_option_value()
     if splitby ~= 'none' then

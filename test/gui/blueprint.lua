@@ -544,7 +544,7 @@ function test.splitby_phase()
             local view = load_ui()
             send_keys('CUSTOM_T')
             guidm.setCursorPos({x=1, y=2, z=3})
-            send_keys('SELECT', 'SELECT') -- a once-tile blueprint, why not?
+            send_keys('SELECT', 'SELECT')
             expect.str_find('%-%-splitby=phase', mock_print.call_args[1][1])
             send_keys('SELECT') -- dismiss the success messagebox
             delay_until(view:callback('isDismissed'))
@@ -555,5 +555,29 @@ function test.preset_splitby()
     dfhack.run_script('gui/blueprint', '--splitby=phase')
     local view = b.active_screen
     expect.eq('phase', view.subviews.splitby:get_current_option_value())
+    send_keys('LEAVESCREEN') -- leave UI
+end
+
+function test.format_pretty()
+    local mock_print, mock_run = mock.func(), mock.func({'blueprints/dig.csv'})
+    mock.patch({
+            {b, 'print', mock_print},
+            {blueprint, 'run', mock_run},
+        },
+        function()
+            local view = load_ui()
+            send_keys('CUSTOM_F')
+            guidm.setCursorPos({x=1, y=2, z=3})
+            send_keys('SELECT', 'SELECT')
+            expect.str_find('%-%-format=pretty', mock_print.call_args[1][1])
+            send_keys('SELECT') -- dismiss the success messagebox
+            delay_until(view:callback('isDismissed'))
+        end)
+end
+
+function test.preset_format()
+    dfhack.run_script('gui/blueprint', '--format=pretty')
+    local view = b.active_screen
+    expect.eq('pretty', view.subviews.format:get_current_option_value())
     send_keys('LEAVESCREEN') -- leave UI
 end
