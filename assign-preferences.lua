@@ -282,6 +282,7 @@ local preference_functions = {
     -- ---------------- LIKEFOOD ---------------- --
     LIKEFOOD = function(token)
         local mat_info = dfhack.matinfo.find(token)
+        local food_state = 1
         if not mat_info then
             goto error
         end
@@ -305,6 +306,7 @@ local preference_functions = {
                 item_type = df.item_type.POWDER_MISC
             elseif food_mat_index.CookableSeed > -1 then
                 item_type = df.item_type.SEEDS
+                food_state = 0
             elseif food_mat_index.CookableLeaf > -1 then
                 --[[
                 In case of plant growths, "mat_info" stores the item type as a specific subtype ("FLOWER", or "FRUIT",
@@ -312,6 +314,7 @@ local preference_functions = {
                 are sometimes stored in the plural form and sometimes in the singular form, so we need to know what to
                 look for when we try to associate the item_type to the growth_id.
                 --]]
+                food_state = 0
                 local growths = {
                     -- item_id = growth_id, as returned by dfhack.matinfo.find()
                     BULB = "BULBS",
@@ -347,7 +350,7 @@ local preference_functions = {
                     item_subtype = item_subtype,
                     mattype = mat_info.type,
                     matindex = mat_info.index,
-                    mat_state = 1,
+                    mat_state = food_state,
                     active = true,
                     prefstring_seed = rng:random()
                 }
