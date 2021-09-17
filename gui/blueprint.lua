@@ -50,6 +50,7 @@ end
 ActionPanel = defclass(ActionPanel, ResizingPanel)
 ActionPanel.ATTRS{
     get_mark_fn=DEFAULT_NIL,
+    is_setting_start_pos_fn=DEFAULT_NIL,
 }
 function ActionPanel:init()
     self:addviews{
@@ -73,6 +74,9 @@ function ActionPanel:preUpdateLayout()
     self.subviews.selected_area.visible = self.get_mark_fn() ~= nil
 end
 function ActionPanel:get_action_text()
+    if self.is_setting_start_pos_fn() then
+        return 'Select the playback start'
+    end
     if self.get_mark_fn() then
         return 'Select the second corner'
     end
@@ -247,6 +251,61 @@ function PhasesPanel:preUpdateLayout()
     end
 end
 
+StartPosPanel = defclass(StartPosPanel, ResizingPanel)
+StartPosPanel.ATTRS{
+    start_pos=DEFAULT_NIL,
+    start_comment=DEFAULT_NIL,
+    on_setting_fn=DEFAULT_NIL,
+    on_layout_change=DEFAULT_NIL,
+}
+function StartPosPanel:init()
+    self:addviews{
+        CycleHotkeyLabel{
+            view_id='startpos',
+            frame={t=0},
+            key='CUSTOM_S',
+            label='playback start',
+            options={'Unset', 'Setting', 'Set'},
+            option_idx=self.start_pos and 3 or 1,
+            help={'Set where the cursor',
+                  'should be positioned when',
+                  'replaying the blueprints.'},
+            on_change=self:callback('on_change'),
+        },
+        widgets.Label{
+            view_id='comment',
+            frame={t=4},
+            text={{text=self:callback('print_comment')}}
+        }
+    }
+end
+function StartPosPanel:preUpdateLayout()
+    self.subviews.comment.visible = not not self.start_pos
+end
+function StartPosPanel:print_comment()
+    return ('Comment: %s'):format(self.start_comment or '')
+end
+function StartPosPanel:on_change()
+    local option = self.subviews.startpos:get_current_option_label()
+    if option == 'Unset' then
+        self.start_pos = nil
+    elseif option == 'Setting' then
+        self.on_setting_fn()
+    elseif option == 'Set' then
+        local input_box = dialogs.InputBox{
+            text={'Please enter a comment for the start position\n',
+                  '\n',
+                  'Example: "on central stairs"\n'},
+            on_input=function(comment) self.start_comment = comment end,
+        }
+        if self.start_comment then
+            input_box.subviews.edit.text = self.start_comment
+        end
+        input_box:show()
+    end
+    if self.on_layout_change then self.on_layout_change() end
+end
+
 BlueprintUI = defclass(BlueprintUI, guidm.MenuOverlay)
 BlueprintUI.ATTRS {
     presets={},
@@ -262,11 +321,14 @@ function BlueprintUI:init()
     self:addviews{
         widgets.Label{text='Blueprint'},
         widgets.Label{text=summary, text_pen=COLOR_GREY},
-        ActionPanel{get_mark_fn=function() return self.mark end},
+        ActionPanel{
+            get_mark_fn=function() return self.mark end,
+            is_setting_start_pos_fn=self:callback('is_setting_start_pos')},
         NamePanel{name=self.presets.name},
-        PhasesPanel{phases=self.presets,
-                    view_id='phases_panel',
-                    on_layout_change=self:callback('updateLayout')},
+        PhasesPanel{
+            phases=self.presets,
+            view_id='phases_panel',
+            on_layout_change=self:callback('updateLayout')},
         CycleHotkeyLabel{
             view_id='format',
             key='CUSTOM_F',
@@ -276,6 +338,12 @@ function BlueprintUI:init()
             option_idx=self.presets.format == 'minimal' and 1 or 2,
             help={'File output format.'},
         },
+        StartPosPanel{
+            view_id='startpos_panel',
+            start_pos=self.presets.start_pos,
+            start_comment=self.presets.start_comment,
+            on_setting_fn=self:callback('save_cursor_pos'),
+            on_layout_change=self:callback('updateLayout')},
         CycleHotkeyLabel{
             view_id='splitby',
             key='CUSTOM_T',
@@ -287,9 +355,9 @@ function BlueprintUI:init()
                   'multiple files.'},
         },
         widgets.Label{view_id='cancel_label',
-                      text={{text=function() return self:get_cancel_label() end,
+                      text={{text=self:callback('get_cancel_label'),
                              key='LEAVESCREEN', key_sep=': ',
-                             on_activate=function() self:on_cancel() end}}},
+                             on_activate=self:callback('on_cancel')}}},
     }
 end
 
@@ -325,15 +393,26 @@ function BlueprintUI:on_mark(pos)
     self:updateLayout()
 end
 
+function BlueprintUI:save_cursor_pos()
+    self.saved_cursor = copyall(df.global.cursor)
+end
+
+function BlueprintUI:is_setting_start_pos()
+    return self.subviews.startpos:get_current_option_label() == 'Setting'
+end
+
 function BlueprintUI:get_cancel_label()
-    if self.mark then
+    if self.mark or self:is_setting_start_pos() then
         return 'Cancel selection'
     end
     return 'Back'
 end
 
 function BlueprintUI:on_cancel()
-    if self.mark then
+    if self:is_setting_start_pos() then
+        self.subviews.startpos.option_idx = 1
+        self.saved_cursor = nil
+    elseif self.mark then
         self.mark = nil
         self:updateLayout()
     else
@@ -363,28 +442,39 @@ local function min_to_max(...)
     return table.unpack(args)
 end
 
-local fg, bg = COLOR_GREEN, COLOR_BLACK
-
 function BlueprintUI:onRenderBody()
-    if not self.mark then return end
+    if not gui.blink_visible(500) then return end
+
+    local start_pos = self.subviews.startpos_panel.start_pos
+    if not self.mark and not start_pos then return end
 
     local vp = self:getViewport()
     local dc = gui.Painter.new(self.df_layout.map)
 
-    if gui.blink_visible(500) then
-        local cursor = df.global.cursor
-        -- clip blinking region to viewport
-        local _,y_start,y_end = min_to_max(self.mark.y, cursor.y, vp.y1, vp.y2)
-        local _,x_start,x_end = min_to_max(self.mark.x, cursor.x, vp.x1, vp.x2)
-        for y=y_start,y_end do
-            for x=x_start,x_end do
-                local pos = xyz2pos(x, y, cursor.z)
-                -- don't overwrite the cursor so the user can still see it
-                if not same_xyz(cursor, pos) then
-                    local stile = vp:tileToScreen(pos)
-                    dc:map(true):seek(stile.x, stile.y):
-                            pen(fg, bg):char('X'):map(false)
-                end
+    local cursor = df.global.cursor
+    local highlight_bound = self.saved_cursor or cursor
+    local mark = self.mark or highlight_bound
+
+    -- mark start_pos (will get ignored if it's offscreen)
+    if start_pos then
+        local start_tile = vp:tileToScreen(start_pos)
+        dc:map(true):seek(start_tile.x, start_tile.y):
+                pen(COLOR_BLUE, COLOR_BLACK):char('X'):map(false)
+    end
+
+    -- clip scanning range to viewport for performance. offscreen writes will
+    -- get ignored, but it can be slow to scan over large offscreen regions.
+    local _,y_start,y_end = min_to_max(mark.y, highlight_bound.y, vp.y1, vp.y2)
+    local _,x_start,x_end = min_to_max(mark.x, highlight_bound.x, vp.x1, vp.x2)
+    for y=y_start,y_end do
+        for x=x_start,x_end do
+            local pos = xyz2pos(x, y, cursor.z)
+            -- don't overwrite the cursor or start_tile so the user can still
+            -- see them
+            if not same_xy(cursor, pos) and not same_xy(start_pos, pos) then
+                local stile = vp:tileToScreen(pos)
+                dc:map(true):seek(stile.x, stile.y):
+                        pen(COLOR_GREEN, COLOR_BLACK):char('X'):map(false)
             end
         end
     end
@@ -432,7 +522,12 @@ function BlueprintUI:onInput(keys)
     end
 
     if pos then
-        if self.mark then
+        if self:is_setting_start_pos() then
+            self.subviews.startpos_panel.start_pos = pos
+            self.subviews.startpos:cycle()
+            guidm.setCursorPos(self.saved_cursor)
+            self.saved_cursor = nil
+        elseif self.mark then
             self:commit(pos)
         else
             self:on_mark(pos)
@@ -472,6 +567,24 @@ function BlueprintUI:commit(pos)
     local format = self.subviews.format:get_current_option_value()
     if format ~= 'minimal' then
         table.insert(params, ('--format=%s'):format(format))
+    end
+
+    local start_pos = self.subviews.startpos_panel.start_pos
+    if start_pos then
+        local playback_start_x = start_pos.x - x + 1
+        local playback_start_y = start_pos.y - y + 1
+        if playback_start_x < 1 or playback_start_x > width or
+                playback_start_y < 1 or playback_start_y > height then
+            dialogs.MessageBox{
+                frame_title='Error',
+                text='Playback start position must be within the blueprint area'
+            }:show()
+            return
+        end
+        table.insert(params,
+                     ('--playback-start=%d,%d,%s')
+                        :format(playback_start_x, playback_start_y,
+                                self.subviews.startpos_panel.start_comment))
     end
 
     local splitby = self.subviews.splitby:get_current_option_value()
