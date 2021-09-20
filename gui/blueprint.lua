@@ -292,16 +292,19 @@ function StartPosPanel:on_change()
     elseif option == 'Setting' then
         self.on_setting_fn()
     elseif option == 'Set' then
-        local input_box = dialogs.InputBox{
+        self.input_box = dialogs.InputBox{
             text={'Please enter a comment for the start position\n',
                   '\n',
                   'Example: "on central stairs"\n'},
-            on_input=function(comment) self.start_comment = comment end,
+            on_input=function(comment)
+                        self.start_comment = comment
+                        self.input_box = nil
+                     end,
         }
         if self.start_comment then
-            input_box.subviews.edit.text = self.start_comment
+            self.input_box.subviews.edit.text = self.start_comment
         end
-        input_box:show()
+        self.input_box:show()
     end
     if self.on_layout_change then self.on_layout_change() end
 end
@@ -552,10 +555,19 @@ function BlueprintUI:commit(pos)
 
     local phases_view = self.subviews.phases
     if phases_view:get_current_option_value() == 'Custom' then
+        local some_phase_is_set = false
         for _,sv in ipairs(self.subviews.phases_panel.subviews) do
             if sv.options and sv:get_current_option_value() == 'On' then
                 table.insert(params, sv.label)
+                some_phase_is_set = true
             end
+        end
+        if not some_phase_is_set then
+            dialogs.MessageBox{
+                frame_title='Error',
+                text='Ensure at least one phase is enabled or enable autodetect'
+            }:show()
+            return
         end
     end
 
@@ -581,10 +593,13 @@ function BlueprintUI:commit(pos)
             }:show()
             return
         end
-        table.insert(params,
-                     ('--playback-start=%d,%d,%s')
-                        :format(playback_start_x, playback_start_y,
-                                self.subviews.startpos_panel.start_comment))
+        start_pos_param = ('--playback-start=%d,%d')
+                          :format(playback_start_x, playback_start_y)
+        local start_comment = self.subviews.startpos_panel.start_comment
+        if start_comment and #start_comment > 0 then
+            start_pos_param = start_pos_param .. (',%s'):format(start_comment)
+        end
+        table.insert(params, start_pos_param)
     end
 
     local splitby = self.subviews.splitby:get_current_option_value()
@@ -595,7 +610,7 @@ function BlueprintUI:commit(pos)
     print('running: blueprint ' .. table.concat(params, ' '))
     local files = blueprint.run(table.unpack(params))
 
-    local text = 'No files generated'
+    local text = 'No files generated (see console for any error output)'
     if files and #files > 0 then
         text = 'Generated blueprint file(s):\n'
         for _,fname in ipairs(files) do
