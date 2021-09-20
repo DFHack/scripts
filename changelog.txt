@@ -14,9 +14,19 @@ that repo.
 # Future
 
 ## New Scripts
+
+## Fixes
+
+## Misc Improvements
+- `gui/blueprint`: support the new ``--splitby`` and ``--format`` options for `blueprint`
+
+# 0.47.05-r3
+
+## New Scripts
 - `autonick`: gives dwarves unique nicknames
 - `build-now`: instantly completes planned building constructions
-- `prioritize`: automatically boosts the priority of current and/or future jobs of the selected types
+- `do-job-now`: makes a job involving current selection high priority
+- `prioritize`: automatically boosts the priority of current and/or future jobs of specified types, such as hauling food, tanning hides, or pulling levers
 - `reveal-adv-map`: exposes/hides all world map tiles in adventure mode
 
 ## Fixes
@@ -25,6 +35,7 @@ that repo.
 - `quickfort`: fix error message when the requested label is not found in the blueprint file
 
 ## Misc Improvements
+- `assign-beliefs`, `assign-facets`: now update needs of units that were changed
 - `devel/query`: updated script to v3.2 (i.e. major rewrite for maintainability/readability)
 - `devel/query`: merged options ``-query`` and ``-querykeys`` into ``-search``
 - `devel/query`: merged options ``-depth`` and ``-keydepth`` into ``-maxdepth``
@@ -40,11 +51,13 @@ that repo.
 - `devel/query`: added support for selecting a Lua script (e.g. `dorf_tables`)
 - `devel/query`: added support for selecting a Json file (e.g. dwarf_profiles.json)
 - `devel/query`: removed options ``-listall``, ``-listfields``, and ``-listkeys`` - these are now simply default behaviour
+- `devel/query`: ``-table`` now accepts the same abbreviations (global names, ``unit``, ``screen``, etc.) as `lua` and `gui/gm-editor`
 - `dorf_tables`: integrated `devel/query` to show the table definitions when requested with ``-list``
 - `geld`: fixed ``-help`` option
 - `gui/gm-editor`: made search case-insensitive
 - `quickfort`: accept multiple commands, list numbers, and/or blueprint lables on a single commandline
 - `unretire-anyone`: replaced the 'undead' descriptor with 'reanimated' to make it more mod-friendly
+- `warn-starving`: added an option to only check sane dwarves
 
 ## Internals
 - Install tests in the scripts repo into hack/scripts/test/scripts when the CMake variable BUILD_TESTS is defined

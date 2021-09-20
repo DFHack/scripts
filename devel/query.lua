@@ -337,7 +337,7 @@ function getSelectionData()
     local path_info = nil
     if args.table then
         debugf(0,"table selection")
-        selection = findTable(args.table)
+        selection = utils.df_expr_to_ref(args.table)
         path_info = args.table
         path_info_pattern = path_info
     elseif args.json then
@@ -570,28 +570,6 @@ function is_exceeding_maxlength(index)
 end
 
 --Section: table helpers
-function safe_pairs(t, keys_only)
-    if keys_only then
-        local mt = debug.getmetatable(t)
-        if mt and mt._index_table then
-            local idx = 0
-            return function()
-                idx = idx + 1
-                if mt._index_table[idx] then
-                    return mt._index_table[idx]
-                end
-            end
-        end
-    end
-    local ret = table.pack(pcall(function() return pairs(t) end))
-    local ok = ret[1]
-    table.remove(ret, 1)
-    if ok then
-        return table.unpack(ret)
-    else
-        return function() end
-    end
-end
 
 function isEmpty(t)
     for _,_ in safe_pairs(t) do
@@ -620,47 +598,20 @@ end
 
 function findPath(t, path)
     debugf(0,string.format("findPath(%s, %s)",t, path))
-    curTable = t
-    keyParts = {}
-    for word in string.gmatch(path, '([^.]+)') do --thanks stack overflow
-        table.insert(keyParts, word)
-    end
+    local curTable = t
     if not curTable then
-        qerror("Looks like we're borked somehow.")
+        error("no table to search")
     end
+    local keyParts = string.split(path, '.', true)
     for _,v in pairs(keyParts) do
         if v and curTable[v] ~= nil then
             debugf(1,"found something",v,curTable,curTable[v])
             curTable = curTable[v]
         else
-            qerror("Table" .. v .. " does not exist.")
+            qerror("Key not found: " .. v)
         end
     end
     --debugf(1,"returning",curTable)
-    return curTable
-end
-
-function findTable(path) --this is the tricky part
-    tableParts = {}
-    for word in string.gmatch(path, '([^.]+)') do --thanks stack overflow
-        table.insert(tableParts, word)
-    end
-    curTable = nil
-    for k,v in pairs(tableParts) do
-        if curTable == nil then
-            if _G[v] ~= nil then
-                curTable = _G[v]
-            else
-                qerror("Table" .. v .. " does not exist.")
-            end
-        else
-            if curTable[v] ~= nil then
-                curTable = curTable[v]
-            else
-                qerror("Table" .. v .. " does not exist.")
-            end
-        end
-    end
     return curTable
 end
 

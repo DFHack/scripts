@@ -70,6 +70,7 @@ triggered a report.
 ]====]
 
 local utils = require("utils")
+local setneed = reqscript("modtools/set-need")
 
 local valid_args = utils.invert({
                                     'help',
@@ -150,6 +151,7 @@ function assign(beliefs, unit, reset)
             print_yellow("WARNING: '" .. belief .. "' is not a valid belief token. Skipping...")
         end
     end
+    setneed.rebuildNeeds(unit)
 end
 
 -- ------------------------------------------------------ MAIN ------------------------------------------------------ --

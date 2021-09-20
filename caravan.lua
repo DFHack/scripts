@@ -54,7 +54,9 @@ function bring_back(car)
     end
 end
 
-local function list()
+local commands = {}
+
+function commands.list()
     for id, car in pairs(caravans) do
         print(dfhack.df2console(('%d: %s caravan from %s'):format(
             id,
@@ -71,7 +73,7 @@ local function list()
     end
 end
 
-local function extend(days, ...)
+function commands.extend(days, ...)
     days = tonumber(days or 7) or qerror('invalid number of days: ' .. days) --luacheck: retype
     for id, car in pairs(caravans_from_ids{...}) do
         car.time_remaining = car.time_remaining + (days * 120)
@@ -79,7 +81,7 @@ local function extend(days, ...)
     end
 end
 
-local function happy(...)
+function commands.happy(...)
     for id, car in pairs(caravans_from_ids{...}) do
         -- all flags default to false
         car.flags.whole = 0
@@ -87,25 +89,28 @@ local function happy(...)
     end
 end
 
-local function leave(...)
+function commands.leave(...)
     for id, car in pairs(caravans_from_ids{...}) do
         car.trade_state = df.caravan_state.T_trade_state.Leaving
     end
 end
 
+function commands.help()
+    print(dfhack.script_help())
+end
+
 function main(...)
     local args = {...}
     local command = table.remove(args, 1)
-    if command == "list" then
-        list(table.unpack(args))
-    elseif command == "extend" then
-        extend(table.unpack(args))
-    elseif command == "happy" then
-        happy(table.unpack(args))
-    elseif command == "leave" then
-        leave(table.unpack(args))
+    if commands[command] then
+        commands[command](table.unpack(args))
     else
-        qerror("No such command: "..command)
+        commands.help()
+        if command then
+            qerror("No such subcommand: " .. command)
+        else
+            qerror("Missing subcommand")
+        end
     end
 end
 

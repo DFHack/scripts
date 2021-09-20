@@ -8,14 +8,14 @@ arguments is equivalent to running ``quickfort gui``.
 
 Examples:
 
-=====================================  ======================================
-Command                                Runs
-=====================================  ======================================
-gui/quickfort                          opens quickfort interactive dialog
-gui/quickfort gui                      same as above
-gui/quickfort gui --library dreamfort  opens the dialog with custom settings
-gui/quickfort help                     prints quickfort help (on the console)
-=====================================  ======================================
+==============================  ======================================
+Command                         Effect
+==============================  ======================================
+gui/quickfort                   opens quickfort interactive dialog
+gui/quickfort gui               same as above
+gui/quickfort gui -l dreamfort  opens the dialog with a custom filter
+gui/quickfort help              prints quickfort help (on the console)
+==============================  ======================================
 ]====]
 
 local args = {...}

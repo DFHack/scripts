@@ -67,6 +67,7 @@ will be reported.
 ]====]
 
 local utils = require("utils")
+local setneed = reqscript("modtools/set-need")
 
 local valid_args = utils.invert({
                                     'help',
@@ -148,6 +149,7 @@ function assign(facets, unit, reset)
             print_yellow("WARNING: '" .. facet .. "' is not a valid facet token. Skipping...")
         end
     end
+    setneed.rebuildNeeds(unit)
 end
 
 -- ------------------------------------------------------ MAIN ------------------------------------------------------ --

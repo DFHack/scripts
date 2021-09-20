@@ -451,14 +451,14 @@ function test.phase_preset()
     local view = b.active_screen
 
     local phases_view = view.subviews.phases
-    expect.eq('Custom', phases_view.options[phases_view.option_idx])
+    expect.eq('Custom', phases_view:get_current_option_value())
 
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label ~= 'phases' then
             expect.true_(sv.visible)
             -- only build should be on; everything else should be off
             expect.eq(sv.label == 'build' and 'On' or 'Off',
-                      sv.options[sv.option_idx])
+                      sv:get_current_option_value())
         end
     end
     send_keys('LEAVESCREEN') -- leave UI
@@ -491,19 +491,19 @@ function test.phase_cycle()
     send_keys('CUSTOM_A')
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label == 'dig' then
-            expect.eq('On', sv.options[sv.option_idx])
+            expect.eq('On', sv:get_current_option_value())
         end
     end
     send_keys('CUSTOM_D')
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label == 'dig' then
-            expect.eq('Off', sv.options[sv.option_idx])
+            expect.eq('Off', sv:get_current_option_value())
         end
     end
     send_keys('CUSTOM_D')
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label == 'dig' then
-            expect.eq('On', sv.options[sv.option_idx])
+            expect.eq('On', sv:get_current_option_value())
         end
     end
     send_keys('LEAVESCREEN') -- leave UI
@@ -530,5 +530,54 @@ function test.phase_set()
             expect.table_eq({'1', '1', '1', 'blueprint', 'dig',
                              '--cursor=1,2,3'}, mock_run.call_args[1])
             send_keys('SELECT') -- dismiss the success messagebox
+            delay_until(view:callback('isDismissed'))
         end)
+end
+
+function test.splitby_phase()
+    local mock_print, mock_run = mock.func(), mock.func({'blueprints/dig.csv'})
+    mock.patch({
+            {b, 'print', mock_print},
+            {blueprint, 'run', mock_run},
+        },
+        function()
+            local view = load_ui()
+            send_keys('CUSTOM_T')
+            guidm.setCursorPos({x=1, y=2, z=3})
+            send_keys('SELECT', 'SELECT')
+            expect.str_find('%-%-splitby=phase', mock_print.call_args[1][1])
+            send_keys('SELECT') -- dismiss the success messagebox
+            delay_until(view:callback('isDismissed'))
+        end)
+end
+
+function test.preset_splitby()
+    dfhack.run_script('gui/blueprint', '--splitby=phase')
+    local view = b.active_screen
+    expect.eq('phase', view.subviews.splitby:get_current_option_value())
+    send_keys('LEAVESCREEN') -- leave UI
+end
+
+function test.format_pretty()
+    local mock_print, mock_run = mock.func(), mock.func({'blueprints/dig.csv'})
+    mock.patch({
+            {b, 'print', mock_print},
+            {blueprint, 'run', mock_run},
+        },
+        function()
+            local view = load_ui()
+            send_keys('CUSTOM_F')
+            guidm.setCursorPos({x=1, y=2, z=3})
+            send_keys('SELECT', 'SELECT')
+            expect.str_find('%-%-format=pretty', mock_print.call_args[1][1])
+            send_keys('SELECT') -- dismiss the success messagebox
+            delay_until(view:callback('isDismissed'))
+        end)
+end
+
+function test.preset_format()
+    dfhack.run_script('gui/blueprint', '--format=pretty')
+    local view = b.active_screen
+    expect.eq('pretty', view.subviews.format:get_current_option_value())
+    send_keys('LEAVESCREEN') -- leave UI
 end
