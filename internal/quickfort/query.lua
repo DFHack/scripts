@@ -114,7 +114,15 @@ function do_run(zlevel, grid, ctx)
             if not dry_run
                     and not quickfort_set.get_setting('query_unsafe') then
                 local cursor = guidm.getCursorPos()
-                if not same_xyz(pos, cursor) then
+                if not cursor then
+                    qerror(string.format(
+                        'expected to be at cursor position (%d, %d, %d) on ' ..
+                        'screen "%s" but there is no active cursor; there ' ..
+                        'is likely a problem with the blueprint text in ' ..
+                        'cell %s: "%s" (do you need a "q" at the end to get ' ..
+                        'back into query mode?)',
+                        pos.x, pos.y, pos.z, focus_string, cell, text))
+                elseif not same_xyz(pos, cursor) then
                     qerror(string.format(
                         'expected to be at cursor position (%d, %d, %d) on ' ..
                         'screen "%s" but cursor is at (%d, %d, %d); there ' ..
