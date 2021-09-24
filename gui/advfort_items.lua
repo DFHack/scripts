@@ -185,9 +185,15 @@ function jobitemEditor:jobValid()
 end
 function jobitemEditor:commit()
     if self.job then
-        for _,slot in pairs(self.slots) do
-            for _1,cur_item in pairs(slot.items) do
-                self.job.items:insert("#",{new=true,item=cur_item,role=df.job_item_ref.T_role.Reagent,job_item_idx=slot.id})
+        -- equivalent of insertion sorting the slots in their job_item_idx order
+        -- fixes decoration jobs destroying both reagents
+        for slotID=0,#self.slots,1 do
+            for _,slot in pairs(self.slots) do
+                if slot.id == slotID then
+                    for _1,cur_item in pairs(slot.items) do
+                        self.job.items:insert("#",{new=true,item=cur_item,role=df.job_item_ref.T_role.Reagent,job_item_idx=slot.id})
+                    end
+                end
             end
         end
     end
