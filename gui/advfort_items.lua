@@ -185,11 +185,17 @@ function jobitemEditor:jobValid()
 end
 function jobitemEditor:commit()
     if self.job then
+        -- count slots
+        local numSlots = 0
+        for _ in pairs(self.slots) do
+            numSlots = numSlots + 1
+        end
+
         -- equivalent of insertion sorting the slots in their job_item_idx order
         -- fixes decoration jobs destroying both reagents
-        for slotID=0,#self.slots,1 do
+        for orderedSlotID=0,numSlots,1 do
             for _,slot in pairs(self.slots) do
-                if slot.id == slotID then
+                if slot.id == orderedSlotID then
                     for _1,cur_item in pairs(slot.items) do
                         self.job.items:insert("#",{new=true,item=cur_item,role=df.job_item_ref.T_role.Reagent,job_item_idx=slot.id})
                     end
