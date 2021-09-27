@@ -259,7 +259,7 @@ function apply_blueprint(params)
     local data, cursor = quickfort_api.normalize_data(params.data, params.pos)
     local ctx = quickfort_command.init_ctx(params.command or 'run', 'API',
                                 cursor, params.aliases or {}, params.dry_run)
-    quickfort_common.verbose = params.verbose
+    quickfort_common.verbose = not not params.verbose
     dfhack.with_finalize(
         function() quickfort_common.verbose = false end,
         function()
