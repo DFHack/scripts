@@ -32,23 +32,32 @@ function init_ctx(command, blueprint_name, cursor, aliases, dry_run)
         cursor=cursor,
         aliases=aliases,
         dry_run=dry_run,
-        stats={},
+        stats={out_of_bounds={label='Tiles outside map boundary', value=0},
+               invalid_keys={label='Invalid key sequences', value=0}},
         messages={},
     }
 end
 
-function do_command_internal(ctx, section_name)
-    ctx.stats.out_of_bounds = ctx.stats.out_of_bounds or
-            {label='Tiles outside map boundary', value=0}
-    ctx.stats.invalid_keys = ctx.stats.invalid_keys or
-            {label='Invalid key sequences', value=0}
+function do_command_raw(mode, zlevel, grid, ctx)
+    -- this error checking is done here again because this function can be
+    -- called directly by the quickfort API
+    if not mode or not mode_modules[mode] then
+        error(string.format('invalid mode: "%s"', mode))
+    end
+    if not ctx.command or not command_switch[ctx.command] then
+        error(string.format('invalid command: "%s"', ctx.command))
+    end
 
+    ctx.cursor.z = zlevel
+    mode_modules[mode][command_switch[ctx.command]](zlevel, grid, ctx)
+end
+
+function do_command_section(ctx, section_name)
     local sheet_name, label = quickfort_parse.parse_section_name(section_name)
     ctx.sheet_name = sheet_name
     local filepath = quickfort_list.get_blueprint_filepath(ctx.blueprint_name)
     local section_data_list = quickfort_parse.process_section(
             filepath, sheet_name, label, ctx.cursor)
-    local command = ctx.command
     local first_modeline = nil
     for _, section_data in ipairs(section_data_list) do
         if not first_modeline then first_modeline = section_data.modeline end
@@ -86,21 +95,16 @@ local function do_one_command(command, cursor, blueprint_name, section_name,
         end
     end
 
-    quickfort_common.verbose = verbose
-    dfhack.with_finalize(
-        function() quickfort_common.verbose = false end,
-        function()
-            local aliases = quickfort_list.get_aliases(blueprint_name)
-            local ctx = init_ctx(command, blueprint_name, cursor, aliases,
-                                 dry_run)
-            do_command_internal(ctx, section_name)
-            finish_command(ctx, section_name, quiet)
-            if command == 'run' then
-                for _,message in ipairs(ctx.messages) do
-                    print('* '..message)
-                end
-            end
-        end)
+    local aliases = quickfort_list.get_aliases(blueprint_name)
+    local ctx = init_ctx(command, blueprint_name, cursor, aliases,
+                            dry_run)
+    do_command_section(ctx, section_name)
+    finish_command(ctx, section_name, quiet)
+    if command == 'run' then
+        for _,message in ipairs(ctx.messages) do
+            print('* '..message)
+        end
+    end
 end
 
 local function do_bp_name(commands, cursor, bp_name, sec_names, quiet, dry_run)
@@ -152,11 +156,16 @@ function do_command(args)
                :format(extra, extra))
     end
 
-    local ok, list_nums = pcall(argparse.numberList, blueprint_name)
-    if not ok then
-        do_bp_name(args.commands, cursor, blueprint_name, section_names,
-                   quiet, dry_run)
-    else
-        do_list_num(args.commands, cursor, list_nums, quiet, dry_run)
-    end
+    quickfort_common.verbose = verbose
+    dfhack.with_finalize(
+        function() quickfort_common.verbose = false end,
+        function()
+            local ok, list_nums = pcall(argparse.numberList, blueprint_name)
+            if not ok then
+                do_bp_name(args.commands, cursor, blueprint_name, section_names,
+                        quiet, dry_run)
+            else
+                do_list_num(args.commands, cursor, list_nums, quiet, dry_run)
+            end
+        end)
 end
