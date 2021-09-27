@@ -1,4 +1,5 @@
 -- DFHack-native implementation of the classic Quickfort utility
+--@module = true
 --[====[
 
 quickfort
@@ -121,7 +122,8 @@ not change the configuration stored in the file:
     for stockpiles that take barrels and bins, 1 wheelbarrow for stone
     stockpiles). The default here for wheelbarrows is 0 since using wheelbarrows
     can *decrease* the efficiency of your fort unless you know how to use them
-    properly.
+    properly. Blueprints can `override <quickfort-place-containers>` this value
+    for specific stockpiles.
 
 There is one other configuration file in the ``dfhack-config/quickfort`` folder:
 :source:`aliases.txt <dfhack-config/quickfort/aliases.txt>`. It defines keycode
@@ -129,6 +131,12 @@ shortcuts for query blueprints. The format for this file is described in the
 `quickfort-alias-guide`, and default aliases that all players can use and build
 on are available in the `quickfort-alias-library`. Some quickfort library
 aliases require the `search-plugin` plugin to be enabled.
+
+API:
+
+The quickfort script can be called programmatically by other scripts either via
+the commandline interface with ``dfhack.run_script()`` or via the API functions
+defined and documented in :source-scripts:`quickfort.lua`.
 ]====]
 
 local argparse = require('argparse')
@@ -137,6 +145,7 @@ local argparse = require('argparse')
 -- top-level file. this ensures modified transitive dependencies are properly
 -- reloaded when this script is run.
 local quickfort_aliases = reqscript('internal/quickfort/aliases')
+local quickfort_api = reqscript('internal/quickfort/api')
 local quickfort_build = reqscript('internal/quickfort/build')
 local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_command = reqscript('internal/quickfort/command')
@@ -213,6 +222,59 @@ For more info, see:
 https://docs.dfhack.org/en/stable/docs/_auto/base.html#quickfort and
 https://docs.dfhack.org/en/stable/docs/guides/quickfort-user-guide.html
 ]=]
+end
+
+
+-- API
+
+-- Applies the specified blueprint data and returns processing statistics. The
+-- statistics structure is a map of stat ids -> {label=string, value=number}.
+--
+-- params is a table with the following fields:
+--   mode (required) - The name of the blueprint mode, e.g. 'dig', 'build', etc.
+--   data (required) - A sparse map populated such that data[z][y][x] yields the
+--       blueprint text that should be applied to the tile at map coordinate
+--       x, y, z.
+--   command - The quickfort command to execute, e.g. 'run', 'orders', etc.
+--       Defaults to 'run'.
+--   pos - A coordinate that serves as the reference point for the coordinates
+--       in the data map. That is, the text at data[z][y][x] will be shifted to
+--       be applied to coordinate pos.x + x, pos.y + y, pos.z + z. If not
+--       specified, defaults to {x=0, y=0, z=0}.
+--   aliases - a map of query blueprint aliases names to their expansions. If
+--       not specified, defaults to {}.
+--   dry_run - Just calculate statistics; don't actually apply the blueprint.
+--       Defaults to false.
+--   verbose - Output extra debugging information to the console. Defaults to
+--       false.
+--
+-- Example:
+--
+-- local guidm = require('gui.dwarfmode')
+-- local quickfort = reqscript('quickfort')
+-- -- dig a 10x10 block at the cursor position
+-- quickfort.apply_blueprint{mode='dig', data={[0]={[0]={[0]='d(10x10)'}}},
+--                           pos=guidm.getCursorPos()}
+function apply_blueprint(params)
+    local data, cursor = quickfort_api.normalize_data(params.data, params.pos)
+    local ctx = quickfort_command.init_ctx(params.command or 'run', 'API',
+                                cursor, params.aliases or {}, params.dry_run)
+    quickfort_common.verbose = params.verbose
+    dfhack.with_finalize(
+        function() quickfort_common.verbose = false end,
+        function()
+            for zlevel,grid in pairs(data) do
+                quickfort_command.do_command_raw(params.mode, zlevel, grid, ctx)
+            end
+        end)
+    return quickfort_api.clean_stats(ctx.stats)
+end
+
+
+-- interactive script
+
+if dfhack_flags.module then
+    return
 end
 
 local action_switch = {
