@@ -47,7 +47,7 @@ local function do_meta(zlevel, grid, ctx)
         local section_name =
                 get_section_name(cell.cell, cell.text, ctx.sheet_name)
         print(string.format('applying blueprint: "%s"', section_name))
-        quickfort_command.do_command_internal(ctx, section_name)
+        quickfort_command.do_command_section(ctx, section_name)
         ctx.cursor.z = saved_zlevel
         stats.meta_blueprints.value = stats.meta_blueprints.value + 1
     end

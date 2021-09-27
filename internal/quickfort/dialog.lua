@@ -189,7 +189,7 @@ local function dialog_command(command, text)
     local aliases = quickfort_list.get_aliases(blueprint_name)
     local ctx = quickfort_command.init_ctx(command, blueprint_name, cursor,
                                            aliases, false)
-    quickfort_command.do_command_internal(ctx, section_name)
+    quickfort_command.do_command_section(ctx, section_name)
     quickfort_command.finish_command(ctx, section_name, true)
     if command == 'run' and #ctx.messages > 0 then
         dialogs.showMessage('Attention',
