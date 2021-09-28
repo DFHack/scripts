@@ -136,7 +136,40 @@ API:
 
 The quickfort script can be called programmatically by other scripts either via
 the commandline interface with ``dfhack.run_script()`` or via the API functions
-defined and documented in :source-scripts:`quickfort.lua`.
+defined in :source-scripts:`quickfort.lua`:
+
+* ``apply_blueprint(params)``
+
+Applies the specified blueprint data and returns processing statistics. The
+statistics structure is a map of stat ids to ``{label=string, value=number}``.
+
+``params`` is a table with the following fields:
+
+:``mode``: (required) The name of the blueprint mode, e.g. 'dig', 'build', etc.
+:``data``: (required) A sparse map populated such that ``data[z][y][x]`` yields
+    the blueprint text that should be applied to the tile at map coordinate
+    ``(x, y, z)``.
+:``command``: The quickfort command to execute, e.g. 'run', 'orders', etc.
+    Defaults to 'run'.
+:``pos``: A coordinate that serves as the reference point for the coordinates in
+    the data map. That is, the text at ``data[z][y][x]`` will be shifted to be
+    applied to coordinate ``(pos.x + x, pos.y + y, pos.z + z)``. If not
+    specified, defaults to ``{x=0, y=0, z=0}``.
+:``aliases``: a map of query blueprint aliases names to their expansions. If not
+    specified, defaults to ``{}``.
+:``dry_run``: Just calculate statistics, such as how many tiles are outside the
+    boundaries of the map; don't actually apply the blueprint. Defaults to
+    false.
+:``verbose``: Output extra debugging information to the console. Defaults to
+    false.
+
+API usage example::
+
+    local guidm = require('gui.dwarfmode')
+    local quickfort = reqscript('quickfort')
+    -- dig a 10x10 block at the cursor position
+    quickfort.apply_blueprint{mode='dig', data={[0]={[0]={[0]='d(10x10)'}}},
+                              pos=guidm.getCursorPos()}
 ]====]
 
 local argparse = require('argparse')
@@ -224,37 +257,7 @@ https://docs.dfhack.org/en/stable/docs/guides/quickfort-user-guide.html
 ]=]
 end
 
-
--- API
-
--- Applies the specified blueprint data and returns processing statistics. The
--- statistics structure is a map of stat ids -> {label=string, value=number}.
---
--- params is a table with the following fields:
---   mode (required) - The name of the blueprint mode, e.g. 'dig', 'build', etc.
---   data (required) - A sparse map populated such that data[z][y][x] yields the
---       blueprint text that should be applied to the tile at map coordinate
---       x, y, z.
---   command - The quickfort command to execute, e.g. 'run', 'orders', etc.
---       Defaults to 'run'.
---   pos - A coordinate that serves as the reference point for the coordinates
---       in the data map. That is, the text at data[z][y][x] will be shifted to
---       be applied to coordinate pos.x + x, pos.y + y, pos.z + z. If not
---       specified, defaults to {x=0, y=0, z=0}.
---   aliases - a map of query blueprint aliases names to their expansions. If
---       not specified, defaults to {}.
---   dry_run - Just calculate statistics; don't actually apply the blueprint.
---       Defaults to false.
---   verbose - Output extra debugging information to the console. Defaults to
---       false.
---
--- Example:
---
--- local guidm = require('gui.dwarfmode')
--- local quickfort = reqscript('quickfort')
--- -- dig a 10x10 block at the cursor position
--- quickfort.apply_blueprint{mode='dig', data={[0]={[0]={[0]='d(10x10)'}}},
---                           pos=guidm.getCursorPos()}
+-- public API
 function apply_blueprint(params)
     local data, cursor = quickfort_api.normalize_data(params.data, params.pos)
     local ctx = quickfort_command.init_ctx(params.command or 'run', 'API',
@@ -270,9 +273,7 @@ function apply_blueprint(params)
     return quickfort_api.clean_stats(ctx.stats)
 end
 
-
 -- interactive script
-
 if dfhack_flags.module then
     return
 end
