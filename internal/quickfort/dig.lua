@@ -83,16 +83,12 @@ local function is_smooth(tileattrs)
     return tileattrs.special == df.tiletype_special.SMOOTH
 end
 
-local function get_engraving(pos)
-    -- scan through engravings until we find the one at this pos
-    -- super inefficient. we could cache, but it's unlikely that players will
-    -- have so many engravings that it would matter.
-    for _, engraving in ipairs(df.global.world.engravings) do
-        if same_xyz(pos, engraving.pos) then
-            return engraving
-        end
-    end
-    return nil
+local function get_engraving(pos, digctx)
+    local grid = digctx.engravings_cache[pos.z]
+    if not grid then return nil end
+    local row = grid[pos.y]
+    if not row then return nil end
+    return row[pos.x]
 end
 
 -- TODO: it would be useful to migrate has_designation and clear_designation to
@@ -289,7 +285,7 @@ local function do_engrave(digctx)
     if digctx.flags.hidden or
             is_construction(digctx.tileattrs) or
             not is_smooth(digctx.tileattrs) or
-            get_engraving(digctx.pos) ~= nil then
+            get_engraving(digctx.pos, digctx) ~= nil then
         return nil
     end
     return function() digctx.flags.smooth = values.tile_engrave end
@@ -336,7 +332,7 @@ end
 
 local function do_toggle_engravings(digctx)
     if digctx.flags.hidden then return nil end
-    local engraving = get_engraving(digctx.pos)
+    local engraving = get_engraving(digctx.pos, digctx)
     if engraving == nil then return nil end
     return function() engraving.flags.hidden = not engraving.flags.hidden end
 end
@@ -565,9 +561,27 @@ local function dig_tile(digctx, db_entry)
     end
 end
 
+local function ensure_index(t, idx)
+    if not t[idx] then t[idx] = {} end
+    return t[idx]
+end
+
+local function ensure_engravings_cache(ctx)
+    if ctx.engravings_cache then return end
+    local engravings_cache = {}
+    for _,engraving in ipairs(df.global.world.engravings) do
+        local pos = engraving.pos
+        local grid = ensure_index(engravings_cache, pos.z)
+        local row = ensure_index(grid, pos.y)
+        row[pos.x] = engraving
+    end
+    ctx.engravings_cache = engravings_cache
+end
+
 local function do_run_impl(zlevel, grid, ctx)
     local stats = ctx.stats
     local bounds = ctx.bounds or quickfort_map.MapBoundsChecker{}
+    ensure_engravings_cache(ctx)
     for y, row in pairs(grid) do
         for x, cell_and_text in pairs(row) do
             local cell, text = cell_and_text.cell, cell_and_text.text
@@ -598,7 +612,8 @@ local function do_run_impl(zlevel, grid, ctx)
                     local digctx = {
                         pos=extent_pos,
                         extent_adjacent=extent_adjacent,
-                        on_map_edge=bounds:is_on_map_edge(extent_pos)
+                        on_map_edge=bounds:is_on_map_edge(extent_pos),
+                        engravings_cache = ctx.engravings_cache
                     }
                     if not bounds:is_on_map(digctx.pos) then
                         log('coordinates out of bounds; skipping (%d, %d, %d)',
