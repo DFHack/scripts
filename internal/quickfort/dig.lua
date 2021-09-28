@@ -576,13 +576,7 @@ local function get_engraving(cache, pos)
     return row[pos.x]
 end
 
-local function init_dig_ctx(ctx, pos)
-    local extent_adjacent = {
-        north=extent_y>1,
-        east=extent_x<extent.width,
-        south=extent_y<extent.height,
-        west=extent_x>1,
-    }
+local function init_dig_ctx(ctx, pos, extent_adjacent)
     local flags, occupancy = dfhack.maps.getTileFlags(pos)
     local tileattrs = df.tiletype.attrs[dfhack.maps.getTileType(pos)]
     local engraving = nil
@@ -594,7 +588,7 @@ local function init_dig_ctx(ctx, pos)
     return {
         pos=pos,
         extent_adjacent=extent_adjacent,
-        on_map_edge=bounds:is_on_map_edge(extent_pos),
+        on_map_edge=ctx.bounds:is_on_map_edge(pos),
         flags=flags,
         occupancy=occupancy,
         tileattrs=tileattrs,
@@ -604,7 +598,7 @@ end
 
 local function do_run_impl(zlevel, grid, ctx)
     local stats = ctx.stats
-    local bounds = ctx.bounds or quickfort_map.MapBoundsChecker{}
+    ctx.bounds = ctx.bounds or quickfort_map.MapBoundsChecker{}
     for y, row in pairs(grid) do
         for x, cell_and_text in pairs(row) do
             local cell, text = cell_and_text.cell, cell_and_text.text
@@ -626,14 +620,24 @@ local function do_run_impl(zlevel, grid, ctx)
                         pos.x+extent_x-1,
                         pos.y+extent_y-1,
                         pos.z)
-                    if not bounds:is_on_map(extent_pos) then
+                    if not ctx.bounds:is_on_map(extent_pos) then
                         log('coordinates out of bounds; skipping (%d, %d, %d)',
                             extent_pos.x, extent_pos.y, extent_pos.z)
                         stats.out_of_bounds.value =
                                 stats.out_of_bounds.value + 1
                         goto inner_continue
                     end
-                    local digctx = init_dig_ctx(ctx, extent_pos)
+                    local extent_adjacent = {
+                        north=extent_y>1,
+                        east=extent_x<extent.width,
+                        south=extent_y<extent.height,
+                        west=extent_x>1,
+                    }
+                    local digctx = init_dig_ctx(ctx,extent_pos,extent_adjacent)
+                    -- can't dig through buildings
+                    if digctx.occupancy.building ~= 0 then
+                        goto inner_continue
+                    end
                     local action_fn = dig_tile(digctx, db_entry)
                     if action_fn then
                         if not ctx.clobber_masterwork_engravings
