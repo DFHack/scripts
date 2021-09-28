@@ -83,14 +83,6 @@ local function is_smooth(tileattrs)
     return tileattrs.special == df.tiletype_special.SMOOTH
 end
 
-local function get_engraving(pos, digctx)
-    local grid = digctx.engravings_cache[pos.z]
-    if not grid then return nil end
-    local row = grid[pos.y]
-    if not row then return nil end
-    return row[pos.x]
-end
-
 -- TODO: it would be useful to migrate has_designation and clear_designation to
 -- the Maps module
 local function has_designation(flags, occupancy)
@@ -285,7 +277,7 @@ local function do_engrave(digctx)
     if digctx.flags.hidden or
             is_construction(digctx.tileattrs) or
             not is_smooth(digctx.tileattrs) or
-            get_engraving(digctx.pos, digctx) ~= nil then
+            digctx.engraving ~= nil then
         return nil
     end
     return function() digctx.flags.smooth = values.tile_engrave end
@@ -332,7 +324,7 @@ end
 
 local function do_toggle_engravings(digctx)
     if digctx.flags.hidden then return nil end
-    local engraving = get_engraving(digctx.pos, digctx)
+    local engraving = digctx.engraving
     if engraving == nil then return nil end
     return function() engraving.flags.hidden = not engraving.flags.hidden end
 end
@@ -444,19 +436,19 @@ local function do_traffic_restricted(digctx)
 end
 
 local dig_db = {
-    d={action=do_mine, use_priority=true},
-    h={action=do_channel, use_priority=true},
-    u={action=do_up_stair, use_priority=true},
-    j={action=do_down_stair, use_priority=true},
-    i={action=do_up_down_stair, use_priority=true},
-    r={action=do_ramp, use_priority=true},
+    d={action=do_mine, use_priority=true, can_clobber_engravings=true},
+    h={action=do_channel, use_priority=true, can_clobber_engravings=true},
+    u={action=do_up_stair, use_priority=true, can_clobber_engravings=true},
+    j={action=do_down_stair, use_priority=true, can_clobber_engravings=true},
+    i={action=do_up_down_stair, use_priority=true, can_clobber_engravings=true},
+    r={action=do_ramp, use_priority=true, can_clobber_engravings=true},
     z={action=do_remove_ramps, use_priority=true},
     t={action=do_mine, use_priority=true},
     p={action=do_gather, use_priority=true},
     s={action=do_smooth, use_priority=true},
     e={action=do_engrave, use_priority=true},
-    F={action=do_fortification, use_priority=true},
-    T={action=do_track, use_priority=true},
+    F={action=do_fortification, use_priority=true, can_clobber_engravings=true},
+    T={action=do_track, use_priority=true, can_clobber_engravings=true},
     v={action=do_toggle_engravings},
     -- the semantics are unclear if the code is M but m or force_marker_mode is
     -- also specified. skipping all other marker mode settings when toggling
@@ -535,8 +527,6 @@ local function set_priority(digctx, priority)
 end
 
 local function dig_tile(digctx, db_entry)
-    digctx.flags, digctx.occupancy = dfhack.maps.getTileFlags(digctx.pos)
-    digctx.tileattrs = df.tiletype.attrs[dfhack.maps.getTileType(digctx.pos)]
     local action_fn = db_entry.action(digctx)
     if not action_fn then return nil end
     return function()
@@ -578,10 +568,43 @@ local function ensure_engravings_cache(ctx)
     ctx.engravings_cache = engravings_cache
 end
 
+local function get_engraving(cache, pos)
+    local grid = cache[pos.z]
+    if not grid then return nil end
+    local row = grid[pos.y]
+    if not row then return nil end
+    return row[pos.x]
+end
+
+local function init_dig_ctx(ctx, pos)
+    local extent_adjacent = {
+        north=extent_y>1,
+        east=extent_x<extent.width,
+        south=extent_y<extent.height,
+        west=extent_x>1,
+    }
+    local flags, occupancy = dfhack.maps.getTileFlags(pos)
+    local tileattrs = df.tiletype.attrs[dfhack.maps.getTileType(pos)]
+    local engraving = nil
+    if is_smooth(tileattrs) then
+        -- potentially has an engraving
+        ensure_engravings_cache(ctx)
+        engraving = get_engraving(ctx.engravings_cache, pos)
+    end
+    return {
+        pos=pos,
+        extent_adjacent=extent_adjacent,
+        on_map_edge=bounds:is_on_map_edge(extent_pos),
+        flags=flags,
+        occupancy=occupancy,
+        tileattrs=tileattrs,
+        engraving=engraving,
+    }
+end
+
 local function do_run_impl(zlevel, grid, ctx)
     local stats = ctx.stats
     local bounds = ctx.bounds or quickfort_map.MapBoundsChecker{}
-    ensure_engravings_cache(ctx)
     for y, row in pairs(grid) do
         for x, cell_and_text in pairs(row) do
             local cell, text = cell_and_text.cell, cell_and_text.text
@@ -603,31 +626,29 @@ local function do_run_impl(zlevel, grid, ctx)
                         pos.x+extent_x-1,
                         pos.y+extent_y-1,
                         pos.z)
-                    local extent_adjacent = {
-                        north=extent_y>1,
-                        east=extent_x<extent.width,
-                        south=extent_y<extent.height,
-                        west=extent_x>1,
-                    }
-                    local digctx = {
-                        pos=extent_pos,
-                        extent_adjacent=extent_adjacent,
-                        on_map_edge=bounds:is_on_map_edge(extent_pos),
-                        engravings_cache = ctx.engravings_cache
-                    }
-                    if not bounds:is_on_map(digctx.pos) then
+                    if not bounds:is_on_map(extent_pos) then
                         log('coordinates out of bounds; skipping (%d, %d, %d)',
-                            digctx.pos.x, digctx.pos.y, digctx.pos.z)
+                            extent_pos.x, extent_pos.y, extent_pos.z)
                         stats.out_of_bounds.value =
                                 stats.out_of_bounds.value + 1
-                    else
-                        local action_fn = dig_tile(digctx, db_entry)
-                        if action_fn then
+                        goto inner_continue
+                    end
+                    local digctx = init_dig_ctx(ctx, extent_pos)
+                    local action_fn = dig_tile(digctx, db_entry)
+                    if action_fn then
+                        if not ctx.clobber_masterwork_engravings
+                                and db_entry.can_clobber_engravings
+                                and digctx.engraving
+                                and digctx.engraving.quality >= 5 then
+                            stats.dig_protected_masterwork.value =
+                                    stats.dig_protected_masterwork.value + 1
+                        else
                             if not ctx.dry_run then action_fn() end
                             stats.dig_designated.value =
                                     stats.dig_designated.value + 1
                         end
                     end
+                    ::inner_continue::
                 end
             end
             ::continue::
@@ -635,10 +656,17 @@ local function do_run_impl(zlevel, grid, ctx)
     end
 end
 
+local function ensure_ctx_stats(ctx, prefix)
+    local designated_label = ('Tiles %sdesignated for digging'):format(prefix)
+    ctx.stats.dig_designated = ctx.stats.dig_designated or
+            {label=designated_label, value=0, always=true}
+    ctx.stats.dig_protected_masterwork = ctx.stats.dig_protected_masterwork or
+            {label='Masterwork engravings protected', value=0}
+end
+
 function do_run(zlevel, grid, ctx)
     values = values_run
-    ctx.stats.dig_designated = ctx.stats.dig_designated or
-            {label='Tiles designated for digging', value=0, always=true}
+    ensure_ctx_stats(ctx, '')
     do_run_impl(zlevel, grid, ctx)
     if not ctx.dry_run then dfhack.job.checkDesignationsNow() end
 end
@@ -649,7 +677,6 @@ end
 
 function do_undo(zlevel, grid, ctx)
     values = values_undo
-    ctx.stats.dig_designated = ctx.stats.dig_designated or
-            {label='Tiles undesignated for digging', value=0, always=true}
+    ensure_ctx_stats(ctx, 'un')
     do_run_impl(zlevel, grid, ctx)
 end
