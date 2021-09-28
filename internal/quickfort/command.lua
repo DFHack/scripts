@@ -61,9 +61,8 @@ function do_command_section(ctx, section_name)
     local first_modeline = nil
     for _, section_data in ipairs(section_data_list) do
         if not first_modeline then first_modeline = section_data.modeline end
-        ctx.cursor.z = section_data.zlevel
-        mode_modules[section_data.modeline.mode][command_switch[ctx.command]](
-            section_data.zlevel, section_data.grid, ctx)
+        do_command_raw(section_data.modeline.mode, section_data.zlevel,
+                       section_data.grid, ctx)
     end
     if first_modeline and first_modeline.message then
         table.insert(ctx.messages, first_modeline.message)

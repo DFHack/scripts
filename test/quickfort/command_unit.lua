@@ -160,3 +160,10 @@ function test.do_command_stats()
                       mock_print.call_args[2][1])
         end)
 end
+
+function test.do_command_raw_errors()
+    expect.error_match('invalid mode',
+        function() c.do_command_raw('badmode', 0, {}, {}) end)
+    expect.error_match('invalid command',
+        function() c.do_command_raw('dig', 0, {}, {command='badcomm'}) end)
+end
