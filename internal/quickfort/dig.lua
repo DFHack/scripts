@@ -643,7 +643,8 @@ local function do_run_impl(zlevel, grid, ctx)
                         if not ctx.clobber_masterwork_engravings
                                 and db_entry.can_clobber_engravings
                                 and digctx.engraving
-                                and digctx.engraving.quality >= 5 then
+                                and digctx.engraving.quality >=
+                                        df.item_quality.Masterful then
                             stats.dig_protected_masterwork.value =
                                     stats.dig_protected_masterwork.value + 1
                         else
