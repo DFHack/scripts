@@ -18,10 +18,12 @@ that repo.
 ## Fixes
 - `quickfort`: produce a useful error message instead of a code error when a bad query blueprint key sequence leaves the game in a mode that does not have an active cursor
 - `quickfort`: restore functionality to the ``--verbose`` commandline flag
+- `quickfort`: don't designate tiles for digging if they are within the bounds of a planned or constructed building
 
 ## Misc Improvements
 - `gui/blueprint`: support the new ``--splitby`` and ``--format`` options for `blueprint`
 - `quickfort`: add ``quickfort.apply_blueprint()`` API function that can be called directly by other scripts
+- `quickfort`: don't designate tiles for digging that have masterwork engravings on them. use the new ``--clobber-masterwork-engravings`` param to get the old behavior of digging them out anyway
 
 # 0.47.05-r3
 
