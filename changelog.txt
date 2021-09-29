@@ -21,6 +21,7 @@ that repo.
 
 ## Misc Improvements
 - `gui/blueprint`: support the new ``--splitby`` and ``--format`` options for `blueprint`
+- `gui/blueprint`: hide help text when the screen is too short to display it
 - `quickfort`: add ``quickfort.apply_blueprint()`` API function that can be called directly by other scripts
 
 # 0.47.05-r3
