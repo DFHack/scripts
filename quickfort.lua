@@ -73,6 +73,10 @@ Usage:
     Use the specified map coordinates instead of the current cursor position for
     the blueprint cursor start position. If this option is specified, then an
     active game map cursor is not necessary.
+``--clobber-masterwork-engravings``
+    Allow dig blueprints to designate tiles for digging even if they have
+    masterwork engravings on them. Note that once those tiles are dug out, the
+    dwarf who engraved the masterwork will get negative thoughts.
 ``-d``, ``--dry-run``
     Go through all the motions and print statistics on what would be done, but
     don't actually change any game state.
@@ -157,6 +161,8 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
     specified, defaults to ``{x=0, y=0, z=0}``.
 :``aliases``: a map of query blueprint aliases names to their expansions. If not
     specified, defaults to ``{}``.
+:``clobber_masterwork_engravings``: Allow dig blueprints to designate tiles for
+    digging even if they have masterwork engravings on them. Defaults to false.
 :``dry_run``: Just calculate statistics, such as how many tiles are outside the
     boundaries of the map; don't actually apply the blueprint. Defaults to
     false.
@@ -242,6 +248,10 @@ undo    Applies the inverse of the specified blueprint. Dig tiles are
     Use the specified map coordinates instead of the current cursor position for
     the blueprint cursor start position. If this option is specified, then an
     active game map cursor is not necessary.
+--clobber-masterwork-engravings
+    Allow dig blueprints to designate tiles for digging even if they have
+    masterwork engravings on them. Note that once those tiles are dug out, the
+    dwarf who engraved the masterwork will get negative thoughts.
 -d, --dry-run
     Go through all the motions and print statistics on what would be done, but
     don't actually change any game state.
@@ -261,7 +271,8 @@ end
 function apply_blueprint(params)
     local data, cursor = quickfort_api.normalize_data(params.data, params.pos)
     local ctx = quickfort_command.init_ctx(params.command or 'run', 'API',
-                                cursor, params.aliases or {}, params.dry_run)
+                                cursor, params.aliases or {}, params.dry_run,
+                                params.clobber_masterwork_engravings)
     quickfort_common.verbose = not not params.verbose
     dfhack.with_finalize(
         function() quickfort_common.verbose = false end,
