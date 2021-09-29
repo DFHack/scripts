@@ -162,23 +162,11 @@ CycleHotkeyLabel.ATTRS{
     options=DEFAULT_NIL,
     option_idx=1,
     help=DEFAULT_NIL,
+    show_help_fn=DEFAULT_NIL,
     on_change=DEFAULT_NIL,
 }
 function CycleHotkeyLabel:init()
-    local contents = {
-        {text=self.label, width=self.label_width, key=self.key, key_sep=': ',
-         on_activate=self:callback('cycle')},
-        '  ',
-        {text=self:callback('get_current_option_label')},
-    }
-    if self.help then
-        table.insert(contents, '\n')
-        for _,line in ipairs(self.help) do
-            table.insert(contents, {gap=2, text=line, pen=COLOR_GREY})
-            table.insert(contents, '\n')
-        end
-    end
-    self:setText(contents)
+    self:preUpdateLayout()
 end
 function CycleHotkeyLabel:cycle()
     if self.option_idx == #self.options then
@@ -202,6 +190,22 @@ function CycleHotkeyLabel:get_current_option_value()
     end
     return option
 end
+function CycleHotkeyLabel:preUpdateLayout()
+    local contents = {
+        {text=self.label, width=self.label_width, key=self.key, key_sep=': ',
+         on_activate=self:callback('cycle')},
+        '  ',
+        {text=self:callback('get_current_option_label')},
+    }
+    if self.help and (not self.show_help_fn or self.show_help_fn()) then
+        table.insert(contents, '\n')
+        for _,line in ipairs(self.help) do
+            table.insert(contents, {gap=2, text=line, pen=COLOR_GREY})
+            table.insert(contents, '\n')
+        end
+    end
+    self:setText(contents)
+end
 
 ToggleHotkeyLabel = defclass(ToggleHotkeyLabel, CycleHotkeyLabel)
 ToggleHotkeyLabel.ATTRS{
@@ -211,6 +215,7 @@ ToggleHotkeyLabel.ATTRS{
 PhasesPanel = defclass(PhasesPanel, ResizingPanel)
 PhasesPanel.ATTRS{
     phases={},
+    show_help_fn=DEFAULT_NIL,
     on_layout_change=DEFAULT_NIL,
 }
 function PhasesPanel:init()
@@ -224,6 +229,7 @@ function PhasesPanel:init()
             option_idx=self.phases.auto_phase and 1 or 2,
             help={'Select blueprint phases',
                   'to export.'},
+            show_help_fn=self.show_help_fn,
             on_change=self.on_layout_change,
         },
         -- we need an explicit spacer since the panel height is autocalculated
@@ -256,6 +262,7 @@ StartPosPanel.ATTRS{
     start_pos=DEFAULT_NIL,
     start_comment=DEFAULT_NIL,
     on_setting_fn=DEFAULT_NIL,
+    show_help_fn=DEFAULT_NIL,
     on_layout_change=DEFAULT_NIL,
 }
 function StartPosPanel:init()
@@ -270,6 +277,7 @@ function StartPosPanel:init()
             help={'Set where the cursor',
                   'should be positioned when',
                   'replaying the blueprints.'},
+            show_help_fn=self.show_help_fn,
             on_change=self:callback('on_change'),
         },
         widgets.Label{
@@ -316,14 +324,16 @@ BlueprintUI.ATTRS {
     focus_path='blueprint',
 }
 function BlueprintUI:init()
-    local summary = {
-        'Create quickfort blueprints\n',
-        'from a live game map.'
-    }
+    self.show_help = true
+    local function get_show_help() return self.show_help end
 
     self:addviews{
         widgets.Label{text='Blueprint'},
-        widgets.Label{text=summary, text_pen=COLOR_GREY},
+        widgets.Label{
+            view_id='summary',
+            text={'Create quickfort blueprints\n',
+                  'from a live game map.'},
+            text_pen=COLOR_GREY},
         ActionPanel{
             get_mark_fn=function() return self.mark end,
             is_setting_start_pos_fn=self:callback('is_setting_start_pos')},
@@ -331,6 +341,7 @@ function BlueprintUI:init()
         PhasesPanel{
             phases=self.presets,
             view_id='phases_panel',
+            show_help_fn=get_show_help,
             on_layout_change=self:callback('updateLayout')},
         CycleHotkeyLabel{
             view_id='format',
@@ -340,12 +351,13 @@ function BlueprintUI:init()
                      {label='Pretty text .csv', value='pretty'}},
             option_idx=self.presets.format == 'minimal' and 1 or 2,
             help={'File output format.'},
-        },
+            show_help_fn=get_show_help},
         StartPosPanel{
             view_id='startpos_panel',
             start_pos=self.presets.start_pos,
             start_comment=self.presets.start_comment,
             on_setting_fn=self:callback('save_cursor_pos'),
+            show_help_fn=get_show_help,
             on_layout_change=self:callback('updateLayout')},
         CycleHotkeyLabel{
             view_id='splitby',
@@ -356,11 +368,11 @@ function BlueprintUI:init()
             option_idx=self.presets.split_strategy == 'none' and 1 or 2,
             help={'Split blueprints into',
                   'multiple files.'},
-        },
-        widgets.Label{view_id='cancel_label',
-                      text={{text=self:callback('get_cancel_label'),
-                             key='LEAVESCREEN', key_sep=': ',
-                             on_activate=self:callback('on_cancel')}}},
+            show_help_fn=get_show_help},
+        widgets.Label{
+            view_id='cancel_label',
+            text={{text=self:callback('get_cancel_label'), key='LEAVESCREEN',
+                   key_sep=': ', on_activate=self:callback('on_cancel')}}}
     }
 end
 
@@ -426,6 +438,10 @@ end
 function BlueprintUI:updateLayout(parent_rect)
     -- set frame boundaries and calculate subframe heights
     BlueprintUI.super.updateLayout(self, parent_rect)
+
+    -- set help text visibility
+    self.subviews.summary.visible = self.show_help
+
     -- vertically lay out subviews, adding an extra line of space between each
     local y = 0
     for _,subview in ipairs(self.subviews) do
@@ -436,6 +452,19 @@ function BlueprintUI:updateLayout(parent_rect)
     end
     -- recalculate widget frames
     self:updateSubviewLayout()
+
+    -- if we can't fit in the screen, hide help text and try again
+    if self.show_help and parent_rect and
+            y > parent_rect.clip_y2 - 2*self.frame_inset then
+        self.show_help = false
+        self.show_help_y = y
+        self:updateLayout(parent_rect)
+    elseif not self.show_help and parent_rect and
+            self.show_help_y <= parent_rect.clip_y2 - 2*self.frame_inset then
+        -- screen is tall enough for help text again
+        self.show_help = true
+        self:updateLayout(parent_rect)
+    end
 end
 
 -- Sorts and returns the given arguments.
