@@ -259,12 +259,12 @@ undo    Applies the inverse of the specified blueprint. Dig tiles are
     don't actually change any game state.
 --preserve-engravings <quality>
     Don't designate tiles for digging if they have an engraving with at least
-    the specified quality. Valid values for "quality"``" are: "None",
-    "Ordinary", "WellCrafted", "FinelyCrafted", "Superior", "Exceptional", and
-    "Masterful". Specify "None" to ignore engravings when designating tiles.
-    Note that if "Masterful" tiles are dug out, the dwarf who engraved the
-    masterwork will get negative thoughts. If not specified, "Masterful"
-    engravings are preserved by default.
+    the specified quality. Valid values for "quality" are: "None", "Ordinary",
+    "WellCrafted", "FinelyCrafted", "Superior", "Exceptional", and "Masterful".
+    Specify "None" to ignore engravings when designating tiles. Note that if
+    "Masterful" tiles are dug out, the dwarf who engraved the masterwork will
+    get negative thoughts. If not specified, "Masterful" engravings are
+    preserved by default.
 -q, --quiet
     Suppress non-error console output.
 -v, --verbose
