@@ -23,7 +23,7 @@ that repo.
 ## Misc Improvements
 - `gui/blueprint`: support the new ``--splitby`` and ``--format`` options for `blueprint`
 - `quickfort`: add ``quickfort.apply_blueprint()`` API function that can be called directly by other scripts
-- `quickfort`: don't designate tiles for digging that have masterwork engravings on them. use the new ``--clobber-masterwork-engravings`` param to get the old behavior of digging them out anyway
+- `quickfort`: by default, don't designate tiles for digging that have masterwork engravings on them. quality level to preserve is configurable with the new ``--preserve-engravings`` param
 
 # 0.47.05-r3
 

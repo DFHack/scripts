@@ -74,6 +74,7 @@ function parse_section_name(section_name)
 end
 
 function parse_preserve_engravings(input, want_error_traceback)
+    input = tonumber(input) or input
     if input == 'None' or input == -1 then
         return nil
     end
