@@ -26,14 +26,14 @@ local command_switch = {
 }
 
 function init_ctx(command, blueprint_name, cursor, aliases, dry_run,
-                  clobber_masterwork_engravings)
+                  preserve_engravings)
     return {
         command=command,
         blueprint_name=blueprint_name,
         cursor=cursor,
         aliases=aliases,
         dry_run=dry_run,
-        clobber_masterwork_engravings=clobber_masterwork_engravings,
+        preserve_engravings=preserve_engravings,
         stats={out_of_bounds={label='Tiles outside map boundary', value=0},
                invalid_keys={label='Invalid key sequences', value=0}},
         messages={},
@@ -86,8 +86,7 @@ function finish_command(ctx, section_name, quiet)
 end
 
 local function do_one_command(command, cursor, blueprint_name, section_name,
-                              mode, quiet, dry_run,
-                              clobber_masterwork_engravings)
+                              mode, quiet, dry_run, preserve_engravings)
     if not cursor then
         if command == 'orders' or mode == 'notes' then
             cursor = {x=0, y=0, z=0}
@@ -99,7 +98,7 @@ local function do_one_command(command, cursor, blueprint_name, section_name,
 
     local aliases = quickfort_list.get_aliases(blueprint_name)
     local ctx = init_ctx(command, blueprint_name, cursor, aliases, dry_run,
-                         clobber_masterwork_engravings)
+                         preserve_engravings)
     do_command_section(ctx, section_name)
     finish_command(ctx, section_name, quiet)
     if command == 'run' then
@@ -110,24 +109,24 @@ local function do_one_command(command, cursor, blueprint_name, section_name,
 end
 
 local function do_bp_name(commands, cursor, bp_name, sec_names, quiet, dry_run,
-                          clobber_masterwork_engravings)
+                          preserve_engravings)
     for _,sec_name in ipairs(sec_names) do
         local mode = quickfort_list.get_blueprint_mode(bp_name, sec_name)
         for _,command in ipairs(commands) do
             do_one_command(command, cursor, bp_name, sec_name, mode,
-                           quiet, dry_run, clobber_masterwork_engravings)
+                           quiet, dry_run, preserve_engravings)
         end
     end
 end
 
 local function do_list_num(commands, cursor, list_nums, quiet, dry_run,
-                           clobber_masterwork_engravings)
+                           preserve_engravings)
     for _,list_num in ipairs(list_nums) do
         local bp_name, sec_name, mode =
                 quickfort_list.get_blueprint_by_number(list_num)
         for _,command in ipairs(commands) do
             do_one_command(command, cursor, bp_name, sec_name, mode,
-                           quiet, dry_run, clobber_masterwork_engravings)
+                           quiet, dry_run, preserve_engravings)
         end
     end
 end
@@ -140,12 +139,13 @@ function do_command(args)
     end
     local cursor = guidm.getCursorPos()
     local quiet, verbose, dry_run, section_names = false, false, false, {''}
-    local clobber_masterwork_engravings = false
+    local preserve_engravings = df.item_quality.Masterful
     local other_args = argparse.processArgsGetopt(args, {
             {'c', 'cursor', hasArg=true,
              handler=function(optarg) cursor = argparse.coords(optarg) end},
-            {nil, 'clobber-masterwork-engravings',
-             handler=function() clobber_masterwork_engravings = true end},
+            {nil, 'preserve-engravings', hasArg=true,
+             handler=function(optarg) preserve_engravings =
+                        quickfort_parse.parse_preserve_engravings(optarg) end},
             {'d', 'dry-run', handler=function() dry_run = true end},
             {'n', 'name', hasArg=true,
              handler=function(optarg)
@@ -170,10 +170,10 @@ function do_command(args)
             local ok, list_nums = pcall(argparse.numberList, blueprint_name)
             if not ok then
                 do_bp_name(args.commands, cursor, blueprint_name, section_names,
-                           quiet, dry_run, clobber_masterwork_engravings)
+                           quiet, dry_run, preserve_engravings)
             else
                 do_list_num(args.commands, cursor, list_nums, quiet, dry_run,
-                            clobber_masterwork_engravings)
+                            preserve_engravings)
             end
         end)
 end

@@ -596,6 +596,14 @@ local function init_dig_ctx(ctx, pos, extent_adjacent)
     }
 end
 
+local function should_preserve_engraving(ctx, db_entry, engraving)
+    if not db_entry.can_clobber_engravings or not engraving then
+        return false
+    end
+    return ctx.preserve_engravings and
+            engraving.quality >= ctx.preserve_engravings
+end
+
 local function do_run_impl(zlevel, grid, ctx)
     local stats = ctx.stats
     ctx.bounds = ctx.bounds or quickfort_map.MapBoundsChecker{}
@@ -640,13 +648,10 @@ local function do_run_impl(zlevel, grid, ctx)
                     end
                     local action_fn = dig_tile(digctx, db_entry)
                     if action_fn then
-                        if not ctx.clobber_masterwork_engravings
-                                and db_entry.can_clobber_engravings
-                                and digctx.engraving
-                                and digctx.engraving.quality >=
-                                        df.item_quality.Masterful then
-                            stats.dig_protected_masterwork.value =
-                                    stats.dig_protected_masterwork.value + 1
+                        if should_preserve_engraving(ctx, db_entry,
+                                                     digctx.engraving) then
+                            stats.dig_protected_engraving.value =
+                                    stats.dig_protected_engraving.value + 1
                         else
                             if not ctx.dry_run then action_fn() end
                             stats.dig_designated.value =
@@ -665,8 +670,8 @@ local function ensure_ctx_stats(ctx, prefix)
     local designated_label = ('Tiles %sdesignated for digging'):format(prefix)
     ctx.stats.dig_designated = ctx.stats.dig_designated or
             {label=designated_label, value=0, always=true}
-    ctx.stats.dig_protected_masterwork = ctx.stats.dig_protected_masterwork or
-            {label='Masterwork engravings protected', value=0}
+    ctx.stats.dig_protected_engraving = ctx.stats.dig_protected_engraving or
+            {label='Engravings protected from destruction', value=0}
 end
 
 function do_run(zlevel, grid, ctx)

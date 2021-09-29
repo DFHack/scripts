@@ -73,6 +73,17 @@ function parse_section_name(section_name)
     return sheet_name, label
 end
 
+function parse_preserve_engravings(input, want_error_traceback)
+    if input == 'None' or input == -1 then
+        return nil
+    end
+    if df.item_quality[input] then
+        return tonumber(input) or df.item_quality[input]
+    end
+    (want_error_traceback and error or qerror)(
+        ('unknown engraving quality level: "%s"'):format(input))
+end
+
 function quote_if_has_spaces(str)
     if str:find(' ') then return '"' .. str .. '"' end
     return str
