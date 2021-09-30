@@ -281,7 +281,7 @@ end
 function apply_blueprint(params)
     local data, cursor = quickfort_api.normalize_data(params.data, params.pos)
     local preserve_engravings = quickfort_parse.parse_preserve_engravings(
-                        params.preserve_engravings or df.item_quality.Masterful)
+                params.preserve_engravings or df.item_quality.Masterful, true)
     local ctx = quickfort_command.init_ctx(params.command or 'run', 'API',
                                 cursor, params.aliases or {}, params.dry_run,
                                 preserve_engravings)

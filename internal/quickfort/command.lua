@@ -144,8 +144,9 @@ function do_command(args)
             {'c', 'cursor', hasArg=true,
              handler=function(optarg) cursor = argparse.coords(optarg) end},
             {nil, 'preserve-engravings', hasArg=true,
-             handler=function(optarg) preserve_engravings =
-                        quickfort_parse.parse_preserve_engravings(optarg) end},
+             handler=function(optarg)
+                preserve_engravings = quickfort_parse.parse_preserve_engravings(
+                                                                optarg) end},
             {'d', 'dry-run', handler=function() dry_run = true end},
             {'n', 'name', hasArg=true,
              handler=function(optarg)

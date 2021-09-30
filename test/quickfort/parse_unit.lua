@@ -68,6 +68,26 @@ function test.parse_section_name()
                     {parse.parse_section_name(' sheet / badlabel')})
 end
 
+function test.parse_preserve_engravings()
+    expect.nil_(parse.parse_preserve_engravings(-1))
+    expect.nil_(parse.parse_preserve_engravings('None'))
+    expect.nil_(parse.parse_preserve_engravings('-1'))
+
+    expect.eq(df.item_quality.Ordinary, parse.parse_preserve_engravings(0))
+    expect.eq(df.item_quality.Ordinary,
+              parse.parse_preserve_engravings('Ordinary'))
+    expect.eq(df.item_quality.Ordinary, parse.parse_preserve_engravings('0'))
+
+    expect.error_match('unknown engraving quality',
+                       function() parse.parse_preserve_engravings(nil) end)
+    expect.error_match('unknown engraving quality',
+                       function() parse.parse_preserve_engravings(-2) end)
+    expect.error_match('unknown engraving quality',
+                       function() parse.parse_preserve_engravings('blorf') end)
+    expect.error_match('parse[.]lua',
+                       function() parse.parse_preserve_engravings(-2, true) end)
+end
+
 function test.quote_if_has_spaces()
     expect.eq('', parse.quote_if_has_spaces(''))
     expect.eq('abc', parse.quote_if_has_spaces('abc'))

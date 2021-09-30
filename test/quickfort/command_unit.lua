@@ -114,6 +114,14 @@ function test.do_command_cursor()
         end)
 end
 
+function test.do_command_preserve_engravings()
+    c.do_command({commands={'run'}, '-q', '--preserve-engravings=Exceptional',
+                  '10'})
+    expect.eq(1, mock_dig_do_run.call_count)
+    expect.eq(df.item_quality.Exceptional,
+              get_ctx(mock_dig_do_run, 1).preserve_engravings)
+end
+
 function test.do_command_multi_command_multi_list_num()
     c.do_command({commands={'run', 'orders'}, '-q', '9,10'})
 

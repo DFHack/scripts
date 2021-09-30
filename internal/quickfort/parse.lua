@@ -82,7 +82,7 @@ function parse_preserve_engravings(input, want_error_traceback)
         return tonumber(input) or df.item_quality[input]
     end
     (want_error_traceback and error or qerror)(
-        ('unknown engraving quality level: "%s"'):format(input))
+        ('unknown engraving quality: "%s"'):format(input))
 end
 
 function quote_if_has_spaces(str)
@@ -606,6 +606,7 @@ if dfhack.internal.IN_TEST then
         coord2d_lt=coord2d_lt,
         get_ordered_grid_cells=get_ordered_grid_cells,
         parse_section_name=parse_section_name,
+        parse_preserve_engravings=parse_preserve_engravings,
         quote_if_has_spaces=quote_if_has_spaces,
         format_command=format_command,
         get_next_csv_token=get_next_csv_token,
