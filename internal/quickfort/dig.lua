@@ -27,6 +27,10 @@ local function is_floor(tileattrs)
     return tileattrs.shape == df.tiletype_shape.FLOOR
 end
 
+local function is_ramp(tileattrs)
+    return tileattrs.shape == df.tiletype_shape.RAMP
+end
+
 local function is_diggable_floor(tileattrs)
     return is_floor(tileattrs) or
             tileattrs.shape == df.tiletype_shape.BOULDER or
@@ -54,9 +58,9 @@ local function is_down_stair(tileattrs)
 end
 
 local function is_removable_shape(tileattrs)
-    return tileattrs.shape == df.tiletype_shape.RAMP or
-            tileattrs.shape == df.tiletype_shape.STAIR_UP or
-            tileattrs.shape == df.tiletype_shape.STAIR_UPDOWN
+    return is_ramp(tileattrs) or
+            is_up_stair(tileattrs) or
+            is_down_stair(tileattrs)
 end
 
 local function is_gatherable(tileattrs)
@@ -88,10 +92,10 @@ end
 local function has_designation(flags, occupancy)
     return flags.dig ~= df.tile_dig_designation.No or
             flags.smooth > 0 or
-            occupancy.carve_track_north == 1 or
-            occupancy.carve_track_east == 1 or
-            occupancy.carve_track_south == 1 or
-            occupancy.carve_track_west == 1
+            occupancy.carve_track_north or
+            occupancy.carve_track_east or
+            occupancy.carve_track_south or
+            occupancy.carve_track_west
 end
 
 local function clear_designation(flags, occupancy)
@@ -294,31 +298,31 @@ local function do_track(digctx)
     if digctx.on_map_edge or
             digctx.flags.hidden or
             is_construction(digctx.tileattrs) or
-            not is_floor(digctx.tileattrs) or
+            not (is_floor(digctx.tileattrs) or is_ramp(digctx.tileattrs)) or
             not is_hard(digctx.tileattrs) then
         return nil
     end
-    local extent_adjacent = digctx.extent_adjacent
-    if not extent_adjacent.north and not  extent_adjacent.south and
-            not extent_adjacent.east and not extent_adjacent.west then
+    local direction = digctx.direction
+    if not direction.north and not  direction.south and
+            not direction.east and not direction.west then
         print('ambiguous direction for track; please use T(width x height)' ..
               ' syntax (specify both width > 1 and height > 1 for a' ..
               ' track that extends both South and East from this corner')
         return nil
     end
-    if extent_adjacent.north and extent_adjacent.west then
+    if not direction.single_tile and direction.north and direction.west then
         -- we're in the "empty" interior of a track extent - tracks can only be
-        -- built in lines along the top or left of an extent.
+        -- built in lines along the top or left of a non-single-tile extent.
         return nil
     end
-    -- don't overwrite all directions, only 'or' in the new bits. we could be
-    -- adding to a previously-designated track.
     local occupancy = digctx.occupancy
     return function()
-    if extent_adjacent.north then occupancy.carve_track_north = values.track end
-    if extent_adjacent.east then occupancy.carve_track_east = values.track end
-    if extent_adjacent.south then occupancy.carve_track_south = values.track end
-    if extent_adjacent.west then occupancy.carve_track_west = values.track end
+        -- don't overwrite all directions, only 'or' in the new bits. we could
+        -- be adding to a previously-designated track.
+        if direction.north then occupancy.carve_track_north = values.track end
+        if direction.east then occupancy.carve_track_east = values.track end
+        if direction.south then occupancy.carve_track_south = values.track end
+        if direction.west then occupancy.carve_track_west = values.track end
     end
 end
 
@@ -435,6 +439,13 @@ local function do_traffic_restricted(digctx)
     return function() digctx.flags.traffic = values.traffic_restricted end
 end
 
+local function track_alias_entry(directions)
+    return {action=do_track, use_priority=true, can_clobber_engravings=true,
+            direction={single_tile=true, north=directions.north,
+                       south=directions.south, east=directions.east,
+                       west=directions.west}}
+end
+
 local dig_db = {
     d={action=do_mine, use_priority=true, can_clobber_engravings=true},
     h={action=do_channel, use_priority=true, can_clobber_engravings=true},
@@ -468,7 +479,40 @@ local dig_db = {
     on={action=do_traffic_normal},
     ol={action=do_traffic_low},
     ['or']={action=do_traffic_restricted},
+    -- single-tile track aliases
+    trackN=track_alias_entry{north=true},
+    trackS=track_alias_entry{south=true},
+    trackE=track_alias_entry{east=true},
+    trackW=track_alias_entry{west=true},
+    trackNS=track_alias_entry{north=true, south=true},
+    trackNE=track_alias_entry{north=true, east=true},
+    trackNW=track_alias_entry{north=true, west=true},
+    trackSE=track_alias_entry{south=true, east=true},
+    trackSW=track_alias_entry{south=true, west=true},
+    trackEW=track_alias_entry{east=true, west=true},
+    trackNSE=track_alias_entry{north=true, south=true, east=true},
+    trackNSW=track_alias_entry{north=true, south=true, west=true},
+    trackNEW=track_alias_entry{north=true, east=true, west=true},
+    trackSEW=track_alias_entry{south=true, east=true, west=true},
+    trackNSEW=track_alias_entry{north=true, south=true, east=true, west=true},
 }
+
+-- add trackramp aliases for the track aliases
+dig_db.trackrampN = dig_db.trackN
+dig_db.trackrampS = dig_db.trackS
+dig_db.trackrampE = dig_db.trackE
+dig_db.trackrampW = dig_db.trackW
+dig_db.trackrampNS = dig_db.trackNS
+dig_db.trackrampNE = dig_db.trackNE
+dig_db.trackrampNW = dig_db.trackNW
+dig_db.trackrampSE = dig_db.trackSE
+dig_db.trackrampSW = dig_db.trackSW
+dig_db.trackrampEW = dig_db.trackEW
+dig_db.trackrampNSE = dig_db.trackNSE
+dig_db.trackrampNSW = dig_db.trackNSW
+dig_db.trackrampNEW = dig_db.trackNEW
+dig_db.trackrampSEW = dig_db.trackSEW
+dig_db.trackrampNSEW = dig_db.trackNSEW
 
 -- set default dig priorities
 for _,v in pairs(dig_db) do
@@ -576,7 +620,7 @@ local function get_engraving(cache, pos)
     return row[pos.x]
 end
 
-local function init_dig_ctx(ctx, pos, extent_adjacent)
+local function init_dig_ctx(ctx, pos, direction)
     local flags, occupancy = dfhack.maps.getTileFlags(pos)
     local tileattrs = df.tiletype.attrs[dfhack.maps.getTileType(pos)]
     local engraving = nil
@@ -587,7 +631,7 @@ local function init_dig_ctx(ctx, pos, extent_adjacent)
     end
     return {
         pos=pos,
-        extent_adjacent=extent_adjacent,
+        direction=direction,
         on_map_edge=ctx.bounds:is_on_map_edge(pos),
         flags=flags,
         occupancy=occupancy,
@@ -635,13 +679,13 @@ local function do_run_impl(zlevel, grid, ctx)
                                 stats.out_of_bounds.value + 1
                         goto inner_continue
                     end
-                    local extent_adjacent = {
+                    local direction = db_entry.direction or {
                         north=extent_y>1,
-                        east=extent_x<extent.width,
-                        south=extent_y<extent.height,
+                        east=extent_x<extent.width and extent_y == 1,
+                        south=extent_y<extent.height and extent_x == 1,
                         west=extent_x>1,
                     }
-                    local digctx = init_dig_ctx(ctx,extent_pos,extent_adjacent)
+                    local digctx = init_dig_ctx(ctx, extent_pos, direction)
                     -- can't dig through buildings
                     if digctx.occupancy.building ~= 0 then
                         goto inner_continue
