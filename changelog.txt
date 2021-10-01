@@ -19,6 +19,7 @@ that repo.
 - `quickfort`: produce a useful error message instead of a code error when a bad query blueprint key sequence leaves the game in a mode that does not have an active cursor
 - `quickfort`: restore functionality to the ``--verbose`` commandline flag
 - `quickfort`: don't designate tiles for digging if they are within the bounds of a planned or constructed building
+- `quickfort`: allow grates, bars, and hatches to be built on flat floor (like DF itself allows)
 
 ## Misc Improvements
 - `gui/blueprint`: support the new ``--splitby`` and ``--format`` options for `blueprint`
