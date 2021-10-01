@@ -20,12 +20,16 @@ that repo.
 - `quickfort`: restore functionality to the ``--verbose`` commandline flag
 - `quickfort`: don't designate tiles for digging if they are within the bounds of a planned or constructed building
 - `quickfort`: allow grates, bars, and hatches to be built on flat floor (like DF itself allows)
+- `quickfort`: allow tracks to be built on hard, natural rock ramps
+- `quickfort`: allow dig priority to be properly set for track designations
+- `quickfort`: fix incorrect directions for tracks that extend south or east from a track segment pair specified with expansion syntax (e.g. T(4x4))
 
 ## Misc Improvements
 - `gui/blueprint`: support the new ``--splitby`` and ``--format`` options for `blueprint`
 - `gui/blueprint`: hide help text when the screen is too short to display it
 - `quickfort`: add ``quickfort.apply_blueprint()`` API function that can be called directly by other scripts
 - `quickfort`: by default, don't designate tiles for digging that have masterwork engravings on them. quality level to preserve is configurable with the new ``--preserve-engravings`` param
+- `quickfort`: implement single-tile track aliases so engraved tracks can be specified tile-by-tile just like constructed tracks
 
 # 0.47.05-r3
 
