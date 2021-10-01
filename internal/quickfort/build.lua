@@ -134,7 +134,8 @@ end
 local function is_tile_coverable(pos)
     local shape = df.tiletype.attrs[dfhack.maps.getTileType(pos)].shape
     if not is_valid_tile_base(pos) or
-            (shape ~= df.tiletype_shape.EMPTY and
+            (shape ~= df.tiletype_shape.FLOOR and
+             shape ~= df.tiletype_shape.EMPTY and
              shape ~= df.tiletype_shape.RAMP_TOP and
              shape ~= df.tiletype_shape.STAIR_DOWN) then
         return false
@@ -501,8 +502,7 @@ local building_db = {
         type=df.building_type.Trap, subtype=df.trap_type.CageTrap,
         additional_orders={'wooden cage'}},
     -- TODO: Same as weapon trap above
-    TS={label='Upright Spear/Spike',
-        type=df.building_type.Weapon, subtype=df.trap_type.StoneFallTrap},
+    TS={label='Upright Spear/Spike', type=df.building_type.Weapon},
     -- tracks (CT...). there aren't any shortcut keys in the UI so we use the
     -- aliases from python quickfort
     trackN={label='Track (N)',
