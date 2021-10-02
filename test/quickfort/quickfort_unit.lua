@@ -21,7 +21,7 @@ config.wrapper = test_wrapper
 function test.apply_blueprint_minimal()
     local data = {[0]={[0]={[0]='d'}}}
     local expected_ctx = quickfort_command.init_ctx('run', 'API',
-                                                    {x=0, y=0, z=0}, {}, nil)
+                            {x=0, y=0, z=0}, {}, nil, df.item_quality.Masterful)
     q.apply_blueprint{mode='dig', data=data}
 
     expect.eq(1, mock_do_command_raw.call_count)
@@ -39,9 +39,8 @@ function test.apply_blueprint_all_ctx_params()
     local data = {[2]={[20]={[8]='somekeys'}},
                   [3]={[9]={[20]='somealias'}}}
     local expected_ctx = quickfort_command.init_ctx('undo', 'API',
-                                                    {x=10, y=10, z=1},
-                                                    {somealias='ab{analias}'},
-                                                    true)
+                                {x=10, y=10, z=1}, {somealias='ab{analias}'},
+                                true, df.item_quality.Masterful)
     q.apply_blueprint{mode='query', data=data, command='undo',
                       pos={x=2, y=1, z=-1}, aliases={somealias='ab{analias}'},
                       dry_run=true, verbose=true}
