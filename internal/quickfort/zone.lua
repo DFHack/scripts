@@ -80,12 +80,15 @@ local hospital_max_values = {
     cloth=1000000,
     splints=100,
     crutches=100,
-    powder=15000,
+    plaster=15000,
     buckets=100,
     soap=15000
 }
 
 local function set_hospital_supplies(key, val, flags)
+    if not hospital_max_values[key] then
+        qerror(string.format('invalid hospital setting: "%s"', key))
+    end
     local val_num = tonumber(val)
     if not val_num or val_num < 0 or val_num > hospital_max_values[key] then
         qerror(string.format(
@@ -97,16 +100,13 @@ local function set_hospital_supplies(key, val, flags)
 end
 
 -- full format (all params optional):
--- {hospital thread=num cloth=num splints=num crutches=num powder=num buckets=num soap=num}
+-- {hospital thread=num cloth=num splints=num crutches=num plaster=num buckets=num soap=num}
 local function parse_hospital_subconfig(keys, flags)
     local etoken, params = quickfort_parse.parse_extended_token(keys)
     if etoken:lower() ~= 'hospital' then
         qerror(string.format('invalid hospital settings: "%s"', keys))
     end
     for k,v in pairs(params) do
-        if not hospital_max_values[k] then
-            qerror(string.format('invalid hospital setting: "%s"', k))
-        end
         set_hospital_supplies(k, v, flags)
     end
 end
@@ -147,7 +147,7 @@ local function custom_zone(_, keys)
     local zone_data = {zone_flags={}}
     -- subconfig sequences are separated by '^' characters
     for zone_config in keys:gmatch('[^^]+') do
-        parse_zone_config(keys, labels, zone_data)
+        parse_zone_config(zone_config, labels, zone_data)
     end
     zone_data.label = table.concat(labels, '+')
     utils.assign(zone_data, zone_template)
