@@ -34,7 +34,7 @@ function ResizingPanel:postUpdateLayout()
     local h = 0
     for _,subview in ipairs(self.subviews) do
         if subview.visible then
-            h = h + subview.frame.h
+            h = math.max(h, subview.frame.t + subview.frame.h)
         end
     end
     self.frame.h = h
@@ -236,17 +236,41 @@ function PhasesPanel:init()
         -- from the subviews
         widgets.Panel{frame={t=3,h=1}},
         ToggleHotkeyLabel{frame={t=4}, key='CUSTOM_D', label='dig',
-                          option_idx=self:get_default('dig'), label_width=5},
-        ToggleHotkeyLabel{frame={t=5}, key='CUSTOM_B', label='build',
+                          option_idx=self:get_default('dig'), label_width=6},
+        ToggleHotkeyLabel{frame={t=4, l=15}, key='CUSTOM_SHIFT_D',
+                          label='track', option_idx=self:get_default('track')},
+        ToggleHotkeyLabel{frame={t=5}, key='CUSTOM_SHIFT_B', label='const',
+                          option_idx=self:get_default('construct'),
+                          label_width=6},
+        ToggleHotkeyLabel{frame={t=5, l=15}, key='CUSTOM_B', label='build',
                           option_idx=self:get_default('build')},
         ToggleHotkeyLabel{frame={t=6}, key='CUSTOM_P', label='place',
-                          option_idx=self:get_default('place')},
-        ToggleHotkeyLabel{frame={t=7}, key='CUSTOM_Q', label='query',
-                          option_idx=self:get_default('query')},
+                          option_idx=self:get_default('place'), label_width=6},
+        ToggleHotkeyLabel{frame={t=6, l=15}, key='CUSTOM_Z', label='zone',
+                          option_idx=self:get_default('zone'), label_width=5},
+        ToggleHotkeyLabel{frame={t=7}, key='CUSTOM_SHIFT_Q', label='config',
+                          option_idx=self:get_default('config')},
+        ToggleHotkeyLabel{frame={t=7, l=15}, key='CUSTOM_Q', label='rooms',
+                          option_idx=self:get_default('rooms')},
+        CycleHotkeyLabel{
+            frame={t=8},
+            key='CUSTOM_SHIFT_A',
+            label='toggle all',
+            options={'', ''},
+            on_change=self:callback('toggle_all'),
+        },
     }
 end
 function PhasesPanel:get_default(label)
     return (self.phases.auto_phase or self.phases[label]) and 1 or 2
+end
+function PhasesPanel:toggle_all()
+    local target_state = self.subviews[#self.subviews].option_idx
+    for _,subview in ipairs(self.subviews) do
+        if subview.options and not subview.view_id then
+            subview.option_idx = target_state
+        end
+    end
 end
 function PhasesPanel:preUpdateLayout()
     local is_custom = self.subviews.phases.option_idx > 1

@@ -460,7 +460,7 @@ function test.phase_preset()
     expect.eq('Custom', phases_view:get_current_option_value())
 
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
-        if sv.label and sv.label ~= 'phases' then
+        if sv.label and sv.label ~= 'phases' and sv.label ~= 'toggle all' then
             expect.true_(sv.visible)
             -- only build should be on; everything else should be off
             expect.eq(sv.label == 'build' and 'On' or 'Off',
