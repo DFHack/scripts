@@ -23,6 +23,8 @@ that repo.
 - `quickfort`: allow tracks to be built on hard, natural rock ramps
 - `quickfort`: allow dig priority to be properly set for track designations
 - `quickfort`: fix incorrect directions for tracks that extend south or east from a track segment pair specified with expansion syntax (e.g. T(4x4))
+- `quickfort`: fix parsing of multi-part extended zone configs (e.g. when you set custom supply limits for hospital zones AND set custom flags for a pond)
+- `quickfort`: fix error when attempting to set a custom limit for plaster powder in a hospital zone
 
 ## Misc Improvements
 - `gui/blueprint`: support the new ``--splitby`` and ``--format`` options for `blueprint`
