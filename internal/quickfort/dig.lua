@@ -722,7 +722,9 @@ function do_run(zlevel, grid, ctx)
     values = values_run
     ensure_ctx_stats(ctx, '')
     do_run_impl(zlevel, grid, ctx)
-    if not ctx.dry_run then dfhack.job.checkDesignationsNow() end
+    if not ctx.dry_run then
+        dfhack.job.checkDesignationsNow()
+    end
 end
 
 function do_orders()

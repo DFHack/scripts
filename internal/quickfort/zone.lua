@@ -238,7 +238,6 @@ function do_run(zlevel, grid, ctx)
             stats.zone_designated.value = stats.zone_designated.value + 1
         end
     end
-    if not dry_run then dfhack.job.checkBuildingsNow() end
 end
 
 function do_orders()

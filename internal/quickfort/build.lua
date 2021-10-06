@@ -795,8 +795,9 @@ function do_run(zlevel, grid, ctx)
             stats.build_designated.value = stats.build_designated.value + 1
         end
     end
-    buildingplan.scheduleCycle()
-    dfhack.job.checkBuildingsNow()
+    if not ctx.dry_run then
+        buildingplan.scheduleCycle()
+    end
 end
 
 function do_orders(zlevel, grid, ctx)
