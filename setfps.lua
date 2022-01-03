@@ -25,3 +25,4 @@ if not capnum or capnum < 1 then
 end
 
 df.global.enabler.fps = capnum
+df.global.enabler.fps_per_gfps = df.global.enabler.fps / df.global.enabler.gfps
