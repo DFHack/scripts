@@ -460,6 +460,14 @@ function test.process_level()
     expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, -1},
                     {parse.process_level(reader, 1, start)})
 
+    reader:reset({{'d'},{'#<1'}})
+    expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, 1},
+                    {parse.process_level(reader, 1, start)})
+
+    reader:reset({{'d'},{'#> 8'}})
+    expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, -8},
+                    {parse.process_level(reader, 1, start)})
+
     reader:reset({{'d'},{'#dig'}})
     expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1},
                     {parse.process_level(reader, 1, start)})

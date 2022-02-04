@@ -311,15 +311,19 @@ local function process_level(reader, start_line_num, start_coord)
         for i, v in ipairs(row_tokens) do
             v = trim_token(v)
             if i == 1 then
-                if v == '#<' then return grid, y-start_coord.y, 1 end
-                if v == '#>' then return grid, y-start_coord.y, -1 end
+                local _, _, zchar, zcount = v:find('^#([<>])%s*(%d*)?$')
+                if zchar then
+                    if not zcount then zcount = 1 end
+                    local zdir = (zchar == '<') and 1 or -1
+                    return grid, y-start_coord.y, zcount * zdir
+                end
                 if parse_modeline(v, reader.filepath) then
                     return grid, y-start_coord.y
                 end
             end
             if v:match('^#$') then break end
             if not v:match('^[`~ ]*$') and not v:match('^%s*#') then
-                -- cell has actual content, not just comments or chalk line chars
+                -- cell has actual content, not just comments or chalkline chars
                 if not grid[y] then grid[y] = {} end
                 local x = start_coord.x + i - 1
                 local line_num = start_line_num + y - start_coord.y
