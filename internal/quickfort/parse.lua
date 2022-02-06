@@ -311,11 +311,11 @@ local function process_level(reader, start_line_num, start_coord)
         for i, v in ipairs(row_tokens) do
             v = trim_token(v)
             if i == 1 then
-                local _, _, zchar, zcount = v:find('^#([<>])%s*(%d*)?$')
+                local _, _, zchar, zcount = v:find('^#([<>])%s*(%d*)')
                 if zchar then
-                    if not zcount then zcount = 1 end
+                    zcount = tonumber(zcount) or 1
                     local zdir = (zchar == '<') and 1 or -1
-                    return grid, y-start_coord.y, zcount * zdir
+                    return grid, y-start_coord.y, zcount*zdir
                 end
                 if parse_modeline(v, reader.filepath) then
                     return grid, y-start_coord.y
