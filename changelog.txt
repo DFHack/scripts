@@ -33,6 +33,7 @@ that repo.
 - `quickfort`: add ``quickfort.apply_blueprint()`` API function that can be called directly by other scripts
 - `quickfort`: by default, don't designate tiles for digging that have masterwork engravings on them. quality level to preserve is configurable with the new ``--preserve-engravings`` param
 - `quickfort`: implement single-tile track aliases so engraved tracks can be specified tile-by-tile just like constructed tracks
+- `quickfort`: allow blueprints to jump up or down multiple z-levels with a single command (e.g. ``#>5`` goes down 5 levels)
 
 # 0.47.05-r3
 
