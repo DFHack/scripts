@@ -41,18 +41,18 @@ Usage:
     blueprints, respectively. The list can be filtered by a specified mode (e.g.
     "-m build") and/or strings to search for in a path, filename, mode, or
     comment. The id numbers in the list may not be contiguous if there are
-    hidden or filtered  blueprints that are not being shown.
+    hidden or filtered blueprints that are not being shown.
 **quickfort gui [-l|-\-library] [-h|-\-hidden] [search string]**
     Starts the quickfort dialog, where you can run blueprints from an
     interactive list. The optional arguments have the same meanings as they do
-    in the list command, and can be used to preset the gui dialog state.
+    in the ``list`` command, and can be used to preset the gui dialog state.
 **quickfort <command>[,<command>...] <list_num>[,<list_num>...] [<options>]**
-    Applies the blueprint with the number from the list command.
+    Applies the blueprint(s) with the number(s) from the ``list`` command.
 **quickfort <command>[,<command>...] <filename> [-n|-\-name <name>[,<name>...]] [<options>]**
     Applies a blueprint in the specified file. The optional ``name`` parameter
     can select a specific blueprint from a file that contains multiple
     blueprints with the format "sheetname/label", or just "/label" for .csv
-    files. The label is defined in the blueprint modeline, or, if not define,
+    files. The label is defined in the blueprint modeline, or, if not defined,
     defaults to its order in the sheet or file (e.g. "/2"). If the ``-n``
     parameter is not specified, the first blueprint in the first sheet is used.
 
@@ -60,7 +60,7 @@ Usage:
 
 :run:     Applies the blueprint at your current in-game cursor position.
 :orders:  Uses the manager interface to queue up orders to manufacture items for
-          the specified build-mode blueprint.
+          the specified blueprint(s).
 :undo:    Applies the inverse of the specified blueprint. Dig tiles are
           undesignated, buildings are canceled or removed (depending on their
           construction status), and stockpiles/zones are removed. There is no
@@ -70,9 +70,9 @@ Usage:
 **<options>** can be zero or more of:
 
 ``-c``, ``--cursor <x>,<y>,<z>``
-    Use the specified map coordinates instead of the current cursor position for
-    the blueprint cursor start position. If this option is specified, then an
-    active game map cursor is not necessary.
+    Use the specified map coordinates instead of the current map cursor for the
+    the blueprint start position. If this option is specified, then an active
+    game map cursor is not necessary.
 ``-d``, ``--dry-run``
     Go through all the motions and print statistics on what would be done, but
     don't actually change any game state.
@@ -86,6 +86,11 @@ Usage:
     specified, ``Masterful`` engravings are preserved by default.
 ``-q``, ``--quiet``
     Suppress non-error console output.
+``-r``, ``--repeat <direction>[,]<num levels>``
+    Repeats the specified blueprint(s) up or down the requested number of
+    z-levels. Direction can be ``up`` or ``down``, and can be abbreviated with
+    ``<`` or ``>``. For example, the following options are equivalent:
+    ``--repeat down,5``, ``-rdown5``, and ``-r>5``.
 ``-v``, ``--verbose``
     Output extra debugging information. This is especially useful if the
     blueprint isn't being applied like you expect.
@@ -96,7 +101,7 @@ Example commands::
     quickfort list -l dreamfort help
     quickfort run library/dreamfort.csv
     quickfort run,orders library/dreamfort.csv -n /industry2
-    quickfort run 10 -v
+    quickfort run 10 -dv
 
 Configuration:
 
@@ -168,7 +173,7 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
 :``preserve_engravings``: Don't designate tiles for digging if they have an
     engraving with at least the specified quality. Value is a df.item_quality
     enum name or value, or "None" (or, equivalently, -1) to indicate that no
-    engravings should be preserved.
+    engravings should be preserved. Defaults to ``df.item_quality.Masterful``.
 :``dry_run``: Just calculate statistics, such as how many tiles are outside the
     boundaries of the map; don't actually apply the blueprint. Defaults to
     false.
@@ -230,7 +235,7 @@ quickfort gui [-l|--library] [-h|--hidden] [search string]
     interactive list. The optional arguments have the same meanings as they do
     in the list command, and can be used to preset the gui dialog state.
 quickfort <command>[,<command>...] <list_num>[,<list_num>...] [<options>]
-    Applies the blueprint with the number from the list command.
+    Applies the blueprint(s) with the number(s) from the list command.
 quickfort <command>[,<command>...] <filename> [-n|--name <name>[,<name>...]] [<options>]
     Applies a blueprint in the specified file. The optional name parameter can
     select a specific blueprint from a file that contains multiple blueprints
@@ -241,7 +246,7 @@ quickfort <command>[,<command>...] <filename> [-n|--name <name>[,<name>...]] [<o
 
 run     Applies the blueprint at your current in-game cursor position.
 orders  Uses the manager interface to queue up orders to manufacture items for
-        the specified build-mode blueprint.
+        the specified blueprint.
 undo    Applies the inverse of the specified blueprint. Dig tiles are
         undesignated, buildings are canceled or removed (depending on their
         construction status), and stockpiles/zones are removed. There is no
@@ -251,9 +256,9 @@ undo    Applies the inverse of the specified blueprint. Dig tiles are
 <options> can be zero or more of:
 
 -c, --cursor <x>,<y>,<z>
-    Use the specified map coordinates instead of the current cursor position for
-    the blueprint cursor start position. If this option is specified, then an
-    active game map cursor is not necessary.
+    Use the specified map coordinates instead of the current map cursor for the
+    blueprint start position. If this option is specified, then an active game
+    map cursor is not necessary.
 -d, --dry-run
     Go through all the motions and print statistics on what would be done, but
     don't actually change any game state.
@@ -267,6 +272,11 @@ undo    Applies the inverse of the specified blueprint. Dig tiles are
     preserved by default.
 -q, --quiet
     Suppress non-error console output.
+-r, --repeat <direction>[,]<num levels>
+    Repeats the specified blueprint(s) up or down the requested number of
+    z-levels. Direction can be "up" or "down", and can be abbreviated with "<"
+    or ">". For example, the following options are equivalent:
+    "--repeat down,5", "-rdown5", and "-r>5".
 -v, --verbose
     Output extra debugging information. This is especially useful if the
     blueprint isn't being applied like you expect.

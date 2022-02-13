@@ -9,14 +9,20 @@ local quickfort_parse = reqscript('internal/quickfort/parse')
 
 -- mock external dependencies (state initialized in test_wrapper below)
 local mock_cursor
-local function mock_guidm_getCursorPos() return mock_cursor end
+local function mock_guidm_getCursorPos() return copyall(mock_cursor) end
 
 local mock_dig_do_run, mock_dig_do_orders, mock_dig_do_undo
 local mock_orders_create_orders
 
 local mock_section_data
-local function mock_parse_process_section(filepath, _, label)
-    return mock_section_data[filepath][label]
+local function mock_parse_process_section(filepath, _, label, cursor)
+    local section_data_list = {}
+    for _,section_data in ipairs(mock_section_data[filepath][label]) do
+        local data = copyall(section_data)
+        data.zlevel = cursor.z
+        table.insert(section_data_list, data)
+    end
+    return section_data_list
 end
 
 local mock_aliases, mock_bp_data
@@ -38,15 +44,15 @@ end
 
 local function test_wrapper(test_fn)
     -- default state (can be overridden by individual tests)
-    mock_cursor = {x=1, y=2, z=3}
+    mock_cursor = {x=1, y=2, z=100}
     mock_dig_do_run, mock_dig_do_orders, mock_dig_do_undo =
             mock.func(), mock.func(), mock.func()
     mock_orders_create_orders = mock.func()
     mock_section_data = {
         ['bp/a.csv']={somelabel={{modeline={mode='dig'}, zlevel=100, grid={}}}},
-        ['bp/b.csv']={alabel={{modeline={mode='dig'}, zlevel=101, grid={}}}},
+        ['bp/b.csv']={alabel={{modeline={mode='dig'}, zlevel=100, grid={}}}},
         ['bp/c.csv']={lab={{modeline={mode='dig', message='ima message'},
-                            zlevel=102, grid={}}}}}
+                            zlevel=100, grid={}}}}}
     mock_aliases = {['a.csv']={imanalias='aliaskeys'}}
     mock_bp_data = {[9]={bp_name='a.csv', sec_name='/somelabel', mode='dig'},
                     [10]={bp_name='b.csv', sec_name='/alabel', mode='dig'},
@@ -120,6 +126,20 @@ function test.do_command_preserve_engravings()
     expect.eq(1, mock_dig_do_run.call_count)
     expect.eq(df.item_quality.Exceptional,
               get_ctx(mock_dig_do_run, 1).preserve_engravings)
+end
+
+function test.do_command_repeat_down()
+    c.do_command({commands={'run'}, '-q', '-r>5', '10'})
+    expect.eq(5, mock_dig_do_run.call_count)
+    expect.eq(100, get_ctx(mock_dig_do_run, 1).zmax)
+    expect.eq(96, get_ctx(mock_dig_do_run, 1).zmin)
+end
+
+function test.do_command_repeat_up()
+    c.do_command({commands={'run'}, '-q', '-r<5', '10'})
+    expect.eq(5, mock_dig_do_run.call_count)
+    expect.eq(104, get_ctx(mock_dig_do_run, 1).zmax)
+    expect.eq(100, get_ctx(mock_dig_do_run, 1).zmin)
 end
 
 function test.do_command_multi_command_multi_list_num()

@@ -11,6 +11,7 @@ local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_list = reqscript('internal/quickfort/list')
 local quickfort_orders = reqscript('internal/quickfort/orders')
 local quickfort_parse = reqscript('internal/quickfort/parse')
+local utils = require('utils')
 
 local mode_modules = {}
 for mode, _ in pairs(quickfort_parse.valid_modes) do
@@ -34,6 +35,7 @@ function init_ctx(command, blueprint_name, cursor, aliases, dry_run,
         aliases=aliases,
         dry_run=dry_run,
         preserve_engravings=preserve_engravings,
+        zmin=30000, zmax=0,
         stats={out_of_bounds={label='Tiles outside map boundary', value=0},
                invalid_keys={label='Invalid key sequences', value=0}},
         messages={},
@@ -51,21 +53,47 @@ function do_command_raw(mode, zlevel, grid, ctx)
     end
 
     ctx.cursor.z = zlevel
+    ctx.zmin, ctx.zmax = math.min(ctx.zmin, zlevel), math.max(ctx.zmax, zlevel)
     mode_modules[mode][command_switch[ctx.command]](zlevel, grid, ctx)
 end
 
-function do_command_section(ctx, section_name)
+local function do_apply_modifiers(filepath, sheet_name, label, ctx, modifiers)
+    local first_modeline = nil
+    local saved_zmin, saved_zmax = ctx.zmin, ctx.zmax
+    if modifiers.repeat_count > 1 then
+        -- scope min and max tracking to the closest repeat modifier so we can
+        -- figure out which level to jump to when repeating up or down
+        ctx.zmin, ctx.zmax = 30000, 0
+    end
+    for i=1,modifiers.repeat_count do
+        local section_data_list = quickfort_parse.process_section(
+                filepath, sheet_name, label, ctx.cursor)
+        for _, section_data in ipairs(section_data_list) do
+            if not first_modeline then first_modeline = section_data.modeline end
+            do_command_raw(section_data.modeline.mode, section_data.zlevel,
+                        section_data.grid, ctx)
+        end
+        if modifiers.repeat_zoff > 0 then
+            ctx.cursor.z = ctx.zmax + modifiers.repeat_zoff
+        else
+            ctx.cursor.z = ctx.zmin + modifiers.repeat_zoff
+        end
+    end
+    if modifiers.repeat_count > 1 then
+        ctx.zmin = math.min(ctx.zmin, saved_zmin)
+        ctx.zmax = math.max(ctx.zmax, saved_zmax)
+    end
+    return first_modeline
+end
+
+function do_command_section(ctx, section_name, modifiers)
+    modifiers = utils.assign(quickfort_parse.get_modifiers_defaults(),
+                             modifiers or {})
     local sheet_name, label = quickfort_parse.parse_section_name(section_name)
     ctx.sheet_name = sheet_name
     local filepath = quickfort_list.get_blueprint_filepath(ctx.blueprint_name)
-    local section_data_list = quickfort_parse.process_section(
-            filepath, sheet_name, label, ctx.cursor)
-    local first_modeline = nil
-    for _, section_data in ipairs(section_data_list) do
-        if not first_modeline then first_modeline = section_data.modeline end
-        do_command_raw(section_data.modeline.mode, section_data.zlevel,
-                       section_data.grid, ctx)
-    end
+    local first_modeline =
+            do_apply_modifiers(filepath, sheet_name, label, ctx, modifiers)
     if first_modeline and first_modeline.message then
         table.insert(ctx.messages, first_modeline.message)
     end
@@ -86,7 +114,8 @@ function finish_command(ctx, section_name, quiet)
 end
 
 local function do_one_command(command, cursor, blueprint_name, section_name,
-                              mode, quiet, dry_run, preserve_engravings)
+                              mode, quiet, dry_run, preserve_engravings,
+                              modifiers)
     if not cursor then
         if command == 'orders' or mode == 'notes' then
             cursor = {x=0, y=0, z=0}
@@ -99,7 +128,7 @@ local function do_one_command(command, cursor, blueprint_name, section_name,
     local aliases = quickfort_list.get_aliases(blueprint_name)
     local ctx = init_ctx(command, blueprint_name, cursor, aliases, dry_run,
                          preserve_engravings)
-    do_command_section(ctx, section_name)
+    do_command_section(ctx, section_name, modifiers)
     finish_command(ctx, section_name, quiet)
     if command == 'run' then
         for _,message in ipairs(ctx.messages) do
@@ -109,24 +138,24 @@ local function do_one_command(command, cursor, blueprint_name, section_name,
 end
 
 local function do_bp_name(commands, cursor, bp_name, sec_names, quiet, dry_run,
-                          preserve_engravings)
+                          preserve_engravings, modifiers)
     for _,sec_name in ipairs(sec_names) do
         local mode = quickfort_list.get_blueprint_mode(bp_name, sec_name)
         for _,command in ipairs(commands) do
             do_one_command(command, cursor, bp_name, sec_name, mode,
-                           quiet, dry_run, preserve_engravings)
+                           quiet, dry_run, preserve_engravings, modifiers)
         end
     end
 end
 
 local function do_list_num(commands, cursor, list_nums, quiet, dry_run,
-                           preserve_engravings)
+                           preserve_engravings, modifiers)
     for _,list_num in ipairs(list_nums) do
         local bp_name, sec_name, mode =
                 quickfort_list.get_blueprint_by_number(list_num)
         for _,command in ipairs(commands) do
             do_one_command(command, cursor, bp_name, sec_name, mode,
-                           quiet, dry_run, preserve_engravings)
+                           quiet, dry_run, preserve_engravings, modifiers)
         end
     end
 end
@@ -139,7 +168,7 @@ function do_command(args)
     end
     local cursor = guidm.getCursorPos()
     local quiet, verbose, dry_run, section_names = false, false, false, {''}
-    local preserve_engravings = df.item_quality.Masterful
+    local preserve_engravings, modifiers = df.item_quality.Masterful, {}
     local other_args = argparse.processArgsGetopt(args, {
             {'c', 'cursor', hasArg=true,
              handler=function(optarg) cursor = argparse.coords(optarg) end},
@@ -152,6 +181,9 @@ function do_command(args)
              handler=function(optarg)
                 section_names = argparse.stringList(optarg) end},
             {'q', 'quiet', handler=function() quiet = true end},
+            {'r', 'repeat', hasArg=true,
+             handler=function(optarg)
+                quickfort_parse.parse_repeat_params(optarg, modifiers) end},
             {'v', 'verbose', handler=function() verbose = true end},
         })
     local blueprint_name = other_args[1]
@@ -171,10 +203,10 @@ function do_command(args)
             local ok, list_nums = pcall(argparse.numberList, blueprint_name)
             if not ok then
                 do_bp_name(args.commands, cursor, blueprint_name, section_names,
-                           quiet, dry_run, preserve_engravings)
+                           quiet, dry_run, preserve_engravings, modifiers)
             else
                 do_list_num(args.commands, cursor, list_nums, quiet, dry_run,
-                            preserve_engravings)
+                            preserve_engravings, modifiers)
             end
         end)
 end

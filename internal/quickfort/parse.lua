@@ -62,15 +62,19 @@ function get_ordered_grid_cells(grid)
 end
 
 -- sheet names can contain (or even start with or even be completely composed
--- of) spaces
+-- of) spaces. labels, however, cannot contain spaces.
+-- if there are characters in the input that follow the matched sheet name and
+-- label, they are trimmed and returned in the third return value.
 function parse_section_name(section_name)
-    local sheet_name, label = nil, nil
-    if section_name then
-        _, _, sheet_name, label = section_name:find('^([^/]*)/?(%S*)')
+    local sheet_name, label, remaining = nil, nil, nil
+    if section_name and #section_name > 0 then
+        local endpos
+        _, endpos, sheet_name, label = section_name:find('^([^/]*)/?(%S*)')
         if #sheet_name == 0 then sheet_name = nil end
         if #label == 0 then label = nil end
+        remaining = section_name:sub(endpos+1):trim()
     end
-    return sheet_name, label
+    return sheet_name, label, remaining
 end
 
 function parse_preserve_engravings(input, want_error_traceback)
@@ -171,9 +175,9 @@ end
 
 -- returns the character position after the marker and the trimmed marker body
 -- or nil if the specified marker is not found at the indicated start_pos
-local function get_marker_body(modeline, start_pos, marker_name)
+local function get_marker_body(text, start_pos, marker_name)
     local _, marker_end, marker_body = string.find(
-            modeline, '^%s*'..marker_name..'%s*(%b())', start_pos)
+            text, '^%s*'..marker_name..'%s*(%b())%s*', start_pos)
     if not marker_body then return nil end
     local _, _, inner_body = string.find(marker_body, '^%(%s*(.-)%s*%)$')
     return marker_end + 1, inner_body
@@ -230,30 +234,33 @@ local function parse_message(modeline, start_pos, filename, marker_values)
     return true, next_start_pos
 end
 
-local marker_fns = {parse_label, parse_start, parse_hidden, parse_message}
-
--- parses all markers in any order
--- returns table of found values:
--- {label, startx, starty, start_comment, hidden, message}
-local function parse_markers(modeline, start_pos, filename)
+-- uses given marker_fns to parse markers in the given text in any order
+-- returns table of marker values and next unmatched text position
+local function parse_markers(text, start_pos, filename, marker_fns)
+    local marker_data = {}
     local remaining_marker_fns = copyall(marker_fns)
-    local marker_values = {}
     while #remaining_marker_fns > 0 do
         local matched = false
         for i,marker_fn in ipairs(remaining_marker_fns) do
-            matched, start_pos = marker_fn(modeline, start_pos, filename,
-                                           marker_values)
+            matched, start_pos = marker_fn(text, start_pos, filename,
+                                           marker_data)
             if matched then
                 table.remove(remaining_marker_fns, i)
                 break
             end
         end
-        -- the rest of the modeline is a comment (or is empty or has duplicate
-        -- markers that will be treated as a comment)
+        -- no more matched text, start_pos contains the next text pos
         if not matched then break end
     end
-    return marker_values, start_pos
+    return marker_data, start_pos
 end
+
+local modeline_marker_fns = {
+    parse_label,
+    parse_start,
+    parse_hidden,
+    parse_message,
+}
 
 --[[
 parses a modeline
@@ -269,12 +276,54 @@ local function parse_modeline(modeline, filename, modeline_id)
     local _, mode_end, mode = string.find(modeline, '^#([%l]+)')
     if not mode or not valid_modes[mode] then return nil end
     local modeline_data, comment_start =
-            parse_markers(modeline, mode_end+1, filename)
+            parse_markers(modeline, mode_end+1, filename, modeline_marker_fns)
     local _, _, comment = string.find(modeline, '^%s*(.-)%s*$', comment_start)
     modeline_data.mode = mode
     modeline_data.label = modeline_data.label or tostring(modeline_id)
     modeline_data.comment = #comment > 0 and comment or nil
     return modeline_data
+end
+
+-- meta markers
+
+function parse_repeat_params(text, modifiers)
+    local _, _, direction, count = text:find('^%s*([%a<>]*)%s*,?%s*(%d*)')
+    direction = direction:lower()
+    local zoff = 0
+    if direction == 'up' or direction == '<' then zoff = 1
+    elseif direction == 'down' or direction == '>' then zoff = -1
+    else qerror('unknown repeat direction: '..direction) end
+    modifiers.repeat_zoff, modifiers.repeat_count = zoff, tonumber(count) or 1
+end
+
+local function parse_repeat(text, start_pos, _, modifiers)
+    local next_start_pos, params = get_marker_body(text, start_pos, 'repeat')
+    if not params then return false, start_pos end
+    parse_repeat_params(params, modifiers)
+    return true, next_start_pos
+end
+
+local meta_marker_fns = {
+    parse_repeat,
+}
+
+local default_modifiers = {
+        repeat_count=1,
+        repeat_zoff=0,
+    }
+function get_modifiers_defaults()
+    return copyall(default_modifiers)
+end
+
+function get_meta_modifiers(text, filename)
+    local modifiers = get_modifiers_defaults()
+    local marker_data, extra_start =
+            parse_markers(text, 1, filename, meta_marker_fns)
+    if extra_start ~= #text+1 then
+        dfhack.printerr(('extra unparsed text at the end of "%s": "%s"'):
+                        format(text, text:sub(extra_start)))
+    end
+    return utils.assign(modifiers, marker_data)
 end
 
 local function get_col_name(col)
@@ -311,7 +360,7 @@ local function process_level(reader, start_line_num, start_coord)
         for i, v in ipairs(row_tokens) do
             v = trim_token(v)
             if i == 1 then
-                local _, _, zchar, zcount = v:find('^#([<>])%s*(%d*)')
+                local _, _, zchar, zcount = v:find('^#([<>])%s*,?%s*(%d*)')
                 if zchar then
                     zcount = tonumber(zcount) or 1
                     local zdir = (zchar == '<') and 1 or -1
@@ -620,8 +669,13 @@ if dfhack.internal.IN_TEST then
         parse_start=parse_start,
         parse_hidden=parse_hidden,
         parse_message=parse_message,
+        modeline_marker_fns=modeline_marker_fns,
         parse_markers=parse_markers,
         parse_modeline=parse_modeline,
+        parse_repeat_params=parse_repeat_params,
+        parse_repeat=parse_repeat,
+        get_modifiers_defaults=get_modifiers_defaults,
+        get_meta_modifiers=get_meta_modifiers,
         get_col_name=get_col_name,
         make_cell_label=make_cell_label,
         trim_token=trim_token,

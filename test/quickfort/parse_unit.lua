@@ -54,18 +54,20 @@ function test.get_ordered_grid_cells()
 end
 
 function test.parse_section_name()
-    expect.table_eq({nil, nil}, {parse.parse_section_name('')})
-    expect.table_eq({' ', nil}, {parse.parse_section_name(' ')})
-    expect.table_eq({' ', nil}, {parse.parse_section_name(' /')})
-    expect.table_eq({nil, nil}, {parse.parse_section_name('/ ')})
-    expect.table_eq({' ', nil}, {parse.parse_section_name(' / ')})
+    expect.table_eq({nil, nil, nil}, {parse.parse_section_name('')})
+    expect.table_eq({' ', nil, ''},  {parse.parse_section_name(' ')})
+    expect.table_eq({' ', nil, ''},  {parse.parse_section_name(' /')})
+    expect.table_eq({nil, nil, ''},  {parse.parse_section_name('/ ')})
+    expect.table_eq({' ', nil, ''},  {parse.parse_section_name(' / ')})
 
-    expect.table_eq({'sheet', 'label'},
+    expect.table_eq({'sheet', 'label', ''},
                     {parse.parse_section_name('sheet/label ')})
-    expect.table_eq({' sheet ', 'label'},
+    expect.table_eq({' sheet ', 'label', ''},
                     {parse.parse_section_name(' sheet /label ')})
-    expect.table_eq({' sheet ', nil},
+    expect.table_eq({' sheet ', nil, 'badlabel'},
                     {parse.parse_section_name(' sheet / badlabel')})
+    expect.table_eq({'sheet', 'label', 'repeat(down  4)'},
+                    {parse.parse_section_name('sheet/label repeat(down  4) ')})
 end
 
 function test.parse_preserve_engravings()
@@ -326,31 +328,36 @@ function test.parse_hidden()
             function() parse.parse_hidden('#dig hidden()', 5, fname, nil) end)
 end
 
-function test.parse_markers()
+function test.parse_modeline_markers()
     local f = 'fname.csv'
 
-    expect.table_eq({{}, 5}, {parse.parse_markers('#dig', 5, f)})
-    expect.table_eq({{}, 5}, {parse.parse_markers('#dig comment', 5, f)})
-    expect.table_eq({{}, 5}, {parse.parse_markers('#dig nomarker()', 5, f)})
+    expect.table_eq({{}, 5}, {parse.parse_markers('#dig', 5, f,
+                                                  parse.modeline_marker_fns)})
+    expect.table_eq({{}, 5}, {parse.parse_markers('#dig comment', 5, f,
+                                                  parse.modeline_marker_fns)})
+    expect.table_eq({{}, 5}, {parse.parse_markers('#dig nomarker()', 5, f,
+                                                  parse.modeline_marker_fns)})
 
     expect.table_eq({{hidden=true}, 14},
-                    {parse.parse_markers('#dig hidden()', 5, f)})
+                    {parse.parse_markers('#dig hidden()', 5, f,
+                                         parse.modeline_marker_fns)})
     expect.table_eq({{hidden=true}, 14},
-                    {parse.parse_markers('#dig hidden()a', 5, f)})
+                    {parse.parse_markers('#dig hidden()a', 5, f,
+                                         parse.modeline_marker_fns)})
     expect.table_eq({{hidden=true}, 14},
                     {parse.parse_markers('#dig hidden()hidden()',
-                                         5, f)})
+                                         5, f, parse.modeline_marker_fns)})
     expect.table_eq({{hidden=true}, 14},
                     {parse.parse_markers('#dig hidden()hidden() message(a)',
-                                         5, f)})
-    expect.table_eq({{hidden=true, message='a'}, 24},
+                                         5, f, parse.modeline_marker_fns)})
+    expect.table_eq({{hidden=true, message='a'}, 25},
                     {parse.parse_markers('#dig hidden()message(a) hidden()',
-                                         5, f)})
+                                         5, f, parse.modeline_marker_fns)})
     expect.table_eq({{hidden=true, message='a', startx='1', starty='2',
-                      start_comment='startcom', label='imalabel'}, 58},
+                      start_comment='startcom', label='imalabel'}, 59},
                     {parse.parse_markers(
         '#dig hidden()message(a)start(1 2 startcom)label(imalabel) modecomment',
-        5, f)})
+        5, f, parse.modeline_marker_fns)})
 end
 
 function test.parse_modeline()
@@ -372,6 +379,75 @@ function test.parse_modeline()
                     parse.parse_modeline('#dig hidden()com ', f, 1))
     expect.table_eq({mode='dig', label='1', hidden=true, comment='c  o  m'},
                     parse.parse_modeline('#dig hidden()  c  o  m  ', f, 1))
+end
+
+function test.parse_repeat_params()
+    local modifiers = {}
+
+    expect.error_match(
+        'unknown repeat direction',
+        function() parse.parse_repeat_params('', modifiers) end)
+    expect.error_match(
+        'unknown repeat direction',
+        function() parse.parse_repeat_params('sideways 5', modifiers) end)
+
+    parse.parse_repeat_params('up 5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('up5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('up,5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('up, 5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('  up  ,  5  ', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('< 5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('<5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('<,5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('<, 5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+
+    parse.parse_repeat_params('down 50', modifiers)
+    expect.table_eq({repeat_zoff=-1, repeat_count=50}, modifiers)
+    parse.parse_repeat_params('>50', modifiers)
+    expect.table_eq({repeat_zoff=-1, repeat_count=50}, modifiers)
+
+    parse.parse_repeat_params('down', modifiers)
+    expect.table_eq({repeat_zoff=-1, repeat_count=1}, modifiers)
+    parse.parse_repeat_params('>, ', modifiers)
+    expect.table_eq({repeat_zoff=-1, repeat_count=1}, modifiers)
+end
+
+function test.parse_repeat()
+    local modifiers = {}
+
+    expect.table_eq({false, 4},
+                    {parse.parse_repeat('/l notrepeat()', 4, nil, modifiers)})
+    expect.table_eq({true, 14},
+                    {parse.parse_repeat('/l repeat(>5)', 4, nil, modifiers)})
+end
+
+function test.get_modifiers_defaults()
+    local modifiers = parse.get_modifiers_defaults()
+    modifiers.repeat_count = 10
+    expect.eq(1, parse.get_modifiers_defaults().repeat_count)
+end
+
+function test.get_meta_modifiers()
+    local fname = 'f'
+
+    expect.table_eq({repeat_count=1, repeat_zoff=0},
+                    parse.get_meta_modifiers('', fname))
+    expect.table_eq({repeat_count=5, repeat_zoff=1},
+                    parse.get_meta_modifiers('  repeat  ( up, 5 ) ', fname))
+
+    expect.printerr_match('extra unparsed text',
+            function() parse.get_meta_modifiers('garbage', fname) end)
+    expect.printerr_match('extra unparsed text',
+            function() parse.get_meta_modifiers('repeat(>5)garbage', fname) end)
 end
 
 function test.get_col_name()
