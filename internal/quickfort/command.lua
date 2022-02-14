@@ -67,7 +67,7 @@ local function do_apply_modifiers(filepath, sheet_name, label, ctx, modifiers)
     end
     for i=1,modifiers.repeat_count do
         local section_data_list = quickfort_parse.process_section(
-                filepath, sheet_name, label, ctx.cursor)
+                filepath, sheet_name, label, ctx.cursor, modifiers.transform_fn)
         for _, section_data in ipairs(section_data_list) do
             if not first_modeline then first_modeline = section_data.modeline end
             do_command_raw(section_data.modeline.mode, section_data.zlevel,

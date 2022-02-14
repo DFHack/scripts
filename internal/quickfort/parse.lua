@@ -310,6 +310,7 @@ local meta_marker_fns = {
 local default_modifiers = {
         repeat_count=1,
         repeat_zoff=0,
+        transform_fn = function(pos) return pos end,
     }
 function get_modifiers_defaults()
     return copyall(default_modifiers)
@@ -351,7 +352,7 @@ end
 -- returns a grid representation of the current level, the number of rows
 -- read from the input, and the next z-level modifier, if any. See
 -- process_section() for grid format.
-local function process_level(reader, start_line_num, start_coord)
+local function process_level(reader, start_line_num, start_coord, transform_fn)
     local grid = {}
     local y = start_coord.y
     while true do
@@ -371,19 +372,21 @@ local function process_level(reader, start_line_num, start_coord)
                 end
             end
             if v:match('^#$') then break end
-            if not v:match('^[`~ ]*$') and not v:match('^%s*#') then
+            if not v:match('^[`~%s]*$') and not v:match('^%s*#') then
                 -- cell has actual content, not just comments or chalkline chars
-                if not grid[y] then grid[y] = {} end
                 local x = start_coord.x + i - 1
+                local pos_t = transform_fn(xy2pos(x, y), start_coord)
+                if not grid[pos_t.y] then grid[pos_t.y] = {} end
                 local line_num = start_line_num + y - start_coord.y
-                grid[y][x] = {cell=make_cell_label(i, line_num), text=v}
+                grid[pos_t.y][pos_t.x] = {cell=make_cell_label(i, line_num),
+                                          text=v}
             end
         end
         y = y + 1
     end
 end
 
-local function process_levels(reader, label, start_cursor_coord)
+local function process_levels(reader, label, start_cursor_coord, transform_fn)
     local section_data_list = {}
     -- scan down to the target label
     local cur_line_num, modeline_id = 1, 1
@@ -422,10 +425,12 @@ local function process_levels(reader, label, start_cursor_coord)
     local y = start_cursor_coord.y - (modeline.starty or 1) + 1
     local z = start_cursor_coord.z
     while true do
+        local start_pos = xyz2pos(x, y, z)
         local grid, num_section_rows, zmod =
-                process_level(reader, cur_line_num, xyz2pos(x, y, z))
+                process_level(reader, cur_line_num, start_pos, transform_fn)
+        local zt = transform_fn(start_pos, start_pos).z
         table.insert(section_data_list,
-                     {modeline=modeline, zlevel=z, grid=grid})
+                     {modeline=modeline, zlevel=zt, grid=grid})
         if zmod == nil then break end
         cur_line_num = cur_line_num + num_section_rows + 1
         z = z + zmod
@@ -532,12 +537,14 @@ Where the structure of modeline is defined as per parse_modeline and grid is a:
 Map keys are numbers, and the keyspace is sparse -- only cells that have content
 are non-nil.
 ]]
-function process_section(filepath, sheet_name, label, start_cursor_coord)
+function process_section(filepath, sheet_name, label, start_cursor_coord,
+                         transform_fn)
     local reader = new_reader(filepath, sheet_name)
     return dfhack.with_finalize(
         function() reader:cleanup() end,
         function()
-            return process_levels(reader, label, start_cursor_coord)
+            return process_levels(reader, label, start_cursor_coord,
+                                  transform_fn)
         end
     )
 end

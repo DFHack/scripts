@@ -91,6 +91,15 @@ Usage:
     z-levels. Direction can be ``up`` or ``down``, and can be abbreviated with
     ``<`` or ``>``. For example, the following options are equivalent:
     ``--repeat down,5``, ``-rdown5``, and ``-r>5``.
+``-s``, ``--shift <x>[,<y>[,<z>]]``
+    Shifts the blueprint by the specified offset before modifying the game map.
+    The values for ``<x>``, ``<y>``, and ``<z>`` can be negative. Positive z
+    values shift the blueprint up towards the sky, and negative z values shift
+    the blueprint towards the circus. If both ``--shift`` and ``--transform``
+    are specified, the shift is always applied last.
+``-t``, ``--transform <transformation>[,<transformation>...]``
+    Applies geometric transformations to the blueprint before modifying the game
+    map. See the Transformations section below for details.
 ``-v``, ``--verbose``
     Output extra debugging information. This is especially useful if the
     blueprint isn't being applied like you expect.
@@ -102,6 +111,21 @@ Example commands::
     quickfort run library/dreamfort.csv
     quickfort run,orders library/dreamfort.csv -n /industry2
     quickfort run 10 -dv
+
+Transformations:
+
+All transformations are anchored at the blueprint start cursor position. This is
+the upper left corner by default, but it can be modified if the blueprint has a
+`start() modeline marker <quickfort-start>_`. This just means that the blueprint
+tile that would normally appear under your cursor will still appear under your
+cursor, regardless of how the blueprint is rotated or flipped.
+
+**<transformation>** is one of:
+
+:rotcw or cw:   Rotates the blueprint 90 degrees clockwise.
+:rotccw or ccw: Rotates the blueprint 90 degrees counterclockwise.
+:fliph:         Flips the blueprint horizontally (left edge becomes right edge).
+:flipv:         Flips the blueprint vertically (top edge becomes bottom edge).
 
 Configuration:
 
@@ -277,6 +301,16 @@ undo    Applies the inverse of the specified blueprint. Dig tiles are
     z-levels. Direction can be "up" or "down", and can be abbreviated with "<"
     or ">". For example, the following options are equivalent:
     "--repeat down,5", "-rdown5", and "-r>5".
+-s, --shift <x>[,<y>[,<z>]]
+    Shifts the blueprint by the specified offset before modifying the game map.
+    The values for "<x>", "<y>", and "<z>" can be negative. Positive z values
+    shift the blueprint up towards the sky, and negative z values shift the
+    blueprint towards the circus. If both --shift and --transform are specified,
+    the shift is always applied last.
+-t, --transform <transformation>[,<transformation>...]
+    Applies geometric transformations to the blueprint before modifying the game
+    map. Valid transformations are: rotcw (or cw), rotccw (or ccw), fliph, and
+    flipv.
 -v, --verbose
     Output extra debugging information. This is especially useful if the
     blueprint isn't being applied like you expect.

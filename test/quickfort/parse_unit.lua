@@ -437,11 +437,12 @@ function test.get_modifiers_defaults()
 end
 
 function test.get_meta_modifiers()
+    local transform_fn = parse.get_modifiers_defaults().transform_fn
     local fname = 'f'
 
-    expect.table_eq({repeat_count=1, repeat_zoff=0},
+    expect.table_eq({repeat_count=1, repeat_zoff=0, transform_fn=transform_fn},
                     parse.get_meta_modifiers('', fname))
-    expect.table_eq({repeat_count=5, repeat_zoff=1},
+    expect.table_eq({repeat_count=5, repeat_zoff=1, transform_fn=transform_fn},
                     parse.get_meta_modifiers('  repeat  ( up, 5 ) ', fname))
 
     expect.printerr_match('extra unparsed text',
@@ -498,90 +499,93 @@ function MockReader:get_next_row_raw()
 end
 
 function test.process_level()
+    local transform_fn = parse.get_modifiers_defaults().transform_fn
     local reader = MockReader{}
     local start = {x=10, y=20}
 
-    expect.table_eq({{}, 0}, {parse.process_level(reader, 1, start)})
+    expect.table_eq({{}, 0},
+                    {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'`'},{'d'}})
     expect.table_eq(
         {{[20]={[10]={cell='A1', text='d'}},
           [22]={[10]={cell='A3', text='d'}}},
-         3}, {parse.process_level(reader, 1, start)})
+         3}, {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{' d '},{' ~ '},{'  d  '}})
     expect.table_eq(
         {{[20]={[10]={cell='A1', text='d'}},
           [22]={[10]={cell='A3', text='d'}}},
-         3}, {parse.process_level(reader, 1, start)})
+         3}, {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'`','#','ignoreme'},{'d'}})
     expect.table_eq(
         {{[20]={[10]={cell='A1', text='d'}},
           [22]={[10]={cell='A3', text='d'}}},
-         3}, {parse.process_level(reader, 1, start)})
+         3}, {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'`','#comment','d'},{'d#d'}})
     expect.table_eq(
         {{[20]={[10]={cell='A1', text='d'}},
           [21]={[12]={cell='C2', text='d'}},
           [22]={[10]={cell='A3', text='d#d'}}},
-         3}, {parse.process_level(reader, 1, start)})
+         3}, {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'#<'}})
     expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, 1},
-                    {parse.process_level(reader, 1, start)})
+                    {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'#>'}})
     expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, -1},
-                    {parse.process_level(reader, 1, start)})
+                    {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'#<1'}})
     expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, 1},
-                    {parse.process_level(reader, 1, start)})
+                    {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'#> 8'}})
     expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, -8},
-                    {parse.process_level(reader, 1, start)})
+                    {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'#dig'}})
     expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1},
-                    {parse.process_level(reader, 1, start)})
+                    {parse.process_level(reader, 1, start, transform_fn)})
 end
 
 function test.process_levels()
+    local transform_fn = parse.get_modifiers_defaults().transform_fn
     local reader = MockReader{}
     local start = {x=10, y=20, z=30}
 
     -- label not found (no data)
     expect.error_match('no data found',
-                       function() parse.process_levels(reader, nil, start) end)
+        function() parse.process_levels(reader, nil, start, transform_fn) end)
 
     -- label not found (mismatch)
     reader:reset({{'#build'},{'Tl'}})
     expect.error_match('not found',
-                       function() parse.process_levels(reader, '2', start) end)
+        function() parse.process_levels(reader, '2', start, transform_fn) end)
 
     -- implicit #dig modeline
     reader:reset({{'d'}})
     expect.table_eq({{modeline={mode='dig',label='1'},
                       zlevel=30,
                       grid={[20]={[10]={cell='A1', text='d'}}}}},
-                    parse.process_levels(reader, '1', start))
+                    parse.process_levels(reader, '1', start, transform_fn))
 
     -- scan to target label
     reader:reset({{'#dig'},{'d'},{'#>'},{'d'},{'#zone'},{'a(3x3)'}})
     expect.table_eq({{modeline={mode='zone',label='2'},
                       zlevel=30,
                       grid={[20]={[10]={cell='A6', text='a(3x3)'}}}}},
-                    parse.process_levels(reader, '2', start))
+                    parse.process_levels(reader, '2', start, transform_fn))
 
     -- scan to target label with interim ignored sections
     reader:reset({{'#dig'},{'d'},{'#ignore'},{'#aliases'},{'#zone'},{'a(3x3)'}})
     expect.table_eq({{modeline={mode='zone',label='2'},
                       zlevel=30,
                       grid={[20]={[10]={cell='A6', text='a(3x3)'}}}}},
-                    parse.process_levels(reader, '2', start))
+                    parse.process_levels(reader, '2', start, transform_fn))
 
     -- multiple levels
     reader:reset({{'#dig'},{'d'},{'#>'},{'d'},{'#>'},{'d'}})
@@ -594,7 +598,7 @@ function test.process_levels()
                      {modeline={mode='dig',label='1'},
                       zlevel=28,
                       grid={[20]={[10]={cell='A6', text='d'}}}},},
-                    parse.process_levels(reader, '1', start))
+                    parse.process_levels(reader, '1', start, transform_fn))
 end
 
 function test.parse_alias_separate()
