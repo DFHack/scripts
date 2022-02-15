@@ -310,7 +310,7 @@ local meta_marker_fns = {
 local default_modifiers = {
         repeat_count=1,
         repeat_zoff=0,
-        transform_fn = function(pos) return pos end,
+        transform_fn_stack = {},
     }
 function get_modifiers_defaults()
     return copyall(default_modifiers)
@@ -528,6 +528,16 @@ function get_metadata(filepath, sheet_name)
     )
 end
 
+local function make_transform_fn(transform_fn_stack)
+    return function(pos, reference_pos)
+        local fn_count = #transform_fn_stack
+        for i=fn_count,1,-1 do
+            pos = transform_fn_stack[i](pos, reference_pos)
+        end
+        return pos
+    end
+end
+
 --[[
 returns a list of {modeline, zlevel, grid} tables
 Where the structure of modeline is defined as per parse_modeline and grid is a:
@@ -538,13 +548,13 @@ Map keys are numbers, and the keyspace is sparse -- only cells that have content
 are non-nil.
 ]]
 function process_section(filepath, sheet_name, label, start_cursor_coord,
-                         transform_fn)
+                         transform_fn_stack)
     local reader = new_reader(filepath, sheet_name)
     return dfhack.with_finalize(
         function() reader:cleanup() end,
         function()
             return process_levels(reader, label, start_cursor_coord,
-                                  transform_fn)
+                                  make_transform_fn(transform_fn_stack))
         end
     )
 end
@@ -691,6 +701,7 @@ if dfhack.internal.IN_TEST then
         parse_alias_separate=parse_alias_separate,
         parse_alias_combined=parse_alias_combined,
         get_sheet_metadata=get_sheet_metadata,
+        make_transform_fn=make_transform_fn,
         get_extended_token=get_extended_token,
         get_token=get_token,
         get_next_param=get_next_param,

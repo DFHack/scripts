@@ -440,9 +440,9 @@ function test.get_meta_modifiers()
     local transform_fn = parse.get_modifiers_defaults().transform_fn
     local fname = 'f'
 
-    expect.table_eq({repeat_count=1, repeat_zoff=0, transform_fn=transform_fn},
+    expect.table_eq({repeat_count=1, repeat_zoff=0, transform_fn_stack={}},
                     parse.get_meta_modifiers('', fname))
-    expect.table_eq({repeat_count=5, repeat_zoff=1, transform_fn=transform_fn},
+    expect.table_eq({repeat_count=5, repeat_zoff=1, transform_fn_stack={}},
                     parse.get_meta_modifiers('  repeat  ( up, 5 ) ', fname))
 
     expect.printerr_match('extra unparsed text',
@@ -499,7 +499,7 @@ function MockReader:get_next_row_raw()
 end
 
 function test.process_level()
-    local transform_fn = parse.get_modifiers_defaults().transform_fn
+    local transform_fn = function(pos) return pos end
     local reader = MockReader{}
     local start = {x=10, y=20}
 
@@ -553,7 +553,7 @@ function test.process_level()
 end
 
 function test.process_levels()
-    local transform_fn = parse.get_modifiers_defaults().transform_fn
+    local transform_fn = function(pos) return pos end
     local reader = MockReader{}
     local start = {x=10, y=20, z=30}
 
