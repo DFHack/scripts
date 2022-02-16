@@ -26,6 +26,8 @@ local command_switch = {
     undo='do_undo',
 }
 
+local default_transform_fn = function(pos) return pos end
+
 function init_ctx(command, blueprint_name, cursor, aliases, dry_run,
                   preserve_engravings)
     return {
@@ -36,8 +38,7 @@ function init_ctx(command, blueprint_name, cursor, aliases, dry_run,
         dry_run=dry_run,
         preserve_engravings=preserve_engravings,
         zmin=30000, zmax=0,
-        transform_fn_stack = {},
-        shift_fn_stack = {},
+        transform_fn = default_transform_fn,
         stats={out_of_bounds={label='Tiles outside map boundary', value=0},
                invalid_keys={label='Invalid key sequences', value=0}},
         messages={},
@@ -59,18 +60,15 @@ function do_command_raw(mode, zlevel, grid, ctx)
     mode_modules[mode][command_switch[ctx.command]](zlevel, grid, ctx)
 end
 
-local function make_transform_fn(ctx)
-    local tfns = ctx.transform_fn_stack
-    local sfns = ctx.shift_fn_stack
-    local cursor = ctx.cursor
+local function make_transform_fn(prev_transform_fn, modifiers, cursor)
     return function(pos)
-        for _,tfn in ipairs(tfns) do
+        for _,tfn in ipairs(modifiers.transform_fn_stack) do
             pos = tfn(pos, cursor)
         end
-        for _,sfn in ipairs(sfns) do
+        for _,sfn in ipairs(modifiers.shift_fn_stack) do
             pos = sfn(pos)
         end
-        return pos
+        return prev_transform_fn(pos)
     end
 end
 
@@ -82,16 +80,12 @@ local function do_apply_modifiers(filepath, sheet_name, label, ctx, modifiers)
         -- figure out which level to jump to when repeating up or down
         ctx.zmin, ctx.zmax = 30000, 0
     end
-    for _,f in ipairs(modifiers.transform_fn_stack) do
-        table.insert(ctx.transform_fn_stack, f)
-    end
-    for _,f in ipairs(modifiers.shift_fn_stack) do
-        table.insert(ctx.shift_fn_stack, f)
-    end
-    local transform_fn = make_transform_fn(ctx)
+    local prev_transform_fn = ctx.transform_fn
+    ctx.transform_fn = make_transform_fn(prev_transform_fn, modifiers,
+                                         ctx.cursor)
     for i=1,modifiers.repeat_count do
         local section_data_list = quickfort_parse.process_section(
-                filepath, sheet_name, label, ctx.cursor, transform_fn)
+                filepath, sheet_name, label, ctx.cursor, ctx.transform_fn)
         for _, section_data in ipairs(section_data_list) do
             if not first_modeline then first_modeline = section_data.modeline end
             do_command_raw(section_data.modeline.mode, section_data.zlevel,
@@ -107,12 +101,7 @@ local function do_apply_modifiers(filepath, sheet_name, label, ctx, modifiers)
         ctx.zmin = math.min(ctx.zmin, saved_zmin)
         ctx.zmax = math.max(ctx.zmax, saved_zmax)
     end
-    for _,_ in ipairs(modifiers.transform_fn_stack) do
-        ctx.transform_fn_stack[#ctx.transform_fn_stack] = nil
-    end
-    for _,_ in ipairs(modifiers.shift_fn_stack) do
-        ctx.shift_fn_stack[#ctx.shift_fn_stack] = nil
-    end
+    ctx.transform_fn = prev_transform_fn
     return first_modeline
 end
 
