@@ -36,6 +36,8 @@ function init_ctx(command, blueprint_name, cursor, aliases, dry_run,
         dry_run=dry_run,
         preserve_engravings=preserve_engravings,
         zmin=30000, zmax=0,
+        transform_fn_stack = {},
+        shift_fn_stack = {},
         stats={out_of_bounds={label='Tiles outside map boundary', value=0},
                invalid_keys={label='Invalid key sequences', value=0}},
         messages={},
@@ -57,6 +59,20 @@ function do_command_raw(mode, zlevel, grid, ctx)
     mode_modules[mode][command_switch[ctx.command]](zlevel, grid, ctx)
 end
 
+local function make_transform_fn(ctx)
+    local tfns = ctx.transform_fn_stack
+    local sfns = ctx.shift_fn_stack
+    return function(pos, reference_pos)
+        for i=#tfns,1,-1 do
+            pos = tfns[i](pos, reference_pos)
+        end
+        for i=#sfns,1,-1 do
+            pos = sfns[i](pos)
+        end
+        return pos
+    end
+end
+
 local function do_apply_modifiers(filepath, sheet_name, label, ctx, modifiers)
     local first_modeline = nil
     local saved_zmin, saved_zmax = ctx.zmin, ctx.zmax
@@ -65,13 +81,20 @@ local function do_apply_modifiers(filepath, sheet_name, label, ctx, modifiers)
         -- figure out which level to jump to when repeating up or down
         ctx.zmin, ctx.zmax = 30000, 0
     end
+    for _,f in ipairs(modifiers.transform_fn_stack) do
+        table.insert(ctx.transform_fn_stack, f)
+    end
+    for _,f in ipairs(modifiers.shift_fn_stack) do
+        table.insert(ctx.shift_fn_stack, f)
+    end
+    local transform_fn = make_transform_fn(ctx)
     for i=1,modifiers.repeat_count do
         local section_data_list = quickfort_parse.process_section(
-                filepath, sheet_name, label, ctx.cursor, modifiers.transform_fn)
+                filepath, sheet_name, label, ctx.cursor, transform_fn)
         for _, section_data in ipairs(section_data_list) do
             if not first_modeline then first_modeline = section_data.modeline end
             do_command_raw(section_data.modeline.mode, section_data.zlevel,
-                        section_data.grid, ctx)
+                           section_data.grid, ctx)
         end
         if modifiers.repeat_zoff > 0 then
             ctx.cursor.z = ctx.zmax + modifiers.repeat_zoff
@@ -82,6 +105,12 @@ local function do_apply_modifiers(filepath, sheet_name, label, ctx, modifiers)
     if modifiers.repeat_count > 1 then
         ctx.zmin = math.min(ctx.zmin, saved_zmin)
         ctx.zmax = math.max(ctx.zmax, saved_zmax)
+    end
+    for _,_ in ipairs(modifiers.transform_fn_stack) do
+        ctx.transform_fn_stack[#ctx.transform_fn_stack] = nil
+    end
+    for _,_ in ipairs(modifiers.shift_fn_stack) do
+        ctx.shift_fn_stack[#ctx.shift_fn_stack] = nil
     end
     return first_modeline
 end
@@ -184,6 +213,12 @@ function do_command(args)
             {'r', 'repeat', hasArg=true,
              handler=function(optarg)
                 quickfort_parse.parse_repeat_params(optarg, modifiers) end},
+            {'s', 'shift', hasArg=true,
+             handler=function(optarg)
+                quickfort_parse.parse_shift_params(optarg, modifiers) end},
+            {'t', 'transform', hasArg=true,
+             handler=function(optarg)
+                quickfort_parse.parse_transform_params(optarg, modifiers) end},
             {'v', 'verbose', handler=function() verbose = true end},
         })
     local blueprint_name = other_args[1]

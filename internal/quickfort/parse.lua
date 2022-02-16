@@ -303,15 +303,92 @@ local function parse_repeat(text, start_pos, _, modifiers)
     return true, next_start_pos
 end
 
+local function make_shift_fn(xoff, yoff, zoff)
+    return function(pos)
+        return xyz2pos(pos.x+xoff, pos.y+yoff, pos.z and pos.z+zoff or nil)
+    end
+end
+
+function parse_shift_params(text, modifiers)
+    local _, _, xstr, ystr, zstr =
+            text:find('^(%-?%d+)%s-[;, ]%s-(%-?%d+)%s-[;, ]?%s-(%-?%d+)')
+    local x, y, z = tonumber(xstr), tonumber(ystr) or 0, tonumber(zstr) or 0
+    if not x then qerror('invalid x offset in: '..text) end
+    table.insert(modifiers.shift_fn_stack, make_shift_fn(x, y, z))
+end
+
+local function parse_shift(text, start_pos, _, modifiers)
+    local next_start_pos, params = get_marker_body(text, start_pos, 'shift')
+    if not params then return false, start_pos end
+    parse_shift_params(params, modifiers)
+    return true, next_start_pos
+end
+
+local function make_transform_fn(tfn)
+    return function(pos, reference_pos)
+        -- shift pos to treat reference_pos as the origin
+        local tpos = xy2pos(pos.x-reference_pos.x, pos.y-reference_pos.y)
+        -- apply transformation
+        tfn(tpos)
+        -- undo origin shift
+        return xy2pos(tpos.x+reference_pos.x, tpos.y+reference_pos.y)
+    end
+end
+
+local function transform_cw(tpos) return xy2pos(tpos.y, -tpos.x) end
+local function transform_ccw(tpos) return xy2pos(-tpos.y, tpos.x) end
+local function transform_fliph(tpos) return xy2pos(-tpos.x, tpos.y) end
+local function transform_flipv(tpos) return xy2pos(tpos.x, -tpos.y) end
+
+local function make_transform_fn_from_name(name)
+    if name == 'rotcw' or name == 'cw' then
+        return make_transform_fn(transform_cw)
+    elseif name == 'rotccw' or name == 'ccw' then
+        return make_transform_fn(transform_ccw)
+    elseif name == 'fliph' then
+        return make_transform_fn(transform_fliph)
+    elseif name == 'flipv' then
+        return make_transform_fn(transform_flipv)
+    else
+        qerror('invalid transformation name: '..name)
+    end
+end
+
+local function get_next_transform_name(text, start_pos)
+    local _, next_pos, name = text:find('^(%a+)%s*[;,]?%s*', start_pos)
+    return next_pos, name
+end
+
+function parse_transform_params(text, modifiers)
+    local next_pos, name = get_next_transform_name(text, 1)
+    if not name then qerror('invalid transformation list: '..text) end
+    while name do
+        table.insert(modifiers.transform_fn_stack,
+                     make_transform_fn_from_name(name))
+        next_pos, name = get_next_transform_name(text, next_pos)
+    end
+end
+
+local function parse_transform(text, start_pos, _, modifiers)
+    local next_start_pos, params = get_marker_body(text, start_pos, 'transform')
+    if not params then return false, start_pos end
+    parse_transform_params(params, modifiers)
+    return true, next_start_pos
+end
+
 local meta_marker_fns = {
     parse_repeat,
+    parse_shift,
+    parse_transform,
 }
 
 local default_modifiers = {
         repeat_count=1,
         repeat_zoff=0,
         transform_fn_stack = {},
+        shift_fn_stack = {},
     }
+
 function get_modifiers_defaults()
     return copyall(default_modifiers)
 end
@@ -528,16 +605,6 @@ function get_metadata(filepath, sheet_name)
     )
 end
 
-local function make_transform_fn(transform_fn_stack)
-    return function(pos, reference_pos)
-        local fn_count = #transform_fn_stack
-        for i=fn_count,1,-1 do
-            pos = transform_fn_stack[i](pos, reference_pos)
-        end
-        return pos
-    end
-end
-
 --[[
 returns a list of {modeline, zlevel, grid} tables
 Where the structure of modeline is defined as per parse_modeline and grid is a:
@@ -548,13 +615,14 @@ Map keys are numbers, and the keyspace is sparse -- only cells that have content
 are non-nil.
 ]]
 function process_section(filepath, sheet_name, label, start_cursor_coord,
-                         transform_fn_stack)
+                         transform_fn)
+    transform_fn = transform_fn or function(pos) return pos end
     local reader = new_reader(filepath, sheet_name)
     return dfhack.with_finalize(
         function() reader:cleanup() end,
         function()
             return process_levels(reader, label, start_cursor_coord,
-                                  make_transform_fn(transform_fn_stack))
+                                  transform_fn)
         end
     )
 end

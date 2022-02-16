@@ -440,9 +440,11 @@ function test.get_meta_modifiers()
     local transform_fn = parse.get_modifiers_defaults().transform_fn
     local fname = 'f'
 
-    expect.table_eq({repeat_count=1, repeat_zoff=0, transform_fn_stack={}},
+    expect.table_eq({repeat_count=1, repeat_zoff=0, transform_fn_stack={},
+                     shift_fn_stack={}},
                     parse.get_meta_modifiers('', fname))
-    expect.table_eq({repeat_count=5, repeat_zoff=1, transform_fn_stack={}},
+    expect.table_eq({repeat_count=5, repeat_zoff=1, transform_fn_stack={},
+                     shift_fn_stack={}},
                     parse.get_meta_modifiers('  repeat  ( up, 5 ) ', fname))
 
     expect.printerr_match('extra unparsed text',
