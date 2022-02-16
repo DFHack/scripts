@@ -236,8 +236,8 @@ end
 
 -- uses given marker_fns to parse markers in the given text in any order
 -- returns table of marker values and next unmatched text position
-local function parse_markers(text, start_pos, filename, marker_fns)
-    local marker_data = {}
+local function parse_markers(text, start_pos, filename, marker_fns, marker_data)
+    marker_data = marker_data or {}
     local remaining_marker_fns = copyall(marker_fns)
     while #remaining_marker_fns > 0 do
         local matched = false
@@ -335,6 +335,7 @@ local function make_transform_fn(tfn)
     end
 end
 
+-- the y axis is reversed in DF so the normal logic for cw and ccw is reversed.
 local function transform_cw(tpos) return xyz2pos(-tpos.y, tpos.x, tpos.z) end
 local function transform_ccw(tpos) return xyz2pos(tpos.y, -tpos.x, tpos.z) end
 local function transform_fliph(tpos) return xyz2pos(-tpos.x, tpos.y, tpos.z) end
@@ -392,14 +393,14 @@ function get_modifiers_defaults()
 end
 
 function get_meta_modifiers(text, filename)
-    local modifiers = get_modifiers_defaults()
     local marker_data, extra_start =
-            parse_markers(text, 1, filename, meta_marker_fns)
+            parse_markers(text, 1, filename, meta_marker_fns,
+                          get_modifiers_defaults())
     if extra_start ~= #text+1 then
         dfhack.printerr(('extra unparsed text at the end of "%s": "%s"'):
                         format(text, text:sub(extra_start)))
     end
-    return utils.assign(modifiers, marker_data)
+    return marker_data
 end
 
 local function get_col_name(col)
