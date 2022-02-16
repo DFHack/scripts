@@ -311,7 +311,7 @@ end
 
 function parse_shift_params(text, modifiers)
     local _, _, xstr, ystr, zstr =
-            text:find('^(%-?%d+)%s-[;, ]%s-(%-?%d+)%s-[;, ]?%s-(%-?%d+)')
+            text:find('^(%-?%d+)%s*[;,]?%s*(%-?%d*)%s*[;,]?%s*(%-?%d*)')
     local x, y, z = tonumber(xstr), tonumber(ystr) or 0, tonumber(zstr) or 0
     if not x then qerror('invalid x offset in: '..text) end
     table.insert(modifiers.shift_fn_stack, make_shift_fn(x, y, z))
@@ -325,20 +325,20 @@ local function parse_shift(text, start_pos, _, modifiers)
 end
 
 local function make_transform_fn(tfn)
-    return function(pos, reference_pos)
-        -- shift pos to treat reference_pos as the origin
-        local tpos = xy2pos(pos.x-reference_pos.x, pos.y-reference_pos.y)
+    return function(pos, origin_pos)
+        -- shift pos to treat origin_pos as the origin
+        local pos = xyz2pos(pos.x-origin_pos.x, pos.y-origin_pos.y, pos.z)
         -- apply transformation
-        tfn(tpos)
+        pos = tfn(pos)
         -- undo origin shift
-        return xy2pos(tpos.x+reference_pos.x, tpos.y+reference_pos.y)
+        return xyz2pos(pos.x+origin_pos.x, pos.y+origin_pos.y, pos.z)
     end
 end
 
-local function transform_cw(tpos) return xy2pos(tpos.y, -tpos.x) end
-local function transform_ccw(tpos) return xy2pos(-tpos.y, tpos.x) end
-local function transform_fliph(tpos) return xy2pos(-tpos.x, tpos.y) end
-local function transform_flipv(tpos) return xy2pos(tpos.x, -tpos.y) end
+local function transform_cw(tpos) return xyz2pos(-tpos.y, tpos.x, tpos.z) end
+local function transform_ccw(tpos) return xyz2pos(tpos.y, -tpos.x, tpos.z) end
+local function transform_fliph(tpos) return xyz2pos(-tpos.x, tpos.y, tpos.z) end
+local function transform_flipv(tpos) return xyz2pos(tpos.x, -tpos.y, tpos.z) end
 
 local function make_transform_fn_from_name(name)
     if name == 'rotcw' or name == 'cw' then
@@ -355,8 +355,8 @@ local function make_transform_fn_from_name(name)
 end
 
 local function get_next_transform_name(text, start_pos)
-    local _, next_pos, name = text:find('^(%a+)%s*[;,]?%s*', start_pos)
-    return next_pos, name
+    local _, end_pos, name = text:find('^(%a+)%s*[;,]?%s*', start_pos)
+    return end_pos and end_pos+1 or nil, name
 end
 
 function parse_transform_params(text, modifiers)
@@ -382,15 +382,13 @@ local meta_marker_fns = {
     parse_transform,
 }
 
-local default_modifiers = {
+function get_modifiers_defaults()
+    return {
         repeat_count=1,
         repeat_zoff=0,
         transform_fn_stack = {},
         shift_fn_stack = {},
     }
-
-function get_modifiers_defaults()
-    return copyall(default_modifiers)
 end
 
 function get_meta_modifiers(text, filename)
@@ -432,6 +430,7 @@ end
 local function process_level(reader, start_line_num, start_coord, transform_fn)
     local grid = {}
     local y = start_coord.y
+    local z = start_coord.z
     while true do
         local row_tokens = reader:get_next_row()
         if not row_tokens then return grid, y-start_coord.y end
@@ -452,7 +451,7 @@ local function process_level(reader, start_line_num, start_coord, transform_fn)
             if not v:match('^[`~%s]*$') and not v:match('^%s*#') then
                 -- cell has actual content, not just comments or chalkline chars
                 local x = start_coord.x + i - 1
-                local pos_t = transform_fn(xy2pos(x, y), start_coord)
+                local pos_t = transform_fn(xyz2pos(x, y, z))
                 if not grid[pos_t.y] then grid[pos_t.y] = {} end
                 local line_num = start_line_num + y - start_coord.y
                 grid[pos_t.y][pos_t.x] = {cell=make_cell_label(i, line_num),
@@ -505,7 +504,7 @@ local function process_levels(reader, label, start_cursor_coord, transform_fn)
         local start_pos = xyz2pos(x, y, z)
         local grid, num_section_rows, zmod =
                 process_level(reader, cur_line_num, start_pos, transform_fn)
-        local zt = transform_fn(start_pos, start_pos).z
+        local zt = transform_fn(start_pos).z
         table.insert(section_data_list,
                      {modeline=modeline, zlevel=zt, grid=grid})
         if zmod == nil then break end

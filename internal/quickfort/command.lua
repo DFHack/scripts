@@ -62,12 +62,13 @@ end
 local function make_transform_fn(ctx)
     local tfns = ctx.transform_fn_stack
     local sfns = ctx.shift_fn_stack
-    return function(pos, reference_pos)
-        for i=#tfns,1,-1 do
-            pos = tfns[i](pos, reference_pos)
+    local cursor = ctx.cursor
+    return function(pos)
+        for _,tfn in ipairs(tfns) do
+            pos = tfn(pos, cursor)
         end
-        for i=#sfns,1,-1 do
-            pos = sfns[i](pos)
+        for _,sfn in ipairs(sfns) do
+            pos = sfn(pos)
         end
         return pos
     end
@@ -197,7 +198,8 @@ function do_command(args)
     end
     local cursor = guidm.getCursorPos()
     local quiet, verbose, dry_run, section_names = false, false, false, {''}
-    local preserve_engravings, modifiers = df.item_quality.Masterful, {}
+    local preserve_engravings = df.item_quality.Masterful
+    local modifiers = quickfort_parse.get_modifiers_defaults()
     local other_args = argparse.processArgsGetopt(args, {
             {'c', 'cursor', hasArg=true,
              handler=function(optarg) cursor = argparse.coords(optarg) end},
