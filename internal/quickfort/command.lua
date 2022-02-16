@@ -61,6 +61,9 @@ function do_command_raw(mode, zlevel, grid, ctx)
 end
 
 local function make_transform_fn(prev_transform_fn, modifiers, cursor)
+    if modifiers.transform_fn_stack == 0 and modifiers.shift_fn_stack == 0 then
+        return prev_transform_fn
+    end
     return function(pos)
         for _,tfn in ipairs(modifiers.transform_fn_stack) do
             pos = tfn(pos, cursor)
