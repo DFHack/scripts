@@ -91,12 +91,10 @@ Usage:
     z-levels. Direction can be ``up`` or ``down``, and can be abbreviated with
     ``<`` or ``>``. For example, the following options are equivalent:
     ``--repeat down,5``, ``-rdown5``, and ``-r>5``.
-``-s``, ``--shift <x>[,<y>[,<z>]]``
+``-s``, ``--shift <x>[,<y>]``
     Shifts the blueprint by the specified offset before modifying the game map.
-    The values for ``<x>``, ``<y>``, and ``<z>`` can be negative. Positive z
-    values shift the blueprint up towards the sky, and negative z values shift
-    the blueprint towards the circus. If both ``--shift`` and ``--transform``
-    are specified, the shift is always applied last.
+    The values for ``<x>`` and ``<y>`` can be negative. If both ``--shift`` and
+    ``--transform`` are specified, the shift is always applied last.
 ``-t``, ``--transform <transformation>[,<transformation>...]``
     Applies geometric transformations to the blueprint before modifying the game
     map. See the Transformations section below for details.
@@ -301,12 +299,10 @@ undo    Applies the inverse of the specified blueprint. Dig tiles are
     z-levels. Direction can be "up" or "down", and can be abbreviated with "<"
     or ">". For example, the following options are equivalent:
     "--repeat down,5", "-rdown5", and "-r>5".
--s, --shift <x>[,<y>[,<z>]]
+-s, --shift <x>[,<y>]
     Shifts the blueprint by the specified offset before modifying the game map.
-    The values for "<x>", "<y>", and "<z>" can be negative. Positive z values
-    shift the blueprint up towards the sky, and negative z values shift the
-    blueprint towards the circus. If both --shift and --transform are specified,
-    the shift is always applied last.
+    The values for "<x>" and "<y>" can be negative. If both "--shift" and
+    "--transform" are specified, the shift is always applied last.
 -t, --transform <transformation>[,<transformation>...]
     Applies geometric transformations to the blueprint before modifying the game
     map. Valid transformations are: rotcw (or cw), rotccw (or ccw), fliph, and
