@@ -114,7 +114,7 @@ Transformations:
 
 All transformations are anchored at the blueprint start cursor position. This is
 the upper left corner by default, but it can be modified if the blueprint has a
-`start() modeline marker <quickfort-start>_`. This just means that the blueprint
+`start() modeline marker <quickfort-start>`. This just means that the blueprint
 tile that would normally appear under your cursor will still appear under your
 cursor, regardless of how the blueprint is rotated or flipped.
 
