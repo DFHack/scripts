@@ -142,6 +142,45 @@ function test.do_command_repeat_up()
     expect.eq(100, get_ctx(mock_dig_do_run, 5).zmin)
 end
 
+function test.do_command_no_shift_no_transform()
+    c.do_command({commands={'run'}, '-q', '10'})
+    local transform_fn = get_ctx(mock_dig_do_run, 1).transform_fn
+    expect.table_eq({x=1, y=2}, transform_fn({x=1, y=2}))
+end
+
+function test.do_command_shift_x()
+    c.do_command({commands={'run'}, '-q', '-s5', '10'})
+    local transform_fn = get_ctx(mock_dig_do_run, 1).transform_fn
+    expect.table_eq({x=6, y=2}, transform_fn({x=1, y=2}))
+end
+
+function test.do_command_shift_y()
+    c.do_command({commands={'run'}, '-q', '-s0,5', '10'})
+    local transform_fn = get_ctx(mock_dig_do_run, 1).transform_fn
+    expect.table_eq({x=1, y=7}, transform_fn({x=1, y=2}))
+end
+
+function test.do_command_transform_cw()
+    c.do_command({commands={'run'}, '-q', '-tcw', '10'})
+    local transform_fn = get_ctx(mock_dig_do_run, 1).transform_fn
+    -- rotates around x=1, y=2
+    expect.table_eq({x=2, y=2}, transform_fn({x=1, y=1}))
+end
+
+function test.do_command_transform_ccw()
+    c.do_command({commands={'run'}, '-q', '-tccw', '10'})
+    local transform_fn = get_ctx(mock_dig_do_run, 1).transform_fn
+    -- rotates around x=1, y=2
+    expect.table_eq({x=1, y=1}, transform_fn({x=2, y=2}))
+end
+
+function test.do_command_transform_combined()
+    c.do_command({commands={'run'}, '-q', '-tcw,flipv,ccw', '10'})
+    local transform_fn = get_ctx(mock_dig_do_run, 1).transform_fn
+    -- rotates around x=1, y=2
+    expect.table_eq({x=0, y=2}, transform_fn({x=2, y=2}))
+end
+
 function test.do_command_multi_command_multi_list_num()
     c.do_command({commands={'run', 'orders'}, '-q', '9,10'})
 
