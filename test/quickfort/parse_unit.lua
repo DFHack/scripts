@@ -430,6 +430,111 @@ function test.parse_repeat()
                     {parse.parse_repeat('/l repeat(>5)', 4, nil, modifiers)})
 end
 
+function test.parse_shift_params()
+    expect.error_match(
+        'invalid x offset', function() parse.parse_shift_params('', {}) end)
+    expect.error_match(
+        'invalid x offset',
+        function() parse.parse_shift_params('garbage', {}) end)
+
+    local modifiers = parse.get_modifiers_defaults()
+    parse.parse_shift_params('5', modifiers)
+    expect.eq(1, #modifiers.shift_fn_stack)
+    expect.table_eq({x=5, y=0}, modifiers.shift_fn_stack[1]({x=0, y=0}))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_shift_params('0,5', modifiers)
+    expect.eq(1, #modifiers.shift_fn_stack)
+    expect.table_eq({x=0, y=5}, modifiers.shift_fn_stack[1]({x=0, y=0}))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_shift_params('-5 -5', modifiers)
+    expect.eq(1, #modifiers.shift_fn_stack)
+    expect.table_eq({x=-5, y=-5}, modifiers.shift_fn_stack[1]({x=0, y=0}))
+end
+
+function test.parse_shift()
+    local modifiers = parse.get_modifiers_defaults()
+
+    expect.table_eq({false, 4},
+                    {parse.parse_shift('/l notshift()', 4, nil, modifiers)})
+    expect.table_eq({true, 12},
+                    {parse.parse_shift('/l shift(5)', 4, nil, modifiers)})
+end
+
+function test.parse_transform_params()
+    local modifiers = parse.get_modifiers_defaults()
+
+    expect.error_match(
+        'invalid transformation',
+        function() parse.parse_transform_params('', modifiers) end)
+    expect.error_match(
+        'invalid transformation',
+        function() parse.parse_transform_params('garbage', modifiers) end)
+    expect.error_match(
+        'invalid transformation',
+        function() parse.parse_transform_params('cw ccw garbage',
+                                                modifiers) end)
+
+    local origin = {x=10, y=0}
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('cw', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=10, y=-10},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('rotcw', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=10, y=-10},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('ccw', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=10, y=10},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('rotccw', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=10, y=10},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('fliph', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=20, y=0},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('flipv', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=0, y=0},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('cw flipv ccw', modifiers)
+    expect.eq(3, #modifiers.transform_fn_stack)
+    expect.table_eq({x=10, y=-10},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+    expect.table_eq({x=0, y=0},
+                    modifiers.transform_fn_stack[2]({x=0, y=0}, origin))
+    expect.table_eq({x=10, y=10},
+                    modifiers.transform_fn_stack[3]({x=0, y=0}, origin))
+end
+
+function test.parse_transform()
+    local modifiers = parse.get_modifiers_defaults()
+
+    expect.table_eq({false, 4},
+                    {parse.parse_transform('/l nottrans()', 4, nil, modifiers)})
+    expect.table_eq({true, 27},
+                    {parse.parse_transform('/l transform(cw fliph ccw)',
+                                           4, nil, modifiers)})
+end
+
 function test.get_modifiers_defaults()
     local modifiers = parse.get_modifiers_defaults()
     modifiers.repeat_count = 10
