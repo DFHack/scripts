@@ -35,6 +35,7 @@ that repo.
 - `quickfort`: implement single-tile track aliases so engraved tracks can be specified tile-by-tile just like constructed tracks
 - `quickfort`: allow blueprints to jump up or down multiple z-levels with a single command (e.g. ``#>5`` goes down 5 levels)
 - `quickfort`: blueprints can now be repeated up and down a specified number of z-levels via ``repeat`` markers in meta blueprints or the ``--repeat`` commandline option
+- `quickfort`: blueprints can now be rotated, flipped, and shifted via ``transform`` and ``shift`` markers in meta blueprints or the corresponding commandline options
 
 # 0.47.05-r3
 
