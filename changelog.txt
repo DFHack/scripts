@@ -38,7 +38,7 @@ that repo.
 - `quickfort`: blueprints can now be rotated, flipped, and shifted via ``transform`` and ``shift`` markers in meta blueprints or the corresponding commandline options
 
 ## Removed
-- `digfort`: code has been removed; please use `quickfort` instead
+- `digfort`: please use `quickfort` instead
 
 # 0.47.05-r3
 
