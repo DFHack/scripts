@@ -16,6 +16,7 @@ that repo.
 ## New Scripts
 
 ## Fixes
+- `devel/query`: fixed a problem printing parents correctly when the starting path has lua pattern special characters in it
 
 ## Misc Improvements
 - `gui/blueprint`: support the new ``--splitby`` and ``--format`` options for `blueprint`
