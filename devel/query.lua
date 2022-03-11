@@ -713,7 +713,6 @@ function presentDebugData(presentedField, field, value)
 end
 
 function printOnce(key, msg)
-    --print("print once!", key, msg)
     if runOnce(key) then
         print(msg)
     end
@@ -721,7 +720,6 @@ end
 
 --sometimes used to print fields, always used to print parents of fields
 function printParents(path, field, value)
-    --print("parents print!", path, "   ", field, "   ", path_info_pattern)
     local value_printed = false
     path = string.gsub(path, path_info_pattern, "")
     field = string.gsub(field, path_info_pattern, "")
@@ -730,7 +728,6 @@ function printParents(path, field, value)
     local cur_path = path_info
     local words = {}
     local index = 1
-    --print("parents print 2!", path, "   ", field)
     for word in string.gmatch(path, '([^.]+)') do
         words[index] = word
         index = index + 1
