@@ -279,7 +279,7 @@ function foreach(table, name, callback)
             callback(idx, value)
             index = index + 1
         end
-    elseif (name == "list" or string.find(name,"%.list")) and table["next"] then
+    elseif table._type and string.find(tostring(table._type), "_list_link") then
         for field, value in utils.listpairs(table) do
             local m = tostring(field):gsub("<.*: ",""):gsub(">.*",""):gsub("%x%x%x%x%x%x","%1 ",1)
             local s = string.format("next{%d}->item", index)
