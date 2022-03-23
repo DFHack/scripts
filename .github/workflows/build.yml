@@ -17,7 +17,7 @@ jobs:
       uses: actions/checkout@v1
     - name: Set up DFHack
       run: |
-        git clone git://github.com/dfhack/dfhack $HOME/dfhack --depth 1 --branch develop
+        git clone https://github.com/DFHack/dfhack.git $HOME/dfhack --depth 1 --branch develop
         git -C $HOME/dfhack submodule update --init --depth 1 --remote plugins/stonesense library/xml
         rmdir $HOME/dfhack/scripts
         ln -sv $(pwd) $HOME/dfhack/scripts
@@ -52,7 +52,7 @@ jobs:
       uses: actions/checkout@v1
     - name: Set up DFHack
       run: |
-        git clone git://github.com/dfhack/dfhack $HOME/dfhack --depth 1 --branch develop
+        git clone https://github.com/DFHack/dfhack.git $HOME/dfhack --depth 1 --branch develop
         rmdir $HOME/dfhack/scripts
         ln -sv $(pwd) $HOME/dfhack/scripts
     - name: Check whitespace
