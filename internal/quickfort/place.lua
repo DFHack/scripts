@@ -235,7 +235,7 @@ function do_run(zlevel, grid, ctx)
     local stockpiles = {}
     stats.invalid_keys.value =
             stats.invalid_keys.value + quickfort_building.init_buildings(
-                zlevel, grid, stockpiles, stockpile_db)
+                ctx, zlevel, grid, stockpiles, stockpile_db)
     stats.out_of_bounds.value =
             stats.out_of_bounds.value + quickfort_building.crop_to_bounds(
                 ctx, stockpiles, stockpile_db)
@@ -261,7 +261,8 @@ end
 -- enqueues orders only for explicitly requested containers
 function do_orders(zlevel, grid, ctx)
     local stockpiles = {}
-    quickfort_building.init_buildings(zlevel, grid, stockpiles, stockpile_db)
+    quickfort_building.init_buildings(
+        ctx, zlevel, grid, stockpiles, stockpile_db)
     for _, s in ipairs(stockpiles) do
         local db_entry = stockpile_db[s.type]
         quickfort_orders.enqueue_container_orders(ctx,
@@ -277,7 +278,7 @@ function do_undo(zlevel, grid, ctx)
     local stockpiles = {}
     stats.invalid_keys.value =
             stats.invalid_keys.value + quickfort_building.init_buildings(
-                zlevel, grid, stockpiles, stockpile_db)
+                ctx, zlevel, grid, stockpiles, stockpile_db)
 
     for _, s in ipairs(stockpiles) do
         for extent_x, col in ipairs(s.extent_grid) do

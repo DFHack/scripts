@@ -24,20 +24,30 @@ valid_modes = utils.invert({
 -- format: {width, height, specified}, where width and height are numbers and
 -- specified is true when an extent was explicitly specified. this function
 -- assumes that text has been trimmed of leading and trailing spaces.
-function parse_cell(text)
+-- if the extent is specified, it will be transformed according ctx.transform_fn
+-- so that the extent extends in the intended direction.
+function parse_cell(ctx, text)
     -- first try to match expansion syntax
     local _, _, keys, width, height =
-            text:find('^([^(][^(]-)%s*%(%s*(%d+)%s*x%s*(%d+)%s*%)$')
+            text:find('^([^(][^(]-)%s*%(%s*(%-?%d+)%s*x%s*(%-?%d+)%s*%)$')
     local specified = nil
     if keys then
-        width = tonumber(width)
-        height = tonumber(height)
+        width, height = tonumber(width), tonumber(height)
         specified = width and height and true
     else
         _, _, keys = text:find('(.+)')
     end
-    if not specified or width <= 0 then width = 1 end
-    if not specified or height <= 0 then height = 1 end
+    if not specified then
+        width, height = 1, 1
+    else
+        if width == 0 then
+            qerror('invalid expansion syntax: width cannot be 0: ' .. text)
+        elseif height == 0 then
+            qerror('invalid expansion syntax: height cannot be 0: ' .. text)
+        end
+        local transformed = ctx.transform_fn(xy2pos(width, height), true)
+        width, height = transformed.x, transformed.y
+    end
     return keys, {width=width, height=height, specified=specified}
 end
 
@@ -62,15 +72,31 @@ function get_ordered_grid_cells(grid)
 end
 
 -- sheet names can contain (or even start with or even be completely composed
--- of) spaces
+-- of) spaces. labels, however, cannot contain spaces.
+-- if there are characters in the input that follow the matched sheet name and
+-- label, they are trimmed and returned in the third return value.
 function parse_section_name(section_name)
-    local sheet_name, label = nil, nil
-    if section_name then
-        _, _, sheet_name, label = section_name:find('^([^/]*)/?(%S*)')
+    local sheet_name, label, remaining = nil, nil, nil
+    if section_name and #section_name > 0 then
+        local endpos
+        _, endpos, sheet_name, label = section_name:find('^([^/]*)/?(%S*)')
         if #sheet_name == 0 then sheet_name = nil end
         if #label == 0 then label = nil end
+        remaining = section_name:sub(endpos+1):trim()
     end
-    return sheet_name, label
+    return sheet_name, label, remaining
+end
+
+function parse_preserve_engravings(input, want_error_traceback)
+    input = tonumber(input) or input
+    if input == 'None' or input == -1 then
+        return nil
+    end
+    if df.item_quality[input] then
+        return tonumber(input) or df.item_quality[input]
+    end
+    (want_error_traceback and error or qerror)(
+        ('unknown engraving quality: "%s"'):format(input))
 end
 
 function quote_if_has_spaces(str)
@@ -159,9 +185,9 @@ end
 
 -- returns the character position after the marker and the trimmed marker body
 -- or nil if the specified marker is not found at the indicated start_pos
-local function get_marker_body(modeline, start_pos, marker_name)
+local function get_marker_body(text, start_pos, marker_name)
     local _, marker_end, marker_body = string.find(
-            modeline, '^%s*'..marker_name..'%s*(%b())', start_pos)
+            text, '^%s*'..marker_name..'%s*(%b())%s*', start_pos)
     if not marker_body then return nil end
     local _, _, inner_body = string.find(marker_body, '^%(%s*(.-)%s*%)$')
     return marker_end + 1, inner_body
@@ -218,30 +244,33 @@ local function parse_message(modeline, start_pos, filename, marker_values)
     return true, next_start_pos
 end
 
-local marker_fns = {parse_label, parse_start, parse_hidden, parse_message}
-
--- parses all markers in any order
--- returns table of found values:
--- {label, startx, starty, start_comment, hidden, message}
-local function parse_markers(modeline, start_pos, filename)
+-- uses given marker_fns to parse markers in the given text in any order
+-- returns table of marker values and next unmatched text position
+local function parse_markers(text, start_pos, filename, marker_fns, marker_data)
+    marker_data = marker_data or {}
     local remaining_marker_fns = copyall(marker_fns)
-    local marker_values = {}
     while #remaining_marker_fns > 0 do
         local matched = false
         for i,marker_fn in ipairs(remaining_marker_fns) do
-            matched, start_pos = marker_fn(modeline, start_pos, filename,
-                                           marker_values)
+            matched, start_pos = marker_fn(text, start_pos, filename,
+                                           marker_data)
             if matched then
                 table.remove(remaining_marker_fns, i)
                 break
             end
         end
-        -- the rest of the modeline is a comment (or is empty or has duplicate
-        -- markers that will be treated as a comment)
+        -- no more matched text, start_pos contains the next text pos
         if not matched then break end
     end
-    return marker_values, start_pos
+    return marker_data, start_pos
 end
+
+local modeline_marker_fns = {
+    parse_label,
+    parse_start,
+    parse_hidden,
+    parse_message,
+}
 
 --[[
 parses a modeline
@@ -257,12 +286,130 @@ local function parse_modeline(modeline, filename, modeline_id)
     local _, mode_end, mode = string.find(modeline, '^#([%l]+)')
     if not mode or not valid_modes[mode] then return nil end
     local modeline_data, comment_start =
-            parse_markers(modeline, mode_end+1, filename)
+            parse_markers(modeline, mode_end+1, filename, modeline_marker_fns)
     local _, _, comment = string.find(modeline, '^%s*(.-)%s*$', comment_start)
     modeline_data.mode = mode
     modeline_data.label = modeline_data.label or tostring(modeline_id)
     modeline_data.comment = #comment > 0 and comment or nil
     return modeline_data
+end
+
+-- meta markers
+
+function parse_repeat_params(text, modifiers)
+    local _, _, direction, count = text:find('^%s*([%a<>]*)%s*,?%s*(%d*)')
+    direction = direction:lower()
+    local zoff = 0
+    if direction == 'up' or direction == '<' then zoff = 1
+    elseif direction == 'down' or direction == '>' then zoff = -1
+    else qerror('unknown repeat direction: '..direction) end
+    modifiers.repeat_zoff, modifiers.repeat_count = zoff, tonumber(count) or 1
+end
+
+local function parse_repeat(text, start_pos, _, modifiers)
+    local next_start_pos, params = get_marker_body(text, start_pos, 'repeat')
+    if not params then return false, start_pos end
+    parse_repeat_params(params, modifiers)
+    return true, next_start_pos
+end
+
+local function make_shift_fn(xoff, yoff)
+    return function(pos)
+        return xy2pos(pos.x+xoff, pos.y+yoff)
+    end
+end
+
+function parse_shift_params(text, modifiers)
+    local _, _, xstr, ystr, zstr = text:find('^(%-?%d+)%s*[;,]?%s*(%-?%d*)')
+    local x, y = tonumber(xstr), tonumber(ystr) or 0
+    if not x then qerror('invalid x offset in: '..text) end
+    table.insert(modifiers.shift_fn_stack, make_shift_fn(x, y))
+end
+
+local function parse_shift(text, start_pos, _, modifiers)
+    local next_start_pos, params = get_marker_body(text, start_pos, 'shift')
+    if not params then return false, start_pos end
+    parse_shift_params(params, modifiers)
+    return true, next_start_pos
+end
+
+local function make_transform_fn(tfn)
+    return function(pos, origin_pos)
+        -- shift pos to treat origin_pos as the origin
+        local pos = xy2pos(pos.x-origin_pos.x, pos.y-origin_pos.y)
+        -- apply transformation
+        pos = tfn(pos)
+        -- undo origin shift
+        return xy2pos(pos.x+origin_pos.x, pos.y+origin_pos.y)
+    end
+end
+
+-- the y axis is reversed in DF so the normal logic for cw and ccw is reversed.
+local function transform_cw(tpos) return xy2pos(-tpos.y, tpos.x) end
+local function transform_ccw(tpos) return xy2pos(tpos.y, -tpos.x) end
+local function transform_fliph(tpos) return xy2pos(-tpos.x, tpos.y) end
+local function transform_flipv(tpos) return xy2pos(tpos.x, -tpos.y) end
+
+local function make_transform_fn_from_name(name)
+    if name == 'rotcw' or name == 'cw' then
+        return make_transform_fn(transform_cw)
+    elseif name == 'rotccw' or name == 'ccw' then
+        return make_transform_fn(transform_ccw)
+    elseif name == 'fliph' then
+        return make_transform_fn(transform_fliph)
+    elseif name == 'flipv' then
+        return make_transform_fn(transform_flipv)
+    else
+        qerror('invalid transformation name: '..name)
+    end
+end
+
+local function get_next_transform_name(text, start_pos)
+    local _, end_pos, name = text:find('^(%a+)%s*[;,]?%s*', start_pos)
+    return end_pos and end_pos+1 or nil, name
+end
+
+function parse_transform_params(text, modifiers)
+    local next_pos, name = get_next_transform_name(text, 1)
+    if not name then qerror('invalid transformation list: '..text) end
+    while name do
+        table.insert(modifiers.transform_fn_stack,
+                     make_transform_fn_from_name(name))
+        next_pos, name = get_next_transform_name(text, next_pos)
+    end
+end
+
+local function parse_transform(text, start_pos, _, modifiers)
+    local next_start_pos, params = get_marker_body(text, start_pos, 'transform')
+    if not params then return false, start_pos end
+    parse_transform_params(params, modifiers)
+    return true, next_start_pos
+end
+
+local meta_marker_fns = {
+    parse_repeat,
+    parse_shift,
+    parse_transform,
+}
+
+function get_modifiers_defaults()
+    return {
+        repeat_count=1,
+        repeat_zoff=0,
+        transform_fn_stack = {},
+        shift_fn_stack = {},
+    }
+end
+
+function get_meta_modifiers(text, filename)
+    local marker_data, extra_start =
+            parse_markers(text, 1, filename, meta_marker_fns,
+                          get_modifiers_defaults())
+    if extra_start ~= #text+1 then
+        dfhack.printerr(('extra unparsed text at the end of "%s": "%s"'):
+                        format(text, text:sub(extra_start)))
+    end
+    return marker_data
 end
 
 local function get_col_name(col)
@@ -290,7 +437,7 @@ end
 -- returns a grid representation of the current level, the number of rows
 -- read from the input, and the next z-level modifier, if any. See
 -- process_section() for grid format.
-local function process_level(reader, start_line_num, start_coord)
+local function process_level(reader, start_line_num, start_coord, transform_fn)
     local grid = {}
     local y = start_coord.y
     while true do
@@ -299,26 +446,32 @@ local function process_level(reader, start_line_num, start_coord)
         for i, v in ipairs(row_tokens) do
             v = trim_token(v)
             if i == 1 then
-                if v == '#<' then return grid, y-start_coord.y, 1 end
-                if v == '#>' then return grid, y-start_coord.y, -1 end
+                local _, _, zchar, zcount = v:find('^#([<>])%s*,?%s*(%d*)')
+                if zchar then
+                    zcount = tonumber(zcount) or 1
+                    local zdir = (zchar == '<') and 1 or -1
+                    return grid, y-start_coord.y, zcount*zdir
+                end
                 if parse_modeline(v, reader.filepath) then
                     return grid, y-start_coord.y
                 end
             end
             if v:match('^#$') then break end
-            if not v:match('^[`~ ]*$') and not v:match('^%s*#') then
-                -- cell has actual content, not just comments or chalk line chars
-                if not grid[y] then grid[y] = {} end
+            if not v:match('^[`~%s]*$') and not v:match('^%s*#') then
+                -- cell has actual content, not just comments or chalkline chars
                 local x = start_coord.x + i - 1
+                local pos_t = transform_fn(xy2pos(x, y))
+                if not grid[pos_t.y] then grid[pos_t.y] = {} end
                 local line_num = start_line_num + y - start_coord.y
-                grid[y][x] = {cell=make_cell_label(i, line_num), text=v}
+                grid[pos_t.y][pos_t.x] = {cell=make_cell_label(i, line_num),
+                                          text=v}
             end
         end
         y = y + 1
     end
 end
 
-local function process_levels(reader, label, start_cursor_coord)
+local function process_levels(reader, label, start_cursor_coord, transform_fn)
     local section_data_list = {}
     -- scan down to the target label
     local cur_line_num, modeline_id = 1, 1
@@ -358,7 +511,7 @@ local function process_levels(reader, label, start_cursor_coord)
     local z = start_cursor_coord.z
     while true do
         local grid, num_section_rows, zmod =
-                process_level(reader, cur_line_num, xyz2pos(x, y, z))
+                process_level(reader, cur_line_num, xy2pos(x, y), transform_fn)
         table.insert(section_data_list,
                      {modeline=modeline, zlevel=z, grid=grid})
         if zmod == nil then break end
@@ -467,12 +620,15 @@ Where the structure of modeline is defined as per parse_modeline and grid is a:
 Map keys are numbers, and the keyspace is sparse -- only cells that have content
 are non-nil.
 ]]
-function process_section(filepath, sheet_name, label, start_cursor_coord)
+function process_section(filepath, sheet_name, label, start_cursor_coord,
+                         transform_fn)
+    transform_fn = transform_fn or function(pos) return pos end
     local reader = new_reader(filepath, sheet_name)
     return dfhack.with_finalize(
         function() reader:cleanup() end,
         function()
-            return process_levels(reader, label, start_cursor_coord)
+            return process_levels(reader, label, start_cursor_coord,
+                                  transform_fn)
         end
     )
 end
@@ -594,6 +750,7 @@ if dfhack.internal.IN_TEST then
         coord2d_lt=coord2d_lt,
         get_ordered_grid_cells=get_ordered_grid_cells,
         parse_section_name=parse_section_name,
+        parse_preserve_engravings=parse_preserve_engravings,
         quote_if_has_spaces=quote_if_has_spaces,
         format_command=format_command,
         get_next_csv_token=get_next_csv_token,
@@ -603,8 +760,17 @@ if dfhack.internal.IN_TEST then
         parse_start=parse_start,
         parse_hidden=parse_hidden,
         parse_message=parse_message,
+        modeline_marker_fns=modeline_marker_fns,
         parse_markers=parse_markers,
         parse_modeline=parse_modeline,
+        parse_repeat_params=parse_repeat_params,
+        parse_repeat=parse_repeat,
+        parse_shift_params=parse_shift_params,
+        parse_shift=parse_shift,
+        parse_transform_params=parse_transform_params,
+        parse_transform=parse_transform,
+        get_modifiers_defaults=get_modifiers_defaults,
+        get_meta_modifiers=get_meta_modifiers,
         get_col_name=get_col_name,
         make_cell_label=make_cell_label,
         trim_token=trim_token,
@@ -613,6 +779,7 @@ if dfhack.internal.IN_TEST then
         parse_alias_separate=parse_alias_separate,
         parse_alias_combined=parse_alias_combined,
         get_sheet_metadata=get_sheet_metadata,
+        make_transform_fn=make_transform_fn,
         get_extended_token=get_extended_token,
         get_token=get_token,
         get_next_param=get_next_param,

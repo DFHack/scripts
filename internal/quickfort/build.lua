@@ -134,7 +134,8 @@ end
 local function is_tile_coverable(pos)
     local shape = df.tiletype.attrs[dfhack.maps.getTileType(pos)].shape
     if not is_valid_tile_base(pos) or
-            (shape ~= df.tiletype_shape.EMPTY and
+            (shape ~= df.tiletype_shape.FLOOR and
+             shape ~= df.tiletype_shape.EMPTY and
              shape ~= df.tiletype_shape.RAMP_TOP and
              shape ~= df.tiletype_shape.STAIR_DOWN) then
         return false
@@ -501,8 +502,7 @@ local building_db = {
         type=df.building_type.Trap, subtype=df.trap_type.CageTrap,
         additional_orders={'wooden cage'}},
     -- TODO: Same as weapon trap above
-    TS={label='Upright Spear/Spike',
-        type=df.building_type.Weapon, subtype=df.trap_type.StoneFallTrap},
+    TS={label='Upright Spear/Spike', type=df.building_type.Weapon},
     -- tracks (CT...). there aren't any shortcut keys in the UI so we use the
     -- aliases from python quickfort
     trackN={label='Track (N)',
@@ -780,7 +780,7 @@ function do_run(zlevel, grid, ctx)
     local buildings = {}
     stats.invalid_keys.value =
             stats.invalid_keys.value + quickfort_building.init_buildings(
-                zlevel, grid, buildings, building_db, building_aliases)
+                ctx, zlevel, grid, buildings, building_db, building_aliases)
     stats.out_of_bounds.value =
             stats.out_of_bounds.value + quickfort_building.crop_to_bounds(
                 ctx, buildings, building_db)
@@ -795,8 +795,9 @@ function do_run(zlevel, grid, ctx)
             stats.build_designated.value = stats.build_designated.value + 1
         end
     end
-    buildingplan.scheduleCycle()
-    dfhack.job.checkBuildingsNow()
+    if not ctx.dry_run then
+        buildingplan.scheduleCycle()
+    end
 end
 
 function do_orders(zlevel, grid, ctx)
@@ -804,7 +805,7 @@ function do_orders(zlevel, grid, ctx)
     local buildings = {}
     stats.invalid_keys.value =
             stats.invalid_keys.value + quickfort_building.init_buildings(
-                zlevel, grid, buildings, building_db, building_aliases)
+                ctx, zlevel, grid, buildings, building_db, building_aliases)
     quickfort_orders.enqueue_building_orders(buildings, building_db, ctx)
 end
 
@@ -827,7 +828,7 @@ function do_undo(zlevel, grid, ctx)
     local buildings = {}
     stats.invalid_keys.value =
             stats.invalid_keys.value + quickfort_building.init_buildings(
-                zlevel, grid, buildings, building_db, building_aliases)
+                ctx, zlevel, grid, buildings, building_db, building_aliases)
 
     for _, s in ipairs(buildings) do
         for extent_x, col in ipairs(s.extent_grid) do

@@ -12,7 +12,7 @@ jobs:
         python-version: 3
     - name: Install dependencies
       run: |
-        pip install sphinx
+        pip install 'sphinx<4.4.0'
     - name: Clone scripts
       uses: actions/checkout@v1
     - name: Set up DFHack

@@ -132,6 +132,12 @@ function test.render_labels()
     expect.eq('first', get_screen_word(action_word_pos))
     expect.eq('Back', get_screen_word(get_cancel_word_pos(cancel_label)))
     guidm.setCursorPos({x=10, y=20, z=30})
+    send_keys('CUSTOM_S')
+    view:onRender()
+    expect.eq('playback', get_screen_word(action_word_pos))
+    send_keys('LEAVESCREEN') -- cancel start pos selection
+    view:onRender()
+    expect.eq('first', get_screen_word(action_word_pos))
     send_keys('SELECT')
     view:onRender()
     expect.eq('second', get_screen_word(action_word_pos))
@@ -524,12 +530,33 @@ function test.phase_set()
                 end
             end
             guidm.setCursorPos({x=1, y=2, z=3})
-            send_keys('SELECT', 'SELECT') -- a once-tile blueprint, why not?
+            send_keys('SELECT', 'SELECT') -- a one-tile blueprint, why not?
             expect.eq('running: blueprint 1 1 1 blueprint dig --cursor=1,2,3',
                     mock_print.call_args[1][1])
             expect.table_eq({'1', '1', '1', 'blueprint', 'dig',
                              '--cursor=1,2,3'}, mock_run.call_args[1])
             send_keys('SELECT') -- dismiss the success messagebox
+            delay_until(view:callback('isDismissed'))
+        end)
+end
+
+function test.phase_nothing_set()
+    local mock_print, mock_run = mock.func(), mock.func({'blueprints/dig.csv'})
+    mock.patch({
+            {b, 'print', mock_print},
+            {blueprint, 'run', mock_run},
+        },
+        function()
+            local view = load_ui()
+            -- turn off autodetect and turn all phases off
+            for _,sv in ipairs(view.subviews.phases_panel.subviews) do
+                sv.option_idx = 2
+            end
+            guidm.setCursorPos({x=1, y=2, z=3})
+            send_keys('SELECT', 'SELECT')
+            expect.eq(0, mock_print.call_count)
+            send_keys('SELECT') -- dismiss the error messagebox
+            send_keys('LEAVESCREEN', 'LEAVESCREEN') -- cancel and leave UI
             delay_until(view:callback('isDismissed'))
         end)
 end
@@ -580,4 +607,145 @@ function test.preset_format()
     local view = b.active_screen
     expect.eq('pretty', view.subviews.format:get_current_option_value())
     send_keys('LEAVESCREEN') -- leave UI
+end
+
+function test.start_pos_comment()
+    local view = load_ui()
+    guidm.setCursorPos({x=1, y=2, z=3})
+    expect.eq('Comment: ', view.subviews.startpos_panel:print_comment())
+    -- set start pos and comment
+    send_keys('CUSTOM_S', 'SELECT')
+    local startpos_panel = view.subviews.startpos_panel
+    startpos_panel.input_box:onInput({_STRING=string.byte('c')})
+    startpos_panel.input_box:onInput({_STRING=string.byte('m')})
+    send_keys('SELECT')
+    expect.eq('Comment: cm', startpos_panel:print_comment())
+    -- unset start pos
+    send_keys('CUSTOM_S')
+    -- reset start pos, expect previous comment to still be there
+    send_keys('CUSTOM_S', 'SELECT', 'SELECT')
+    expect.eq('Comment: cm', startpos_panel:print_comment())
+end
+
+function test.start_pos_before_range_set()
+    local mock_print, mock_run = mock.func(), mock.func({'blueprints/dig.csv'})
+    mock.patch({
+            {b, 'print', mock_print},
+            {blueprint, 'run', mock_run},
+        },
+        function()
+            local view = load_ui()
+            send_keys('CUSTOM_S')
+            guidm.setCursorPos({x=1, y=2, z=3})
+            -- select start pos and then surround it by the blueprint range
+            send_keys('SELECT', 'SELECT', 'CURSOR_UP', 'CURSOR_LEFT', 'SELECT',
+                      'CURSOR_DOWN', 'CURSOR_DOWN', 'CURSOR_RIGHT',
+                      'CURSOR_RIGHT', 'SELECT')
+            expect.str_find('%-%-playback%-start=2,2',
+                            mock_print.call_args[1][1])
+            send_keys('SELECT') -- dismiss the success messagebox
+            delay_until(view:callback('isDismissed'))
+        end)
+end
+
+function test.start_pos_during_range_set()
+    local mock_print, mock_run = mock.func(), mock.func({'blueprints/dig.csv'})
+    mock.patch({
+            {b, 'print', mock_print},
+            {blueprint, 'run', mock_run},
+        },
+        function()
+            local view = load_ui()
+            guidm.setCursorPos({x=1, y=2, z=3})
+            -- select upper left corner of blueprint range
+            send_keys('SELECT')
+            -- select start pos
+            send_keys('CUSTOM_S', 'SELECT')
+            -- set comment
+            local startpos_panel = view.subviews.startpos_panel
+            startpos_panel.input_box:onInput({_STRING=string.byte('h')})
+            startpos_panel.input_box:onInput({_STRING=string.byte('i')})
+            send_keys('SELECT')
+            -- select second corner of blueprint range
+            send_keys('SELECT')
+            expect.str_find('%-%-playback%-start=1,1,hi',
+                            mock_print.call_args[1][1])
+            send_keys('SELECT') -- dismiss the success messagebox
+            delay_until(view:callback('isDismissed'))
+        end)
+end
+
+function test.start_pos_overlay_blink_with_cursor()
+    local view = load_ui()
+    local pos = xyz2pos(1, 2, 3)
+    guidm.setCursorPos(pos)
+    send_keys('CUSTOM_S', 'SELECT', 'SELECT')
+    dfhack.gui.revealInDwarfmodeMap(pos, true)
+    local vp = view:getViewport()
+    local stile = vp:tileToScreen(pos)
+
+    -- when blink is off, (yellow) cursor should be visible
+    mock.patch(gui, 'blink_visible', mock.func(false),
+               function() view:onRender() end)
+    local pen = dfhack.screen.readTile(stile.x+1, stile.y+1, true)
+    expect.eq(X_ASCII, pen.ch)
+    expect.ne(COLOR_BLUE, pen.fg)
+
+    -- when blink is on, (blue) marker should be visible
+    mock.patch(gui, 'blink_visible', mock.func(true),
+               function() view:onRender() end)
+    pen = dfhack.screen.readTile(stile.x+1, stile.y+1, true)
+    expect.eq(X_ASCII, pen.ch)
+    expect.eq(COLOR_BLUE, pen.fg)
+    send_keys('LEAVESCREEN') -- leave UI
+end
+
+function test.start_pos_overlay()
+    local view = load_ui()
+    local pos = xyz2pos(1, 2, 3)
+    guidm.setCursorPos(pos)
+    dfhack.gui.revealInDwarfmodeMap(pos, true)
+    local vp = view:getViewport()
+    local stile = vp:tileToScreen(pos)
+
+    -- ensure blue marker is visible when range is being selected and the marker
+    -- is outside of the range
+    send_keys('CUSTOM_S', 'SELECT', 'SELECT', 'CURSOR_DOWN', 'SELECT',
+              'CURSOR_DOWN')
+    mock.patch(gui, 'blink_visible', mock.func(true),
+               function() view:onRender() end)
+    pen = dfhack.screen.readTile(stile.x+1, stile.y+1, true)
+    expect.eq(X_ASCII, pen.ch)
+    expect.eq(COLOR_BLUE, pen.fg)
+
+    -- ensure blue marker is visible when range is being selected and the marker
+    -- is inside of the range
+    send_keys('CURSOR_UP', 'CURSOR_UP', 'CURSOR_UP')
+    mock.patch(gui, 'blink_visible', mock.func(true),
+               function() view:onRender() end)
+    pen = dfhack.screen.readTile(stile.x+1, stile.y+1, true)
+    expect.eq(X_ASCII, pen.ch)
+    expect.eq(COLOR_BLUE, pen.fg)
+
+    send_keys('LEAVESCREEN', 'LEAVESCREEN') -- cancel selection and leave UI
+end
+
+function test.start_pos_out_of_bounds()
+    local mock_print, mock_run = mock.func(), function() error() end
+    mock.patch({
+            {b, 'print', mock_print},
+            {blueprint, 'run', mock_run},
+        },
+        function()
+            local view = load_ui()
+            send_keys('CUSTOM_S')
+            guidm.setCursorPos({x=1, y=2, z=3})
+            -- select start pos and set the blueprint range somewhere else
+            send_keys('SELECT', 'SELECT', 'CURSOR_RIGHT', 'SELECT',
+                      'CURSOR_DOWN', 'SELECT')
+            expect.eq(0, mock_print.call_count)
+            send_keys('SELECT') -- dismiss the error messagebox
+            send_keys('LEAVESCREEN', 'LEAVESCREEN') -- cancel and leave UI
+            delay_until(view:callback('isDismissed'))
+        end)
 end

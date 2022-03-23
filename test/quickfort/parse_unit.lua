@@ -8,26 +8,41 @@ function test.module()
 end
 
 function test.parse_cell()
-    expect.table_eq({nil, {width=1, height=1}}, {parse.parse_cell('')})
+    local ctx = {transform_fn=function(pos) return pos end}
 
-    expect.table_eq({'()', {width=1, height=1}}, {parse.parse_cell('()')})
-    expect.table_eq({'a()', {width=1, height=1}}, {parse.parse_cell('a()')})
-    expect.table_eq({'a(x)', {width=1, height=1}}, {parse.parse_cell('a(x)')})
-    expect.table_eq({'a(5)', {width=1, height=1}}, {parse.parse_cell('a(5)')})
-    expect.table_eq({'a(5x)', {width=1, height=1}}, {parse.parse_cell('a(5x)')})
+    expect.table_eq({nil, {width=1, height=1}}, {parse.parse_cell(ctx, '')})
+
+    expect.table_eq({'()', {width=1, height=1}}, {parse.parse_cell(ctx, '()')})
+    expect.table_eq({'a()', {width=1, height=1}},
+                    {parse.parse_cell(ctx, 'a()')})
+    expect.table_eq({'a(x)', {width=1, height=1}},
+                    {parse.parse_cell(ctx, 'a(x)')})
+    expect.table_eq({'a(5)', {width=1, height=1}},
+                    {parse.parse_cell(ctx, 'a(5)')})
+    expect.table_eq({'a(5x)', {width=1, height=1}},
+                    {parse.parse_cell(ctx, 'a(5x)')})
     expect.table_eq({'ab(5x6 ', {width=1, height=1}},
-                    {parse.parse_cell('ab(5x6 ')})
-    expect.table_eq({'a5', {width=1, height=1}}, {parse.parse_cell('a5')})
-    expect.table_eq({'a5x', {width=1, height=1}}, {parse.parse_cell('a5x')})
-    expect.table_eq({'a5x2', {width=1, height=1}}, {parse.parse_cell('a5x2')})
+                    {parse.parse_cell(ctx, 'ab(5x6 ')})
+    expect.table_eq({'a5', {width=1, height=1}}, {parse.parse_cell(ctx, 'a5')})
+    expect.table_eq({'a5x', {width=1, height=1}},
+                    {parse.parse_cell(ctx, 'a5x')})
+    expect.table_eq({'a5x2', {width=1, height=1}},
+                    {parse.parse_cell(ctx, 'a5x2')})
 
-    expect.table_eq({'a', {width=1, height=1}}, {parse.parse_cell('a')})
+    expect.table_eq({'a', {width=1, height=1}}, {parse.parse_cell(ctx, 'a')})
     expect.table_eq({'ab', {width=5, height=6, specified=true}},
-                    {parse.parse_cell('ab(5x6)')})
+                    {parse.parse_cell(ctx, 'ab(5x6)')})
     expect.table_eq({'ab', {width=5, height=6, specified=true}},
-                    {parse.parse_cell('ab  (  5  x  6  )')})
-    expect.table_eq({'ab', {width=1, height=1, specified=true}},
-                    {parse.parse_cell('ab(0x0)')})
+                    {parse.parse_cell(ctx, 'ab  (  5  x  6  )')})
+
+    expect.error_match('width cannot be 0',
+            function() parse.parse_cell(ctx, 'ab(0x1)') end)
+    expect.error_match('height cannot be 0',
+            function() parse.parse_cell(ctx, 'ab(1x0)') end)
+
+    ctx.transform_fn = function(pos) return xy2pos(pos.y, pos.x) end
+    expect.table_eq({'ab', {width=6, height=5, specified=true}},
+                    {parse.parse_cell(ctx, 'ab(5x6)')})
 end
 
 function test.coord2d_lt()
@@ -54,18 +69,40 @@ function test.get_ordered_grid_cells()
 end
 
 function test.parse_section_name()
-    expect.table_eq({nil, nil}, {parse.parse_section_name('')})
-    expect.table_eq({' ', nil}, {parse.parse_section_name(' ')})
-    expect.table_eq({' ', nil}, {parse.parse_section_name(' /')})
-    expect.table_eq({nil, nil}, {parse.parse_section_name('/ ')})
-    expect.table_eq({' ', nil}, {parse.parse_section_name(' / ')})
+    expect.table_eq({nil, nil, nil}, {parse.parse_section_name('')})
+    expect.table_eq({' ', nil, ''},  {parse.parse_section_name(' ')})
+    expect.table_eq({' ', nil, ''},  {parse.parse_section_name(' /')})
+    expect.table_eq({nil, nil, ''},  {parse.parse_section_name('/ ')})
+    expect.table_eq({' ', nil, ''},  {parse.parse_section_name(' / ')})
 
-    expect.table_eq({'sheet', 'label'},
+    expect.table_eq({'sheet', 'label', ''},
                     {parse.parse_section_name('sheet/label ')})
-    expect.table_eq({' sheet ', 'label'},
+    expect.table_eq({' sheet ', 'label', ''},
                     {parse.parse_section_name(' sheet /label ')})
-    expect.table_eq({' sheet ', nil},
+    expect.table_eq({' sheet ', nil, 'badlabel'},
                     {parse.parse_section_name(' sheet / badlabel')})
+    expect.table_eq({'sheet', 'label', 'repeat(down  4)'},
+                    {parse.parse_section_name('sheet/label repeat(down  4) ')})
+end
+
+function test.parse_preserve_engravings()
+    expect.nil_(parse.parse_preserve_engravings(-1))
+    expect.nil_(parse.parse_preserve_engravings('None'))
+    expect.nil_(parse.parse_preserve_engravings('-1'))
+
+    expect.eq(df.item_quality.Ordinary, parse.parse_preserve_engravings(0))
+    expect.eq(df.item_quality.Ordinary,
+              parse.parse_preserve_engravings('Ordinary'))
+    expect.eq(df.item_quality.Ordinary, parse.parse_preserve_engravings('0'))
+
+    expect.error_match('unknown engraving quality',
+                       function() parse.parse_preserve_engravings(nil) end)
+    expect.error_match('unknown engraving quality',
+                       function() parse.parse_preserve_engravings(-2) end)
+    expect.error_match('unknown engraving quality',
+                       function() parse.parse_preserve_engravings('blorf') end)
+    expect.error_match('parse[.]lua',
+                       function() parse.parse_preserve_engravings(-2, true) end)
 end
 
 function test.quote_if_has_spaces()
@@ -306,31 +343,36 @@ function test.parse_hidden()
             function() parse.parse_hidden('#dig hidden()', 5, fname, nil) end)
 end
 
-function test.parse_markers()
+function test.parse_modeline_markers()
     local f = 'fname.csv'
 
-    expect.table_eq({{}, 5}, {parse.parse_markers('#dig', 5, f)})
-    expect.table_eq({{}, 5}, {parse.parse_markers('#dig comment', 5, f)})
-    expect.table_eq({{}, 5}, {parse.parse_markers('#dig nomarker()', 5, f)})
+    expect.table_eq({{}, 5}, {parse.parse_markers('#dig', 5, f,
+                                                  parse.modeline_marker_fns)})
+    expect.table_eq({{}, 5}, {parse.parse_markers('#dig comment', 5, f,
+                                                  parse.modeline_marker_fns)})
+    expect.table_eq({{}, 5}, {parse.parse_markers('#dig nomarker()', 5, f,
+                                                  parse.modeline_marker_fns)})
 
     expect.table_eq({{hidden=true}, 14},
-                    {parse.parse_markers('#dig hidden()', 5, f)})
+                    {parse.parse_markers('#dig hidden()', 5, f,
+                                         parse.modeline_marker_fns)})
     expect.table_eq({{hidden=true}, 14},
-                    {parse.parse_markers('#dig hidden()a', 5, f)})
+                    {parse.parse_markers('#dig hidden()a', 5, f,
+                                         parse.modeline_marker_fns)})
     expect.table_eq({{hidden=true}, 14},
                     {parse.parse_markers('#dig hidden()hidden()',
-                                         5, f)})
+                                         5, f, parse.modeline_marker_fns)})
     expect.table_eq({{hidden=true}, 14},
                     {parse.parse_markers('#dig hidden()hidden() message(a)',
-                                         5, f)})
-    expect.table_eq({{hidden=true, message='a'}, 24},
+                                         5, f, parse.modeline_marker_fns)})
+    expect.table_eq({{hidden=true, message='a'}, 25},
                     {parse.parse_markers('#dig hidden()message(a) hidden()',
-                                         5, f)})
+                                         5, f, parse.modeline_marker_fns)})
     expect.table_eq({{hidden=true, message='a', startx='1', starty='2',
-                      start_comment='startcom', label='imalabel'}, 58},
+                      start_comment='startcom', label='imalabel'}, 59},
                     {parse.parse_markers(
         '#dig hidden()message(a)start(1 2 startcom)label(imalabel) modecomment',
-        5, f)})
+        5, f, parse.modeline_marker_fns)})
 end
 
 function test.parse_modeline()
@@ -352,6 +394,183 @@ function test.parse_modeline()
                     parse.parse_modeline('#dig hidden()com ', f, 1))
     expect.table_eq({mode='dig', label='1', hidden=true, comment='c  o  m'},
                     parse.parse_modeline('#dig hidden()  c  o  m  ', f, 1))
+end
+
+function test.parse_repeat_params()
+    local modifiers = {}
+
+    expect.error_match(
+        'unknown repeat direction',
+        function() parse.parse_repeat_params('', modifiers) end)
+    expect.error_match(
+        'unknown repeat direction',
+        function() parse.parse_repeat_params('sideways 5', modifiers) end)
+
+    parse.parse_repeat_params('up 5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('up5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('up,5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('up, 5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('  up  ,  5  ', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('< 5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('<5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('<,5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+    parse.parse_repeat_params('<, 5', modifiers)
+    expect.table_eq({repeat_zoff=1, repeat_count=5}, modifiers)
+
+    parse.parse_repeat_params('down 50', modifiers)
+    expect.table_eq({repeat_zoff=-1, repeat_count=50}, modifiers)
+    parse.parse_repeat_params('>50', modifiers)
+    expect.table_eq({repeat_zoff=-1, repeat_count=50}, modifiers)
+
+    parse.parse_repeat_params('down', modifiers)
+    expect.table_eq({repeat_zoff=-1, repeat_count=1}, modifiers)
+    parse.parse_repeat_params('>, ', modifiers)
+    expect.table_eq({repeat_zoff=-1, repeat_count=1}, modifiers)
+end
+
+function test.parse_repeat()
+    local modifiers = {}
+
+    expect.table_eq({false, 4},
+                    {parse.parse_repeat('/l notrepeat()', 4, nil, modifiers)})
+    expect.table_eq({true, 14},
+                    {parse.parse_repeat('/l repeat(>5)', 4, nil, modifiers)})
+end
+
+function test.parse_shift_params()
+    expect.error_match(
+        'invalid x offset', function() parse.parse_shift_params('', {}) end)
+    expect.error_match(
+        'invalid x offset',
+        function() parse.parse_shift_params('garbage', {}) end)
+
+    local modifiers = parse.get_modifiers_defaults()
+    parse.parse_shift_params('5', modifiers)
+    expect.eq(1, #modifiers.shift_fn_stack)
+    expect.table_eq({x=5, y=0}, modifiers.shift_fn_stack[1]({x=0, y=0}))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_shift_params('0,5', modifiers)
+    expect.eq(1, #modifiers.shift_fn_stack)
+    expect.table_eq({x=0, y=5}, modifiers.shift_fn_stack[1]({x=0, y=0}))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_shift_params('-5 -5', modifiers)
+    expect.eq(1, #modifiers.shift_fn_stack)
+    expect.table_eq({x=-5, y=-5}, modifiers.shift_fn_stack[1]({x=0, y=0}))
+end
+
+function test.parse_shift()
+    local modifiers = parse.get_modifiers_defaults()
+
+    expect.table_eq({false, 4},
+                    {parse.parse_shift('/l notshift()', 4, nil, modifiers)})
+    expect.table_eq({true, 12},
+                    {parse.parse_shift('/l shift(5)', 4, nil, modifiers)})
+end
+
+function test.parse_transform_params()
+    local modifiers = parse.get_modifiers_defaults()
+
+    expect.error_match(
+        'invalid transformation',
+        function() parse.parse_transform_params('', modifiers) end)
+    expect.error_match(
+        'invalid transformation',
+        function() parse.parse_transform_params('garbage', modifiers) end)
+    expect.error_match(
+        'invalid transformation',
+        function() parse.parse_transform_params('cw ccw garbage',
+                                                modifiers) end)
+
+    local origin = {x=10, y=0}
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('cw', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=10, y=-10},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('rotcw', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=10, y=-10},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('ccw', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=10, y=10},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('rotccw', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=10, y=10},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('fliph', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=20, y=0},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('flipv', modifiers)
+    expect.eq(1, #modifiers.transform_fn_stack)
+    expect.table_eq({x=0, y=0},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+
+    modifiers = parse.get_modifiers_defaults()
+    parse.parse_transform_params('cw flipv ccw', modifiers)
+    expect.eq(3, #modifiers.transform_fn_stack)
+    expect.table_eq({x=10, y=-10},
+                    modifiers.transform_fn_stack[1]({x=0, y=0}, origin))
+    expect.table_eq({x=0, y=0},
+                    modifiers.transform_fn_stack[2]({x=0, y=0}, origin))
+    expect.table_eq({x=10, y=10},
+                    modifiers.transform_fn_stack[3]({x=0, y=0}, origin))
+end
+
+function test.parse_transform()
+    local modifiers = parse.get_modifiers_defaults()
+
+    expect.table_eq({false, 4},
+                    {parse.parse_transform('/l nottrans()', 4, nil, modifiers)})
+    expect.table_eq({true, 27},
+                    {parse.parse_transform('/l transform(cw fliph ccw)',
+                                           4, nil, modifiers)})
+end
+
+function test.get_modifiers_defaults()
+    local modifiers = parse.get_modifiers_defaults()
+    modifiers.repeat_count = 10
+    expect.eq(1, parse.get_modifiers_defaults().repeat_count)
+end
+
+function test.get_meta_modifiers()
+    local transform_fn = parse.get_modifiers_defaults().transform_fn
+    local fname = 'f'
+
+    expect.table_eq({repeat_count=1, repeat_zoff=0, transform_fn_stack={},
+                     shift_fn_stack={}},
+                    parse.get_meta_modifiers('', fname))
+    expect.table_eq({repeat_count=5, repeat_zoff=1, transform_fn_stack={},
+                     shift_fn_stack={}},
+                    parse.get_meta_modifiers('  repeat  ( up, 5 ) ', fname))
+
+    expect.printerr_match('extra unparsed text',
+            function() parse.get_meta_modifiers('garbage', fname) end)
+    expect.printerr_match('extra unparsed text',
+            function() parse.get_meta_modifiers('repeat(>5)garbage', fname) end)
 end
 
 function test.get_col_name()
@@ -402,82 +621,93 @@ function MockReader:get_next_row_raw()
 end
 
 function test.process_level()
+    local transform_fn = function(pos) return pos end
     local reader = MockReader{}
     local start = {x=10, y=20}
 
-    expect.table_eq({{}, 0}, {parse.process_level(reader, 1, start)})
+    expect.table_eq({{}, 0},
+                    {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'`'},{'d'}})
     expect.table_eq(
         {{[20]={[10]={cell='A1', text='d'}},
           [22]={[10]={cell='A3', text='d'}}},
-         3}, {parse.process_level(reader, 1, start)})
+         3}, {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{' d '},{' ~ '},{'  d  '}})
     expect.table_eq(
         {{[20]={[10]={cell='A1', text='d'}},
           [22]={[10]={cell='A3', text='d'}}},
-         3}, {parse.process_level(reader, 1, start)})
+         3}, {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'`','#','ignoreme'},{'d'}})
     expect.table_eq(
         {{[20]={[10]={cell='A1', text='d'}},
           [22]={[10]={cell='A3', text='d'}}},
-         3}, {parse.process_level(reader, 1, start)})
+         3}, {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'`','#comment','d'},{'d#d'}})
     expect.table_eq(
         {{[20]={[10]={cell='A1', text='d'}},
           [21]={[12]={cell='C2', text='d'}},
           [22]={[10]={cell='A3', text='d#d'}}},
-         3}, {parse.process_level(reader, 1, start)})
+         3}, {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'#<'}})
     expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, 1},
-                    {parse.process_level(reader, 1, start)})
+                    {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'#>'}})
     expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, -1},
-                    {parse.process_level(reader, 1, start)})
+                    {parse.process_level(reader, 1, start, transform_fn)})
+
+    reader:reset({{'d'},{'#<1'}})
+    expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, 1},
+                    {parse.process_level(reader, 1, start, transform_fn)})
+
+    reader:reset({{'d'},{'#> 8'}})
+    expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1, -8},
+                    {parse.process_level(reader, 1, start, transform_fn)})
 
     reader:reset({{'d'},{'#dig'}})
     expect.table_eq({{[20]={[10]={cell='A1', text='d'}}}, 1},
-                    {parse.process_level(reader, 1, start)})
+                    {parse.process_level(reader, 1, start, transform_fn)})
 end
 
 function test.process_levels()
+    local transform_fn = function(pos) return pos end
     local reader = MockReader{}
     local start = {x=10, y=20, z=30}
 
     -- label not found (no data)
     expect.error_match('no data found',
-                       function() parse.process_levels(reader, nil, start) end)
+        function() parse.process_levels(reader, nil, start, transform_fn) end)
 
     -- label not found (mismatch)
     reader:reset({{'#build'},{'Tl'}})
     expect.error_match('not found',
-                       function() parse.process_levels(reader, '2', start) end)
+        function() parse.process_levels(reader, '2', start, transform_fn) end)
 
     -- implicit #dig modeline
     reader:reset({{'d'}})
     expect.table_eq({{modeline={mode='dig',label='1'},
                       zlevel=30,
                       grid={[20]={[10]={cell='A1', text='d'}}}}},
-                    parse.process_levels(reader, '1', start))
+                    parse.process_levels(reader, '1', start, transform_fn))
 
     -- scan to target label
     reader:reset({{'#dig'},{'d'},{'#>'},{'d'},{'#zone'},{'a(3x3)'}})
     expect.table_eq({{modeline={mode='zone',label='2'},
                       zlevel=30,
                       grid={[20]={[10]={cell='A6', text='a(3x3)'}}}}},
-                    parse.process_levels(reader, '2', start))
+                    parse.process_levels(reader, '2', start, transform_fn))
 
     -- scan to target label with interim ignored sections
     reader:reset({{'#dig'},{'d'},{'#ignore'},{'#aliases'},{'#zone'},{'a(3x3)'}})
     expect.table_eq({{modeline={mode='zone',label='2'},
                       zlevel=30,
                       grid={[20]={[10]={cell='A6', text='a(3x3)'}}}}},
-                    parse.process_levels(reader, '2', start))
+                    parse.process_levels(reader, '2', start, transform_fn))
 
     -- multiple levels
     reader:reset({{'#dig'},{'d'},{'#>'},{'d'},{'#>'},{'d'}})
@@ -490,7 +720,7 @@ function test.process_levels()
                      {modeline={mode='dig',label='1'},
                       zlevel=28,
                       grid={[20]={[10]={cell='A6', text='d'}}}},},
-                    parse.process_levels(reader, '1', start))
+                    parse.process_levels(reader, '1', start, transform_fn))
 end
 
 function test.parse_alias_separate()

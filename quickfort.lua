@@ -1,4 +1,5 @@
 -- DFHack-native implementation of the classic Quickfort utility
+--@module = true
 --[====[
 
 quickfort
@@ -40,18 +41,18 @@ Usage:
     blueprints, respectively. The list can be filtered by a specified mode (e.g.
     "-m build") and/or strings to search for in a path, filename, mode, or
     comment. The id numbers in the list may not be contiguous if there are
-    hidden or filtered  blueprints that are not being shown.
+    hidden or filtered blueprints that are not being shown.
 **quickfort gui [-l|-\-library] [-h|-\-hidden] [search string]**
     Starts the quickfort dialog, where you can run blueprints from an
     interactive list. The optional arguments have the same meanings as they do
-    in the list command, and can be used to preset the gui dialog state.
+    in the ``list`` command, and can be used to preset the gui dialog state.
 **quickfort <command>[,<command>...] <list_num>[,<list_num>...] [<options>]**
-    Applies the blueprint with the number from the list command.
+    Applies the blueprint(s) with the number(s) from the ``list`` command.
 **quickfort <command>[,<command>...] <filename> [-n|-\-name <name>[,<name>...]] [<options>]**
     Applies a blueprint in the specified file. The optional ``name`` parameter
     can select a specific blueprint from a file that contains multiple
     blueprints with the format "sheetname/label", or just "/label" for .csv
-    files. The label is defined in the blueprint modeline, or, if not define,
+    files. The label is defined in the blueprint modeline, or, if not defined,
     defaults to its order in the sheet or file (e.g. "/2"). If the ``-n``
     parameter is not specified, the first blueprint in the first sheet is used.
 
@@ -59,7 +60,7 @@ Usage:
 
 :run:     Applies the blueprint at your current in-game cursor position.
 :orders:  Uses the manager interface to queue up orders to manufacture items for
-          the specified build-mode blueprint.
+          the specified blueprint(s).
 :undo:    Applies the inverse of the specified blueprint. Dig tiles are
           undesignated, buildings are canceled or removed (depending on their
           construction status), and stockpiles/zones are removed. There is no
@@ -69,14 +70,34 @@ Usage:
 **<options>** can be zero or more of:
 
 ``-c``, ``--cursor <x>,<y>,<z>``
-    Use the specified map coordinates instead of the current cursor position for
-    the blueprint cursor start position. If this option is specified, then an
-    active game map cursor is not necessary.
+    Use the specified map coordinates instead of the current map cursor for the
+    the blueprint start position. If this option is specified, then an active
+    game map cursor is not necessary.
 ``-d``, ``--dry-run``
     Go through all the motions and print statistics on what would be done, but
     don't actually change any game state.
+``--preserve-engravings <quality>``
+    Don't designate tiles for digging if they have an engraving with at least
+    the specified quality. Valid values for ``quality`` are: ``None``,
+    ``Ordinary``, ``WellCrafted``, ``FinelyCrafted``, ``Superior``,
+    ``Exceptional``, and ``Masterful``. Specify ``None`` to ignore engravings
+    when designating tiles. Note that if ``Masterful`` tiles are dug out, the
+    dwarf who engraved the masterwork will get negative thoughts. If not
+    specified, ``Masterful`` engravings are preserved by default.
 ``-q``, ``--quiet``
     Suppress non-error console output.
+``-r``, ``--repeat <direction>[,]<num levels>``
+    Repeats the specified blueprint(s) up or down the requested number of
+    z-levels. Direction can be ``up`` or ``down``, and can be abbreviated with
+    ``<`` or ``>``. For example, the following options are equivalent:
+    ``--repeat down,5``, ``-rdown5``, and ``-r>5``.
+``-s``, ``--shift <x>[,<y>]``
+    Shifts the blueprint by the specified offset before modifying the game map.
+    The values for ``<x>`` and ``<y>`` can be negative. If both ``--shift`` and
+    ``--transform`` are specified, the shift is always applied last.
+``-t``, ``--transform <transformation>[,<transformation>...]``
+    Applies geometric transformations to the blueprint before modifying the game
+    map. See the Transformations section below for details.
 ``-v``, ``--verbose``
     Output extra debugging information. This is especially useful if the
     blueprint isn't being applied like you expect.
@@ -87,7 +108,22 @@ Example commands::
     quickfort list -l dreamfort help
     quickfort run library/dreamfort.csv
     quickfort run,orders library/dreamfort.csv -n /industry2
-    quickfort run 10 -v
+    quickfort run 10 -dv
+
+Transformations:
+
+All transformations are anchored at the blueprint start cursor position. This is
+the upper left corner by default, but it can be modified if the blueprint has a
+`start() modeline marker <quickfort-start>`. This just means that the blueprint
+tile that would normally appear under your cursor will still appear under your
+cursor, regardless of how the blueprint is rotated or flipped.
+
+**<transformation>** is one of:
+
+:rotcw or cw:   Rotates the blueprint 90 degrees clockwise.
+:rotccw or ccw: Rotates the blueprint 90 degrees counterclockwise.
+:fliph:         Flips the blueprint horizontally (left edge becomes right edge).
+:flipv:         Flips the blueprint vertically (top edge becomes bottom edge).
 
 Configuration:
 
@@ -121,7 +157,8 @@ not change the configuration stored in the file:
     for stockpiles that take barrels and bins, 1 wheelbarrow for stone
     stockpiles). The default here for wheelbarrows is 0 since using wheelbarrows
     can *decrease* the efficiency of your fort unless you know how to use them
-    properly.
+    properly. Blueprints can `override <quickfort-place-containers>` this value
+    for specific stockpiles.
 
 There is one other configuration file in the ``dfhack-config/quickfort`` folder:
 :source:`aliases.txt <dfhack-config/quickfort/aliases.txt>`. It defines keycode
@@ -129,6 +166,49 @@ shortcuts for query blueprints. The format for this file is described in the
 `quickfort-alias-guide`, and default aliases that all players can use and build
 on are available in the `quickfort-alias-library`. Some quickfort library
 aliases require the `search-plugin` plugin to be enabled.
+
+API:
+
+The quickfort script can be called programmatically by other scripts either via
+the commandline interface with ``dfhack.run_script()`` or via the API functions
+defined in :source-scripts:`quickfort.lua`:
+
+* ``apply_blueprint(params)``
+
+Applies the specified blueprint data and returns processing statistics. The
+statistics structure is a map of stat ids to ``{label=string, value=number}``.
+
+``params`` is a table with the following fields:
+
+:``mode``: (required) The name of the blueprint mode, e.g. 'dig', 'build', etc.
+:``data``: (required) A sparse map populated such that ``data[z][y][x]`` yields
+    the blueprint text that should be applied to the tile at map coordinate
+    ``(x, y, z)``.
+:``command``: The quickfort command to execute, e.g. 'run', 'orders', etc.
+    Defaults to 'run'.
+:``pos``: A coordinate that serves as the reference point for the coordinates in
+    the data map. That is, the text at ``data[z][y][x]`` will be shifted to be
+    applied to coordinate ``(pos.x + x, pos.y + y, pos.z + z)``. If not
+    specified, defaults to ``{x=0, y=0, z=0}``.
+:``aliases``: a map of query blueprint aliases names to their expansions. If not
+    specified, defaults to ``{}``.
+:``preserve_engravings``: Don't designate tiles for digging if they have an
+    engraving with at least the specified quality. Value is a df.item_quality
+    enum name or value, or "None" (or, equivalently, -1) to indicate that no
+    engravings should be preserved. Defaults to ``df.item_quality.Masterful``.
+:``dry_run``: Just calculate statistics, such as how many tiles are outside the
+    boundaries of the map; don't actually apply the blueprint. Defaults to
+    false.
+:``verbose``: Output extra debugging information to the console. Defaults to
+    false.
+
+API usage example::
+
+    local guidm = require('gui.dwarfmode')
+    local quickfort = reqscript('quickfort')
+    -- dig a 10x10 block at the cursor position
+    quickfort.apply_blueprint{mode='dig', data={[0]={[0]={[0]='d(10x10)'}}},
+                              pos=guidm.getCursorPos()}
 ]====]
 
 local argparse = require('argparse')
@@ -137,6 +217,7 @@ local argparse = require('argparse')
 -- top-level file. this ensures modified transitive dependencies are properly
 -- reloaded when this script is run.
 local quickfort_aliases = reqscript('internal/quickfort/aliases')
+local quickfort_api = reqscript('internal/quickfort/api')
 local quickfort_build = reqscript('internal/quickfort/build')
 local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_command = reqscript('internal/quickfort/command')
@@ -176,7 +257,7 @@ quickfort gui [-l|--library] [-h|--hidden] [search string]
     interactive list. The optional arguments have the same meanings as they do
     in the list command, and can be used to preset the gui dialog state.
 quickfort <command>[,<command>...] <list_num>[,<list_num>...] [<options>]
-    Applies the blueprint with the number from the list command.
+    Applies the blueprint(s) with the number(s) from the list command.
 quickfort <command>[,<command>...] <filename> [-n|--name <name>[,<name>...]] [<options>]
     Applies a blueprint in the specified file. The optional name parameter can
     select a specific blueprint from a file that contains multiple blueprints
@@ -187,7 +268,7 @@ quickfort <command>[,<command>...] <filename> [-n|--name <name>[,<name>...]] [<o
 
 run     Applies the blueprint at your current in-game cursor position.
 orders  Uses the manager interface to queue up orders to manufacture items for
-        the specified build-mode blueprint.
+        the specified blueprint.
 undo    Applies the inverse of the specified blueprint. Dig tiles are
         undesignated, buildings are canceled or removed (depending on their
         construction status), and stockpiles/zones are removed. There is no
@@ -197,14 +278,35 @@ undo    Applies the inverse of the specified blueprint. Dig tiles are
 <options> can be zero or more of:
 
 -c, --cursor <x>,<y>,<z>
-    Use the specified map coordinates instead of the current cursor position for
-    the blueprint cursor start position. If this option is specified, then an
-    active game map cursor is not necessary.
+    Use the specified map coordinates instead of the current map cursor for the
+    blueprint start position. If this option is specified, then an active game
+    map cursor is not necessary.
 -d, --dry-run
     Go through all the motions and print statistics on what would be done, but
     don't actually change any game state.
+--preserve-engravings <quality>
+    Don't designate tiles for digging if they have an engraving with at least
+    the specified quality. Valid values for "quality" are: "None", "Ordinary",
+    "WellCrafted", "FinelyCrafted", "Superior", "Exceptional", and "Masterful".
+    Specify "None" to ignore engravings when designating tiles. Note that if
+    "Masterful" tiles are dug out, the dwarf who engraved the masterwork will
+    get negative thoughts. If not specified, "Masterful" engravings are
+    preserved by default.
 -q, --quiet
     Suppress non-error console output.
+-r, --repeat <direction>[,]<num levels>
+    Repeats the specified blueprint(s) up or down the requested number of
+    z-levels. Direction can be "up" or "down", and can be abbreviated with "<"
+    or ">". For example, the following options are equivalent:
+    "--repeat down,5", "-rdown5", and "-r>5".
+-s, --shift <x>[,<y>]
+    Shifts the blueprint by the specified offset before modifying the game map.
+    The values for "<x>" and "<y>" can be negative. If both "--shift" and
+    "--transform" are specified, the shift is always applied last.
+-t, --transform <transformation>[,<transformation>...]
+    Applies geometric transformations to the blueprint before modifying the game
+    map. Valid transformations are: rotcw (or cw), rotccw (or ccw), fliph, and
+    flipv.
 -v, --verbose
     Output extra debugging information. This is especially useful if the
     blueprint isn't being applied like you expect.
@@ -213,6 +315,30 @@ For more info, see:
 https://docs.dfhack.org/en/stable/docs/_auto/base.html#quickfort and
 https://docs.dfhack.org/en/stable/docs/guides/quickfort-user-guide.html
 ]=]
+end
+
+-- public API
+function apply_blueprint(params)
+    local data, cursor = quickfort_api.normalize_data(params.data, params.pos)
+    local preserve_engravings = quickfort_parse.parse_preserve_engravings(
+                params.preserve_engravings or df.item_quality.Masterful, true)
+    local ctx = quickfort_command.init_ctx(params.command or 'run', 'API',
+                                cursor, params.aliases or {}, params.dry_run,
+                                preserve_engravings)
+    quickfort_common.verbose = not not params.verbose
+    dfhack.with_finalize(
+        function() quickfort_common.verbose = false end,
+        function()
+            for zlevel,grid in pairs(data) do
+                quickfort_command.do_command_raw(params.mode, zlevel, grid, ctx)
+            end
+        end)
+    return quickfort_api.clean_stats(ctx.stats)
+end
+
+-- interactive script
+if dfhack_flags.module then
+    return
 end
 
 local action_switch = {

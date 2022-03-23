@@ -65,11 +65,11 @@ end
 -- populates seen_grid coordinates with the building id so we can build an
 -- extent_grid later. spreadsheet cells that define extents (e.g. a(5x5)) create
 -- buildings separate from adjacent cells, even if they have the same type.
-local function flood_fill(grid, x, y, seen_grid, data, db, aliases)
+local function flood_fill(ctx, grid, x, y, seen_grid, data, db, aliases)
     if seen_grid[x] and seen_grid[x][y] then return 0 end
     if not grid[y] or not grid[y][x] then return 0 end
     local cell, text = grid[y][x].cell, grid[y][x].text
-    local keys, extent = quickfort_parse.parse_cell(text)
+    local keys, extent = quickfort_parse.parse_cell(ctx, text)
     if aliases[string.lower(keys)] then keys = aliases[string.lower(keys)] end
     if not db[keys] then
         if not seen_grid[x] then seen_grid[x] = {} end
@@ -82,26 +82,26 @@ local function flood_fill(grid, x, y, seen_grid, data, db, aliases)
     log('mapping spreadsheet cell %s with text "%s"', cell, text)
     if not data.type then data.type = keys end
     table.insert(data.cells, cell)
-    for target_x=x,x+extent.width-1 do
-        for target_y=y,y+extent.height-1 do
-            if not seen_grid[target_x] then seen_grid[target_x] = {} end
+    for tgt_x=math.min(x,x+extent.width+1),math.max(x+extent.width-1,x) do
+        for tgt_y=math.min(y,y+extent.height+1),math.max(y+extent.height-1,y) do
+            if not seen_grid[tgt_x] then seen_grid[tgt_x] = {} end
             -- this may overlap with another building, but that's handled later
-            seen_grid[target_x][target_y] = data.id
-            if target_x < data.x_min then data.x_min = target_x end
-            if target_x > data.x_max then data.x_max = target_x end
-            if target_y < data.y_min then data.y_min = target_y end
-            if target_y > data.y_max then data.y_max = target_y end
+            seen_grid[tgt_x][tgt_y] = data.id
+            if tgt_x < data.x_min then data.x_min = tgt_x end
+            if tgt_x > data.x_max then data.x_max = tgt_x end
+            if tgt_y < data.y_min then data.y_min = tgt_y end
+            if tgt_y > data.y_max then data.y_max = tgt_y end
         end
     end
     if extent.specified then return 0 end
-    return flood_fill(grid, x-1, y-1, seen_grid, data, db, aliases) +
-            flood_fill(grid, x-1, y, seen_grid, data, db, aliases) +
-            flood_fill(grid, x-1, y+1, seen_grid, data, db, aliases) +
-            flood_fill(grid, x, y-1, seen_grid, data, db, aliases) +
-            flood_fill(grid, x, y+1, seen_grid, data, db, aliases) +
-            flood_fill(grid, x+1, y-1, seen_grid, data, db, aliases) +
-            flood_fill(grid, x+1, y, seen_grid, data, db, aliases) +
-            flood_fill(grid, x+1, y+1, seen_grid, data, db, aliases)
+    return flood_fill(ctx, grid, x-1, y-1, seen_grid, data, db, aliases) +
+            flood_fill(ctx, grid, x-1, y, seen_grid, data, db, aliases) +
+            flood_fill(ctx, grid, x-1, y+1, seen_grid, data, db, aliases) +
+            flood_fill(ctx, grid, x, y-1, seen_grid, data, db, aliases) +
+            flood_fill(ctx, grid, x, y+1, seen_grid, data, db, aliases) +
+            flood_fill(ctx, grid, x+1, y-1, seen_grid, data, db, aliases) +
+            flood_fill(ctx, grid, x+1, y, seen_grid, data, db, aliases) +
+            flood_fill(ctx, grid, x+1, y+1, seen_grid, data, db, aliases)
 end
 
 local function swap_id(data, seen_grid, from_id)
@@ -207,7 +207,7 @@ local function build_extent_grid(seen_grid, data)
 end
 
 -- build boundaries and extent maps from blueprint grid input
-function init_buildings(zlevel, grid, buildings, db, aliases)
+function init_buildings(ctx, zlevel, grid, buildings, db, aliases)
     local invalid_keys = 0
     local data_tables = {}
     local seen_grid = {} -- [x][y] -> id
@@ -220,7 +220,7 @@ function init_buildings(zlevel, grid, buildings, db, aliases)
                 x_min=30000, x_max=-30000, y_min=30000, y_max=-30000
             }
             invalid_keys = invalid_keys +
-                    flood_fill(grid, x, y, seen_grid, data, db, aliases)
+                    flood_fill(ctx, grid, x, y, seen_grid, data, db, aliases)
             if data.type then table.insert(data_tables, data) end
             ::continue::
         end

@@ -98,28 +98,31 @@ function test.flood_fill()
               [13]={cell='D5',text='b'},
               [14]={cell='E5',text='b(1x3)'}},
     }
+    local ctx = {transform_fn=function(pos) return pos end}
     local db = utils.invert{'a','b','c','d'}
     local aliases = {d='a'}
 
-    expect.eq(0, b.flood_fill(grid, 10, 20, {[10]={[20]=1}}, {}, db, aliases))
-    expect.eq(0, b.flood_fill(grid, 1, 1, {}, {}, db, aliases))
-    expect.eq(0, b.flood_fill(grid, 12, 20, {}, {}, db, aliases))
+    expect.eq(0, b.flood_fill(ctx, grid, 10, 20, {[10]={[20]=1}}, {}, db,
+                              aliases))
+    expect.eq(0, b.flood_fill(ctx, grid, 1, 1, {}, {}, db, aliases))
+    expect.eq(0, b.flood_fill(ctx, grid, 12, 20, {}, {}, db, aliases))
 
     local seen_grid = {}
     expect.printerr_match(
         'invalid key sequence',
         function()
-            expect.eq(1, b.flood_fill(grid, 10, 21, seen_grid, {}, db, aliases))
+            expect.eq(1, b.flood_fill(ctx, grid, 10, 21, seen_grid, {}, db,
+                                      aliases))
         end)
     expect.table_eq({[10]={[21]=true}}, seen_grid)
 
-    expect.eq(0, b.flood_fill(grid, 14, 24, {}, {type='z'}, db, aliases))
-    expect.eq(0, b.flood_fill(grid, 14, 24, {}, {type='b'}, db, aliases))
+    expect.eq(0, b.flood_fill(ctx, grid, 14, 24, {}, {type='z'}, db, aliases))
+    expect.eq(0, b.flood_fill(ctx, grid, 14, 24, {}, {type='b'}, db, aliases))
 
     local data = {id=1, cells={},
                   x_min=30000, x_max=-30000, y_min=30000, y_max=-30000}
     seen_grid = {}
-    expect.eq(0, b.flood_fill(grid, 14, 24, seen_grid, data, db, aliases))
+    expect.eq(0, b.flood_fill(ctx, grid, 14, 24, seen_grid, data, db, aliases))
     expect.table_eq({[14]={[24]=1,[25]=1,[26]=1}}, seen_grid)
     expect.table_eq({id=1, type='b', cells={'E5'},
                      x_min=14, x_max=14, y_min=24, y_max=26},
@@ -128,7 +131,7 @@ function test.flood_fill()
     -- from here on down, seen_grid is cumulative across tests
     data = {id=2, cells={},
             x_min=30000, x_max=-30000, y_min=30000, y_max=-30000}
-    expect.eq(0, b.flood_fill(grid, 13, 24, seen_grid, data, db, aliases))
+    expect.eq(0, b.flood_fill(ctx, grid, 13, 24, seen_grid, data, db, aliases))
     expect.table_eq({[13]={[24]=2},
                      [14]={[23]=2,[24]=1,[25]=1,[26]=1}},
                     seen_grid)
@@ -138,7 +141,7 @@ function test.flood_fill()
 
     data = {id=3, cells={},
             x_min=30000, x_max=-30000, y_min=30000, y_max=-30000}
-    expect.eq(0, b.flood_fill(grid, 13, 22, seen_grid, data, db, aliases))
+    expect.eq(0, b.flood_fill(ctx, grid, 13, 22, seen_grid, data, db, aliases))
     expect.table_eq({[13]={[22]=3,[23]=3,[24]=2},
                      [14]={[23]=2,[24]=1,[25]=1,[26]=1}},
                     seen_grid)
@@ -151,8 +154,8 @@ function test.flood_fill()
     expect.printerr_match(
         'invalid key sequence',
         function()
-            expect.eq(1,
-                      b.flood_fill(grid, 12, 22, seen_grid, data, db, aliases))
+            expect.eq(1, b.flood_fill(ctx, grid, 12, 22, seen_grid, data, db,
+                                      aliases))
         end)
     expect.table_eq({[10]={[20]=4,[21]=true,[22]=4},
                      [11]={[20]=4,[21]=4},
@@ -293,6 +296,7 @@ function test.build_extent_grid()
 end
 
 function test.init_buildings()
+    local ctx = {transform_fn=function(pos) return pos end}
     local zlevel = 5
 
     -- one building completely covering another in the flood fill stage
@@ -309,7 +313,7 @@ function test.init_buildings()
         width=2, height=1,
         extent_grid={[1]={[1]=true},[2]={[1]=true}}
     }
-    expect.eq(0, b.init_buildings(zlevel, grid, buildings, db))
+    expect.eq(0, b.init_buildings(ctx, zlevel, grid, buildings, db))
     expect.table_eq({expected}, buildings)
 
     -- one building preventing another from expanding
@@ -330,7 +334,7 @@ function test.init_buildings()
     expect.printerr_match(
         'taken by adjacent structures',
         function()
-            expect.eq(0, b.init_buildings(zlevel, grid, buildings, db))
+            expect.eq(0, b.init_buildings(ctx, zlevel, grid, buildings, db))
         end)
 
     expect.table_eq({expected}, buildings)

@@ -1,9 +1,9 @@
 ===[[[
 This file contains changes specific to the scripts repo. See docs/changelog.txt
 in the dfhack repo for a full description, or
-https://docs.dfhack.org/en/latest/docs/Compile.html#build-changelog
+https://docs.dfhack.org/en/latest/docs/Documentation.html#building-the-changelogs
 
-NOTE: currently, gen_changelog.txt expects a "Future" section to exist at the
+NOTE: currently, gen_changelog.py expects a "Future" section to exist at the
 top of this file (even if no changes are listed under it), or you will get a
 "Entry without section" error. Also, to maintain proper sorting in the generated
 changelogs when making a new release, docs/changelog.txt in the dfhack repo must
@@ -15,12 +15,43 @@ that repo.
 
 ## New Scripts
 
+## Removed
+
 ## Fixes
-- `devel/query`: fixed a problem printing parents correctly when the starting path has lua pattern special characters in it
-- `devel/query`: fixed a crash when trying to iterated linked list types
+- `devel/query`: fixed a problem printing parents when the starting path has lua pattern special characters in it
+- `devel/query`: fixed a crash when trying to iterate over linked lists
+- `gui/advfort`: encrust and stud jobs no longer consume reagents without actually improving the target item
+- `setfps`: keep internal ratio of processing FPS to graphics FPS in sync when updating FPS
+
+## Misc Improvements
+- `quickfort`: support transformations for blueprints that use expansion syntax
+
+# 0.47.05-r4
+
+## Fixes
+- `quickfort`: produce a useful error message instead of a code error when a bad query blueprint key sequence leaves the game in a mode that does not have an active cursor
+- `quickfort`: restore functionality to the ``--verbose`` commandline flag
+- `quickfort`: don't designate tiles for digging if they are within the bounds of a planned or constructed building
+- `quickfort`: allow grates, bars, and hatches to be built on flat floor (like DF itself allows)
+- `quickfort`: allow tracks to be built on hard, natural rock ramps
+- `quickfort`: allow dig priority to be properly set for track designations
+- `quickfort`: fix incorrect directions for tracks that extend south or east from a track segment pair specified with expansion syntax (e.g. T(4x4))
+- `quickfort`: fix parsing of multi-part extended zone configs (e.g. when you set custom supply limits for hospital zones AND set custom flags for a pond)
+- `quickfort`: fix error when attempting to set a custom limit for plaster powder in a hospital zone
+- `exportlegends`: fix issue where birth year was outputted as birth seconds
 
 ## Misc Improvements
 - `gui/blueprint`: support the new ``--splitby`` and ``--format`` options for `blueprint`
+- `gui/blueprint`: hide help text when the screen is too short to display it
+- `quickfort`: add ``quickfort.apply_blueprint()`` API function that can be called directly by other scripts
+- `quickfort`: by default, don't designate tiles for digging that have masterwork engravings on them. quality level to preserve is configurable with the new ``--preserve-engravings`` param
+- `quickfort`: implement single-tile track aliases so engraved tracks can be specified tile-by-tile just like constructed tracks
+- `quickfort`: allow blueprints to jump up or down multiple z-levels with a single command (e.g. ``#>5`` goes down 5 levels)
+- `quickfort`: blueprints can now be repeated up and down a specified number of z-levels via ``repeat`` markers in meta blueprints or the ``--repeat`` commandline option
+- `quickfort`: blueprints can now be rotated, flipped, and shifted via ``transform`` and ``shift`` markers in meta blueprints or the corresponding commandline options
+
+## Removed
+- `digfort`: please use `quickfort` instead
 
 # 0.47.05-r3
 
