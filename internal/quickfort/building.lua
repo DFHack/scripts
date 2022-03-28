@@ -71,12 +71,16 @@ local function flood_fill(ctx, grid, x, y, seen_grid, data, db, aliases)
     local cell, text = grid[y][x].cell, grid[y][x].text
     local keys, extent = quickfort_parse.parse_cell(ctx, text)
     if aliases[string.lower(keys)] then keys = aliases[string.lower(keys)] end
-    if not db[keys] then
+    local db_entry = db[keys]
+    if not db_entry then
         if not seen_grid[x] then seen_grid[x] = {} end
         seen_grid[x][y] = true -- seen, but not part of any building
         dfhack.printerr(string.format('invalid key sequence in cell %s: "%s"',
                                       cell, text))
         return 1
+    end
+    if db_entry.transform then
+        keys = db_entry.transform(ctx)
     end
     if data.type and (data.type ~= keys or extent.specified) then return 0 end
     log('mapping spreadsheet cell %s with text "%s"', cell, text)
@@ -104,25 +108,33 @@ local function flood_fill(ctx, grid, x, y, seen_grid, data, db, aliases)
             flood_fill(ctx, grid, x+1, y+1, seen_grid, data, db, aliases)
 end
 
-local function swap_id(data, seen_grid, from_id)
-    for x=data.x_min,data.x_max do
-        for y=data.y_min,data.y_max do
+local function swap_id_and_trim_chunk(chunk, seen_grid, from_id)
+    local x_min, x_max = chunk.x_max, chunk.x_min
+    local y_min, y_max = chunk.y_max,chunk.y_min
+    for x=chunk.x_min,chunk.x_max do
+        for y=chunk.y_min,chunk.y_max do
             if seen_grid[x] and seen_grid[x][y] == from_id then
-                seen_grid[x][y] = data.id
+                seen_grid[x][y] = chunk.id
+                x_min, x_max = math.min(x_min, x), math.max(x_max, x)
+                y_min, y_max = math.min(y_min, y), math.max(y_max, y)
             end
         end
     end
+    chunk.x_min, chunk.x_max = x_min, x_max
+    chunk.y_min, chunk.y_max = y_min, y_max
 end
 
 -- if an extent is too large in any dimension, chunk it up intelligently. we
 -- can't just split it into a grid since the pieces might not align cleanly
 -- (think of a solid block of staggered workshops of the same type). instead,
--- scan the edges and break off pieces as we find them.
-local function chunk_extents(data_tables, seen_grid, db)
+-- scan the edges and break off pieces as we find them. scan in an order that
+-- results in the same chunking regardless of any applied transformations.
+local function chunk_extents(data_tables, seen_grid, db, invert)
     local chunks = {}
     for i, data in ipairs(data_tables) do
-        local max_width = db[data.type].max_width
-        local max_height = db[data.type].max_height
+        local db_entry = db[data.type]
+        local max_width = db_entry.max_width
+        local max_height = db_entry.max_height
         local width = data.x_max - data.x_min + 1
         local height = data.y_max - data.y_min + 1
         if width <= max_width and height <= max_height then
@@ -131,50 +143,83 @@ local function chunk_extents(data_tables, seen_grid, db)
         end
         local chunk = nil
         local cuts = 0
-        for x=data.x_min,data.x_max do
-            for y=data.y_min,data.y_max do
-                if seen_grid[x] and seen_grid[x][y] == data.id then
-                    chunk = copyall(data)
-                    chunk.id = #data_tables - (i - 1) + #chunks + 1
-                    chunk.x_min, chunk.y_min = x, y
-                    chunk.x_max = math.min(x + max_width - 1, data.x_max)
-                    chunk.y_max = math.min(y + max_height - 1, data.y_max)
-                    swap_id(chunk, seen_grid, data.id)
-                    table.insert(chunks, chunk)
-                    cuts = cuts + 1
+        local startx, endx, stepx = data.x_min, data.x_max, 1
+        local starty, endy, stepy = data.y_min, data.y_max, 1
+        if invert.x then
+            startx, endx, stepx = data.x_max, data.x_min, -1
+        end
+        if invert.y then
+            starty, endy, stepy = data.y_max, data.y_min, -1
+        end
+        for x=startx,endx,stepx do
+            for y=starty,endy,stepy do
+                if not seen_grid[x] or seen_grid[x][y] ~= data.id then
+                    goto inner_continue
                 end
+                chunk = copyall(data)
+                chunk.id = #data_tables - (i - 1) + #chunks + 1
+                if invert.x then
+                    chunk.x_max = x
+                    chunk.x_min = math.max(x - max_width + 1, data.x_min)
+                else
+                    chunk.x_min = x
+                    chunk.x_max = math.min(x + max_width - 1, data.x_max)
+                end
+                if invert.y then
+                    chunk.y_max = y
+                    chunk.y_min = math.max(y - max_height + 1, data.y_min)
+                else
+                    chunk.y_min = y
+                    chunk.y_max = math.min(y + max_height - 1, data.y_max)
+                end
+                swap_id_and_trim_chunk(chunk, seen_grid, data.id)
+                table.insert(chunks, chunk)
+                cuts = cuts + 1
+                ::inner_continue::
             end
         end
         -- use the original data.id for the last chunk so our ids are contiguous
         local old_chunk_id = chunk.id
         chunk.id = data.id
-        swap_id(chunk, seen_grid, old_chunk_id)
+        swap_id_and_trim_chunk(chunk, seen_grid, old_chunk_id)
         log('%s area too big; chunking into %d parts ' ..
             '(defined in spreadsheet cells %s)',
-            db[data.type].label, cuts, table.concat(data.cells, ', '))
+            db_entry.label, cuts, table.concat(data.cells, ', '))
         ::continue::
     end
     return chunks
 end
 
 -- expand multi-tile buildings that are less than their min dimensions around
--- their current center
-local function expand_buildings(data_tables, seen_grid, db)
+-- their current center. if the blueprint has been transformed, ensures the
+-- expansion respects the original orientation.
+local function expand_buildings(data_tables, seen_grid, db, invert)
     for _, data in ipairs(data_tables) do
-        if db[data.type].has_extents then goto continue end
+        local db_entry = db[data.type]
+        if db_entry.has_extents then goto continue end
         local width = data.x_max - data.x_min + 1
         local height = data.y_max - data.y_min + 1
-        local min_width = db[data.type].min_width
-        local min_height = db[data.type].min_height
+        local min_width = db_entry.min_width
+        local min_height = db_entry.min_height
         if width < min_width then
             local center_x = math.floor((data.x_min + data.x_max) / 2)
-            data.x_min = math.ceil(center_x - min_width / 2)
-            data.x_max = data.x_min + min_width - 1
+            if invert.x then
+                data.x_max = math.floor(math.ceil(center_x) + min_width / 2)
+                data.x_min = data.x_max - min_width + 1
+            else
+                data.x_min = math.ceil(math.floor(center_x) - min_width / 2)
+                data.x_max = data.x_min + min_width - 1
+            end
         end
         if height < min_height then
-            local center_y = math.floor((data.y_min + data.y_max) / 2)
-            data.y_min = math.ceil(center_y - min_height / 2)
-            data.y_max = data.y_min + min_height - 1
+            local center_y = (data.y_min + data.y_max) / 2
+            if invert.y then
+                data.y_max = math.floor(math.ceil(center_y) + min_height / 2)
+                data.y_min = data.y_max - min_height + 1
+            else
+                data.y_min = math.ceil(math.floor(center_y) - min_height / 2)
+                data.y_max = data.y_min + min_height - 1
+            end
         end
         for x=data.x_min,data.x_max do
             if not seen_grid[x] then seen_grid[x] = {} end
@@ -226,9 +271,14 @@ function init_buildings(ctx, zlevel, grid, buildings, db, aliases)
         end
     end
     logfn(dump_seen_grid, 'after edge detection', seen_grid, #data_tables)
-    data_tables = chunk_extents(data_tables, seen_grid, db)
+    local tvec = ctx.transform_fn({x=1, y=-2}, true)
+    local invert = {
+        x=tvec.x == -1 or tvec.x == 2,
+        y=tvec.y == -1 or tvec.y == 2
+    }
+    data_tables = chunk_extents(data_tables, seen_grid, db, invert)
     logfn(dump_seen_grid, 'after chunking', seen_grid, #data_tables)
-    expand_buildings(data_tables, seen_grid, db)
+    expand_buildings(data_tables, seen_grid, db, invert)
     logfn(dump_seen_grid, 'after expansion', seen_grid, #data_tables)
     for _, data in ipairs(data_tables) do
         local extent_grid, is_solid = build_extent_grid(seen_grid, data)
@@ -462,7 +512,7 @@ if dfhack.internal.IN_TEST then
         left_pad=left_pad,
         dump_seen_grid=dump_seen_grid,
         flood_fill=flood_fill,
-        swap_id=swap_id,
+        swap_id_and_trim_chunk=swap_id_and_trim_chunk,
         chunk_extents=chunk_extents,
         expand_buildings=expand_buildings,
         build_extent_grid=build_extent_grid,

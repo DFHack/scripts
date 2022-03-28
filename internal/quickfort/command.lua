@@ -64,6 +64,12 @@ local function make_transform_fn(prev_transform_fn, modifiers, cursor)
     if modifiers.transform_fn_stack == 0 and modifiers.shift_fn_stack == 0 then
         return prev_transform_fn
     end
+    -- when no_shift is true, we transform around the origin instead of the
+    -- cursor. this is a convenient way to transform expansion syntax elements
+    -- so they are still valid after the cell itself is transformed around the
+    -- cursor. e.g. T(5x2) becomes T(-2,5) after a clockwise rotation.
+    -- no_shift is also useful for transforming unit vectors around the origin
+    -- so we can figure out where the cardinal directions got transformed to.
     local origin = xy2pos(0, 0)
     return function(pos, no_shift)
         for _,tfn in ipairs(modifiers.transform_fn_stack) do

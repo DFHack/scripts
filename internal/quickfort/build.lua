@@ -172,71 +172,309 @@ end
 -- ************ the database ************ --
 --
 
+-- y coords are inverted since the map y axis is inverted
+local unit_vectors = {
+    north={x=0, y=-1},
+    east={x=1, y=0},
+    south={x=0, y=1},
+    west={x=-1, y=0}
+}
+local unit_vectors_revmap = {
+    north='x=0, y=-1',
+    east='x=1, y=0',
+    south='x=0, y=1',
+    west='x=-1, y=0'
+}
+
+local function resolve_transformed_vector(ctx, vector, revmap)
+    local transformed_vector = ctx.transform_fn(vector, true)
+    local serialized = ('x=%d, y=%d')
+            :format(transformed_vector.x, transformed_vector.y)
+    return revmap[serialized]
+end
+
+local function make_transform_building_fn(vector, revmap, post_fn)
+    return function(ctx)
+        local keys = resolve_transformed_vector(ctx, vector, revmap)
+        if post_fn then keys = post_fn(keys) end
+        return keys
+    end
+end
+
+local bridge_data = {
+    [df.building_bridgest.T_direction.Retracting]={label='Retracting'},
+    [df.building_bridgest.T_direction.Up]={label='Raises to North',
+                                           vector=unit_vectors.north},
+    [df.building_bridgest.T_direction.Right]={label='Raises to East',
+                                              vector=unit_vectors.east},
+    [df.building_bridgest.T_direction.Down]={label='Raises to South',
+                                             vector=unit_vectors.south},
+    [df.building_bridgest.T_direction.Left]={label='Raises to West',
+                                             vector=unit_vectors.west}
+}
+local bridge_revmap = {
+    [unit_vectors_revmap.north]='gw',
+    [unit_vectors_revmap.east]='gd',
+    [unit_vectors_revmap.south]='gx',
+    [unit_vectors_revmap.west]='ga'
+}
+local function make_bridge_entry(direction)
+    local bridge_data_entry = bridge_data[direction]
+    local transform = nil
+    if direction ~= df.building_bridgest.T_direction.Retracting then
+        transform = make_transform_building_fn(bridge_data_entry.vector,
+                                               bridge_revmap)
+    end
+    return {label=('Bridge (%s)'):format(bridge_data_entry.label),
+            type=df.building_type.Bridge,
+            direction=direction,
+            transform=transform}
+end
+
 local screw_pump_data = {
-    [df.screw_pump_direction.FromNorth]={label='North', vertical=true},
-    [df.screw_pump_direction.FromEast]={label='East'},
-    [df.screw_pump_direction.FromSouth]={label='South', vertical=true},
-    [df.screw_pump_direction.FromWest]={label='West'}
+    [df.screw_pump_direction.FromNorth]={label='North', vertical=true,
+                                         vector=unit_vectors.north},
+    [df.screw_pump_direction.FromEast]={label='East',
+                                        vector=unit_vectors.east},
+    [df.screw_pump_direction.FromSouth]={label='South', vertical=true,
+                                         vector=unit_vectors.south},
+    [df.screw_pump_direction.FromWest]={label='West',
+                                        vector=unit_vectors.west}
+}
+local screw_pump_revmap = {
+    [unit_vectors_revmap.north]='Msu',
+    [unit_vectors_revmap.east]='Msk',
+    [unit_vectors_revmap.south]='Msm',
+    [unit_vectors_revmap.west]='Msh'
 }
 local function make_screw_pump_entry(direction)
     local width, height = 1, 1
-    if screw_pump_data[direction].vertical then
+    local screw_pump_data_entry = screw_pump_data[direction]
+    if screw_pump_data_entry.vertical then
         height = 2
     else
         width = 2
     end
+    local transform = make_transform_building_fn(screw_pump_data_entry.vector,
+                                                 screw_pump_revmap)
     return {label=string.format('Screw Pump (Pump From %s)',
-                                screw_pump_data[direction].label),
+                                screw_pump_data_entry.label),
             type=df.building_type.ScrewPump,
             min_width=width, max_width=width,
             min_height=height, max_height=height,
-            direction=direction, is_valid_tile_fn=is_valid_tile_machine}
+            direction=direction,
+            is_valid_tile_fn=is_valid_tile_machine,
+            transform=transform}
+end
+
+local ns_ew_data = {
+    [true]={label='N/S', vector=unit_vectors.north},
+    [false]={label='E/W', vector=unit_vectors.east}
+}
+local water_wheel_revmap = {
+    [unit_vectors_revmap.north]='Mw',
+    [unit_vectors_revmap.east]='Mws',
+    [unit_vectors_revmap.south]='Mw',
+    [unit_vectors_revmap.west]='Mws'
+}
+local horizontal_axle_revmap = {
+    [unit_vectors_revmap.north]='Mhs',
+    [unit_vectors_revmap.east]='Mh',
+    [unit_vectors_revmap.south]='Mhs',
+    [unit_vectors_revmap.west]='Mh'
+}
+local function make_ns_ew_entry(name, building_type, long_dim_min, long_dim_max,
+                                revmap, vertical)
+    local width_min, width_max, height_min, height_max = 1, 1, 1, 1
+    local ns_ew_data_entry = ns_ew_data[vertical]
+    if vertical then
+        height_min, height_max = long_dim_min, long_dim_max
+    else
+        width_min, width_max = long_dim_min, long_dim_max
+    end
+    local transform = make_transform_building_fn(ns_ew_data_entry.vector,
+                                                 revmap)
+    return {label=('%s (%s)'):format(name, ns_ew_data_entry.label),
+            type=building_type,
+            min_width=width_min, max_width=width_max,
+            min_height=height_min, max_height=height_max,
+            direction=vertical and 1 or 0,
+            is_valid_tile_fn=is_valid_tile_has_space, -- impeded by ramps
+            transform=transform}
+end
+local function make_water_wheel_entry(vertical)
+    return make_ns_ew_entry('Water Wheel', df.building_type.WaterWheel, 3, 3,
+                            water_wheel_revmap, vertical)
+end
+local function make_horizontal_axle_entry(vertical)
+    return make_ns_ew_entry('Horizontal Axle', df.building_type.AxleHorizontal,
+                            1, 10, horizontal_axle_revmap, vertical)
 end
 
 local roller_data = {
-    [df.screw_pump_direction.FromNorth]={label='Rollers (N->S)', vertical=true},
-    [df.screw_pump_direction.FromEast]={label='Rollers (E->W)'},
-    [df.screw_pump_direction.FromSouth]={label='Rollers (S->N)', vertical=true},
-    [df.screw_pump_direction.FromWest]={label='Rollers (W->E)'}
+    [df.screw_pump_direction.FromNorth]={label='N->S', vertical=true,
+                                         vector=unit_vectors.north},
+    [df.screw_pump_direction.FromEast]={label='E->W',
+                                        vector=unit_vectors.east},
+    [df.screw_pump_direction.FromSouth]={label='S->N', vertical=true,
+                                         vector=unit_vectors.south},
+    [df.screw_pump_direction.FromWest]={label='W->E',
+                                        vector=unit_vectors.west}
 }
+local roller_revmap = {
+    [unit_vectors_revmap.north]='Mr',
+    [unit_vectors_revmap.east]='Mrs',
+    [unit_vectors_revmap.south]='Mrss',
+    [unit_vectors_revmap.west]='Mrsss'
+}
+local roller_speedmap = {
+    [50000]='',
+    [40000]='q',
+    [30000]='qq',
+    [20000]='qqq',
+    [10000]='qqqq'
+}
+local function make_transform_roller_fn(vector, speed)
+    local function post_fn(keys) return keys .. roller_speedmap[speed] end
+    return make_transform_building_fn(vector, roller_revmap, post_fn)
+end
 local function make_roller_entry(direction, speed)
+    local roller_data_entry = roller_data[direction]
+    local transform = make_transform_roller_fn(roller_data_entry.vector, speed)
     return {
-        label=roller_data[direction].label,
+        label=('Rollers (%s)'):format(roller_data_entry.label),
         type=df.building_type.Rollers,
-        min_width=1,
-        max_width=not roller_data[direction].vertical and 10 or 1,
-        min_height=1,
-        max_height=roller_data[direction].vertical and 10 or 1,
+        min_width=1, max_width=roller_data_entry.vertical and 1 or 10,
+        min_height=1, max_height=roller_data_entry.vertical and 10 or 1,
         direction=direction,
         fields={speed=speed},
-        is_valid_tile_fn=is_valid_tile_machine
+        is_valid_tile_fn=is_valid_tile_machine,
+        transform=transform
     }
 end
 
 local trackstop_data = {
-    dump_y_shift={[-1]='Track Stop (Dump North)',
-                  [1]='Track Stop (Dump South)'},
-    dump_x_shift={[-1]='Track Stop (Dump West)',
-                  [1]='Track Stop (Dump East)'}
+    dump_y_shift={[-1]={label='Dump North', vector=unit_vectors.north},
+                  [1]={label='Dump South', vector=unit_vectors.south}},
+    dump_x_shift={[-1]={label='Dump West', vector=unit_vectors.west},
+                  [1]={label='Dump East', vector=unit_vectors.east}}
 }
+local trackstop_revmap = {
+    [unit_vectors_revmap.north]='CSd',
+    [unit_vectors_revmap.east]='CSddd',
+    [unit_vectors_revmap.south]='CSdd',
+    [unit_vectors_revmap.west]='CSdddd'
+}
+local trackstop_frictionmap = {
+    [50000]='',
+    [10000]='a',
+    [500]='aa',
+    [50]='aaa',
+    [10]='aaaa'
+}
+local function make_transform_trackstop_fn(vector, friction)
+    local function post_fn(keys)
+        return keys .. trackstop_frictionmap[friction]
+    end
+    return make_transform_building_fn(vector, trackstop_revmap, post_fn)
+end
 local function make_trackstop_entry(direction, friction)
-    local label, fields = nil, {friction=friction}
-    if not direction then
-        label = 'Track Stop (No Dump)'
-    else
+    local label, fields, transform = 'No Dump', {friction=friction}, nil
+    if direction then
         fields.use_dump = 1
         for k,v in pairs(direction) do
-            label = trackstop_data[k][v]
+            local trackstop_data_entry = trackstop_data[k][v]
+            label = trackstop_data_entry.label
             fields[k] = v
+            transform = make_transform_trackstop_fn(
+                    trackstop_data_entry.vector, friction)
         end
     end
     return {
-        label=label,
+        label=('Track Stop (%s)'):format(label),
         type=df.building_type.Trap,
         subtype=df.trap_type.TrackStop,
         fields=fields,
+        transform=transform,
         additional_orders={'wooden minecart'}
     }
+end
+
+local track_end_data = {
+    N=unit_vectors.north,
+    E=unit_vectors.east,
+    S=unit_vectors.south,
+    W=unit_vectors.west
+}
+local track_end_revmap = {
+    [unit_vectors_revmap.north]='N',
+    [unit_vectors_revmap.east]='E',
+    [unit_vectors_revmap.south]='S',
+    [unit_vectors_revmap.west]='W'
+}
+
+local track_through_data = {
+    NS=unit_vectors.north,
+    EW=unit_vectors.east
+}
+local track_through_revmap = {
+    [unit_vectors_revmap.north]='NS',
+    [unit_vectors_revmap.east]='EW',
+    [unit_vectors_revmap.south]='NS',
+    [unit_vectors_revmap.west]='EW'
+}
+
+-- the tables below don't use unit vectors since we need to map how both axes
+-- are transformed. we need 8 potential landing points, not just four.
+local track_corner_data = {
+    NE={x=1, y=-2},
+    NW={x=-2, y=-1},
+    SE={x=2, y=1},
+    SW={x=-1, y=2}
+}
+local track_corner_revmap = {
+    ['x=1, y=-2'] = 'NE',
+    ['x=2, y=-1'] = 'NE',
+    ['x=2, y=1'] = 'SE',
+    ['x=1, y=2'] = 'SE',
+    ['x=-1, y=2'] = 'SW',
+    ['x=-2, y=1'] = 'SW',
+    ['x=-2, y=-1'] = 'NW',
+    ['x=-1, y=-2'] = 'NW'
+}
+
+local track_tee_data = {
+    NSE={x=1, y=-2},
+    NEW={x=-2, y=-1},
+    SEW={x=2, y=1},
+    NSW={x=-1, y=2}
+}
+local track_tee_revmap = {
+    ['x=1, y=-2'] = 'NSE',
+    ['x=2, y=-1'] = 'NEW',
+    ['x=2, y=1'] = 'SEW',
+    ['x=1, y=2'] = 'NSE',
+    ['x=-1, y=2'] = 'NSW',
+    ['x=-2, y=1'] = 'SEW',
+    ['x=-2, y=-1'] = 'NEW',
+    ['x=-1, y=-2'] = 'NSW'
+}
+
+local function make_transform_track_fn(vector, revmap, is_ramp)
+    local prefix = is_ramp and 'trackramp' or 'track'
+    local function post_fn(keys) return prefix .. keys end
+    return make_transform_building_fn(vector, revmap, post_fn)
+end
+local function make_track_entry(name, data, revmap, is_ramp)
+    local typename = 'Track'..(is_ramp and 'Ramp' or '')..name
+    local transform = nil
+    if data and revmap then
+        transform = make_transform_track_fn(data[name], revmap, is_ramp)
+    end
+    return {label=('Track%s (%s)'):format(is_ramp and '/Ramp' or '', name),
+            type=df.building_type.Construction,
+            subtype=df.construction_type[typename],
+            transform=transform}
 end
 
 -- grouped by type, generally in ui order
@@ -264,45 +502,29 @@ local building_db = {
     s={label='Statue', type=df.building_type.Statue},
     ['{Alt}s']={label='Slab', type=df.building_type.Slab},
     t={label='Table', type=df.building_type.Table},
-    g={label='Bridge (Retracting)', type=df.building_type.Bridge,
-       direction=df.building_bridgest.T_direction.Retracting},
-    gs={label='Bridge (Retracting)', type=df.building_type.Bridge,
-       direction=df.building_bridgest.T_direction.Retracting},
-    ga={label='Bridge (Raises to West)', type=df.building_type.Bridge,
-       direction=df.building_bridgest.T_direction.Left},
-    gd={label='Bridge (Raises to East)', type=df.building_type.Bridge,
-       direction=df.building_bridgest.T_direction.Right},
-    gw={label='Bridge (Raises to North)', type=df.building_type.Bridge,
-       direction=df.building_bridgest.T_direction.Up},
-    gx={label='Bridge (Raises to South)', type=df.building_type.Bridge,
-       direction=df.building_bridgest.T_direction.Down},
+    gs=make_bridge_entry(df.building_bridgest.T_direction.Retracting),
+    gw=make_bridge_entry(df.building_bridgest.T_direction.Up),
+    gd=make_bridge_entry(df.building_bridgest.T_direction.Right),
+    gx=make_bridge_entry(df.building_bridgest.T_direction.Down),
+    ga=make_bridge_entry(df.building_bridgest.T_direction.Left),
     l={label='Well', type=df.building_type.Well,
        is_valid_tile_fn=is_tile_empty_and_floor_adjacent},
     y={label='Glass Window', type=df.building_type.WindowGlass},
     Y={label='Gem Window', type=df.building_type.WindowGem},
     D={label='Trade Depot', type=df.building_type.TradeDepot,
        min_width=5, max_width=5, min_height=5, max_height=5},
-    Ms=make_screw_pump_entry(df.screw_pump_direction.FromNorth),
     Msu=make_screw_pump_entry(df.screw_pump_direction.FromNorth),
     Msk=make_screw_pump_entry(df.screw_pump_direction.FromEast),
     Msm=make_screw_pump_entry(df.screw_pump_direction.FromSouth),
     Msh=make_screw_pump_entry(df.screw_pump_direction.FromWest),
     -- there is no enum for water wheel and horiz axle directions, we just have
     -- to pass a non-zero integer (but not a boolean)
-    Mw={label='Water Wheel (N/S)', type=df.building_type.WaterWheel,
-        min_width=1, max_width=1, min_height=3, max_height=3, direction=1,
-        is_valid_tile_fn=is_valid_tile_has_space},
-    Mws={label='Water Wheel (E/W)', type=df.building_type.WaterWheel,
-         min_width=3, max_width=3, min_height=1, max_height=1,
-         is_valid_tile_fn=is_valid_tile_has_space},
+    Mw=make_water_wheel_entry(true),
+    Mws=make_water_wheel_entry(false),
     Mg={label='Gear Assembly', type=df.building_type.GearAssembly,
         is_valid_tile_fn=is_valid_tile_machine},
-    Mh={label='Horizontal Axle (E/W)', type=df.building_type.AxleHorizontal,
-        min_width=1, max_width=10, min_height=1, max_height=1,
-        is_valid_tile_fn=is_valid_tile_has_space}, -- impeded by ramps
-    Mhs={label='Horizontal Axle (N/S)', type=df.building_type.AxleHorizontal,
-         min_width=1, max_width=1, min_height=1, max_height=10, direction=1,
-         is_valid_tile_fn=is_valid_tile_has_space}, -- impeded by ramps
+    Mh=make_horizontal_axle_entry(false),
+    Mhs=make_horizontal_axle_entry(true),
     Mv={label='Vertical Axle', type=df.building_type.AxleVertical,
         is_valid_tile_fn=is_valid_tile_machine},
     Mr=make_roller_entry(df.screw_pump_direction.FromNorth, 50000),
@@ -505,96 +727,52 @@ local building_db = {
     TS={label='Upright Spear/Spike', type=df.building_type.Weapon},
     -- tracks (CT...). there aren't any shortcut keys in the UI so we use the
     -- aliases from python quickfort
-    trackN={label='Track (N)',
-            type=df.building_type.Construction,
-            subtype=df.construction_type.TrackN},
-    trackS={label='Track (S)',
-            type=df.building_type.Construction,
-            subtype=df.construction_type.TrackS},
-    trackE={label='Track (E)',
-            type=df.building_type.Construction,
-            subtype=df.construction_type.TrackE},
-    trackW={label='Track (W)',
-            type=df.building_type.Construction,
-            subtype=df.construction_type.TrackW},
-    trackNS={label='Track (NS)',
-             type=df.building_type.Construction,
-             subtype=df.construction_type.TrackNS},
-    trackNE={label='Track (NE)',
-             type=df.building_type.Construction,
-             subtype=df.construction_type.TrackNE},
-    trackNW={label='Track (NW)',
-             type=df.building_type.Construction,
-             subtype=df.construction_type.TrackNW},
-    trackSE={label='Track (SE)',
-             type=df.building_type.Construction,
-             subtype=df.construction_type.TrackSE},
-    trackSW={label='Track (SW)',
-             type=df.building_type.Construction,
-             subtype=df.construction_type.TrackSW},
-    trackEW={label='Track (EW)',
-             type=df.building_type.Construction,
-             subtype=df.construction_type.TrackEW},
-    trackNSE={label='Track (NSE)',
-              type=df.building_type.Construction,
-              subtype=df.construction_type.TrackNSE},
-    trackNSW={label='Track (NSW)',
-              type=df.building_type.Construction,
-              subtype=df.construction_type.TrackNSW},
-    trackNEW={label='Track (NEW)',
-              type=df.building_type.Construction,
-              subtype=df.construction_type.TrackNEW},
-    trackSEW={label='Track (SEW)',
-              type=df.building_type.Construction,
-              subtype=df.construction_type.TrackSEW},
-    trackNSEW={label='Track (NSEW)',
-               type=df.building_type.Construction,
-               subtype=df.construction_type.TrackNSEW},
-    trackrampN={label='Track/Ramp (N)',
-                type=df.building_type.Construction,
-                subtype=df.construction_type.TrackRampN},
-    trackrampS={label='Track/Ramp (S)',
-                type=df.building_type.Construction,
-                subtype=df.construction_type.TrackRampS},
-    trackrampE={label='Track/Ramp (E)',
-                type=df.building_type.Construction,
-                subtype=df.construction_type.TrackRampE},
-    trackrampW={label='Track/Ramp (W)',
-                type=df.building_type.Construction,
-                subtype=df.construction_type.TrackRampW},
-    trackrampNS={label='Track/Ramp (NS)',
-                 type=df.building_type.Construction,
-                 subtype=df.construction_type.TrackRampNS},
-    trackrampNE={label='Track/Ramp (NE)',
-                 type=df.building_type.Construction,
-                 subtype=df.construction_type.TrackRampNE},
-    trackrampNW={label='Track/Ramp (NW)',
-                 type=df.building_type.Construction,
-                 subtype=df.construction_type.TrackRampNW},
-    trackrampSE={label='Track/Ramp (SE)',
-                 type=df.building_type.Construction,
-                 subtype=df.construction_type.TrackRampSE},
-    trackrampSW={label='Track/Ramp (SW)',
-                 type=df.building_type.Construction,
-                 subtype=df.construction_type.TrackRampSW},
-    trackrampEW={label='Track/Ramp (EW)',
-                 type=df.building_type.Construction,
-                 subtype=df.construction_type.TrackRampEW},
-    trackrampNSE={label='Track/Ramp (NSE)',
-                  type=df.building_type.Construction,
-                  subtype=df.construction_type.TrackRampNSE},
-    trackrampNSW={label='Track/Ramp (NSW)',
-                  type=df.building_type.Construction,
-                  subtype=df.construction_type.TrackRampNSW},
-    trackrampNEW={label='Track/Ramp (NEW)',
-                  type=df.building_type.Construction,
-                  subtype=df.construction_type.TrackRampNEW},
-    trackrampSEW={label='Track/Ramp (SEW)',
-                  type=df.building_type.Construction,
-                  subtype=df.construction_type.TrackRampSEW},
-    trackrampNSEW={label='Track/Ramp (NSEW)',
-                   type=df.building_type.Construction,
-                   subtype=df.construction_type.TrackRampNSEW},
+    trackN=make_track_entry('N', track_end_data, track_end_revmap, false),
+    trackS=make_track_entry('S', track_end_data, track_end_revmap, false),
+    trackE=make_track_entry('E', track_end_data, track_end_revmap, false),
+    trackW=make_track_entry('W', track_end_data, track_end_revmap, false),
+    trackNS=make_track_entry('NS', track_through_data, track_through_revmap,
+                             false),
+    trackEW=make_track_entry('EW', track_through_data, track_through_revmap,
+                             false),
+    trackNE=make_track_entry('NE', track_corner_data, track_corner_revmap,
+                             false),
+    trackNW=make_track_entry('NW', track_corner_data, track_corner_revmap,
+                             false),
+    trackSE=make_track_entry('SE', track_corner_data, track_corner_revmap,
+                             false),
+    trackSW=make_track_entry('SW', track_corner_data, track_corner_revmap,
+                             false),
+    trackNSE=make_track_entry('NSE', track_tee_data, track_tee_revmap, false),
+    trackNSW=make_track_entry('NSW', track_tee_data, track_tee_revmap, false),
+    trackNEW=make_track_entry('NEW', track_tee_data, track_tee_revmap, false),
+    trackSEW=make_track_entry('SEW', track_tee_data, track_tee_revmap, false),
+    trackNSEW=make_track_entry('NSEW', nil, nil, false),
+    trackrampN=make_track_entry('N', track_end_data, track_end_revmap, true),
+    trackrampS=make_track_entry('S', track_end_data, track_end_revmap, true),
+    trackrampE=make_track_entry('E', track_end_data, track_end_revmap, true),
+    trackrampW=make_track_entry('W', track_end_data, track_end_revmap, true),
+    trackrampNS=make_track_entry('NS', track_through_data, track_through_revmap,
+                                 true),
+    trackrampEW=make_track_entry('EW', track_through_data, track_through_revmap,
+                                 true),
+    trackrampNE=make_track_entry('NE', track_corner_data, track_corner_revmap,
+                                 true),
+    trackrampNW=make_track_entry('NW', track_corner_data, track_corner_revmap,
+                                 true),
+    trackrampSE=make_track_entry('SE', track_corner_data, track_corner_revmap,
+                                 true),
+    trackrampSW=make_track_entry('SW', track_corner_data, track_corner_revmap,
+                                 true),
+    trackrampNSE=make_track_entry('NSE', track_tee_data, track_tee_revmap,
+                                  true),
+    trackrampNSW=make_track_entry('NSW', track_tee_data, track_tee_revmap,
+                                  true),
+    trackrampNEW=make_track_entry('NEW', track_tee_data, track_tee_revmap,
+                                  true),
+    trackrampSEW=make_track_entry('SEW', track_tee_data, track_tee_revmap,
+                                  true),
+    trackrampNSEW=make_track_entry('NSEW', nil, nil, true)
 }
 
 -- fill in default values if they're not already specified
@@ -629,6 +807,10 @@ for _, v in pairs(building_db) do
         v.is_valid_extent_fn = is_extent_solid
     end
 end
+
+-- case sensitive aliases
+building_db.g = building_db.gs
+building_db.Ms = building_db.Msu
 
 -- case insensitive aliases for keys in the db
 -- this allows us to keep compatibility with the old python quickfort and makes

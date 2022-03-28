@@ -1,4 +1,3 @@
-local utils = require('utils')
 local building = reqscript('internal/quickfort/building')
 local quickfort_map = reqscript('internal/quickfort/map')
 local b = building.unit_test_hooks
@@ -99,7 +98,7 @@ function test.flood_fill()
               [14]={cell='E5',text='b(1x3)'}},
     }
     local ctx = {transform_fn=function(pos) return pos end}
-    local db = utils.invert{'a','b','c','d'}
+    local db = {a={}, b={}, c={}, d={}}
     local aliases = {d='a'}
 
     expect.eq(0, b.flood_fill(ctx, grid, 10, 20, {[10]={[20]=1}}, {}, db,
@@ -168,13 +167,38 @@ function test.flood_fill()
                     data)
 end
 
-function test.swap_id()
+function test.flood_fill_transform()
+    local ctx = {transform_fn=function(pos) return xy2pos(pos.y, pos.x) end}
+    local grid = {[1]={[1]={cell='A1',text='a(2x3)'}}}
+    local seen_grid, aliases = {}, {}
+    local data = {id=5, cells={},
+                  x_min=30000, x_max=-30000, y_min=30000, y_max=-30000}
+    local db = {a={transform=function(ctx) return 'b' end},
+                b={transform=function(ctx) return 'a' end}}
+
+    expect.eq(0, b.flood_fill(ctx, grid, 1, 1, seen_grid, data, db, aliases))
+
+    -- expect the xy dimensions to be swapped
+    local expected_seen_grid = {[1]={[1]=5, [2]=5},
+                                [2]={[1]=5, [2]=5},
+                                [3]={[1]=5, [2]=5}}
+    -- expect the type to be changed to 'b'
+    local expected_data = {id=5, cells={'A1'}, type='b',
+                           x_min=1, x_max=3, y_min=1, y_max=2}
+    expect.table_eq(expected_seen_grid, seen_grid)
+    expect.table_eq(expected_data, data)
+end
+
+function test.swap_id_and_trim_chunk()
     local seen_grid = {[1]={[10]=4,[11]=true,[13]=4},
                        [2]={[10]=4,[11]=true,[13]=4}}
-    local expected = {[1]={[10]=4,[11]=true,[13]=4},
-                      [2]={[10]=5,[11]=true,[13]=5}}
-    b.swap_id({id=5, x_min=2, x_max=3, y_min=9, y_max=14}, seen_grid, 4)
-    expect.table_eq(expected, seen_grid)
+    local expected_seen_grid = {[1]={[10]=4,[11]=true,[13]=4},
+                                [2]={[10]=5,[11]=true,[13]=5}}
+    local chunk = {id=5, x_min=2, x_max=3, y_min=9, y_max=14}
+    local expected_chunk = {id=5, x_min=2, x_max=2, y_min=10, y_max=13}
+    b.swap_id_and_trim_chunk(chunk, seen_grid, 4)
+    expect.table_eq(expected_seen_grid, seen_grid)
+    expect.table_eq(expected_chunk, chunk)
 end
 
 function test.chunk_extents()
@@ -193,6 +217,7 @@ function test.chunk_extents()
         [6]={[1]=2},
     }
     local db = {a={label='typea', max_width=2, max_height=1}}
+    local invert = {x=false, y=false}
 
     -- 1 1 4 4 2 2
     -- . 3 3 5 5 .
@@ -211,7 +236,128 @@ function test.chunk_extents()
         [5]={[1]=2,[2]=5},
         [6]={[1]=2},
     }
-    expect.table_eq(expected, b.chunk_extents(data_tables, seen_grid, db))
+    expect.table_eq(expected,
+                    b.chunk_extents(data_tables, seen_grid, db, invert))
+    expect.table_eq(expected_seen_grid, seen_grid)
+end
+
+function test.chunk_extents_invert_x()
+    -- 2 2 2 2 1 1
+    -- . 2 2 2 2 .
+    local data_tables = {
+        {id=1, type='a', cells={}, x_min=5, x_max=6, y_min=1, y_max=1},
+        {id=2, type='a', cells={}, x_min=1, x_max=5, y_min=1, y_max=2},
+    }
+    local seen_grid = {
+        [1]={[1]=2},
+        [2]={[1]=2,[2]=2},
+        [3]={[1]=2,[2]=2},
+        [4]={[1]=2,[2]=2},
+        [5]={[1]=1,[2]=2},
+        [6]={[1]=1},
+    }
+    local db = {a={label='typea', max_width=2, max_height=1}}
+    local invert = {x=true, y=false}
+
+    -- 2 2 4 4 1 1
+    -- . 5 5 3 3 .
+    local expected = {
+        {id=1, type='a', cells={}, x_min=5, x_max=6, y_min=1, y_max=1},
+        {id=3, type='a', cells={}, x_min=4, x_max=5, y_min=2, y_max=2},
+        {id=4, type='a', cells={}, x_min=3, x_max=4, y_min=1, y_max=1},
+        {id=5, type='a', cells={}, x_min=2, x_max=3, y_min=2, y_max=2},
+        {id=2, type='a', cells={}, x_min=1, x_max=2, y_min=1, y_max=1},
+    }
+    local expected_seen_grid = {
+        [1]={[1]=2},
+        [2]={[1]=2,[2]=5},
+        [3]={[1]=4,[2]=5},
+        [4]={[1]=4,[2]=3},
+        [5]={[1]=1,[2]=3},
+        [6]={[1]=1},
+    }
+    expect.table_eq(expected,
+                    b.chunk_extents(data_tables, seen_grid, db, invert))
+    expect.table_eq(expected_seen_grid, seen_grid)
+end
+
+function test.chunk_extents_invert_y()
+    -- . 2 2 2 2 .
+    -- 1 1 2 2 2 2
+    local data_tables = {
+        {id=1, type='a', cells={}, x_min=1, x_max=2, y_min=2, y_max=2},
+        {id=2, type='a', cells={}, x_min=2, x_max=6, y_min=1, y_max=2},
+    }
+    local seen_grid = {
+        [1]={[2]=1},
+        [2]={[2]=1,[1]=2},
+        [3]={[2]=2,[1]=2},
+        [4]={[2]=2,[1]=2},
+        [5]={[2]=2,[1]=2},
+        [6]={[2]=2},
+    }
+    local db = {a={label='typea', max_width=2, max_height=1}}
+    local invert = {x=false, y=true}
+
+    -- . 3 3 5 5 .
+    -- 1 1 4 4 2 2
+    local expected = {
+        {id=1, type='a', cells={}, x_min=1, x_max=2, y_min=2, y_max=2},
+        {id=3, type='a', cells={}, x_min=2, x_max=3, y_min=1, y_max=1},
+        {id=4, type='a', cells={}, x_min=3, x_max=4, y_min=2, y_max=2},
+        {id=5, type='a', cells={}, x_min=4, x_max=5, y_min=1, y_max=1},
+        {id=2, type='a', cells={}, x_min=5, x_max=6, y_min=2, y_max=2},
+    }
+    local expected_seen_grid = {
+        [1]={[2]=1},
+        [2]={[2]=1,[1]=3},
+        [3]={[2]=4,[1]=3},
+        [4]={[2]=4,[1]=5},
+        [5]={[2]=2,[1]=5},
+        [6]={[2]=2},
+    }
+    expect.table_eq(expected,
+                    b.chunk_extents(data_tables, seen_grid, db, invert))
+    expect.table_eq(expected_seen_grid, seen_grid)
+end
+
+function test.chunk_extents_invert_xy()
+    -- . 2 2 2 2 .
+    -- 2 2 2 2 1 1
+    local data_tables = {
+        {id=1, type='a', cells={}, x_min=5, x_max=6, y_min=2, y_max=2},
+        {id=2, type='a', cells={}, x_min=1, x_max=5, y_min=1, y_max=2},
+    }
+    local seen_grid = {
+        [1]={[2]=2},
+        [2]={[2]=2,[1]=2},
+        [3]={[2]=2,[1]=2},
+        [4]={[2]=2,[1]=2},
+        [5]={[2]=1,[1]=2},
+        [6]={[2]=1},
+    }
+    local db = {a={label='typea', max_width=2, max_height=1}}
+    local invert = {x=true, y=false}
+
+    -- . 5 5 3 3 .
+    -- 2 2 4 4 1 1
+    local expected = {
+        {id=1, type='a', cells={}, x_min=5, x_max=6, y_min=2, y_max=2},
+        {id=3, type='a', cells={}, x_min=4, x_max=5, y_min=1, y_max=1},
+        {id=4, type='a', cells={}, x_min=3, x_max=4, y_min=2, y_max=2},
+        {id=5, type='a', cells={}, x_min=2, x_max=3, y_min=1, y_max=1},
+        {id=2, type='a', cells={}, x_min=1, x_max=2, y_min=2, y_max=2},
+    }
+    local expected_seen_grid = {
+        [1]={[2]=2},
+        [2]={[2]=2,[1]=5},
+        [3]={[2]=4,[1]=5},
+        [4]={[2]=4,[1]=3},
+        [5]={[2]=1,[1]=3},
+        [6]={[2]=1},
+    }
+    expect.table_eq(expected,
+                    b.chunk_extents(data_tables, seen_grid, db, invert))
     expect.table_eq(expected_seen_grid, seen_grid)
 end
 
@@ -234,6 +380,7 @@ function test.expand_buildings()
         b={label='typeb', min_width=1, min_height=2},
         c={label='typec', min_width=3, min_height=3},
     }
+    local invert = {x=false, y=false}
 
     -- 1 1 2 3 3 3
     -- . . 2 3 3 3
@@ -251,7 +398,133 @@ function test.expand_buildings()
         [5]={[1]=3,[2]=3,[3]=3},
         [6]={[1]=3,[2]=3,[3]=3},
     }
-    b.expand_buildings(data_tables, seen_grid, db)
+    b.expand_buildings(data_tables, seen_grid, db, invert)
+    expect.table_eq(expected, data_tables)
+    expect.table_eq(expected_seen_grid, seen_grid)
+end
+
+function test.expand_buildings_invert_x()
+    -- ~ ~ ~ ~ 1 ~
+    -- ~ 3 ~ 2 . .
+    -- ~ ~ ~ . . .
+    local data_tables = {
+        {id=1, type='a', cells={}, x_min=5, x_max=5, y_min=1, y_max=1},
+        {id=2, type='b', cells={}, x_min=4, x_max=4, y_min=2, y_max=2},
+        {id=3, type='c', cells={}, x_min=2, x_max=2, y_min=2, y_max=2},
+    }
+    local seen_grid = {
+        [2]={[2]=3},
+        [4]={[2]=2},
+        [5]={[1]=1},
+    }
+    local db = {
+        a={label='typea', min_width=2, min_height=1},
+        b={label='typeb', min_width=1, min_height=2},
+        c={label='typec', min_width=3, min_height=3},
+    }
+    local invert = {x=true, y=false}
+
+    -- 3 3 3 2 1 1
+    -- 3 3 3 2 . .
+    -- 3 3 3 . . .
+    local expected = {
+        {id=1, type='a', cells={}, x_min=5, x_max=6, y_min=1, y_max=1},
+        {id=2, type='b', cells={}, x_min=4, x_max=4, y_min=1, y_max=2},
+        {id=3, type='c', cells={}, x_min=1, x_max=3, y_min=1, y_max=3},
+    }
+    local expected_seen_grid = {
+        [6]={[1]=1},
+        [5]={[1]=1},
+        [4]={[1]=2,[2]=2},
+        [3]={[1]=3,[2]=3,[3]=3},
+        [2]={[1]=3,[2]=3,[3]=3},
+        [1]={[1]=3,[2]=3,[3]=3},
+    }
+    b.expand_buildings(data_tables, seen_grid, db, invert)
+    expect.table_eq(expected, data_tables)
+    expect.table_eq(expected_seen_grid, seen_grid)
+end
+
+function test.expand_buildings_invert_y()
+    -- . . . ~ ~ ~
+    -- . . 2 ~ 3 ~
+    -- ~ 1 ~ ~ ~ ~
+    local data_tables = {
+        {id=1, type='a', cells={}, x_min=2, x_max=2, y_min=3, y_max=3},
+        {id=2, type='b', cells={}, x_min=3, x_max=3, y_min=2, y_max=2},
+        {id=3, type='c', cells={}, x_min=5, x_max=5, y_min=2, y_max=2},
+    }
+    local seen_grid = {
+        [2]={[3]=1},
+        [3]={[2]=2},
+        [5]={[2]=3},
+    }
+    local db = {
+        a={label='typea', min_width=2, min_height=1},
+        b={label='typeb', min_width=1, min_height=2},
+        c={label='typec', min_width=3, min_height=3},
+    }
+    local invert = {x=false, y=true}
+
+    -- . . . 3 3 3
+    -- . . 2 3 3 3
+    -- 1 1 2 3 3 3
+    local expected = {
+        {id=1, type='a', cells={}, x_min=1, x_max=2, y_min=3, y_max=3},
+        {id=2, type='b', cells={}, x_min=3, x_max=3, y_min=2, y_max=3},
+        {id=3, type='c', cells={}, x_min=4, x_max=6, y_min=1, y_max=3},
+    }
+    local expected_seen_grid = {
+        [1]={[3]=1},
+        [2]={[3]=1},
+        [3]={[2]=2,[3]=2},
+        [4]={[1]=3,[2]=3,[3]=3},
+        [5]={[1]=3,[2]=3,[3]=3},
+        [6]={[1]=3,[2]=3,[3]=3},
+    }
+    b.expand_buildings(data_tables, seen_grid, db, invert)
+    expect.table_eq(expected, data_tables)
+    expect.table_eq(expected_seen_grid, seen_grid)
+end
+
+function test.expand_buildings_invert_xy()
+    -- ~ ~ ~ . . .
+    -- ~ 3 ~ 2 . .
+    -- ~ ~ ~ ~ 1 ~
+    local data_tables = {
+        {id=1, type='a', cells={}, x_min=5, x_max=5, y_min=3, y_max=3},
+        {id=2, type='b', cells={}, x_min=4, x_max=4, y_min=2, y_max=2},
+        {id=3, type='c', cells={}, x_min=2, x_max=2, y_min=2, y_max=2},
+    }
+    local seen_grid = {
+        [2]={[2]=3},
+        [4]={[2]=2},
+        [5]={[3]=1},
+    }
+    local db = {
+        a={label='typea', min_width=2, min_height=1},
+        b={label='typeb', min_width=1, min_height=2},
+        c={label='typec', min_width=3, min_height=3},
+    }
+    local invert = {x=true, y=true}
+
+    -- 3 3 3 . . .
+    -- 3 3 3 2 . .
+    -- 3 3 3 2 1 1
+    local expected = {
+        {id=1, type='a', cells={}, x_min=5, x_max=6, y_min=3, y_max=3},
+        {id=2, type='b', cells={}, x_min=4, x_max=4, y_min=2, y_max=3},
+        {id=3, type='c', cells={}, x_min=1, x_max=3, y_min=1, y_max=3},
+    }
+    local expected_seen_grid = {
+        [6]={[3]=1},
+        [5]={[3]=1},
+        [4]={[3]=2,[2]=2},
+        [3]={[1]=3,[2]=3,[3]=3},
+        [2]={[1]=3,[2]=3,[3]=3},
+        [1]={[1]=3,[2]=3,[3]=3},
+    }
+    b.expand_buildings(data_tables, seen_grid, db, invert)
     expect.table_eq(expected, data_tables)
     expect.table_eq(expected_seen_grid, seen_grid)
 end
