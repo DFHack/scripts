@@ -26,6 +26,8 @@ that repo.
 ## Misc Improvements
 - `quickfort`: support transformations for blueprints that use expansion syntax
 - `quickfort`: adjust direction affinity when transforming buildings (e.g.  bridges that open to the north now open to the south when rotated 180 degrees)
+- `autonick`: now requires `all` command
+- `autonick`: added `--quiet` and `--help` options; also displays help on incorrect use
 
 # 0.47.05-r4
 
