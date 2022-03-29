@@ -69,7 +69,7 @@ for line in io.lines(path) do
 end
 
 --assign names
-count = 0
+local count = 0
 for _,unit in ipairs(df.global.world.units.active) do
     if (#names == 0) then
             if options.quiet ~= true then
