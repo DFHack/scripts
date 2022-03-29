@@ -73,7 +73,7 @@ local count = 0
 for _,unit in ipairs(df.global.world.units.active) do
     if (#names == 0) then
             if options.quiet ~= true then
-                print("no free names left in autonick.txt.")
+                print("no free names left in dfhack-config/autonick.txt")
             end
         break
     end
