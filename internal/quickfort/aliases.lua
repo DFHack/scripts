@@ -11,6 +11,9 @@ local quickfort_reader = reqscript('internal/quickfort/reader')
 
 local log = quickfort_common.log
 
+common_aliases_filename = 'hack/data/quickfort/aliases-common.txt'
+user_aliases_filename = 'dfhack-config/quickfort/aliases.txt'
+
 -- special keycode shortcuts inherited from python quickfort.
 local special_keys = {
     ['&']={'Enter'},
@@ -27,14 +30,14 @@ local special_aliases = {
 
 local alias_stack = {}
 
-function reset_aliases()
+local function reset_aliases()
     alias_stack = {}
 end
 
 -- pushes a collection of aliases on the stack. aliases are resolved with the
 -- definition nearest the top of the stack.
 -- note: this function overwrites the metatable of the passed-in aliases map
-function push_aliases(aliases)
+local function push_aliases(aliases)
     local prev = alias_stack
     setmetatable(aliases, {prev=prev,
                            __index=function(_, key) return prev[key] end})
@@ -58,10 +61,25 @@ local function push_aliases_reader(reader)
     return num_aliases
 end
 
-function push_aliases_file(filepath)
+local function push_aliases_file(filepath)
     local num_aliases = push_aliases_reader(
             quickfort_reader.TextReader{filepath=filepath})
     log('read in %d aliases from "%s"', num_aliases, filepath)
+end
+
+-- clears the alias stack and reloads all relevant aliases
+function reload_aliases(ctx)
+    reset_aliases()
+    push_aliases_file(common_aliases_filename)
+    push_aliases_file(user_aliases_filename)
+    if not ctx or not ctx.aliases then return end
+    local num_file_aliases = 0
+    for _ in pairs(ctx.aliases) do num_file_aliases = num_file_aliases + 1 end
+    if num_file_aliases > 0 then
+        push_aliases(ctx.aliases)
+        log('successfully read in %d aliases from "%s"',
+            num_file_aliases, ctx.blueprint_name)
+    end
 end
 
 local function process_text(text, tokens, depth)

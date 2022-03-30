@@ -14,6 +14,7 @@ valid_modes = utils.invert({
     'place',
     'zone',
     'query',
+    'config',
     'meta',
     'notes',
     'ignore',
