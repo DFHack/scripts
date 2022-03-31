@@ -89,9 +89,22 @@ local function config_pre_tile_fn(ctx, tile_ctx)
     return true
 end
 
+local function config_post_tile_fn(ctx, tile_ctx)
+    if ctx.dry_run then return end
+    if df.global.ui.main.mode ~= df.ui_sidebar_mode.Default then
+        qerror(string.format(
+            'expected to be at map screen, but we seem to be in mode "%s"; ' ..
+            'there is likely a problem with the blueprint text in ' ..
+            'cell %s: "%s" (do you need a "^" at the end to get back to the ' ..
+            'main map?)',
+            df.ui_sidebar_mode[df.global.ui.main.mode],
+            tile_ctx.cell, tile_ctx.text))
+    end
+end
+
 function do_run(zlevel, grid, ctx)
     do_query_config_blueprint(zlevel, grid, ctx, df.ui_sidebar_mode.Default,
-                              config_pre_tile_fn)
+                              config_pre_tile_fn, config_post_tile_fn)
 end
 
 function do_orders()
