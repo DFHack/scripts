@@ -21,7 +21,7 @@ local function is_queryable_tile(pos)
          dfhack.buildings.findCivzonesAt(pos))
 end
 
-local function config_pre_tile_fn(ctx, tile_ctx)
+local function query_pre_tile_fn(ctx, tile_ctx)
     local pos = tile_ctx.pos
     if not quickfort_set.get_setting('query_unsafe') and
             not is_queryable_tile(pos) then
@@ -29,7 +29,8 @@ local function config_pre_tile_fn(ctx, tile_ctx)
                 'no building at coordinates (%d, %d, %d); skipping ' ..
                 'text in spreadsheet cell %s: "%s"',
                 pos.x, pos.y, pos.z, cell, text))
-        ctx.stats.query_skipped_tiles = ctx.stats.query_skipped_tiles + 1
+        ctx.stats.query_skipped_tiles.value =
+                ctx.stats.query_skipped_tiles.value + 1
         return false
     end
     if not ctx.dry_run then quickfort_map.move_cursor(pos) end
@@ -45,7 +46,7 @@ local exempt_focus_strings = utils.invert({
     'dwarfmode/QueryBuilding/Destroying',
     })
 
-local function config_post_tile_fn(ctx, tile_ctx)
+local function query_post_tile_fn(ctx, tile_ctx)
     stats.query_tiles.value = stats.query_tiles.value + 1
     if ctx.dry_run or quickfort_set.get_setting('query_unsafe') then
         return
@@ -82,6 +83,10 @@ local function config_post_tile_fn(ctx, tile_ctx)
     end
 end
 
+local function query_post_blueprint_fn(ctx)
+    quickfort_map.move_cursor(ctx.cursor)
+end
+
 function do_run(zlevel, grid, ctx)
     local stats = ctx.stats
     stats.query_tiles = stats.query_tiles or {label='Tiles configured', value=0}
@@ -90,7 +95,8 @@ function do_run(zlevel, grid, ctx)
 
     quickfort_config.do_key_blueprint(zlevel, grid, ctx,
                                       df.ui_sidebar_mode.QueryBuilding,
-                                      query_pre_tile_fn, query_post_tile_fn)
+                                      query_pre_tile_fn, query_post_tile_fn,
+                                      query_post_blueprint_fn)
 end
 
 function do_orders()

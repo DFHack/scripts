@@ -77,7 +77,7 @@ function reload_aliases(ctx)
     for _ in pairs(ctx.aliases) do num_file_aliases = num_file_aliases + 1 end
     if num_file_aliases > 0 then
         push_aliases(ctx.aliases)
-        log('successfully read in %d aliases from "%s"',
+        log('read in %d aliases from "%s"',
             num_file_aliases, ctx.blueprint_name)
     end
 end

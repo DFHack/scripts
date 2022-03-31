@@ -31,7 +31,7 @@ local function handle_modifiers(token, modifiers)
 end
 
 function do_query_config_blueprint(zlevel, grid, ctx, sidebar_mode,
-                                   pre_tile_fn, post_tile_fn)
+                                   pre_tile_fn, post_tile_fn, post_blueprint_fn)
     local stats = ctx.stats
     stats.query_config_keystrokes = stats.query_config_keystrokes or
             {label='Keystrokes sent', value=0, always=true}
@@ -49,11 +49,12 @@ function do_query_config_blueprint(zlevel, grid, ctx, sidebar_mode,
         for x, cell_and_text in pairs(row) do
             local tile_ctx = {pos=xyz2pos(x, y, zlevel)}
             tile_ctx.cell,tile_ctx.text = cell_and_text.cell,cell_and_text.text
-            if not pre_tile_fn(ctx, tile_ctx) then
+            if pre_tile_fn and not pre_tile_fn(ctx, tile_ctx) then
                 goto continue
             end
             local modifiers = {} -- tracks ctrl, shift, and alt modifiers
-            for _,token in ipairs(quickfort_aliases.expand_aliases(text)) do
+            local tokens = quickfort_aliases.expand_aliases(tile_ctx.text)
+            for _,token in ipairs(tokens) do
                 if handle_modifiers(token, modifiers) then goto continue2 end
                 local kcodes = quickfort_keycodes.get_keycodes(token, modifiers)
                 if not kcodes then
@@ -64,10 +65,11 @@ function do_query_config_blueprint(zlevel, grid, ctx, sidebar_mode,
                     gui.simulateInput(dfhack.gui.getCurViewscreen(true), kcodes)
                 end
                 modifiers = {}
-                stats.query_config_keystrokes = stats.query_config_keystrokes+1
+                stats.query_config_keystrokes.value =
+                        stats.query_config_keystrokes.value + 1
                 ::continue2::
             end
-            post_tile_fn(ctx, tile_ctx)
+            if post_tile_fn then post_tile_fn(ctx, tile_ctx) end
             ::continue::
         end
     end
@@ -77,7 +79,7 @@ function do_query_config_blueprint(zlevel, grid, ctx, sidebar_mode,
                     and guidm.SIDEBAR_MODE_KEYS[saved_mode] then
             guidm.enterSidebarMode(saved_mode)
         end
-        quickfort_map.move_cursor(ctx.cursor)
+        if post_blueprint_fn then post_blueprint_fn(ctx) end
     end
 end
 
@@ -89,7 +91,7 @@ end
 
 function do_run(zlevel, grid, ctx)
     do_query_config_blueprint(zlevel, grid, ctx, df.ui_sidebar_mode.Default,
-                              config_pre_tile_fn, function() end)
+                              config_pre_tile_fn)
 end
 
 function do_orders()
