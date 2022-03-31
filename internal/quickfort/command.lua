@@ -148,7 +148,7 @@ local function do_one_command(command, cursor, blueprint_name, section_name,
                               mode, quiet, dry_run, preserve_engravings,
                               modifiers)
     if not cursor then
-        if command == 'orders' or mode == 'notes' then
+        if command == 'orders' or mode == 'notes' or mode == 'config' then
             cursor = {x=0, y=0, z=0}
         else
             qerror('please position the game cursor at the blueprint start ' ..

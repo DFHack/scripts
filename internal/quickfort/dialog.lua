@@ -169,7 +169,7 @@ local function dialog_command(command, text)
 
     local cursor = guidm.getCursorPos()
     if not cursor then
-        if command == 'orders' or mode == 'notes' then
+        if command == 'orders' or mode == 'notes' or mode == 'config' then
             cursor = {x=0, y=0, z=0}
         else
             dialogs.showMessage('Error',
