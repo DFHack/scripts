@@ -26,6 +26,26 @@ local guidm = require('gui.dwarfmode')
 local utils = require('utils')
 local widgets = require('gui.widgets')
 
+local function auto_layout(panel, spacer)
+    -- recalculate widget frames
+    panel:updateSubviewLayout()
+
+    -- vertically lay out subviews, adding spacer lines of space between each
+    spacer = spacer or 0
+    local y = 0
+    for _,subview in ipairs(panel.subviews) do
+        subview.frame.t = y
+        if subview.visible then
+            y = y + subview.frame.h + spacer
+        end
+    end
+
+    -- recalculate widget frames again
+    panel:updateSubviewLayout()
+
+    return y
+end
+
 ResizingPanel = defclass(ResizingPanel, widgets.Panel)
 function ResizingPanel:init()
     if not self.frame then self.frame = {} end
@@ -34,7 +54,7 @@ function ResizingPanel:postUpdateLayout()
     local h = 0
     for _,subview in ipairs(self.subviews) do
         if subview.visible then
-            h = math.max(h, subview.frame.t + subview.frame.h)
+            h = math.max(h, (subview.frame.t or 1) + (subview.frame.h or 1))
         end
     end
     self.frame.h = h
@@ -222,7 +242,6 @@ function PhasesPanel:init()
     self:addviews{
         CycleHotkeyLabel{
             view_id='phases',
-            frame={t=0},
             key='CUSTOM_A',
             label='phases',
             options={'Autodetect', 'Custom'},
@@ -232,42 +251,49 @@ function PhasesPanel:init()
             show_help_fn=self.show_help_fn,
             on_change=self.on_layout_change,
         },
-        -- we need an explicit spacer since the panel height is autocalculated
-        -- from the subviews
-        widgets.Panel{frame={t=3,h=1}},
-        ToggleHotkeyLabel{frame={t=4}, key='CUSTOM_D', label='dig',
-                          option_idx=self:get_default('dig'), label_width=6},
-        ToggleHotkeyLabel{frame={t=4, l=15}, key='CUSTOM_SHIFT_D',
-                          label='track', option_idx=self:get_default('track')},
-        ToggleHotkeyLabel{frame={t=5}, key='CUSTOM_SHIFT_B', label='const',
-                          option_idx=self:get_default('construct'),
-                          label_width=6},
-        ToggleHotkeyLabel{frame={t=5, l=15}, key='CUSTOM_B', label='build',
-                          option_idx=self:get_default('build')},
-        ToggleHotkeyLabel{frame={t=6}, key='CUSTOM_P', label='place',
-                          option_idx=self:get_default('place'), label_width=6},
-        ToggleHotkeyLabel{frame={t=6, l=15}, key='CUSTOM_Z', label='zone',
-                          option_idx=self:get_default('zone'), label_width=5},
-        ToggleHotkeyLabel{frame={t=7}, key='CUSTOM_SHIFT_Q', label='config',
-                          option_idx=self:get_default('config')},
-        ToggleHotkeyLabel{frame={t=7, l=15}, key='CUSTOM_Q', label='rooms',
-                          option_idx=self:get_default('rooms')},
         CycleHotkeyLabel{
-            frame={t=8},
+            view_id='toggle_all',
             key='CUSTOM_SHIFT_A',
             label='toggle all',
             options={'', ''},
             on_change=self:callback('toggle_all'),
         },
+        -- we need an explicit spacer since the panel height is autocalculated
+        -- from the subviews
+        widgets.Panel{frame={h=1}},
+        widgets.Panel{frame={h=1},
+                      subviews={ToggleHotkeyLabel{view_id='dig_phase',
+                                    frame={t=0, l=0},
+                                    key='CUSTOM_D', label='dig',
+                                    option_idx=self:get_default('dig'),
+                                    label_width=5},
+                                ToggleHotkeyLabel{view_id='carve_phase',
+                                    frame={t=0, l=15},
+                                    key='CUSTOM_SHIFT_D', label='carve',
+                                    option_idx=self:get_default('carve')}}},
+        ToggleHotkeyLabel{view_id='build_phase', key='CUSTOM_B', label='build',
+                          option_idx=self:get_default('build')},
+        widgets.Panel{frame={h=1},
+                      subviews={ToggleHotkeyLabel{view_id='place_phase',
+                                    frame={t=0, l=0},
+                                    key='CUSTOM_P', label='place',
+                                    option_idx=self:get_default('place')},
+                                ToggleHotkeyLabel{view_id='zone_phase',
+                                    frame={t=0, l=15},
+                                    key='CUSTOM_Z', label='zone',
+                                    option_idx=self:get_default('zone'),
+                                    label_width=5}}},
+        ToggleHotkeyLabel{view_id='query_phase', key='CUSTOM_Q', label='query',
+                          option_idx=self:get_default('query')},
     }
 end
 function PhasesPanel:get_default(label)
     return (self.phases.auto_phase or self.phases[label]) and 1 or 2
 end
 function PhasesPanel:toggle_all()
-    local target_state = self.subviews[#self.subviews].option_idx
-    for _,subview in ipairs(self.subviews) do
-        if subview.options and not subview.view_id then
+    local target_state = self.subviews.toggle_all.option_idx
+    for _,subview in pairs(self.subviews) do
+        if subview.options and subview.view_id:endswith('_phase') then
             subview.option_idx = target_state
         end
     end
@@ -275,10 +301,16 @@ end
 function PhasesPanel:preUpdateLayout()
     local is_custom = self.subviews.phases.option_idx > 1
     for _,subview in ipairs(self.subviews) do
-        if not subview.view_id then
+        if subview.view_id ~= 'phases' then
             subview.visible = is_custom
         end
     end
+end
+function PhasesPanel:updateLayout(parent_rect)
+    -- set frame boundaries and calculate subframe heights
+    PhasesPanel.super.updateLayout(self, parent_rect)
+
+    auto_layout(self)
 end
 
 StartPosPanel = defclass(StartPosPanel, ResizingPanel)
@@ -367,6 +399,13 @@ function BlueprintUI:init()
             view_id='phases_panel',
             show_help_fn=get_show_help,
             on_layout_change=self:callback('updateLayout')},
+        ToggleHotkeyLabel{
+            view_id='engrave',
+            key='CUSTOM_E',
+            label='engrave',
+            option_idx=self.presets.engrave and 1 or 2,
+            help={'Capture engravings.'},
+            show_help_fn=get_show_help},
         CycleHotkeyLabel{
             view_id='format',
             key='CUSTOM_F',
@@ -466,16 +505,7 @@ function BlueprintUI:updateLayout(parent_rect)
     -- set help text visibility
     self.subviews.summary.visible = self.show_help
 
-    -- vertically lay out subviews, adding an extra line of space between each
-    local y = 0
-    for _,subview in ipairs(self.subviews) do
-        subview.frame.t = y
-        if subview.visible then
-            y = y + subview.frame.h + 1
-        end
-    end
-    -- recalculate widget frames
-    self:updateSubviewLayout()
+    local y = auto_layout(self, 1)
 
     -- if we can't fit in the screen, hide help text and try again
     if self.show_help and parent_rect and
@@ -609,7 +639,7 @@ function BlueprintUI:commit(pos)
     local phases_view = self.subviews.phases
     if phases_view:get_current_option_value() == 'Custom' then
         local some_phase_is_set = false
-        for _,sv in ipairs(self.subviews.phases_panel.subviews) do
+        for _,sv in pairs(self.subviews.phases_panel.subviews) do
             if sv.options and sv:get_current_option_value() == 'On' then
                 table.insert(params, sv.label)
                 some_phase_is_set = true
@@ -628,6 +658,11 @@ function BlueprintUI:commit(pos)
     local x, y, z = math.min(mark.x, pos.x), math.min(mark.y, pos.y),
             math.max(mark.z, pos.z)
     table.insert(params, ('--cursor=%d,%d,%d'):format(x, y, z))
+
+    local engrave = self.subviews.engrave:get_current_option_value()
+    if engrave == 'On' then
+        table.insert(params, '--engrave')
+    end
 
     local format = self.subviews.format:get_current_option_value()
     if format ~= 'minimal' then

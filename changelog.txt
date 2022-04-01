@@ -30,6 +30,7 @@ that repo.
 - `quickfort`: new blueprint mode: ``#config``; for playing back key sequences that don't involve the map cursor (like configuring hotkeys, changing standing orders, or modifying military uniforms)
 - `autonick`: now requires ``all`` command
 - `autonick`: added ``--quiet`` and ``--help`` options; also displays help on incorrect use
+- `gui/blueprint`: support new `blueprint` options and phases
 
 # 0.47.05-r4
 

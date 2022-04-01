@@ -524,9 +524,9 @@ function test.phase_set()
         function()
             local view = load_ui()
             -- turn off autodetect and turn all phases except dig off
-            for _,sv in ipairs(view.subviews.phases_panel.subviews) do
-                if sv.label and sv.label ~= 'dig' then
-                    sv.option_idx = 2
+            for _,sv in pairs(view.subviews.phases_panel.subviews) do
+                if sv.option_idx then
+                    sv.option_idx = sv.label == 'dig' and 1 or 2
                 end
             end
             guidm.setCursorPos({x=1, y=2, z=3})
@@ -549,7 +549,7 @@ function test.phase_nothing_set()
         function()
             local view = load_ui()
             -- turn off autodetect and turn all phases off
-            for _,sv in ipairs(view.subviews.phases_panel.subviews) do
+            for _,sv in pairs(view.subviews.phases_panel.subviews) do
                 sv.option_idx = 2
             end
             guidm.setCursorPos({x=1, y=2, z=3})
@@ -609,6 +609,30 @@ function test.preset_format()
     send_keys('LEAVESCREEN') -- leave UI
 end
 
+function test.engrave()
+    local mock_print, mock_run = mock.func(), mock.func({'blueprints/dig.csv'})
+    mock.patch({
+            {b, 'print', mock_print},
+            {blueprint, 'run', mock_run},
+        },
+        function()
+            local view = load_ui()
+            send_keys('CUSTOM_E')
+            guidm.setCursorPos({x=1, y=2, z=3})
+            send_keys('SELECT', 'SELECT')
+            expect.str_find('%-%-engrave', mock_print.call_args[1][1])
+            send_keys('SELECT') -- dismiss the success messagebox
+            delay_until(view:callback('isDismissed'))
+        end)
+end
+
+function test.preset_engrave()
+    dfhack.run_script('gui/blueprint', '--engrave')
+    local view = b.active_screen
+    expect.eq('On', view.subviews.engrave:get_current_option_value())
+    send_keys('LEAVESCREEN') -- leave UI
+end
+
 function test.start_pos_comment()
     local view = load_ui()
     guidm.setCursorPos({x=1, y=2, z=3})
@@ -625,6 +649,7 @@ function test.start_pos_comment()
     -- reset start pos, expect previous comment to still be there
     send_keys('CUSTOM_S', 'SELECT', 'SELECT')
     expect.eq('Comment: cm', startpos_panel:print_comment())
+    send_keys('LEAVESCREEN') -- leave UI
 end
 
 function test.start_pos_before_range_set()
