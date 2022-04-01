@@ -7,6 +7,7 @@ end
 
 local utils = require('utils')
 local quickfort_reader = reqscript('internal/quickfort/reader')
+local quickfort_transform = reqscript('internal/quickfort/transform')
 
 valid_modes = utils.invert({
     'dig',
@@ -334,37 +335,6 @@ local function parse_shift(text, start_pos, _, modifiers)
     return true, next_start_pos
 end
 
-local function make_transform_fn(tfn)
-    return function(pos, origin_pos)
-        -- shift pos to treat origin_pos as the origin
-        local pos = xy2pos(pos.x-origin_pos.x, pos.y-origin_pos.y)
-        -- apply transformation
-        pos = tfn(pos)
-        -- undo origin shift
-        return xy2pos(pos.x+origin_pos.x, pos.y+origin_pos.y)
-    end
-end
-
--- the y axis is reversed in DF so the normal logic for cw and ccw is reversed.
-local function transform_cw(tpos) return xy2pos(-tpos.y, tpos.x) end
-local function transform_ccw(tpos) return xy2pos(tpos.y, -tpos.x) end
-local function transform_fliph(tpos) return xy2pos(-tpos.x, tpos.y) end
-local function transform_flipv(tpos) return xy2pos(tpos.x, -tpos.y) end
-
-local function make_transform_fn_from_name(name)
-    if name == 'rotcw' or name == 'cw' then
-        return make_transform_fn(transform_cw)
-    elseif name == 'rotccw' or name == 'ccw' then
-        return make_transform_fn(transform_ccw)
-    elseif name == 'fliph' then
-        return make_transform_fn(transform_fliph)
-    elseif name == 'flipv' then
-        return make_transform_fn(transform_flipv)
-    else
-        qerror('invalid transformation name: '..name)
-    end
-end
-
 local function get_next_transform_name(text, start_pos)
     local _, end_pos, name = text:find('^(%a+)%s*[;,]?%s*', start_pos)
     return end_pos and end_pos+1 or nil, name
@@ -375,7 +345,7 @@ function parse_transform_params(text, modifiers)
     if not name then qerror('invalid transformation list: '..text) end
     while name do
         table.insert(modifiers.transform_fn_stack,
-                     make_transform_fn_from_name(name))
+                     quickfort_transform.make_transform_fn_from_name(name))
         next_pos, name = get_next_transform_name(text, next_pos)
     end
 end

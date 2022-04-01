@@ -237,6 +237,7 @@ local quickfort_place = reqscript('internal/quickfort/place')
 local quickfort_query = reqscript('internal/quickfort/query')
 local quickfort_reader = reqscript('internal/quickfort/reader')
 local quickfort_set = reqscript('internal/quickfort/set')
+local quickfort_transform = reqscript('internal/quickfort/transform')
 local quickfort_zone = reqscript('internal/quickfort/zone')
 
 -- keep this in sync with the full help text above

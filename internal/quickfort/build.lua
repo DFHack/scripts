@@ -21,6 +21,7 @@ local buildingplan = require('plugins.buildingplan')
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_orders = reqscript('internal/quickfort/orders')
+local quickfort_transform = reqscript('internal/quickfort/transform')
 
 local log = quickfort_common.log
 
@@ -172,30 +173,13 @@ end
 -- ************ the database ************ --
 --
 
--- y coords are inverted since the map y axis is inverted
-local unit_vectors = {
-    north={x=0, y=-1},
-    east={x=1, y=0},
-    south={x=0, y=1},
-    west={x=-1, y=0}
-}
-local unit_vectors_revmap = {
-    north='x=0, y=-1',
-    east='x=1, y=0',
-    south='x=0, y=1',
-    west='x=-1, y=0'
-}
-
-local function resolve_transformed_vector(ctx, vector, revmap)
-    local transformed_vector = ctx.transform_fn(vector, true)
-    local serialized = ('x=%d, y=%d')
-            :format(transformed_vector.x, transformed_vector.y)
-    return revmap[serialized]
-end
+local unit_vectors = quickfort_transform.unit_vectors
+local unit_vectors_revmap = quickfort_transform.unit_vectors_revmap
 
 local function make_transform_building_fn(vector, revmap, post_fn)
     return function(ctx)
-        local keys = resolve_transformed_vector(ctx, vector, revmap)
+        local keys = quickfort_transform.resolve_transformed_vector(
+                                                        ctx, vector, revmap)
         if post_fn then keys = post_fn(keys) end
         return keys
     end

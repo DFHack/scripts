@@ -11,8 +11,22 @@ local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_aliases = reqscript('internal/quickfort/aliases')
 local quickfort_keycodes = reqscript('internal/quickfort/keycodes')
 local quickfort_map = reqscript('internal/quickfort/map')
+local quickfort_transform = reqscript('internal/quickfort/transform')
 
 local log = quickfort_common.log
+
+local dir_map = {
+    Up=quickfort_transform.unit_vectors.north,
+    Right=quickfort_transform.unit_vectors.east,
+    Down=quickfort_transform.unit_vectors.south,
+    Left=quickfort_transform.unit_vectors.west
+}
+local dir_revmap = {
+    [quickfort_transform.unit_vectors_revmap.north]='Up',
+    [quickfort_transform.unit_vectors_revmap.east]='Right',
+    [quickfort_transform.unit_vectors_revmap.south]='Down',
+    [quickfort_transform.unit_vectors_revmap.west]='Left'
+}
 
 local function handle_modifiers(token, modifiers)
     local token_lower = token:lower()
@@ -30,6 +44,27 @@ local function handle_modifiers(token, modifiers)
     return false
 end
 
+local function transform_token(ctx, token, transformable_dirs)
+    -- don't transform if the token is not a direction key or if we're not on
+    -- a map screen. note this is only a heuristic. there are dwarfmode screens
+    -- that can't move a cursor anyway. there are also dwarfmode screens where
+    -- the arrow keys change settings instead of move a cursor. however, these
+    -- screens (e.g. the hospital zone settings screen) are very unlikely to be
+    -- visited by a query or config blueprint. we can make this heuristic more
+    -- complicated if the above statement is proven incorrect.
+    if not transformable_dirs[token] or
+            not dfhack.gui.getCurFocus(true):startswith('dwarfmode') then
+        return token
+    end
+    local translated_dir = quickfort_transform.resolve_transformed_vector(
+            ctx, dir_map[token], dir_revmap)
+    if token ~= translated_dir then
+        log(('transforming cursor movement on map screen: %s -> %s')
+            :format(token, translated_dir))
+    end
+    return translated_dir
+end
+
 function do_query_config_blueprint(zlevel, grid, ctx, sidebar_mode,
                                    pre_tile_fn, post_tile_fn, post_blueprint_fn)
     local stats = ctx.stats
@@ -45,6 +80,16 @@ function do_query_config_blueprint(zlevel, grid, ctx, sidebar_mode,
         guidm.enterSidebarMode(sidebar_mode)
     end
 
+    -- record which direction keys are potentially transformed so we only
+    -- look up whether we need to transform when we absolutely have to
+    local transformable_dirs = {}
+    for k,v in pairs(dir_map) do
+        if k ~= quickfort_transform.resolve_transformed_vector(ctx, v,
+                                                               dir_revmap) then
+            transformable_dirs[k] = true
+        end
+    end
+
     for y, row in pairs(grid) do
         for x, cell_and_text in pairs(row) do
             local tile_ctx = {pos=xyz2pos(x, y, zlevel)}
@@ -56,6 +101,7 @@ function do_query_config_blueprint(zlevel, grid, ctx, sidebar_mode,
             local tokens = quickfort_aliases.expand_aliases(tile_ctx.text)
             for _,token in ipairs(tokens) do
                 if handle_modifiers(token, modifiers) then goto continue2 end
+                token = transform_token(ctx, token, transformable_dirs)
                 local kcodes = quickfort_keycodes.get_keycodes(token, modifiers)
                 if not kcodes then
                     qerror(string.format(
