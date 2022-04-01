@@ -28,15 +28,18 @@ local function query_pre_tile_fn(ctx, tile_ctx)
         print(string.format(
                 'no building at coordinates (%d, %d, %d); skipping ' ..
                 'text in spreadsheet cell %s: "%s"',
-                pos.x, pos.y, pos.z, cell, text))
+                pos.x, pos.y, pos.z, tile_ctx.cell, tile_ctx.text))
         ctx.stats.query_skipped_tiles.value =
                 ctx.stats.query_skipped_tiles.value + 1
         return false
     end
-    if not ctx.dry_run then quickfort_map.move_cursor(pos) end
-    tile_ctx.focus_string = dfhack.gui.getCurFocus(true)
+    if not ctx.dry_run then
+        quickfort_map.move_cursor(pos)
+        tile_ctx.focus_string = dfhack.gui.getCurFocus(true)
+    end
     log('applying spreadsheet cell %s with text "%s" to map ' ..
-        'coordinates (%d, %d, %d)', cell, text, pos.x, pos.y, pos.z)
+        'coordinates (%d, %d, %d)',
+        tile_ctx.cell, tile_ctx.text, pos.x, pos.y, pos.z)
     return true
 end
 
@@ -47,7 +50,7 @@ local exempt_focus_strings = utils.invert({
     })
 
 local function query_post_tile_fn(ctx, tile_ctx)
-    stats.query_tiles.value = stats.query_tiles.value + 1
+    ctx.stats.query_tiles.value = ctx.stats.query_tiles.value + 1
     if ctx.dry_run or quickfort_set.get_setting('query_unsafe') then
         return
     end
@@ -93,10 +96,11 @@ function do_run(zlevel, grid, ctx)
     stats.query_skipped_tiles = stats.query_skipped_tiles
             or {label='Tiles not configured due to missing buildings', value=0}
 
-    quickfort_config.do_key_blueprint(zlevel, grid, ctx,
-                                      df.ui_sidebar_mode.QueryBuilding,
-                                      query_pre_tile_fn, query_post_tile_fn,
-                                      query_post_blueprint_fn)
+    quickfort_config.do_query_config_blueprint(zlevel, grid, ctx,
+                                               df.ui_sidebar_mode.QueryBuilding,
+                                               query_pre_tile_fn,
+                                               query_post_tile_fn,
+                                               query_post_blueprint_fn)
 end
 
 function do_orders()
