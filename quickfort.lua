@@ -22,7 +22,7 @@ real" in Dwarf Fortress, and then export your map using the DFHack
 should go in the ``blueprints`` subfolder in the main DF folder.
 
 For more details on blueprint file syntax, see the `quickfort-blueprint-guide`
-or browse through the ready-to-use examples in the `quickfort-library-guide`.
+or browse through the ready-to-use examples in the `blueprint-library-guide`.
 
 Usage:
 
@@ -148,9 +148,10 @@ not change the configuration stored in the file:
     halt or skip keycode playback. Checks include ensuring a configurable
     building exists at the designated cursor position and verifying the active
     UI screen is the same before and after sending keys for the cursor
-    position. Temporarily enable this if you are running a query blueprint that
-    sends a key sequence that is *not* related to stockpile or building
-    configuration. Most players will never need to enable this setting.
+    position. If you find you need to enable this for one of your own
+    blueprints, you should probably be using a
+    `config blueprint <quickfort-config-blueprints>`, not a query blueprint.
+    Most players will never need to enable this setting.
 ``stockpiles_max_barrels``, ``stockpiles_max_bins``, and ``stockpiles_max_wheelbarrows`` (defaults: -1, -1, 0)
     Set to the maximum number of resources you want assigned to stockpiles of
     the relevant types. Set to -1 for DF defaults (number of stockpile tiles
