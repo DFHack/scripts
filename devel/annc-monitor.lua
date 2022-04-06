@@ -71,4 +71,3 @@ function eventful.onReport.annc_monitor(id)
         log(annc.text, color)
     end
 end
-

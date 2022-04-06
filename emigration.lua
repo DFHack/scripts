@@ -135,4 +135,3 @@ end
 if dfhack.isMapLoaded() then
     dfhack.onStateChange.loadEmigration(SC_MAP_LOADED)
 end
-

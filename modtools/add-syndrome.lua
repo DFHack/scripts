@@ -114,4 +114,3 @@ if args.skipImmunities then
 else
  syndromeUtil.infectWithSyndromeIfValidTarget(targ,syndrome,resetPolicy)
 end
-

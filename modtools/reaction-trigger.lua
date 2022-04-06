@@ -263,4 +263,3 @@ if args.syndrome and not findSyndrome(args.syndrome) then
 end
 
 table.insert(reactionHooks[args.reactionName], args)
-

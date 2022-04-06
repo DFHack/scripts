@@ -781,4 +781,3 @@ if dfhack.gui.getCurFocus() ~= 'dfhack/lua/'..UnitInfoViewer.focus_path then
   kan_viewscreen:show()
  end
 end
-

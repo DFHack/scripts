@@ -27,7 +27,7 @@ local function getUnitName(unit)
     if language_name.has_name then
         return dfhack.df2console(dfhack.TranslateName( language_name ))
     end
-    
+
     -- animals
     return dfhack.units.getProfessionName(unit)
 end
@@ -114,7 +114,7 @@ end
 
 local function doPlantJobNow(plant)
     --print('This will attempt to make a job with a plant a top priority')
-    
+
     for _link, job in utils.listpairs(df.global.world.jobs.list) do
         if plant.pos.x == job.pos.x
         and plant.pos.y == job.pos.y
@@ -124,7 +124,7 @@ local function doPlantJobNow(plant)
             return
         end
     end
-    
+
     print("Couldn't find any job involving this plant.")
 end
 
@@ -137,7 +137,7 @@ local function doWorkOrderJobsNow(order)
             cnt = cnt + 1
         end
     end
-    
+
     if cnt > 0 then
         print("Found " .. cnt .. " jobs for this work order.")
     else

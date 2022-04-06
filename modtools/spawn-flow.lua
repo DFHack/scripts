@@ -87,4 +87,3 @@ if not pos.x or not pos.y or not pos.z then
 end
 
 dfhack.maps.spawnFlow(pos, flowType, mat_type, mat_index, flowSize)
-

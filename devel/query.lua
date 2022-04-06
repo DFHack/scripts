@@ -208,7 +208,7 @@ Usage examples::
   Disables printing. Might be useful if you are debugging
   this script. Or to see if a query will crash (faster) but
   not sure what else you could use it for.
-                       
+
 ``-debug <value>``
   Enables debug log lines equal to or less than the value provided.
 

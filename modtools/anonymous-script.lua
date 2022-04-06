@@ -24,4 +24,3 @@ end
 
 --we don't care about the result even if they return something for some reason: we just want to ensure its side-effects happen and print appropriate error messages
 dfhack.safecall(f,table.unpack(args,2))
-

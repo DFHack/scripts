@@ -160,4 +160,3 @@ end
 function do_undo()
     log('cannot undo blueprints for mode: config')
 end
-

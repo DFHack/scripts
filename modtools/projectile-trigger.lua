@@ -101,5 +101,3 @@ if not materialTriggers[args.material] then
  materialTriggers[args.material] = {}
 end
 table.insert(materialTriggers[args.material], args)
-
-

@@ -20,12 +20,12 @@ function drop_webs(all_webs)
     if not dfhack.isMapLoaded() then
         qerror("Error: Map not loaded!")
     end
-    
+
     local count = 0
     for i, item in ipairs(df.global.world.items.other.ANY_WEBS) do
         if item.flags.on_ground and not item.flags.in_job then
             local valid_tile = all_webs or (dfhack.maps.getTileType(item.pos) == df.tiletype.OpenSpace)
-            
+
             if valid_tile then
                 local proj = dfhack.items.makeProjectile(item)
                 proj.flags.no_impact_destroy = true
@@ -44,7 +44,7 @@ end
 function main(...)
     local validArgs = utils.invert({"all"})
     local args = utils.processArgs({...}, validArgs)
-    
+
     drop_webs(args.all)
 end
 

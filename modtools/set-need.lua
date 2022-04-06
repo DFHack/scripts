@@ -609,4 +609,3 @@ end
 if not dfhack_flags.module then
   main(...)
 end
-

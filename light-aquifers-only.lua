@@ -40,7 +40,7 @@ function lightaqonly (arg)
         end
       end
     end
-    
+
   else
     for i = 0, df.global.world.world_data.world_width - 1 do
       for k = 0, df.global.world.world_data.world_height - 1 do

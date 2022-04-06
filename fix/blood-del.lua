@@ -58,4 +58,3 @@ for x,y in pairs(df.global.world.entities.all) do
   k=k+1
  end
 end
-

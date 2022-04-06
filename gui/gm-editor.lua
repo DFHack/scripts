@@ -601,4 +601,3 @@ if #args~=0 then
 else
     show_editor(getTargetFromScreens())
 end
-
