@@ -44,7 +44,7 @@ function test.apply_blueprint_all_ctx_params()
     local expected_ctx = utils.assign(
             c.make_ctx_base(),
             {command='undo', blueprint_name='API', cursor={x=10, y=10, z=1},
-             aliases={somealias='ab{analias}'}, dry_run=true,
+             aliases={somealias='ab{analias}'}, dry_run=true, quiet=false,
              preserve_engravings=df.item_quality.Masterful})
 
     q.apply_blueprint{mode='query', data=data, command='undo',

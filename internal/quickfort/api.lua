@@ -45,6 +45,8 @@ function init_api_ctx(params, cursor)
     if not p.command then p.command = 'run' end
     p.blueprint_name = 'API'
     p.cursor = cursor
+    p.quiet = not p.verbose
+    p.preview = false
     if p.preserve_engravings then
         p.preserve_engravings = quickfort_parse.parse_preserve_engravings(
                 params.preserve_engravings, true)

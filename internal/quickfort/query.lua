@@ -25,10 +25,12 @@ local function query_pre_tile_fn(ctx, tile_ctx)
     local pos = tile_ctx.pos
     if not quickfort_set.get_setting('query_unsafe') and
             not is_queryable_tile(pos) then
-        print(string.format(
-                'no building at coordinates (%d, %d, %d); skipping ' ..
-                'text in spreadsheet cell %s: "%s"',
-                pos.x, pos.y, pos.z, tile_ctx.cell, tile_ctx.text))
+        if not ctx.quiet then
+            dfhack.printerr(string.format(
+                    'no building at coordinates (%d, %d, %d); skipping ' ..
+                    'text in spreadsheet cell %s: "%s"',
+                    pos.x, pos.y, pos.z, tile_ctx.cell, tile_ctx.text))
+        end
         ctx.stats.query_skipped_tiles.value =
                 ctx.stats.query_skipped_tiles.value + 1
         return false

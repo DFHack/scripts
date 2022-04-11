@@ -953,7 +953,7 @@ function do_run(zlevel, grid, ctx)
     stats.build_unsuitable.value =
             stats.build_unsuitable.value +
             quickfort_building.check_tiles_and_extents(
-                buildings, building_db)
+                ctx, buildings, building_db)
 
     for _, b in ipairs(buildings) do
         if b.pos then

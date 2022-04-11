@@ -203,7 +203,7 @@ function do_list_internal(show_library, show_hidden)
         for _,v in pairs(display_data) do
             if v then
                 -- order doesn't matter; we just need all the strings in there
-                search_key = string.format('%s %s', search_key, tostring(v))
+                search_key = ('%s %s'):format(search_key, v)
             end
         end
         display_data.search_key = search_key

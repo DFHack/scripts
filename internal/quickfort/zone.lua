@@ -229,7 +229,7 @@ function do_run(zlevel, grid, ctx)
     stats.zone_occupied.value =
             stats.zone_occupied.value +
             quickfort_building.check_tiles_and_extents(
-                zones, zone_db)
+                ctx, zones, zone_db)
 
     for _,zone in ipairs(zones) do
         if zone.pos then

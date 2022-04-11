@@ -101,7 +101,7 @@ local function process_filter(order_specs, filter, reactions)
         label = 'iron spear'
     end
     if not label then
-        print('unhandled filter:')
+        dfhack.printerr('unhandled filter:')
         printall_recurse(filter)
         error('quickfort out of sync with DFHack filters; please file a bug')
     end

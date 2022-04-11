@@ -242,7 +242,7 @@ function do_run(zlevel, grid, ctx)
     stats.place_occupied.value =
             stats.place_occupied.value +
             quickfort_building.check_tiles_and_extents(
-                stockpiles, stockpile_db)
+                ctx, stockpiles, stockpile_db)
 
     local stockpile_query_grid = {}
     local dry_run = ctx.dry_run

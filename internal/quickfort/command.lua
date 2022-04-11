@@ -40,15 +40,17 @@ local function make_ctx_base()
     }
 end
 
-local function make_ctx(command, blueprint_name, cursor, aliases, dry_run,
-                        preserve_engravings)
+local function make_ctx(command, blueprint_name, cursor, aliases, quiet,
+                        dry_run, preview, preserve_engravings)
     local ctx = make_ctx_base()
     local params = {
         command=command,
         blueprint_name=blueprint_name,
         cursor=cursor,
         aliases=aliases,
+        quiet=quiet,
         dry_run=dry_run,
+        preview=preview,
         preserve_engravings=preserve_engravings,
     }
 
@@ -72,7 +74,9 @@ function init_ctx(params)
         params.blueprint_name,
         params.cursor,
         params.aliases or {},
+        params.quiet,
         params.dry_run,
+        params.preview and {tiles={}, bounds={}, invalid_tiles=0} or nil,
         params.preserve_engravings or df.item_quality.Masterful)
 end
 
@@ -158,9 +162,9 @@ function do_command_section(ctx, section_name, modifiers)
     end
 end
 
-function finish_command(ctx, section_name, quiet)
+function finish_command(ctx, section_name)
     if ctx.command == 'orders' then quickfort_orders.create_orders(ctx) end
-    if not quiet then
+    if not ctx.quiet then
         print(string.format('%s successfully completed',
                             quickfort_parse.format_command(
                                 ctx.command, ctx.blueprint_name, section_name)))
@@ -189,11 +193,12 @@ local function do_one_command(command, cursor, blueprint_name, section_name,
         blueprint_name=blueprint_name,
         cursor=cursor,
         aliases=quickfort_list.get_aliases(blueprint_name),
+        quiet=quiet,
         dry_run=dry_run,
         preserve_engravings=preserve_engravings}
 
     do_command_section(ctx, section_name, modifiers)
-    finish_command(ctx, section_name, quiet)
+    finish_command(ctx, section_name)
     if command == 'run' then
         for _,message in ipairs(ctx.messages) do
             print('* '..message)
@@ -206,8 +211,8 @@ local function do_bp_name(commands, cursor, bp_name, sec_names, quiet, dry_run,
     for _,sec_name in ipairs(sec_names) do
         local mode = quickfort_list.get_blueprint_mode(bp_name, sec_name)
         for _,command in ipairs(commands) do
-            do_one_command(command, cursor, bp_name, sec_name, mode,
-                           quiet, dry_run, preserve_engravings, modifiers)
+            do_one_command(command, cursor, bp_name, sec_name, mode, quiet,
+                           dry_run, preserve_engravings, modifiers)
         end
     end
 end
@@ -218,8 +223,8 @@ local function do_list_num(commands, cursor, list_nums, quiet, dry_run,
         local bp_name, sec_name, mode =
                 quickfort_list.get_blueprint_by_number(list_num)
         for _,command in ipairs(commands) do
-            do_one_command(command, cursor, bp_name, sec_name, mode,
-                           quiet, dry_run, preserve_engravings, modifiers)
+            do_one_command(command, cursor, bp_name, sec_name, mode, quiet,
+                           dry_run, preserve_engravings, modifiers)
         end
     end
 end
@@ -274,7 +279,8 @@ function do_command(args)
             local ok, list_nums = pcall(argparse.numberList, blueprint_name)
             if not ok then
                 do_bp_name(args.commands, cursor, blueprint_name, section_names,
-                           quiet, dry_run, preserve_engravings, modifiers)
+                           quiet, dry_run, preserve_engravings,
+                           modifiers)
             else
                 do_list_num(args.commands, cursor, list_nums, quiet, dry_run,
                             preserve_engravings, modifiers)

@@ -11,6 +11,7 @@ local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_aliases = reqscript('internal/quickfort/aliases')
 local quickfort_keycodes = reqscript('internal/quickfort/keycodes')
 local quickfort_map = reqscript('internal/quickfort/map')
+local quickfort_preview = reqscript('internal/quickfort/preview')
 local quickfort_transform = reqscript('internal/quickfort/transform')
 
 local log = quickfort_common.log
@@ -94,9 +95,9 @@ function do_query_config_blueprint(zlevel, grid, ctx, sidebar_mode,
         for x, cell_and_text in pairs(row) do
             local tile_ctx = {pos=xyz2pos(x, y, zlevel)}
             tile_ctx.cell,tile_ctx.text = cell_and_text.cell,cell_and_text.text
-            if pre_tile_fn and not pre_tile_fn(ctx, tile_ctx) then
-                goto continue
-            end
+            local is_valid_tile = not pre_tile_fn or pre_tile_fn(ctx, tile_ctx)
+            quickfort_preview.set_preview_tile(ctx, tile_ctx.pos, is_valid_tile)
+            if not is_valid_tile then goto continue end
             local modifiers = {} -- tracks ctrl, shift, and alt modifiers
             local tokens = quickfort_aliases.expand_aliases(alias_ctx,
                                                             tile_ctx.text)

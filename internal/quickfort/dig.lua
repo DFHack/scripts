@@ -15,6 +15,7 @@ local utils = require('utils')
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_map = reqscript('internal/quickfort/map')
 local quickfort_parse = reqscript('internal/quickfort/parse')
+local quickfort_preview = reqscript('internal/quickfort/preview')
 local quickfort_set = reqscript('internal/quickfort/set')
 
 local log = quickfort_common.log
@@ -582,29 +583,16 @@ local function dig_tile(digctx, db_entry)
     end
 end
 
-local function ensure_index(t, idx)
-    if not t[idx] then t[idx] = {} end
-    return t[idx]
-end
-
 local function ensure_engravings_cache(ctx)
     if ctx.engravings_cache then return end
     local engravings_cache = {}
     for _,engraving in ipairs(df.global.world.engravings) do
         local pos = engraving.pos
-        local grid = ensure_index(engravings_cache, pos.z)
-        local row = ensure_index(grid, pos.y)
+        local grid = quickfort_common.ensure_key(engravings_cache, pos.z)
+        local row = quickfort_common.ensure_key(grid, pos.y)
         row[pos.x] = engraving
     end
     ctx.engravings_cache = engravings_cache
-end
-
-local function get_engraving(cache, pos)
-    local grid = cache[pos.z]
-    if not grid then return nil end
-    local row = grid[pos.y]
-    if not row then return nil end
-    return row[pos.x]
 end
 
 local function init_dig_ctx(ctx, pos, direction)
@@ -614,7 +602,7 @@ local function init_dig_ctx(ctx, pos, direction)
     if is_smooth(tileattrs) then
         -- potentially has an engraving
         ensure_engravings_cache(ctx)
-        engraving = get_engraving(ctx.engravings_cache, pos)
+        engraving = utils.safe_index(ctx.engravings_cache, pos.z, pos.y, pos.x)
     end
     return {
         pos=pos,
@@ -717,7 +705,14 @@ local function do_run_impl(zlevel, grid, ctx)
                         goto inner_continue
                     end
                     local action_fn = dig_tile(digctx, db_entry)
-                    if action_fn then
+                    quickfort_preview.set_preview_tile(ctx, extent_pos,
+                                                       action_fn ~= nil)
+                    if not action_fn then
+                        log('cannot apply "%s" to coordinate (%d, %d, %d)',
+                            keys, extent_pos.x, extent_pos.y, extent_pos.z)
+                        stats.dig_invalid_tiles.value =
+                                stats.dig_invalid_tiles.value + 1
+                    else
                         if should_preserve_engraving(ctx, db_entry,
                                                      digctx.engraving) then
                             stats.dig_protected_engraving.value =
@@ -740,6 +735,8 @@ local function ensure_ctx_stats(ctx, prefix)
     local designated_label = ('Tiles %sdesignated for digging'):format(prefix)
     ctx.stats.dig_designated = ctx.stats.dig_designated or
             {label=designated_label, value=0, always=true}
+    ctx.stats.dig_invalid_tiles = ctx.stats.dig_invalid_tiles or
+            {label='Tiles that could not be designated for digging', value=0}
     ctx.stats.dig_protected_engraving = ctx.stats.dig_protected_engraving or
             {label='Engravings protected from destruction', value=0}
 end

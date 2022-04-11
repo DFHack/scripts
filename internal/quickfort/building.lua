@@ -9,6 +9,7 @@ end
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_map = reqscript('internal/quickfort/map')
 local quickfort_parse = reqscript('internal/quickfort/parse')
+local quickfort_preview = reqscript('internal/quickfort/preview')
 
 local log = quickfort_common.log
 local logfn = quickfort_common.logfn
@@ -455,11 +456,12 @@ end
 -- check tiles for validity, adjust the extent_grid, and checks the validity of
 -- the adjusted extent_grid. marks building as invalid if the extent_grid is
 -- invalid.
-function check_tiles_and_extents(buildings, db)
+function check_tiles_and_extents(ctx, buildings, db)
     local occupied_tiles = 0
     for _, b in ipairs(buildings) do
         if not b.pos then goto continue end
         local db_entry = db[b.type]
+        local owns_preview = false
         for extent_x=1,b.width do
             local col = b.extent_grid[extent_x]
             for extent_y=1,b.height do
@@ -467,7 +469,11 @@ function check_tiles_and_extents(buildings, db)
                 if not in_extent then goto continue_inner end
                 local pos =
                         xyz2pos(b.pos.x+extent_x-1, b.pos.y+extent_y-1, b.pos.z)
-                if not db_entry.is_valid_tile_fn(pos) then
+                local is_valid_tile = db_entry.is_valid_tile_fn(pos)
+                owns_preview =
+                        quickfort_preview.set_preview_tile(ctx, pos,
+                                                           is_valid_tile)
+                if not is_valid_tile then
                     log('tile not usable: (%d, %d, %d)', pos.x, pos.y, pos.z)
                     col[extent_y] = false
                     occupied_tiles = occupied_tiles + 1
@@ -478,6 +484,14 @@ function check_tiles_and_extents(buildings, db)
         if not db_entry.is_valid_extent_fn(b) then
             log('no room for %s at (%d, %d, %d)',
                 db_entry.label, b.pos.x, b.pos.y, b.pos.z)
+            if owns_preview then
+                for x=b.pos.x,b.pos.x+b.width-1 do
+                    for y=b.pos.y,b.pos.y+b.height-1 do
+                        local p = xyz2pos(x, y, b.pos.z)
+                        quickfort_preview.set_preview_tile(ctx, p, false, true)
+                    end
+                end
+            end
             clear_building(b)
         end
         ::continue::

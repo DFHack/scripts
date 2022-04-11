@@ -1056,8 +1056,10 @@ function test.crop_to_bounds()
 end
 
 function test.check_tiles_and_extents()
-    expect.eq(0, b.check_tiles_and_extents({}, {}), 'no buildings')
-    expect.eq(0, b.check_tiles_and_extents({{'no pos'}},{}), 'invalid building')
+    local ctx = {}
+    expect.eq(0, b.check_tiles_and_extents(ctx, {}, {}), 'no buildings')
+    expect.eq(0, b.check_tiles_and_extents(ctx, {{'no pos'}},{}),
+                                           'invalid building')
 
     local valid_tiles = {}
     local function is_valid_tile(pos)
@@ -1073,13 +1075,13 @@ function test.check_tiles_and_extents()
     local bld = {type='a', pos={x=0, y=0, z=0}, width=1, height=1,
                  extent_grid={[1]={[1]=true}}}
     valid_tiles[0] = {[0]={[0]=true}}
-    expect.eq(0, b.check_tiles_and_extents({bld}, db), 'one valid tile')
+    expect.eq(0, b.check_tiles_and_extents(ctx, {bld}, db), 'one valid tile')
     expect.table_eq({[1]={[1]=true}}, bld.extent_grid)
 
     bld = {type='a', pos={x=0, y=0, z=0}, width=1, height=1,
            extent_grid={[1]={[1]=true}}}
     valid_tiles = {}
-    expect.eq(1, b.check_tiles_and_extents({bld}, db), 'one invalid tile')
+    expect.eq(1, b.check_tiles_and_extents(ctx, {bld}, db), 'one invalid tile')
     expect.table_eq({[1]={[1]=false}}, bld.extent_grid)
 
     bld = {type='a', pos={x=1, y=1, z=1}, width=3, height=3,
@@ -1089,7 +1091,7 @@ function test.check_tiles_and_extents()
     valid_tiles[1] = {[1]={[2]=true},
                       [2]={},
                       [3]={[1]=true,[3]=true}}
-    expect.eq(0, b.check_tiles_and_extents({bld}, db),
+    expect.eq(0, b.check_tiles_and_extents(ctx, {bld}, db),
               'valid tiles, non-contiguous extent')
     expect.table_eq({[1]={[2]=true},
                      [2]={},
@@ -1100,7 +1102,7 @@ function test.check_tiles_and_extents()
                         [2]={},
                         [3]={[1]=true,[3]=true}}}
     valid_tiles = {}
-    expect.eq(3, b.check_tiles_and_extents({bld}, db),
+    expect.eq(3, b.check_tiles_and_extents(ctx, {bld}, db),
               'invalid tiles, non-contiguous extent')
     expect.table_eq({[1]={[2]=false},
                      [2]={},
@@ -1113,7 +1115,7 @@ function test.check_tiles_and_extents()
     valid_tiles[1] = {[1]={[1]=true,[2]=true, [3]=true},
                       [2]={[1]=true,[2]=false,[3]=true},
                       [3]={[1]=true,[2]=true, [3]=true}}
-    expect.eq(1, b.check_tiles_and_extents({bld}, db), 'invalid extent')
+    expect.eq(1, b.check_tiles_and_extents(ctx, {bld}, db), 'invalid extent')
     expect.table_eq({}, bld.extent_grid)
 end
 
