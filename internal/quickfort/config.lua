@@ -72,7 +72,7 @@ function do_query_config_blueprint(zlevel, grid, ctx, sidebar_mode,
             {label='Keystrokes sent', value=0, always=true}
 
     quickfort_keycodes.init_keycodes()
-    quickfort_aliases.reload_aliases(ctx)
+    local alias_ctx = quickfort_aliases.init_alias_ctx(ctx)
 
     local dry_run = ctx.dry_run
     local saved_mode = df.global.ui.main.mode
@@ -98,7 +98,8 @@ function do_query_config_blueprint(zlevel, grid, ctx, sidebar_mode,
                 goto continue
             end
             local modifiers = {} -- tracks ctrl, shift, and alt modifiers
-            local tokens = quickfort_aliases.expand_aliases(tile_ctx.text)
+            local tokens = quickfort_aliases.expand_aliases(alias_ctx,
+                                                            tile_ctx.text)
             for _,token in ipairs(tokens) do
                 if handle_modifiers(token, modifiers) then goto continue2 end
                 token = transform_token(ctx, token, transformable_dirs)

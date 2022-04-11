@@ -28,27 +28,21 @@ local special_aliases = {
     ['r+']={'r','+','Enter'},
 }
 
-local alias_stack = {}
-
-local function reset_aliases()
-    alias_stack = {}
-end
-
 -- pushes a collection of aliases on the stack. aliases are resolved with the
 -- definition nearest the top of the stack.
 -- note: this function overwrites the metatable of the passed-in aliases map
-local function push_aliases(aliases)
-    local prev = alias_stack
+local function push_aliases(alias_ctx, aliases)
+    local prev = alias_ctx.stack
     setmetatable(aliases, {prev=prev,
                            __index=function(_, key) return prev[key] end})
-    alias_stack = aliases
+    alias_ctx.stack = aliases
 end
 
-local function pop_aliases()
-    alias_stack = getmetatable(alias_stack).prev
+local function pop_aliases(alias_ctx)
+    alias_ctx.stack = getmetatable(alias_ctx.stack).prev
 end
 
-local function push_aliases_reader(reader)
+local function push_aliases_reader(alias_ctx, reader)
     local aliases, num_aliases = {}, 0
     local line = reader:get_next_row()
     while line do
@@ -57,37 +51,43 @@ local function push_aliases_reader(reader)
         end
         line = reader:get_next_row()
     end
-    push_aliases(aliases)
+    push_aliases(alias_ctx, aliases)
     return num_aliases
 end
 
-local function push_aliases_file(filepath)
-    local num_aliases = push_aliases_reader(
+local function push_aliases_file(alias_ctx, filepath)
+    local num_aliases = push_aliases_reader(alias_ctx,
             quickfort_reader.TextReader{filepath=filepath})
     log('read in %d aliases from "%s"', num_aliases, filepath)
 end
 
--- clears the alias stack and reloads all relevant aliases
-function reload_aliases(ctx)
-    reset_aliases()
-    push_aliases_file(common_aliases_filename)
-    push_aliases_file(user_aliases_filename)
+local function init_alias_ctx_base()
+    return {stack={}}
+end
+
+-- initializes a new alias_ctx with all aliases within scope
+function init_alias_ctx(ctx)
+    local alias_ctx = init_alias_ctx_base()
+    push_aliases_file(alias_ctx, common_aliases_filename)
+    push_aliases_file(alias_ctx, user_aliases_filename)
     if not ctx or not ctx.aliases then return end
     local num_file_aliases = 0
     for _ in pairs(ctx.aliases) do num_file_aliases = num_file_aliases + 1 end
     if num_file_aliases > 0 then
-        push_aliases(ctx.aliases)
+        push_aliases(alias_ctx, ctx.aliases)
         log('read in %d aliases from "%s"',
             num_file_aliases, ctx.blueprint_name)
     end
+    return alias_ctx
 end
 
-local function process_text(text, tokens, depth)
+local function process_text(alias_ctx, text, tokens, depth)
     depth = depth or 1
     if depth > 50 then
         qerror(string.format('alias maximum recursion depth exceeded (%d)',
                              depth))
     end
+    local alias_stack = alias_ctx.stack
     local i = 1
     while i <= #text do
         local next_char = text:sub(i, i)
@@ -99,9 +99,9 @@ local function process_text(text, tokens, depth)
             local etoken, params, reps, next_pos =
                 quickfort_parse.parse_extended_token(text, i)
             if not special_aliases[etoken] and alias_stack[etoken] then
-                push_aliases(params)
-                process_text(alias_stack[etoken], expansion, depth+1)
-                pop_aliases()
+                push_aliases(alias_ctx, params)
+                process_text(alias_ctx, alias_stack[etoken], expansion, depth+1)
+                pop_aliases(alias_ctx)
             else
                 expansion[1] = special_aliases[etoken] or etoken
             end
@@ -134,14 +134,14 @@ end
 -- doesn't get expanded to 'Numpad' 8 times, but rather 'Numpad 8' once. You can
 -- repeat Numpad keys like this: '{Numpad 8 5}'.
 -- returns an array of character key tokens
-function expand_aliases(text)
-    local tokens = {}
+function expand_aliases(alias_ctx, text)
+    local tokens, alias_stack = {}, alias_ctx.stack
     if special_aliases[text] then
         tokens = special_aliases[text]
     elseif alias_stack[text] then
-        process_text(alias_stack[text], tokens)
+        process_text(alias_ctx, alias_stack[text], tokens)
     else
-        process_text(text, tokens)
+        process_text(alias_ctx, text, tokens)
     end
     local expanded_text = table.concat(tokens, '')
     if text ~= expanded_text then
@@ -152,7 +152,7 @@ end
 
 if dfhack.internal.IN_TEST then
     unit_test_hooks = {
-        reset_aliases=reset_aliases,
+        init_alias_ctx_base=init_alias_ctx_base,
         push_aliases=push_aliases,
         pop_aliases=pop_aliases,
         push_aliases_reader=push_aliases_reader,
