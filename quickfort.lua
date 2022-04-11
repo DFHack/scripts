@@ -190,7 +190,8 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
 :``pos``: A coordinate that serves as the reference point for the coordinates in
     the data map. That is, the text at ``data[z][y][x]`` will be shifted to be
     applied to coordinate ``(pos.x + x, pos.y + y, pos.z + z)``. If not
-    specified, defaults to ``{x=0, y=0, z=0}``.
+    specified, defaults to ``{x=0, y=0, z=0}``, which means that the coordinates
+    in the ``data`` map are used directly.
 :``aliases``: a map of query blueprint aliases names to their expansions. If not
     specified, defaults to ``{}``.
 :``preserve_engravings``: Don't designate tiles for digging if they have an
@@ -323,11 +324,8 @@ end
 -- public API
 function apply_blueprint(params)
     local data, cursor = quickfort_api.normalize_data(params.data, params.pos)
-    local preserve_engravings = quickfort_parse.parse_preserve_engravings(
-                params.preserve_engravings or df.item_quality.Masterful, true)
-    local ctx = quickfort_command.init_ctx(params.command or 'run', 'API',
-                                cursor, params.aliases or {}, params.dry_run,
-                                preserve_engravings)
+    local ctx = quickfort_api.init_api_ctx(params, cursor)
+
     quickfort_common.verbose = not not params.verbose
     dfhack.with_finalize(
         function() quickfort_common.verbose = false end,
@@ -359,4 +357,10 @@ local args = {...}
 local action = table.remove(args, 1) or 'help'
 args.commands = argparse.stringList(action)
 
-action_switch[args.commands[1]](args)
+local action_fn = action_switch[args.commands[1]]
+
+if action_fn ~= print_short_help and not dfhack.isMapLoaded() then
+    qerror('quickfort needs a fortress map to be loaded.')
+end
+
+action_fn(args)

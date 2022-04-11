@@ -1,6 +1,10 @@
 local q = reqscript('quickfort')
+local quickfort_api = reqscript('internal/quickfort/api')
 local quickfort_command = reqscript('internal/quickfort/command')
+local c = quickfort_command.unit_test_hooks
 local quickfort_common = reqscript('internal/quickfort/common')
+
+local utils = require('utils')
 
 local mock_do_command_raw
 local verbose_snapshot
@@ -20,8 +24,7 @@ config.wrapper = test_wrapper
 
 function test.apply_blueprint_minimal()
     local data = {[0]={[0]={[0]='d'}}}
-    local expected_ctx = quickfort_command.init_ctx('run', 'API',
-                            {x=0, y=0, z=0}, {}, nil, df.item_quality.Masterful)
+    local expected_ctx = quickfort_api.init_api_ctx({}, {x=0, y=0, z=0})
     q.apply_blueprint{mode='dig', data=data}
 
     expect.eq(1, mock_do_command_raw.call_count)
@@ -38,9 +41,12 @@ end
 function test.apply_blueprint_all_ctx_params()
     local data = {[2]={[20]={[8]='somekeys'}},
                   [3]={[9]={[20]='somealias'}}}
-    local expected_ctx = quickfort_command.init_ctx('undo', 'API',
-                                {x=10, y=10, z=1}, {somealias='ab{analias}'},
-                                true, df.item_quality.Masterful)
+    local expected_ctx = utils.assign(
+            c.make_ctx_base(),
+            {command='undo', blueprint_name='API', cursor={x=10, y=10, z=1},
+             aliases={somealias='ab{analias}'}, dry_run=true,
+             preserve_engravings=df.item_quality.Masterful})
+
     q.apply_blueprint{mode='query', data=data, command='undo',
                       pos={x=2, y=1, z=-1}, aliases={somealias='ab{analias}'},
                       dry_run=true, verbose=true}

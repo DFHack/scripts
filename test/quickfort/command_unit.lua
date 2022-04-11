@@ -1,7 +1,9 @@
-local c = reqscript('internal/quickfort/command')
+local quickfort_command = reqscript('internal/quickfort/command')
+local c = quickfort_command.unit_test_hooks
 
 local argparse = require('argparse')
 local guidm = require('gui.dwarfmode')
+local utils = require('utils')
 local quickfort_dig = reqscript('internal/quickfort/dig')
 local quickfort_list = reqscript('internal/quickfort/list')
 local quickfort_orders = reqscript('internal/quickfort/orders')
@@ -80,6 +82,23 @@ function test.module()
     expect.error_match(
         'this script cannot be called directly',
         function() dfhack.run_script('internal/quickfort/command') end)
+end
+
+function test.init_ctx()
+    expect.error_match('invalid command',
+        function() c.init_ctx{command='badcomm'} end)
+    expect.error_match('must specify blueprint_name',
+        function() c.init_ctx{command='run'} end)
+    expect.error_match('must specify cursor',
+        function() c.init_ctx{command='run', blueprint_name='bp.csv'} end)
+
+    local expected_ctx = utils.assign(
+            c.make_ctx_base(),
+            {command='run', blueprint_name='bp.csv', cursor={x=0, y=0, z=0},
+             aliases={}, preserve_engravings=df.item_quality.Masterful})
+    expect.table_eq(expected_ctx,
+                    c.init_ctx{command='run', blueprint_name='bp.csv',
+                               cursor={x=0, y=0, z=0}})
 end
 
 function test.do_command_errors()
@@ -204,7 +223,7 @@ end
 
 function test.do_command_message()
     local mock_print = mock.func()
-    mock.patch(c, 'print', mock_print, function()
+    mock.patch(quickfort_command, 'print', mock_print, function()
             c.do_command({commands={'run'}, '11'})
             expect.eq(2, mock_print.call_count)
             expect.eq('run c.csv -n /lab successfully completed',
@@ -217,7 +236,7 @@ function test.do_command_stats()
     local mock_print = mock.func()
     local mock_dig_do_run =
             function(_, _, ctx) ctx.stats.out_of_bounds.value = 2 end
-    mock.patch({{c, 'print', mock_print},
+    mock.patch({{quickfort_command, 'print', mock_print},
                 {quickfort_dig, 'do_run', mock_dig_do_run}}, function()
             c.do_command({commands={'run'}, '9'})
             expect.eq(2, mock_print.call_count)
@@ -231,6 +250,4 @@ end
 function test.do_command_raw_errors()
     expect.error_match('invalid mode',
         function() c.do_command_raw('badmode', 0, {}, {}) end)
-    expect.error_match('invalid command',
-        function() c.do_command_raw('dig', 0, {}, {command='badcomm'}) end)
 end

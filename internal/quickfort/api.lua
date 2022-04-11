@@ -7,6 +7,7 @@ end
 
 require('dfhack.buildings') -- loads additional functions into dfhack.buildings
 local utils = require('utils')
+local quickfort_command = reqscript('internal/quickfort/command')
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_map = reqscript('internal/quickfort/map')
@@ -36,6 +37,21 @@ function normalize_data(data, pos)
     return shifted, min
 end
 
+-- wraps quickfort_command.init_ctx() and sets API-specific settings
+function init_api_ctx(params, cursor)
+    local p = copyall(params)
+
+    -- fix up API params so they can be used to initialize a quickfort ctx
+    if not p.command then p.command = 'run' end
+    p.blueprint_name = 'API'
+    p.cursor = cursor
+    if p.preserve_engravings then
+        p.preserve_engravings = quickfort_parse.parse_preserve_engravings(
+                params.preserve_engravings, true)
+    end
+
+    return quickfort_command.init_ctx(p)
+end
 function clean_stats(stats)
     for _,stat in pairs(stats) do
         -- remove internal markers
