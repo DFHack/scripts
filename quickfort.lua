@@ -42,10 +42,10 @@ Usage:
     "-m build") and/or strings to search for in a path, filename, mode, or
     comment. The id numbers in the list may not be contiguous if there are
     hidden or filtered blueprints that are not being shown.
-**quickfort gui [-l|-\-library] [-h|-\-hidden] [search string]**
-    Starts the quickfort dialog, where you can run blueprints from an
-    interactive list. The optional arguments have the same meanings as they do
-    in the ``list`` command, and can be used to preset the gui dialog state.
+**quickfort gui [filename or search terms]**
+    Invokes the quickfort UI with the specified parameters, giving you an
+    interactive blueprint preview to work with before you apply it to the map.
+    See the `gui/quickfort` documentation for details.
 **quickfort <command>[,<command>...] <list_num>[,<list_num>...] [<options>]**
     Applies the blueprint(s) with the number(s) from the ``list`` command.
 **quickfort <command>[,<command>...] <filename> [-n|-\-name <name>[,<name>...]] [<options>]**
@@ -226,7 +226,6 @@ local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_command = reqscript('internal/quickfort/command')
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_config = reqscript('internal/quickfort/config')
-local quickfort_dialog = reqscript('internal/quickfort/dialog')
 local quickfort_dig = reqscript('internal/quickfort/dig')
 local quickfort_keycodes = reqscript('internal/quickfort/keycodes')
 local quickfort_list = reqscript('internal/quickfort/list')
@@ -258,10 +257,10 @@ quickfort list [-m|--mode <mode>] [-l|--library] [-h|--hidden] [search string]
     blueprints and -h to include hidden blueprints. The list can be filtered by
     a specified mode (e.g. "-m build") and/or strings to search for in a path,
     filename, mode, or comment.
-quickfort gui [-l|--library] [-h|--hidden] [search string]
-    Starts the quickfort dialog, where you can run blueprints from an
-    interactive list. The optional arguments have the same meanings as they do
-    in the list command, and can be used to preset the gui dialog state.
+quickfort gui [filename or search terms]
+    Invokes the quickfort UI with the specified parameters, giving you an
+    interactive blueprint preview to work with before you apply it to the map.
+    See the gui/quickfort documentation for details.
 quickfort <command>[,<command>...] <list_num>[,<list_num>...] [<options>]
     Applies the blueprint(s) with the number(s) from the list command.
 quickfort <command>[,<command>...] <filename> [-n|--name <name>[,<name>...]] [<options>]
@@ -344,11 +343,15 @@ if dfhack_flags.module then
     return
 end
 
+local function do_gui(params)
+    dfhack.run_script('gui/quickfort', table.unpack(params))
+end
+
 local action_switch = {
     set=quickfort_set.do_set,
     reset=quickfort_set.do_reset,
     list=quickfort_list.do_list,
-    gui=quickfort_dialog.do_dialog,
+    gui=do_gui,
     run=quickfort_command.do_command,
     orders=quickfort_command.do_command,
     undo=quickfort_command.do_command
@@ -359,4 +362,10 @@ local args = {...}
 local action = table.remove(args, 1) or 'help'
 args.commands = argparse.stringList(action)
 
-action_switch[args.commands[1]](args)
+local action_fn = action_switch[args.commands[1]]
+
+if action_fn ~= print_short_help and not dfhack.isMapLoaded() then
+    qerror('quickfort needs a fortress map to be loaded.')
+end
+
+action_fn(args)

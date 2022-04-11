@@ -8,8 +8,6 @@ end
 local quickfort_common = reqscript('internal/quickfort/common')
 local ensure_key = quickfort_common.ensure_key
 
-local utils = require('utils')
-
 -- sets the given preview position to the given value if it is not already set
 -- if override is true, ignores whether the tile was previously set
 -- returns whether the tile was set
@@ -38,5 +36,5 @@ end
 -- returns false if the tile is on the blueprint and is an invalid tile
 -- returns nil if the tile is not on the blueprint
 function get_preview_tile(tiles, pos)
-    return utils.safe_index(tiles, pos.z, pos.y, pos.x)
+    return safe_index(tiles, pos.z, pos.y, pos.x)
 end

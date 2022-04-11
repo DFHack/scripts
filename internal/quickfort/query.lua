@@ -16,6 +16,7 @@ local log = quickfort_common.log
 
 local function is_queryable_tile(pos)
     local flags, occupancy = dfhack.maps.getTileFlags(pos)
+    if not flags then return false end
     return not flags.hidden and
         (occupancy.building ~= 0 or
          dfhack.buildings.findCivzonesAt(pos))

@@ -72,7 +72,7 @@ function init_ctx(params)
     return make_ctx(
         params.command,
         params.blueprint_name,
-        params.cursor,
+        copyall(params.cursor),  -- copy since we modify this during processing
         params.aliases or {},
         params.quiet,
         params.dry_run,

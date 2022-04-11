@@ -602,7 +602,7 @@ local function init_dig_ctx(ctx, pos, direction)
     if is_smooth(tileattrs) then
         -- potentially has an engraving
         ensure_engravings_cache(ctx)
-        engraving = utils.safe_index(ctx.engravings_cache, pos.z, pos.y, pos.x)
+        engraving = safe_index(ctx.engravings_cache, pos.z, pos.y, pos.x)
     end
     return {
         pos=pos,

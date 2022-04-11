@@ -126,7 +126,7 @@ function create_orders(ctx)
         if not ctx.dry_run then
             stockflow.create_orders(order_spec.order, quantity)
         end
-        table.insert(ctx.stats, {label=k, value=quantity})
+        table.insert(ctx.stats, {label=k, value=quantity, is_order=true})
     end
 end
 
