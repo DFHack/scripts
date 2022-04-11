@@ -357,10 +357,4 @@ local args = {...}
 local action = table.remove(args, 1) or 'help'
 args.commands = argparse.stringList(action)
 
-local action_fn = action_switch[args.commands[1]]
-
-if action_fn ~= print_short_help and not dfhack.isMapLoaded() then
-    qerror('quickfort needs a fortress map to be loaded.')
-end
-
-action_fn(args)
+action_switch[args.commands[1]](args)

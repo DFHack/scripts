@@ -206,8 +206,8 @@ local function do_bp_name(commands, cursor, bp_name, sec_names, quiet, dry_run,
     for _,sec_name in ipairs(sec_names) do
         local mode = quickfort_list.get_blueprint_mode(bp_name, sec_name)
         for _,command in ipairs(commands) do
-            do_one_command(command, cursor, bp_name, sec_name, mode, quiet,
-                           dry_run, preserve_engravings, modifiers)
+            do_one_command(command, cursor, bp_name, sec_name, mode,
+                           quiet, dry_run, preserve_engravings, modifiers)
         end
     end
 end
@@ -218,8 +218,8 @@ local function do_list_num(commands, cursor, list_nums, quiet, dry_run,
         local bp_name, sec_name, mode =
                 quickfort_list.get_blueprint_by_number(list_num)
         for _,command in ipairs(commands) do
-            do_one_command(command, cursor, bp_name, sec_name, mode, quiet,
-                           dry_run, preserve_engravings, modifiers)
+            do_one_command(command, cursor, bp_name, sec_name, mode,
+                           quiet, dry_run, preserve_engravings, modifiers)
         end
     end
 end
@@ -274,8 +274,7 @@ function do_command(args)
             local ok, list_nums = pcall(argparse.numberList, blueprint_name)
             if not ok then
                 do_bp_name(args.commands, cursor, blueprint_name, section_names,
-                           quiet, dry_run, preserve_engravings,
-                           modifiers)
+                           quiet, dry_run, preserve_engravings, modifiers)
             else
                 do_list_num(args.commands, cursor, list_nums, quiet, dry_run,
                             preserve_engravings, modifiers)
