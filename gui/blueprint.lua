@@ -10,7 +10,7 @@ a blueprint file that you (or anyone else) can later play back with `quickfort`.
 This script provides a visual, interactive interface to make configuring and
 using the blueprint plugin much easier.
 
-Usage:
+Usage::
 
     gui/blueprint [<name> [<phases>]] [<options>]
 
@@ -26,40 +26,6 @@ local guidm = require('gui.dwarfmode')
 local utils = require('utils')
 local widgets = require('gui.widgets')
 
-local function auto_layout(panel, spacer)
-    -- recalculate widget frames
-    panel:updateSubviewLayout()
-
-    -- vertically lay out subviews, adding spacer lines of space between each
-    spacer = spacer or 0
-    local y = 0
-    for _,subview in ipairs(panel.subviews) do
-        subview.frame.t = y
-        if subview.visible then
-            y = y + subview.frame.h + spacer
-        end
-    end
-
-    -- recalculate widget frames again
-    panel:updateSubviewLayout()
-
-    return y
-end
-
-ResizingPanel = defclass(ResizingPanel, widgets.Panel)
-function ResizingPanel:init()
-    if not self.frame then self.frame = {} end
-end
-function ResizingPanel:postUpdateLayout()
-    local h = 0
-    for _,subview in ipairs(self.subviews) do
-        if subview.visible then
-            h = math.max(h, (subview.frame.t or 1) + (subview.frame.h or 1))
-        end
-    end
-    self.frame.h = h
-end
-
 local function get_dims(pos1, pos2)
     local width, height, depth = math.abs(pos1.x - pos2.x) + 1,
             math.abs(pos1.y - pos2.y) + 1,
@@ -67,7 +33,7 @@ local function get_dims(pos1, pos2)
     return width, height, depth
 end
 
-ActionPanel = defclass(ActionPanel, ResizingPanel)
+ActionPanel = defclass(ActionPanel, widgets.ResizingPanel)
 ActionPanel.ATTRS{
     get_mark_fn=DEFAULT_NIL,
     is_setting_start_pos_fn=DEFAULT_NIL,
@@ -109,7 +75,7 @@ function ActionPanel:get_area_text()
     return ('%dx%dx%d (%d tile%s)'):format(width, height, depth, tiles, plural)
 end
 
-NamePanel = defclass(NamePanel, ResizingPanel)
+NamePanel = defclass(NamePanel, widgets.ResizingPanel)
 NamePanel.ATTRS{
     name='blueprint',
 }
@@ -232,11 +198,12 @@ ToggleHotkeyLabel.ATTRS{
     options={'On', 'Off'},
 }
 
-PhasesPanel = defclass(PhasesPanel, ResizingPanel)
+PhasesPanel = defclass(PhasesPanel, widgets.ResizingPanel)
 PhasesPanel.ATTRS{
     phases={},
     show_help_fn=DEFAULT_NIL,
     on_layout_change=DEFAULT_NIL,
+    autoarrange_subviews=true,
 }
 function PhasesPanel:init()
     self:addviews{
@@ -306,14 +273,8 @@ function PhasesPanel:preUpdateLayout()
         end
     end
 end
-function PhasesPanel:updateLayout(parent_rect)
-    -- set frame boundaries and calculate subframe heights
-    PhasesPanel.super.updateLayout(self, parent_rect)
 
-    auto_layout(self)
-end
-
-StartPosPanel = defclass(StartPosPanel, ResizingPanel)
+StartPosPanel = defclass(StartPosPanel, widgets.ResizingPanel)
 StartPosPanel.ATTRS{
     start_pos=DEFAULT_NIL,
     start_comment=DEFAULT_NIL,
@@ -378,12 +339,15 @@ BlueprintUI.ATTRS {
     presets={},
     frame_inset=1,
     focus_path='blueprint',
+    sidebar_mode=df.ui_sidebar_mode.LookAround,
 }
 function BlueprintUI:init()
     self.show_help = true
     local function get_show_help() return self.show_help end
 
-    self:addviews{
+    local main_panel = widgets.Panel{autoarrange_subviews=true,
+                                     autoarrange_gap=1}
+    main_panel:addviews{
         widgets.Label{text='Blueprint'},
         widgets.Label{
             view_id='summary',
@@ -437,22 +401,11 @@ function BlueprintUI:init()
             text={{text=self:callback('get_cancel_label'), key='LEAVESCREEN',
                    key_sep=': ', on_activate=self:callback('on_cancel')}}}
     }
-end
-
-function BlueprintUI:onAboutToShow()
-    if not dfhack.isMapLoaded() then
-        qerror('Please load a fortress map.')
-    end
-
-    self.saved_mode = df.global.ui.main.mode
-    if dfhack.gui.getCurFocus(true):find('^dfhack/')
-            or not guidm.SIDEBAR_MODE_KEYS[self.saved_mode] then
-        self.saved_mode = df.ui_sidebar_mode.Default
-    end
-    guidm.enterSidebarMode(df.ui_sidebar_mode.LookAround)
+    self:addviews{main_panel}
 end
 
 function BlueprintUI:onShow()
+    BlueprintUI.super.onShow(self)
     local start = self.presets.start
     if not start or not dfhack.maps.isValidTilePos(start) then
         return
@@ -460,10 +413,6 @@ function BlueprintUI:onShow()
     guidm.setCursorPos(start)
     dfhack.gui.revealInDwarfmodeMap(start, true)
     self:on_mark(start)
-end
-
-function BlueprintUI:onDismiss()
-    guidm.enterSidebarMode(self.saved_mode)
 end
 
 function BlueprintUI:on_mark(pos)
@@ -498,16 +447,14 @@ function BlueprintUI:on_cancel()
     end
 end
 
-function BlueprintUI:updateLayout(parent_rect)
-    -- set frame boundaries and calculate subframe heights
-    BlueprintUI.super.updateLayout(self, parent_rect)
-
+function BlueprintUI:preUpdateLayout(parent_rect)
     -- set help text visibility
     self.subviews.summary.visible = self.show_help
+end
 
-    local y = auto_layout(self, 1)
-
+function BlueprintUI:postUpdateLayout(parent_rect)
     -- if we can't fit in the screen, hide help text and try again
+    local y = self.frame_rect.height
     if self.show_help and parent_rect and
             y > parent_rect.clip_y2 - 2*self.frame_inset then
         self.show_help = false
