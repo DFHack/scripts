@@ -65,6 +65,8 @@ selected_id = selected_id or nil
 local BlueprintDetails = defclass(BlueprintDetails, dialogs.MessageBox)
 BlueprintDetails.ATTRS{
     focus_path='quickfort/dialog/details',
+    frame_title='Details',
+    frame_width=28,
 }
 
 -- adds hint about left arrow being a valid "exit" key for this dialog
@@ -93,6 +95,20 @@ BlueprintDialog.ATTRS{
     row_height=2,
 }
 
+function BlueprintDialog:init()
+    self:addviews{
+        widgets.Label{frame={t=0, l=0}, text='Filters:', text_pen=COLOR_GREY},
+        widgets.ToggleHotkeyLabel{frame={t=0, l=11}, label='Library',
+                key='CUSTOM_ALT_L', option_default=show_library,
+                text_pen=COLOR_GREY,
+                on_change=self:callback('update_setting', 'show_library')},
+        widgets.ToggleHotkeyLabel{frame={t=0, l=33}, label='Hidden',
+                key='CUSTOM_ALT_H', option_default=show_hidden,
+                text_pen=COLOR_GREY,
+                on_change=self:callback('update_setting', 'show_hidden')}
+    }
+end
+
 -- never shrink smaller than 25 lines. less than that and the resize effect is
 -- jarring when the filter is being edited and it suddenly matches no blueprints
 function BlueprintDialog:getWantedFrameSize()
@@ -103,24 +119,14 @@ end
 function BlueprintDialog:onRenderFrame(dc, rect)
     BlueprintDialog.super.onRenderFrame(self, dc, rect)
 
-    -- render settings help in top row
-    local filters_caption = "Filters:"
-    local library_caption = "Library: Off"
-    local hidden_caption = "Hidden: Off"
-    if show_library then library_caption = "Library: On " end
-    if show_hidden then hidden_caption = "Hidden: On " end
-    local filters_offset = rect.x1 + 2
-    local library_offset = filters_offset + #filters_caption + 2
-    local hidden_offset = library_offset + #library_caption + 9
-    dc:seek(filters_offset, rect.y1+1):string(filters_caption, COLOR_GREY)
-    dc:seek(library_offset, rect.y1+1):
-            key_string('CUSTOM_ALT_L', library_caption)
-    dc:seek(hidden_offset, rect.y1+1):
-            key_string('CUSTOM_ALT_H', hidden_caption)
-
     -- render command help on bottom frame
     dc:seek(rect.x1+2, rect.y2):string('Right arrow', dc.cur_key_pen):
             string(': Show details', COLOR_GREY)
+end
+
+function BlueprintDialog:update_setting(setting, value)
+    _ENV[setting] = value
+    self:refresh()
 end
 
 -- ensures each newline-delimited sequence within text is no longer than
@@ -200,16 +206,7 @@ end
 function BlueprintDialog:onInput(keys)
     local idx, obj = self.subviews.list:getSelected()
     if keys.STANDARDSCROLL_RIGHT and obj then
-        BlueprintDetails{
-            frame_title='Details',
-            text=obj.full_text:wrap(self.frame_body.width)
-        }:show()
-    elseif keys.CUSTOM_ALT_L then
-        show_library = not show_library
-        self:refresh()
-    elseif keys.CUSTOM_ALT_H then
-        show_hidden = not show_hidden
-        self:refresh()
+        BlueprintDetails{text=obj.full_text:wrap(self.frame_body.width)}:show()
     elseif keys.LEAVESCREEN then
         self:dismiss()
         if self.on_cancel then
@@ -244,65 +241,54 @@ function QuickfortUI:init()
                                      autoarrange_gap=1}
     main_panel:addviews{
         widgets.Label{text='Quickfort'},
-        widgets.Label{view_id='summary',
-            text={{text=self:callback('get_summary_label', 1)},
-                  '\n',
-                  {text=self:callback('get_summary_label', 2)}},
-            text_pen=COLOR_GREY},
-        widgets.Label{
-            text={{text='Load new blueprint', key='CUSTOM_L',
-                   key_sep=': ', on_activate=self:callback('show_dialog')}}},
-        widgets.Label{
-            text={'Current blueprint:\n',
-                  {text=self:callback('get_blueprint_name', 1)},
-                  '\n',
-                  {text=self:callback('get_blueprint_name', 2)}},
-            text_pen=COLOR_GREY},
+        widgets.TooltipLabel{view_id='summary',
+            indent=0, tooltip=self:callback('get_summary_label')},
+        widgets.HotkeyLabel{key='CUSTOM_L', label='Load new blueprint',
+            on_activate=self:callback('show_dialog')},
+        widgets.ResizingPanel{autoarrange_subviews=true, subviews={
+            widgets.Label{text='Current blueprint:'},
+            widgets.TooltipLabel{
+                tooltip=self:callback('get_blueprint_name'), indent=0}
+            }},
         widgets.Label{
             text={'Invalid tiles: ',
                   {text=self:callback('get_invalid_tiles')}},
             text_dpen=COLOR_RED,
             disabled=self:callback('has_invalid_tiles')},
-        widgets.Label{
-            text={{text=self:callback('get_lock_cursor_label'),
-                   key='CUSTOM_SHIFT_L', key_sep=': ',
-                   on_activate=self:callback('toggle_lock_cursor')}}},
-        widgets.Label{
-            text={{text='Generate manager orders', key='CUSTOM_O',
-                   key_sep=': ', on_activate=self:callback('do_command',
-                                                           'orders')}}},
-        widgets.Label{
-            text={{text='Preview manager orders', key='CUSTOM_SHIFT_O',
-                   key_sep=': ', on_activate=self:callback('do_command',
-                                                           'orders', true)}}},
-        widgets.Label{
-            text={{text='Undo blueprint', key='CUSTOM_SHIFT_U',
-                   key_sep=': ', on_activate=self:callback('do_command',
-                                                           'undo')}}},
-        widgets.Label{
-            text={{text='Back', key='LEAVESCREEN',
-                   key_sep=': ', on_activate=self:callback('dismiss')}}}
+        widgets.HotkeyLabel{key='CUSTOM_SHIFT_L',
+            label=self:callback('get_lock_cursor_label'),
+            on_activate=self:callback('toggle_lock_cursor')},
+        widgets.HotkeyLabel{key='CUSTOM_O', label='Generate manager orders',
+            on_activate=self:callback('do_command', 'orders')},
+        widgets.HotkeyLabel{key='CUSTOM_SHIFT_O',
+            label='Preview manager orders',
+            on_activate=self:callback('do_command', 'orders', true)},
+        widgets.HotkeyLabel{key='CUSTOM_SHIFT_U', label='Undo blueprint',
+            on_activate=self:callback('do_command', 'undo')},
+        widgets.HotkeyLabel{key='LEAVESCREEN', label='Back',
+            on_activate=self:callback('dismiss')}
     }
     self:addviews{main_panel}
 end
 
-function QuickfortUI:get_summary_label(lineno)
+function QuickfortUI:get_summary_label()
     if self.mode == 'config' then
-        return ({'Blueprint configures game,',
-                 'not map. Hit ENTER to apply.'})[lineno]
+        return 'Blueprint configures game, not map. Hit ENTER to apply.'
     elseif self.mode == 'notes' then
-        return ({'Blueprint shows help text.',
-                 'Hit ENTER to apply.'})[lineno]
+        return 'Blueprint shows help text. Hit ENTER to apply.'
     end
-    return ({'Reposition with the cursor',
-             'keys and hit ENTER to apply.'})[lineno]
+    return 'Reposition with the cursor keys and hit ENTER to apply.'
 end
 
-function QuickfortUI:get_blueprint_name(lineno)
+function QuickfortUI:get_blueprint_name()
     if self.blueprint_name then
-        return ({self.blueprint_name, '  '..(self.section_name or '')})[lineno]
+        local text = {self.blueprint_name}
+        if self.section_name then
+            table.insert(text, '  '..self.section_name)
+        end
+        return text
     end
-    return ({'No blueprint loaded', ''})[lineno]
+    return 'No blueprint loaded'
 end
 
 function QuickfortUI:get_lock_cursor_label()
@@ -329,6 +315,7 @@ function QuickfortUI:dialog_cb(text)
     local id = get_id(text)
     self.blueprint_name, self.section_name, self.mode =
             quickfort_list.get_blueprint_by_number(id)
+    self:updateLayout()
     if self.mode == 'notes' then
         self:do_command('run', false, self:callback('show_dialog'))
     end
@@ -373,6 +360,7 @@ end
 
 function QuickfortUI:onShow()
     QuickfortUI.super.onShow(self)
+    self.saved_cursor = guidm.getCursorPos()
     self:show_dialog(true)
 end
 
