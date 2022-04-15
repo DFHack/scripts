@@ -29,6 +29,7 @@ that repo.
 - `quickfort`: adjust direction affinity when transforming buildings (e.g.  bridges that open to the north now open to the south when rotated 180 degrees)
 - `quickfort`: automatically adjust cursor movements on the map screen in ``#query`` and ``#config`` modes when the blueprint is transformed. e.g.  ``{Up}`` will be played back as ``{Right}`` when the blueprint is rotated clockwise and the direction key would move the map cursor
 - `quickfort`: new blueprint mode: ``#config``; for playing back key sequences that don't involve the map cursor (like configuring hotkeys, changing standing orders, or modifying military uniforms)
+- `quickfort`: API function ``apply_blueprint`` can now take ``data`` parameters that are simple strings instead of coordinate maps. This allows easier application of blueprints that are just one cell.
 - `autonick`: now requires ``all`` command
 - `autonick`: added ``--quiet`` and ``--help`` options; also displays help on incorrect use
 - `gui/blueprint`: support new `blueprint` options and phases

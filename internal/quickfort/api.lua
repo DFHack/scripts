@@ -17,6 +17,10 @@ function normalize_data(data, pos)
     pos = pos or {}
     pos.x, pos.y, pos.z = pos.x or 0, pos.y or 0, pos.z or 0
 
+    if type(data) == 'string' then
+        data = {[0]={[0]={[0]=data}}}
+    end
+
     local shifted, min = {}, {x=30000, y=30000, z=30000}
     for z,grid in pairs(data) do
         local shiftedz, shiftedgrid = z+pos.z, {}

@@ -184,7 +184,8 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
 :``mode``: (required) The name of the blueprint mode, e.g. 'dig', 'build', etc.
 :``data``: (required) A sparse map populated such that ``data[z][y][x]`` yields
     the blueprint text that should be applied to the tile at map coordinate
-    ``(x, y, z)``.
+    ``(x, y, z)``. You can also just pass a string and it will be interpreted
+    as the value of ``data[0][0][0]``.
 :``command``: The quickfort command to execute, e.g. 'run', 'orders', etc.
     Defaults to 'run'.
 :``pos``: A coordinate that serves as the reference point for the coordinates in

@@ -12,11 +12,19 @@ function test.normalize_data()
     local expected_min = {x=0, y=0, z=0}
     expect.table_eq({expected_data, expected_min}, {a.normalize_data(data)})
 
+    -- test a string instead of a coordinate map
+    data = 'd(10x10)'
+    expected_data = {[0]={[0]={[0]={cell='0,0,0', text='d(10x10)'}}}}
+    expected_min = {x=0, y=0, z=0}
+    expect.table_eq({expected_data, expected_min}, {a.normalize_data(data)})
+
+    -- offset with a pos param
     expected_data = {[10]={[11]={[12]={cell='0,0,0', text='d(10x10)'}}}}
     expected_min = {x=12, y=11, z=10}
     expect.table_eq({expected_data, expected_min},
                     {a.normalize_data(data, {x=12, y=11, z=10})})
 
+    -- test negative starting coords
     data = {[-1]={[-2]={[-3]='d(10x10)'}}}
     expected_data = {[1]={[1]={[1]={cell='-3,-2,-1', text='d(10x10)'}}}}
     expected_min = {x=1, y=1, z=1}
