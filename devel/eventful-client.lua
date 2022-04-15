@@ -14,7 +14,7 @@ Usage::
 
 :help:  shows this help text and a list of valid event types
 :add:   add a handler for the named event type at the requested tick frequency
-:list:  lists active handlers and their frequencies
+:list:  lists active handlers and their metadata
 :clear: unregisters all handlers
 
 Note this script does not handle the eventful reaction or workshop events.
@@ -26,6 +26,7 @@ local utils = require('utils')
 
 rng = rng or dfhack.random.new()
 
+-- maps handler name to {count, freq}
 handlers = handlers or {}
 
 local function get_event_fn_name(event_type_name)
@@ -62,9 +63,10 @@ local function help()
 end
 
 local function make_handler_fn(registry_entry, freq)
-    return function()
+    return function(...)
         print(('eventful-client: %s received %s event (freq=%d)')
               :format(os.date("%X"), registry_entry.etype, freq))
+        print('  params:', ...)
     end
 end
 
@@ -82,7 +84,7 @@ local function add_one(registry_entry, freq)
     print(('eventful-client registering new %s handler at freq %d: %s')
           :format(registry_entry.etype, freq, handler_name))
     eventful[registry_entry.fn][handler_name] = handler
-    handlers[handler_name] = freq
+    handlers[handler_name] = {count=0, freq=freq}
 end
 
 local function add(spec, freq)
@@ -109,9 +111,13 @@ local function iterate_handlers(fn)
 end
 
 local function list_fn(registry_entry, handler_name)
-    print(('  %s -> %s (freq=%s)')
-          :format(registry_entry.etype, handler_name,
-                  handlers[handler_name] or 'unknown'))
+    local hdata = handlers[handler_name]
+    local metadata = 'handler metadata not found'
+    if hdata then
+        metadata = ('freq=%s, call count=%s'):format(hdata.freq, hdata.count)
+    end
+    print(('  %s -> %s (%s)')
+          :format(registry_entry.etype, handler_name, metadata))
 end
 
 local function list()
@@ -124,12 +130,12 @@ end
 local function clear_fn(registry_entry, handler_name)
     list_fn(registry_entry, handler_name)
     eventful[registry_entry.fn][handler_name] = nil
-    handlers[handler_name] = nil
 end
 
 local function clear()
     print('Clearing handlers:')
     iterate_handlers(clear_fn)
+    handlers = {}
 end
 
 local action_switch = {
