@@ -118,8 +118,6 @@ end
 
 function BlueprintDialog:onRenderFrame(dc, rect)
     BlueprintDialog.super.onRenderFrame(self, dc, rect)
-
-    -- render command help on bottom frame
     dc:seek(rect.x1+2, rect.y2):string('Right arrow', dc.cur_key_pen):
             string(': Show details', COLOR_GREY)
 end
@@ -217,6 +215,7 @@ function BlueprintDialog:onInput(keys)
         -- save the filter if it was updated so we always have the most recent
         -- text for the next invocation of the dialog
         filter_text = self.subviews.list:getFilter()
+        -- allow the list box to grow and shrink with the contents
         self:updateLayout()
     end
     if obj then
