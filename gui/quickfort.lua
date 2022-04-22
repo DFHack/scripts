@@ -28,13 +28,13 @@ saved between invocations.
 
 Examples:
 
-============================== =============================================
+============================== =================================================
 Command                        Effect
-============================== =============================================
+============================== =================================================
 gui/quickfort                  opens the quickfort interface with saved settings
 gui/quickfort dreamfort        opens with a custom blueprint filter
 gui/quickfort myblueprint.csv  opens with the specified blueprint pre-loaded
-============================== =============================================
+============================== =================================================
 ]====]
 
 local quickfort_command = reqscript('internal/quickfort/command')
@@ -66,7 +66,7 @@ local BlueprintDetails = defclass(BlueprintDetails, dialogs.MessageBox)
 BlueprintDetails.ATTRS{
     focus_path='quickfort/dialog/details',
     frame_title='Details',
-    frame_width=28,
+    frame_width=28, -- minimum width required for the bottom frame text
 }
 
 -- adds hint about left arrow being a valid "exit" key for this dialog
@@ -93,17 +93,19 @@ BlueprintDialog.ATTRS{
     with_filter=true,
     frame_width=dialog_width,
     row_height=2,
+    frame_inset={t=0,l=1,r=1,b=1},
+    list_frame_inset={t=1},
 }
 
 function BlueprintDialog:init()
     self:addviews{
-        widgets.Label{frame={t=0, l=0}, text='Filters:', text_pen=COLOR_GREY},
-        widgets.ToggleHotkeyLabel{frame={t=0, l=11}, label='Library',
-                key='CUSTOM_ALT_L', option_default=show_library,
+        widgets.Label{frame={t=0, l=1}, text='Filters:', text_pen=COLOR_GREY},
+        widgets.ToggleHotkeyLabel{frame={t=0, l=12}, label='Library',
+                key='CUSTOM_ALT_L', initial_option=show_library,
                 text_pen=COLOR_GREY,
                 on_change=self:callback('update_setting', 'show_library')},
-        widgets.ToggleHotkeyLabel{frame={t=0, l=33}, label='Hidden',
-                key='CUSTOM_ALT_H', option_default=show_hidden,
+        widgets.ToggleHotkeyLabel{frame={t=0, l=34}, label='Hidden',
+                key='CUSTOM_ALT_H', initial_option=show_hidden,
                 text_pen=COLOR_GREY,
                 on_change=self:callback('update_setting', 'show_hidden')}
     }
@@ -130,16 +132,17 @@ end
 -- ensures each newline-delimited sequence within text is no longer than
 -- width characters long. also ensures that no more than max_lines lines are
 -- returned in the truncated string.
+local more_marker = '...->'
 local function truncate(text, width, max_lines)
     local truncated_text = {}
-    for line in text:gmatch('[^\n]*') do
+    for line in text:gmatch('[^'..NEWLINE..']*') do
         if #line > width then
-            line = line:sub(1, width-5) .. '...->'
+            line = line:sub(1, width-#more_marker) .. more_marker
         end
         table.insert(truncated_text, line)
         if #truncated_text >= max_lines then break end
     end
-    return table.concat(truncated_text, '\n')
+    return table.concat(truncated_text, NEWLINE)
 end
 
 -- extracts the blueprint list id from a dialog list entry
@@ -150,7 +153,7 @@ end
 
 -- generates a new list of unfiltered choices by calling quickfort's list
 -- implementation, then applies the saved (or given) filter text
-function BlueprintDialog:refresh(filter)
+function BlueprintDialog:refresh()
     local choices = {}
     for _,v in ipairs(
             quickfort_list.do_list_internal(show_library, show_hidden)) do
@@ -198,7 +201,7 @@ function BlueprintDialog:refresh(filter)
             if selected_id <= cur_id then break end
         end
     end
-    self.subviews.list:setFilter(filter or filter_text, selected_id)
+    self.subviews.list:setFilter(filter_text, selected_id)
 end
 
 function BlueprintDialog:onInput(keys)
@@ -240,14 +243,16 @@ function QuickfortUI:init()
                                      autoarrange_gap=1}
     main_panel:addviews{
         widgets.Label{text='Quickfort'},
-        widgets.TooltipLabel{view_id='summary',
-            indent=0, tooltip=self:callback('get_summary_label')},
+        widgets.WrappedLabel{view_id='summary',
+            text_pen=COLOR_GREY,
+            text_to_wrap=self:callback('get_summary_label')},
         widgets.HotkeyLabel{key='CUSTOM_L', label='Load new blueprint',
             on_activate=self:callback('show_dialog')},
         widgets.ResizingPanel{autoarrange_subviews=true, subviews={
             widgets.Label{text='Current blueprint:'},
-            widgets.TooltipLabel{
-                tooltip=self:callback('get_blueprint_name'), indent=0}
+            widgets.WrappedLabel{
+                text_pen=COLOR_GREY,
+                text_to_wrap=self:callback('get_blueprint_name')}
             }},
         widgets.Label{
             text={'Invalid tiles: ',
@@ -329,28 +334,28 @@ function QuickfortUI:dialog_cancel_cb()
     end
 end
 
-function QuickfortUI:show_dialog(use_self_filter)
-    local saved_filter_text = filter_text
-    local filter = use_self_filter and self.filter or filter_text
+function QuickfortUI:show_dialog(initial)
+    -- if this is the first showing, absorb the filter from the commandline (if
+    -- one was specified)
+    if initial and #self.filter > 0 then
+        filter_text = self.filter
+    end
 
     local file_dialog = BlueprintDialog{
         on_select=function(idx, obj) self:dialog_cb(obj.text) end,
         on_cancel=self:callback('dialog_cancel_cb')
     }
-    file_dialog:refresh(filter)
+    file_dialog:refresh()
 
-    -- autoload if the filter passed to the command matches exactly one choice
-    if use_self_filter then
-        local choices = file_dialog.subviews.list.list.choices
+    -- autoload if this is the first showing of the dialog and a filter was
+    -- specified on the commandline and the filter matches exactly one choice
+    if initial and #self.filter > 0 then
+        local choices = file_dialog.subviews.list:getVisibleChoices()
         if #choices == 1 then
             local selection = choices[1].text
             file_dialog:dismiss()
             self:dialog_cb(selection)
             return
-        end
-        if #filter == 0 then
-            filter_text = saved_filter_text
-            file_dialog.subviews.list:setFilter(filter_text, selected_id)
         end
     end
 
