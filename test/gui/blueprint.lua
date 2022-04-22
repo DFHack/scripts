@@ -16,8 +16,8 @@ function test.fail_if_no_map_loaded()
     local mock_is_map_loaded = mock.func(false)
     mock.patch(dfhack, 'isMapLoaded', mock_is_map_loaded,
         function()
-            expect.error_match('load a fortress map',
-                               function() b.BlueprintUI{}:show() end)
+            expect.error_match('requires a fortress map to be loaded',
+                            function() dfhack.run_script('gui/blueprint') end)
         end)
 end
 
@@ -211,7 +211,7 @@ function test.preset_cursor()
     guidm.enterSidebarMode(df.ui_sidebar_mode.LookAround)
     guidm.setCursorPos({x=10, y=20, z=30})
     dfhack.run_script('gui/blueprint', '--cursor=11,12,13')
-    local view = b.active_screen
+    local view = b.view
     expect.table_eq({x=11, y=12, z=13}, guidm.getCursorPos())
     expect.true_(not not view.mark)
     -- cancel selection, ui, and look mode
@@ -262,12 +262,12 @@ end
 function test.replace_ui()
     dfhack.run_script('gui/blueprint')
     expect.eq('dfhack/lua/blueprint', dfhack.gui.getCurFocus(true))
-    local view = b.active_screen
+    local view = b.view
     expect.true_(not not view)
     dfhack.run_script('gui/blueprint')
     expect.eq('dfhack/lua/blueprint', dfhack.gui.getCurFocus(true))
-    expect.true_(not not b.active_screen)
-    expect.ne(view, b.active_screen)
+    expect.true_(not not b.view)
+    expect.ne(view, b.view)
     send_keys('LEAVESCREEN') -- cancel out of ui
     expect.nil_(dfhack.gui.getCurFocus(true):find('^dfhack/'),
                 'ensure the original ui is not still on the stack')
@@ -276,9 +276,9 @@ end
 function test.reset_ui()
     dfhack.run_script('gui/blueprint')
     send_keys('SELECT') -- set cursor position
-    expect.true_(not not b.active_screen.mark)
+    expect.true_(not not b.view.mark)
     dfhack.run_script('gui/blueprint')
-    expect.nil_(b.active_screen.mark)
+    expect.nil_(b.view.mark)
     send_keys('LEAVESCREEN') -- cancel out of ui
     expect.nil_(dfhack.gui.getCurFocus(true):find('^dfhack/'),
                 'ensure the original ui is not still on the stack')
@@ -357,7 +357,7 @@ end
 -- edit widget for setting the blueprint name
 function test.preset_basename()
     dfhack.run_script('gui/blueprint', 'imaname')
-    local view = b.active_screen
+    local view = b.view
     expect.eq('imaname', view.subviews.name.text)
     send_keys('LEAVESCREEN') -- leave UI
 end
@@ -395,7 +395,7 @@ function test.name_no_collision()
             local view = load_ui()
             view:updateLayout()
             local name_help_label = view.subviews.name_help
-            local name_help_text_pos = {x=name_help_label.frame_body.x1,
+            local name_help_text_pos = {x=name_help_label.frame_body.x1+2,
                                         y=name_help_label.frame_body.y1}
             view:onRender()
             expect.eq('Set', get_screen_word(name_help_text_pos))
@@ -410,7 +410,7 @@ function test.name_no_collision()
             view.subviews.name.on_change()
             view:updateLayout()
             local name_help_label = view.subviews.name_help
-            local name_help_text_pos = {x=name_help_label.frame_body.x1,
+            local name_help_text_pos = {x=name_help_label.frame_body.x1+2,
                                         y=name_help_label.frame_body.y1}
             view:onRender()
             expect.eq('Set', get_screen_word(name_help_text_pos),
@@ -426,7 +426,7 @@ function test.name_collision()
             local view = load_ui()
             view:updateLayout()
             local name_help_label = view.subviews.name_help
-            local name_help_text_pos = {x=name_help_label.frame_body.x1,
+            local name_help_text_pos = {x=name_help_label.frame_body.x1+2,
                                         y=name_help_label.frame_body.y1}
             view:onRender()
             expect.eq('Warning:', get_screen_word(name_help_text_pos))
@@ -441,7 +441,7 @@ function test.name_collision()
             view.subviews.name.on_change()
             view:updateLayout()
             local name_help_label = view.subviews.name_help
-            local name_help_text_pos = {x=name_help_label.frame_body.x1,
+            local name_help_text_pos = {x=name_help_label.frame_body.x1+2,
                                         y=name_help_label.frame_body.y1}
             view:onRender()
             expect.eq('Warning:', get_screen_word(name_help_text_pos),
@@ -454,17 +454,16 @@ end
 
 function test.phase_preset()
     dfhack.run_script('gui/blueprint', 'imaname', 'build')
-    local view = b.active_screen
+    local view = b.view
 
     local phases_view = view.subviews.phases
-    expect.eq('Custom', phases_view:get_current_option_value())
+    expect.eq('Custom', phases_view:getOptionValue())
 
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label ~= 'phases' and sv.label ~= 'toggle all' then
             expect.true_(sv.visible)
             -- only build should be on; everything else should be off
-            expect.eq(sv.label == 'build' and 'On' or 'Off',
-                      sv:get_current_option_value())
+            expect.eq(sv.label == 'build', sv:getOptionValue())
         end
     end
     send_keys('LEAVESCREEN') -- leave UI
@@ -497,19 +496,19 @@ function test.phase_cycle()
     send_keys('CUSTOM_A')
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label == 'dig' then
-            expect.eq('On', sv:get_current_option_value())
+            expect.true_(sv:getOptionValue())
         end
     end
     send_keys('CUSTOM_D')
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label == 'dig' then
-            expect.eq('Off', sv:get_current_option_value())
+            expect.false_(sv:getOptionValue())
         end
     end
     send_keys('CUSTOM_D')
     for _,sv in ipairs(view.subviews.phases_panel.subviews) do
         if sv.label and sv.label == 'dig' then
-            expect.eq('On', sv:get_current_option_value())
+            expect.true_(sv:getOptionValue())
         end
     end
     send_keys('LEAVESCREEN') -- leave UI
@@ -580,8 +579,8 @@ end
 
 function test.preset_splitby()
     dfhack.run_script('gui/blueprint', '--splitby=phase')
-    local view = b.active_screen
-    expect.eq('phase', view.subviews.splitby:get_current_option_value())
+    local view = b.view
+    expect.eq('phase', view.subviews.splitby:getOptionValue())
     send_keys('LEAVESCREEN') -- leave UI
 end
 
@@ -604,8 +603,8 @@ end
 
 function test.preset_format()
     dfhack.run_script('gui/blueprint', '--format=pretty')
-    local view = b.active_screen
-    expect.eq('pretty', view.subviews.format:get_current_option_value())
+    local view = b.view
+    expect.eq('pretty', view.subviews.format:getOptionValue())
     send_keys('LEAVESCREEN') -- leave UI
 end
 
@@ -628,27 +627,27 @@ end
 
 function test.preset_engrave()
     dfhack.run_script('gui/blueprint', '--engrave')
-    local view = b.active_screen
-    expect.eq('On', view.subviews.engrave:get_current_option_value())
+    local view = b.view
+    expect.true_(view.subviews.engrave:getOptionValue())
     send_keys('LEAVESCREEN') -- leave UI
 end
 
 function test.start_pos_comment()
     local view = load_ui()
     guidm.setCursorPos({x=1, y=2, z=3})
-    expect.eq('Comment: ', view.subviews.startpos_panel:print_comment())
+    expect.eq('Comment: ', view.subviews.startpos_panel:get_comment())
     -- set start pos and comment
     send_keys('CUSTOM_S', 'SELECT')
     local startpos_panel = view.subviews.startpos_panel
-    startpos_panel.input_box:onInput({_STRING=string.byte('c')})
-    startpos_panel.input_box:onInput({_STRING=string.byte('m')})
+    startpos_panel._input_box:onInput({_STRING=string.byte('c')})
+    startpos_panel._input_box:onInput({_STRING=string.byte('m')})
     send_keys('SELECT')
-    expect.eq('Comment: cm', startpos_panel:print_comment())
+    expect.eq('Comment: cm', startpos_panel:get_comment())
     -- unset start pos
     send_keys('CUSTOM_S')
     -- reset start pos, expect previous comment to still be there
     send_keys('CUSTOM_S', 'SELECT', 'SELECT')
-    expect.eq('Comment: cm', startpos_panel:print_comment())
+    expect.eq('Comment: cm', startpos_panel:get_comment())
     send_keys('LEAVESCREEN') -- leave UI
 end
 
@@ -688,8 +687,8 @@ function test.start_pos_during_range_set()
             send_keys('CUSTOM_S', 'SELECT')
             -- set comment
             local startpos_panel = view.subviews.startpos_panel
-            startpos_panel.input_box:onInput({_STRING=string.byte('h')})
-            startpos_panel.input_box:onInput({_STRING=string.byte('i')})
+            startpos_panel._input_box:onInput({_STRING=string.byte('h')})
+            startpos_panel._input_box:onInput({_STRING=string.byte('i')})
             send_keys('SELECT')
             -- select second corner of blueprint range
             send_keys('SELECT')
