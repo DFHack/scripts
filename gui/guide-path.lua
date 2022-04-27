@@ -27,11 +27,11 @@ GuidePathUI.ATTRS {
     route = DEFAULT_NIL,
     stop = DEFAULT_NIL,
     order = DEFAULT_NIL,
+    -- with cursor, but without those ugly lines from native hauling mode
+    sidebar_mode=df.ui_sidebar_mode.LookAround,
 }
 
 function GuidePathUI:init()
-    self.saved_mode = df.global.ui.main.mode
-
     for i=0,#self.route.stops-1 do
         if self.route.stops[i] == self.stop then
             self.stop_idx = i
@@ -44,15 +44,6 @@ function GuidePathUI:init()
     end
 
     self.next_stop = self.route.stops[(self.stop_idx+1)%#self.route.stops]
-end
-
-function GuidePathUI:onShow()
-    -- with cursor, but without those ugly lines from native hauling mode
-    df.global.ui.main.mode = df.ui_sidebar_mode.Stockpiles
-end
-
-function GuidePathUI:onDestroy()
-    df.global.ui.main.mode = self.saved_mode
 end
 
 local function getTileType(cursor)
@@ -193,7 +184,7 @@ function GuidePathUI:onInput(keys)
 end
 
 if not string.match(dfhack.gui.getCurFocus(), '^dwarfmode/Hauling/DefineStop/Cond/Guide') then
-    qerror("This script requires the main dwarfmode view in 'h' mode over a Guide order")
+    qerror("This script requires 'h' mode over a Guide order")
 end
 
 local hauling = df.global.ui.hauling
