@@ -136,7 +136,7 @@ function MechanismList:onInput(keys)
 end
 
 if not string.match(dfhack.gui.getCurFocus(), '^dwarfmode/QueryBuilding/Some') then
-    qerror("This script requires the main dwarfmode view in 'q' mode")
+    qerror("This script requires a mechanism-linked building to be selected in 'q' mode")
 end
 
 local list = MechanismList{ building = df.global.world.selected_building }
