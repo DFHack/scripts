@@ -57,8 +57,8 @@ local dialog_width = 73
 -- persist these between invocations
 show_library = show_library == nil and true or show_library
 show_hidden = show_hidden or false
-filter_text = filter_text or nil
-selected_id = selected_id or nil
+filter_text = filter_text or ''
+selected_id = selected_id or 1
 
 -- displays blueprint details, such as the full modeline and comment, that
 -- otherwise might be truncated for length in the blueprint selection list
@@ -79,8 +79,6 @@ end
 function BlueprintDetails:onInput(keys)
     if keys.STANDARDSCROLL_LEFT or keys.SELECT or keys.LEAVESCREEN then
         self:dismiss()
-    else
-        self:inputToSubviews(keys)
     end
 end
 
@@ -111,11 +109,11 @@ function BlueprintDialog:init()
     }
 end
 
--- never shrink smaller than 25 lines. less than that and the resize effect is
--- jarring when the filter is being edited and it suddenly matches no blueprints
+-- always keep our list big enough to display 10 items so we don't jarringly
+-- resize when the filter is being edited and it suddenly matches no blueprints
 function BlueprintDialog:getWantedFrameSize()
     local mw, mh = BlueprintDialog.super.getWantedFrameSize(self)
-    return mw, math.max(mh, 25)
+    return mw, math.max(mh, 24)
 end
 
 function BlueprintDialog:onRenderFrame(dc, rect)
@@ -151,6 +149,26 @@ local function get_id(text)
     return tonumber(id)
 end
 
+local function save_selection(list)
+    local _, obj = list:getSelected()
+    if obj then
+        selected_id = get_id(obj.text)
+    end
+end
+
+-- reinstate the saved selection in the list, or a nearby list id if that exact
+-- item is no longer in the list
+local function restore_selection(list)
+    local best_idx = 1
+    for idx,v in ipairs(list:getVisibleChoices()) do
+        local cur_id = get_id(v.text)
+        if selected_id >= cur_id then best_idx = idx end
+        if selected_id <= cur_id then break end
+    end
+    list.list:setSelected(best_idx)
+    save_selection(list)
+end
+
 -- generates a new list of unfiltered choices by calling quickfort's list
 -- implementation, then applies the saved (or given) filter text
 function BlueprintDialog:refresh()
@@ -170,8 +188,10 @@ function BlueprintDialog:refresh()
         local main = ('%d) %s%s (%s)')
                      :format(v.id, quickfort_parse.quote_if_has_spaces(v.path),
                      sheet_spec, v.mode)
-        local text = ('%s%s\n    %s')
-                     :format(main, start_comment, v.comment or '')
+        local text = ('%s%s'):format(main, start_comment)
+        if v.comment then
+            text = text .. ('\n    %s'):format(v.comment)
+        end
         local full_text = main
         if #start_comment > 0 then
             full_text = full_text .. '\n\n' .. start_comment
@@ -191,23 +211,19 @@ function BlueprintDialog:refresh()
                       search_key=v.search_key .. main})
     end
     self.subviews.list:setChoices(choices)
-    self:updateLayout() -- allows the dialog to resize to fit the content
-    if selected_id then
-        -- reinstate the saved selection in the list, or a nearby list id if
-        -- that exact item is no longer in the list
-        for idx,v in ipairs(choices) do
-            local cur_id = get_id(v.text)
-            if selected_id >= cur_id then selected_id = idx end
-            if selected_id <= cur_id then break end
-        end
-    end
-    self.subviews.list:setFilter(filter_text, selected_id)
+    self:updateLayout() -- allows the dialog to resize width to fit the content
+    self.subviews.list:setFilter(filter_text)
+    restore_selection(self.subviews.list)
 end
 
 function BlueprintDialog:onInput(keys)
-    local idx, obj = self.subviews.list:getSelected()
+    local _, obj = self.subviews.list:getSelected()
     if keys.STANDARDSCROLL_RIGHT and obj then
-        BlueprintDetails{text=obj.full_text:wrap(self.frame_body.width)}:show()
+        local details = BlueprintDetails{
+                text=obj.full_text:wrap(self.frame_body.width)}
+        details:show()
+        -- for testing
+        self._details = details
     elseif keys.LEAVESCREEN then
         self:dismiss()
         if self.on_cancel then
@@ -215,16 +231,19 @@ function BlueprintDialog:onInput(keys)
         end
     else
         self:inputToSubviews(keys)
+        local prev_filter_text = filter_text
         -- save the filter if it was updated so we always have the most recent
         -- text for the next invocation of the dialog
         filter_text = self.subviews.list:getFilter()
+        if prev_filter_text ~= filter_text then
+            -- if the filter text has changed, restore the last selected item
+            restore_selection(self.subviews.list)
+        else
+            -- otherwise, save the new selected item
+            save_selection(self.subviews.list)
+        end
         -- allow the list box to grow and shrink with the contents
         self:updateLayout()
-    end
-    if obj then
-        selected_id = get_id(obj.text)
-    else
-        selected_id = nil
     end
 end
 
@@ -317,8 +336,8 @@ end
 
 function QuickfortUI:dialog_cb(text)
     local id = get_id(text)
-    self.blueprint_name, self.section_name, self.mode =
-            quickfort_list.get_blueprint_by_number(id)
+    local name, sec_name, mode = quickfort_list.get_blueprint_by_number(id)
+    self.blueprint_name, self.section_name, self.mode = name, sec_name, mode
     self:updateLayout()
     if self.mode == 'notes' then
         self:do_command('run', false, self:callback('show_dialog'))
@@ -360,6 +379,9 @@ function QuickfortUI:show_dialog(initial)
     end
 
     file_dialog:show()
+
+    -- for testing
+    self._dialog = file_dialog
 end
 
 function QuickfortUI:onShow()
@@ -404,29 +426,13 @@ function QuickfortUI:onRenderBody()
     local tiles = self.saved_preview.tiles
     if not tiles[cursor.z] then return end
 
-    local vp = self:getViewport()
-    local dc = gui.Painter.new(self.df_layout.map)
-
-    -- clip scanning range to viewport for performance. offscreen writes would
-    -- get ignored, but it can be slow to scan over large offscreen regions.
-    local bounds = self.saved_preview.bounds[cursor.z]
-    local y1,y2 = math.max(vp.y1, bounds.y_min), math.min(vp.y2, bounds.y_max)
-    local x1,x2 = math.max(vp.x1, bounds.x_min), math.min(vp.x2, bounds.x_max)
-
-    for y=y1,y2 do
-        for x=x1,x2 do
-            local pos = xyz2pos(x, y, cursor.z)
-            -- don't overwrite the cursor so the user can still see it
-            if same_xy(cursor, pos) then goto continue end
-            local preview_tile = quickfort_preview.get_preview_tile(tiles, pos)
-            if preview_tile == nil then goto continue end
-            local stile = vp:tileToScreen(pos)
-            dc:map(true):seek(stile.x, stile.y):
-                    pen(preview_tile and COLOR_GREEN or COLOR_RED, COLOR_BLACK):
-                    char('X'):map(false)
-            ::continue::
-        end
+    local function get_overlay_char(pos)
+        local preview_tile = quickfort_preview.get_preview_tile(tiles, pos)
+        if preview_tile == nil then return nil end
+        return 'X', preview_tile and COLOR_GREEN or COLOR_RED
     end
+
+    self:renderMapOverlay(get_overlay_char, self.saved_preview.bounds[cursor.z])
 end
 
 function QuickfortUI:onInput(keys)
@@ -459,11 +465,11 @@ function QuickfortUI:do_command(command, dry_run, post_fn)
     quickfort_command.finish_command(ctx, self.section_name)
     if command == 'run' then
         if #ctx.messages > 0 then
-            dialogs.showMessage('Attention',
-                                table.concat(ctx.messages, '\n\n'):wrap(
-                                        dialog_width),
-                                nil,
-                                post_fn)
+            self._dialog = dialogs.showMessage(
+                    'Attention',
+                    table.concat(ctx.messages, '\n\n'):wrap(dialog_width),
+                    nil,
+                    post_fn)
         elseif post_fn then
             post_fn()
         end
@@ -471,7 +477,7 @@ function QuickfortUI:do_command(command, dry_run, post_fn)
         local count = 0
         for _,_ in pairs(ctx.order_specs or {}) do count = count + 1 end
         local messages = {string.format(
-            '%d orders %senqueued for %s.', count,
+            '%d order(s) %senqueued for %s.', count,
             dry_run and 'would be ' or '',
             quickfort_parse.format_command(nil, self.blueprint_name,
                                            self.section_name))}
@@ -484,14 +490,18 @@ function QuickfortUI:do_command(command, dry_run, post_fn)
                                                            stat.value))
             end
         end
-        dialogs.showMessage(('Orders %senqueued')
-                             :format(dry_run and 'that would be ' or ''),
-                             table.concat(messages,'\n'):wrap(dialog_width))
+        self._dialog = dialogs.showMessage(
+               ('Orders %senqueued'):format(dry_run and 'that would be ' or ''),
+               table.concat(messages,'\n'):wrap(dialog_width))
     end
 end
 
 if dfhack_flags.module then
     return
+end
+
+if not dfhack.isMapLoaded() then
+    qerror('This script requires a fortress map to be loaded')
 end
 
 -- treat all arguments as blueprint list dialog filter text

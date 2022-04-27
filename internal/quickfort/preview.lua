@@ -18,17 +18,16 @@ function set_preview_tile(ctx, pos, is_valid_tile, override)
     if not override and preview_row[pos.x] ~= nil then
         return false
     end
-    preview_row[pos.x] = is_valid_tile
-    if not is_valid_tile then
+    if not is_valid_tile and preview_row[pos.x] ~= is_valid_tile then
         preview.invalid_tiles = preview.invalid_tiles + 1
     end
+    preview_row[pos.x] = is_valid_tile
     local bounds = ensure_key(preview.bounds, pos.z,
-                              {x_min=pos.x, x_max=pos.x,
-                               y_min=pos.y, y_max=pos.y})
-    bounds.x_min = math.min(bounds.x_min, pos.x)
-    bounds.x_max = math.max(bounds.x_max, pos.x)
-    bounds.y_min = math.min(bounds.y_min, pos.y)
-    bounds.y_max = math.max(bounds.y_max, pos.y)
+                              {x1=pos.x, x2=pos.x, y1=pos.y, y2=pos.y})
+    bounds.x1 = math.min(bounds.x1, pos.x)
+    bounds.x2 = math.max(bounds.x2, pos.x)
+    bounds.y1 = math.min(bounds.y1, pos.y)
+    bounds.y2 = math.max(bounds.y2, pos.y)
     return true
 end
 
