@@ -40,16 +40,9 @@ end
 
 Pathable = defclass(Pathable, guidm.MenuOverlay)
 
-function Pathable:onAboutToShow(parent)
-    if df.global.cursor.x == -30000 then
-        if df.global.ui.main.mode == df.ui_sidebar_mode.Default then
-            parent:feed_key(df.interface_key.D_LOOK)
-        else
-            qerror("Unsupported UI mode - needs a cursor")
-        end
-    end
-    Pathable.super.onAboutToShow(self, parent)
-end
+Pathable.ATTRS = {
+    sidebar_mode=df.ui_sidebar_mode.LookAround,
+}
 
 function Pathable:onRenderBody(p)
     local cursor = df.global.cursor
@@ -83,7 +76,6 @@ function Pathable:onInput(keys)
         dfhack.gui.refreshSidebar()
     elseif keys.LEAVESCREEN_ALL then
         self:dismiss()
-        df.global.ui.main.mode = df.ui_sidebar_mode.Default
     elseif keys.CUSTOM_L then
         opts.lock_cursor = not opts.lock_cursor
     elseif keys.CUSTOM_D then
@@ -98,6 +90,10 @@ function Pathable:onInput(keys)
             self:propagateMoveKeys(keys)
         end
     end
+end
+
+if not dfhack.isMapLoaded() then
+    qerror('This script requires a fortress map to be loaded')
 end
 
 Pathable():show()
