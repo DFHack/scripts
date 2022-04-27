@@ -43,7 +43,8 @@ local action_indexes = utils.invert(actions)
 MassRemoveUI.ATTRS {
     action="remove_all",
     marking=false,
-    mark=nil
+    mark=nil,
+    sidebar_mode=df.ui_sidebar_mode.LookAround,
 }
 
 -- Helper functions.
@@ -79,13 +80,8 @@ local function ableToSuspend(job)
     return ret
 end
 
-function MassRemoveUI:onAboutToShow()
-    guidm.enterSidebarMode(df.ui_sidebar_mode.LookAround)
-end
-
 function MassRemoveUI:onDestroy()
     persistTable.GlobalTable.massRemoveAction=self.action
-    guidm.enterSidebarMode(df.ui_sidebar_mode.Default)
 end
 
 function MassRemoveUI:changeSuspendState(x, y, z, new_state)
@@ -183,62 +179,59 @@ function MassRemoveUI:getColor(action)
     end
 end
 
-function MassRemoveUI:renderOverlay()
-    local vp=self:getViewport()
-    local dc = gui.Painter.new(self.df_layout.map)
+-- show buildings/constructions marked for removal and planned
+-- buildings/constructions that are suspended
+function get_building_overlay()
+    local grid, z = {}, guidm.getCursorPos().z
 
-    -- show buildings/constructions marked for removal and planned buildings/constructions that are suspended
-    if gui.blink_visible(500) then
-        local joblist = df.global.world.jobs.list.next
-        while joblist do
-            local job = joblist.item
-            joblist = joblist.next
-
-            if job.job_type == df.job_type.ConstructBuilding and job.flags.suspend and ableToSuspend(job) then
-                paintMapTile(dc, vp, nil, job.pos, "s", COLOR_LIGHTRED)
-            elseif job.job_type == df.job_type.RemoveConstruction then
-                paintMapTile(dc, vp, nil, job.pos, "n", COLOR_LIGHTRED)
-            end
+    local joblist = df.global.world.jobs.list.next
+    while joblist do
+        local job = joblist.item
+        joblist = joblist.next
+        if job.pos.z ~= z then
+            goto continue
         end
 
-        for x=vp.x1, vp.x2 do
-            for y=vp.y1, vp.y2 do
-                local building = dfhack.buildings.findAtTile(x, y, vp.z)
-                if building and dfhack.buildings.markedForRemoval(building) then
-                    paintMapTile(dc, vp, nil, xyz2pos(x, y, vp.z), "x", COLOR_LIGHTRED)
-                end
-            end
+        if job.job_type == df.job_type.ConstructBuilding
+                and job.flags.suspend and ableToSuspend(job) then
+            ensure_key(grid, job.pos.y)[job.pos.x] = 's'
+        elseif job.job_type == df.job_type.RemoveConstruction then
+            ensure_key(grid, job.pos.y)[job.pos.x] = 'n'
         end
+        ::continue::
     end
 
-    -- show box selection
-    if not gui.blink_visible(500) and self.marking then
-        local x_start, x_end = minToMax(self.mark.x, df.global.cursor.x)
-        local y_start, y_end = minToMax(self.mark.y, df.global.cursor.y)
-        paintMapTile(dc, vp, nil, self.mark, "+", COLOR_LIGHTGREEN)
-        for x=x_start, x_end do
-            for y=y_start, y_end do
-                local fg=COLOR_GREEN
-                local bg=COLOR_BLACK
-                local symbol="X"
-                dc:pen(fg,bg)
-                paintMapTile(dc, vp, nil, xyz2pos(x, y, df.global.cursor.z), symbol, fg)
-            end
+    return function(pos, is_cursor)
+        if is_cursor then return end
+        local building = dfhack.buildings.findAtTile(pos.x, pos.y, pos.z)
+        if building and dfhack.buildings.markedForRemoval(building) then
+            return 'x', COLOR_LIGHTRED
         end
-    end
-
-    -- show initial position of box selection
-    if self.mark and self.marking then
-        local fg=COLOR_RED
-        local bg=COLOR_BLACK
-        local symbol="X"
-        dc:pen(fg,bg)
-        paintMapTile(dc, vp, nil, xyz2pos(self.mark.x, self.mark.y, self.mark.z), symbol, fg)
+        return safe_index(grid, pos.y, pos.x), COLOR_LIGHTRED
     end
 end
 
+-- shows the selection range
+function get_selection_overlay(pos, is_cursor)
+    if is_cursor then return end
+    return 'X', COLOR_GREEN
+end
+
 function MassRemoveUI:onRenderBody(dc)
-    self:renderOverlay()
+    local blink_state = gui.blink_visible(500)
+
+    if blink_state then
+        self:renderMapOverlay(get_building_overlay())
+    end
+
+    if not blink_state and self.marking then
+        local cursor = guidm.getCursorPos()
+        self:renderMapOverlay(get_selection_overlay, {
+                                  x1 = math.min(self.mark.x, cursor.x),
+                                  x2 = math.max(self.mark.x, cursor.x),
+                                  y1 = math.min(self.mark.y, cursor.y),
+                                  y2 = math.max(self.mark.y, cursor.y)})
+    end
 
     dc:clear():seek(1,1):pen(COLOR_WHITE):string("Mass Remove")
     dc:seek(1,3)
@@ -327,5 +320,8 @@ function MassRemoveUI:onInput(keys)
     end
 end
 
-local list = MassRemoveUI{action=persistTable.GlobalTable.massRemoveAction, marking=false}
-list:show()
+if not dfhack.isMapLoaded() then
+    qerror('This script requires a fortress map to be loaded')
+end
+
+MassRemoveUI{action=persistTable.GlobalTable.massRemoveAction, marking=false}:show()
