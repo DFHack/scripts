@@ -200,7 +200,9 @@ function PhasesPanel:get_default(label)
     return self.phases.auto_phase or not not self.phases[label]
 end
 function PhasesPanel:toggle_all()
-    local target_state = self.subviews.dig_phase.option_idx
+    local dig_phase = self.subviews.dig_phase
+    dig_phase:cycle()
+    local target_state = dig_phase.option_idx
     for _,subview in pairs(self.subviews) do
         if subview.options and subview.view_id:endswith('_phase') then
             subview.option_idx = target_state
@@ -426,11 +428,19 @@ function BlueprintUI:postUpdateLayout(parent_rect)
     end
 end
 
--- Sorts and returns the given arguments.
-local function min_to_max(...)
-    local args = {...}
-    table.sort(args, function(a, b) return a < b end)
-    return table.unpack(args)
+function BlueprintUI:get_bounds()
+    local cur = self.saved_cursor or guidm.getCursorPos()
+    local mark = self.mark or cur
+    local start_pos = self.subviews.startpos_panel.start_pos or mark
+
+    return {
+        x1=math.min(cur.x, mark.x, start_pos.x),
+        x2=math.max(cur.x, mark.x, start_pos.x),
+        y1=math.min(cur.y, mark.y, start_pos.y),
+        y2=math.max(cur.y, mark.y, start_pos.y),
+        z1=math.min(cur.z, mark.z),
+        z2=math.max(cur.z, mark.z)
+    }
 end
 
 function BlueprintUI:onRenderBody()
@@ -439,36 +449,14 @@ function BlueprintUI:onRenderBody()
     local start_pos = self.subviews.startpos_panel.start_pos
     if not self.mark and not start_pos then return end
 
-    local vp = self:getViewport()
-    local dc = gui.Painter.new(self.df_layout.map)
-
-    local cursor = df.global.cursor
-    local highlight_bound = self.saved_cursor or cursor
-    local mark = self.mark or highlight_bound
-
-    -- mark start_pos (will get ignored if it's offscreen)
-    if start_pos then
-        local start_tile = vp:tileToScreen(start_pos)
-        dc:map(true):seek(start_tile.x, start_tile.y):
-                pen(COLOR_BLUE, COLOR_BLACK):char('X'):map(false)
+    local function get_overlay_char(pos, is_cursor)
+        -- always render start_pos tile, even if it would overwrite the cursor
+        if same_xy(start_pos, pos) then return 'X', COLOR_BLUE end
+        if is_cursor then return nil end
+        return 'X'
     end
 
-    -- clip scanning range to viewport for performance. offscreen writes will
-    -- get ignored, but it can be slow to scan over large offscreen regions.
-    local _,y_start,y_end = min_to_max(mark.y, highlight_bound.y, vp.y1, vp.y2)
-    local _,x_start,x_end = min_to_max(mark.x, highlight_bound.x, vp.x1, vp.x2)
-    for y=y_start,y_end do
-        for x=x_start,x_end do
-            local pos = xyz2pos(x, y, cursor.z)
-            -- don't overwrite the cursor or start_tile so the user can still
-            -- see them
-            if not same_xy(cursor, pos) and not same_xy(start_pos, pos) then
-                local stile = vp:tileToScreen(pos)
-                dc:map(true):seek(stile.x, stile.y):
-                        pen(COLOR_GREEN, COLOR_BLACK):char('X'):map(false)
-            end
-        end
-    end
+    self:renderMapOverlay(get_overlay_char, self:get_bounds())
 end
 
 function BlueprintUI:onInput(keys)
@@ -560,9 +548,9 @@ function BlueprintUI:commit(pos)
     end
 
     -- set cursor to top left corner of the *uppermost* z-level
-    local x, y, z = math.min(mark.x, pos.x), math.min(mark.y, pos.y),
-            math.max(mark.z, pos.z)
-    table.insert(params, ('--cursor=%d,%d,%d'):format(x, y, z))
+    local bounds = self:get_bounds()
+    table.insert(params, ('--cursor=%d,%d,%d')
+                         :format(bounds.x1, bounds.y1, bounds.z2))
 
     if self.subviews.engrave:getOptionValue() then
         table.insert(params, '--engrave')
@@ -575,18 +563,10 @@ function BlueprintUI:commit(pos)
 
     local start_pos = self.subviews.startpos_panel.start_pos
     if start_pos then
-        local playback_start_x = start_pos.x - x + 1
-        local playback_start_y = start_pos.y - y + 1
-        if playback_start_x < 1 or playback_start_x > width or
-                playback_start_y < 1 or playback_start_y > height then
-            dialogs.MessageBox{
-                frame_title='Error',
-                text='Playback start position must be within the blueprint area'
-            }:show()
-            return
-        end
-        start_pos_param = ('--playback-start=%d,%d')
-                          :format(playback_start_x, playback_start_y)
+        local playback_start_x = start_pos.x - bounds.x1 + 1
+        local playback_start_y = start_pos.y - bounds.y1 + 1
+        local start_pos_param = ('--playback-start=%d,%d')
+                                :format(playback_start_x, playback_start_y)
         local start_comment = self.subviews.startpos_panel.start_comment
         if start_comment and #start_comment > 0 then
             start_pos_param = start_pos_param .. (',%s'):format(start_comment)
