@@ -3,15 +3,18 @@
 
 --[[ TODO / WISHLIST:
 - Add in an alternative mode that behaves more like vanilla
-- Account for units being burdened (apparently that's a think that effects recovery rate according to my tests with throwing)
+- Account for units being burdened (apparently that's a thing that effects recovery rate according to my tests with throwing)
 ]]
 
 local help = [====[
 
 modtools/fire-rate
 ==================
-Allows altering the fire rates of ranged weapons. Each are defined on a per-item basis. As this is done in an on-world basis, commands for this should be placed in an ``onLoad*.init``. This also technically serves as a patch to any of the weapons targeted in adventure mode, reducing the times down to their intended speeds (the game applies an additional hardcoded recovery time to any ranged attack you make in adventure mode).
-Once run, all ranged attacks will use this script's systems for calculating recovery speeds, even for items that haven't directly been modified using this script's commands. One minor side effect is that it can't account for interactions with the ``FREE_ACTION`` token - interactions with that tag which launch projectiles will be subject to recovery times (though there aren't any interaction in vanilla where this would happen, as far as I know).
+Allows altering the fire rates of ranged weapons. Each are defined on a per-item basis.
+As this is done in an on-world basis, commands for this should be placed in an ``onLoad*.init``.
+This also technically serves as a patch to any of the weapons targeted in adventure mode, reducing the times down to their intended speeds (the game applies an additional hardcoded recovery time to any ranged attack you make in adventure mode).
+Once run, all ranged attacks will use this script's systems for calculating recovery speeds, even for items that haven't directly been modified using this script's commands.
+One minor side effect is that it can't account for interactions with the ``FREE_ACTION`` token - interactions with that tag which launch projectiles will be subject to recovery times (though there aren't any interaction in vanilla where this would happen, as far as I know).
 
 Requires a Target and any number of Modifiers.
 
@@ -51,13 +54,16 @@ Other:
 ]====]
 
 --[[ Here's my current research on how I think this stuff works (v 47.05)
-Fort Mode uses a unit's think_counter. After firing a shot, it's set to 80 (not accounting for skill stuff). This delays them from acting again until then. If you make it so onProjItemCheckMovement sets their think_counter to 0 whenever they fire something, they can fire 1 shot every tick.
-Adventure mode uses think_counter + a fixed delay. After firing a shot, the game advances by the fixed delay, then starts decrementing the think_counter. The fixed delay is either 10 or 9 from testing. It probably exists to prevent units walking into their own shots.
+Fort Mode uses a unit's think_counter. After firing a shot, it's set to 80 (not accounting for skill stuff). This delays them from acting again until then.
+If you make it so onProjItemCheckMovement sets their think_counter to 0 whenever they fire something, they can fire 1 shot every tick.
+Adventure mode uses think_counter + a fixed delay. After firing a shot, the game advances by the fixed delay, then starts decrementing the think_counter.
+The fixed delay is either 10 or 9 from testing. It probably exists to prevent units walking into their own shots.
 Example:
 - Throw - think_counter 1, total time passed 10
 - Spit - think_counter 1, total time passed 10
 
-When in tactical mode, the fixed delay always occurs after making a ranged attack before switching control to the next character. Then, the think counter delay prevents switching back into that character until it's passed.
+When in tactical mode, the fixed delay always occurs after making a ranged attack before switching control to the next character.
+Then, the think counter delay prevents switching back into that character until it's passed.
 
 Some figures might be off by 1 because of delays between firing and when onProjItemCheckMovement triggers.
 ]]
@@ -182,6 +188,7 @@ end
 function set_config_skill_mode(value)
   if ( value ~= "basic" and value ~= "vanilla" ) then
     config.skill_mode = "basic"
+    return
   end
 
   config.skill_mode = value
