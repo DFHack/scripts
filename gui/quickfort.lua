@@ -5,23 +5,23 @@ gui/quickfort
 =============
 Graphical interface for the `quickfort` script. Once you load a blueprint, you
 will see a blinking "shadow" over the tiles that will be modified. You can use
-the cursor to reposition the blueprint, or use the hotkeys to rotate or flip the
-blueprint around to your liking. Once you are satisfied, hit :kbd:`ENTER` to
-apply the blueprint to the map.
+the cursor to reposition the blueprint. Once you are satisfied, hit :kbd:`ENTER`
+to apply the blueprint to the map.
 
 Usage::
 
     gui/quickfort [<search terms>]
 
-If the specified search terms match exactly one blueprint (e.g. if the search
-terms are the filename and blueprint label), that blueprint is pre-loaded into
-the UI and a preview for that blueprint appears. Otherwise, a dialog is shown
-where you can select a blueprint to load.
+If the (optional) search terms match a single blueprint (e.g. if the search
+terms are copied from the ``quickfort list`` output like
+``gui/quickfort library/dreamfort.csv -n /industry1``), then that blueprint is
+pre-loaded into the UI and a preview for that blueprint appears. Otherwise, a
+dialog is shown where you can select a blueprint to load.
 
-You can type search terms in the dialog and the list of blueprints will be
-filtered as you type. You can search for file directories, file names, blueprint
-labels, modes, or comments. Note that, depending on the active list filters, the
-id numbers in the list may not be contiguous.
+You can also type search terms in the dialog and the list of matching blueprints
+will be filtered as you type. You can search for directory names, file names,
+blueprint labels, modes, or comments. Note that, depending on the active list
+filters, the id numbers in the list may not be contiguous.
 
 Any settings you set in the UI, such as search terms for the blueprint list, are
 saved between invocations.
@@ -204,7 +204,6 @@ function BlueprintDialog:refresh()
 
         -- search for the extra syntax shown in the list items in case someone
         -- is typing exactly what they see
-        local extra_keys = main
         table.insert(choices,
                      {text=truncated_text,
                       full_text=full_text,
