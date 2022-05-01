@@ -30,7 +30,6 @@ BlockBordersOverlay = defclass(BlockBordersOverlay, guidm.MenuOverlay)
 BlockBordersOverlay.ATTRS{
     block_size = 16,
     draw_borders = true,
-    sidebar_mode=df.ui_sidebar_mode.LookAround,
 }
 
 function BlockBordersOverlay:onInput(keys)
@@ -104,4 +103,8 @@ if not dfhack.isMapLoaded() then
     qerror('This script requires a fortress map to be loaded')
 end
 
-BlockBordersOverlay():show()
+-- we can work both with a cursor and without one. start in a mode that mirrors
+-- the current game state
+local is_cursor = not not guidm.getCursorPos()
+local sidebar_mode = df.ui_sidebar_mode[is_cursor and 'LookAround' or 'Default']
+BlockBordersOverlay{sidebar_mode=sidebar_mode}:show()
