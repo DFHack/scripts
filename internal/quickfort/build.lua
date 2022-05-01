@@ -83,15 +83,34 @@ local function is_valid_tile_has_space(pos)
             shape == df.tiletype_shape.SHRUB
 end
 
-local function is_valid_tile_machine(pos)
+local function is_valid_tile_has_space_or_is_ramp(pos)
     local shape = df.tiletype.attrs[dfhack.maps.getTileType(pos)].shape
     return is_valid_tile_has_space(pos) or shape == df.tiletype_shape.RAMP
 end
 
+local function is_valid_tile_machine(pos)
+    return is_valid_tile_has_space_or_is_ramp(pos)
+end
+
+-- ramps are ok everywhere except under the anchor point of directional bridges
+local function is_valid_tile_bridge(pos, db_entry, b)
+    local dir = db_entry.direction
+    local T_direction = df.building_bridgest.T_direction
+    if (dir == T_direction.Up and pos.y == b.pos.y) or
+            (dir == T_direction.Down and pos.y == b.pos.y+b.height-1) or
+            (dir == T_direction.Left and pos.x == b.pos.x) or
+            (dir == T_direction.Right and pos.x == b.pos.x+b.width-1) then
+        return is_valid_tile_has_space(pos)
+    end
+    return is_valid_tile_has_space_or_is_ramp(pos)
+end
+
 local function is_valid_tile_construction(pos)
-    local material = df.tiletype.attrs[dfhack.maps.getTileType(pos)].material
-    return is_valid_tile_has_space(pos) and
-            material ~= df.tiletype_material.CONSTRUCTION
+    local tileattrs = df.tiletype.attrs[dfhack.maps.getTileType(pos)]
+    local shape = tileattrs.shape
+    local mat = tileattrs.material
+    return is_valid_tile_has_space_or_is_ramp(pos) and
+            mat ~= df.tiletype_material.CONSTRUCTION
 end
 
 local function is_shape_at(pos, allowed_shapes)
@@ -212,6 +231,11 @@ local function make_bridge_entry(direction)
     return {label=('Bridge (%s)'):format(bridge_data_entry.label),
             type=df.building_type.Bridge,
             direction=direction,
+            min_width=1,
+            max_width=10,
+            min_height=1,
+            max_height=10,
+            is_valid_tile_fn=is_valid_tile_bridge,
             transform=transform}
 end
 
@@ -771,14 +795,8 @@ for _, v in pairs(building_db) do
         if not v.min_width then
             v.min_width, v.max_width, v.min_height, v.max_height = 3, 3, 3, 3
         end
-    else
-        if not v.min_width then
-            v.min_width, v.max_width, v.min_height, v.max_height = 1, 1, 1, 1
-        end
-    end
-    if v.type == df.building_type.Bridge then
-       v.min_width, v.max_width, v.min_height, v.max_height = 1, 10, 1, 10
-       v.is_valid_tile_fn = is_valid_tile_has_space
+    elseif not v.min_width then
+        v.min_width, v.max_width, v.min_height, v.max_height = 1, 1, 1, 1
     end
     if not v.is_valid_tile_fn then
         if v.type == df.building_type.Construction then

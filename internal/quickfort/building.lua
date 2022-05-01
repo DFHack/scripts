@@ -469,7 +469,7 @@ function check_tiles_and_extents(ctx, buildings, db)
                 if not in_extent then goto continue_inner end
                 local pos =
                         xyz2pos(b.pos.x+extent_x-1, b.pos.y+extent_y-1, b.pos.z)
-                local is_valid_tile = db_entry.is_valid_tile_fn(pos)
+                local is_valid_tile = db_entry.is_valid_tile_fn(pos,db_entry,b)
                 owns_preview =
                         quickfort_preview.set_preview_tile(ctx, pos,
                                                            is_valid_tile)
