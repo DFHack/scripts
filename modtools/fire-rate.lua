@@ -130,6 +130,9 @@ local separator = "|||"
 -- attack is coming from a throw.
 local throw_key = "throw"
 
+-- The hardcoded delay (in ticks) that the game adds when performing any ranged
+-- attack in adventure mode.
+local adventure_ranged_delay = 9
 ---------------------------------------------------------------------
 weapon_data = weapon_data or {}
 config = config or {
@@ -286,7 +289,7 @@ function apply_shot_cooldown(unit, recovery_time)
             and unit.id == get_adventurer_unit().id ) then
     -- The hardcoded delay is still active even in tactical mode, so no need to
     -- try and account for it
-    time_to_use = math.max(recovery_time - 9, 0)
+    time_to_use = math.max(recovery_time - adventure_ranged_delay, 0)
   end
 
   unit.counters.think_counter = time_to_use
