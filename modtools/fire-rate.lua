@@ -5,6 +5,8 @@
 - Add in an alternative mode that behaves more like vanilla
 - Account for units being burdened (apparently that's a thing that affects
   recovery rate according to my tests with throwing)
+- Allow throw + item combinations so the fire rate of throwing weapons can
+  be modified
 ]]
 
 local help = [====[
