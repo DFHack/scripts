@@ -174,28 +174,17 @@ function register_weapon(weapon_token, material_token, data)
   return new_entry
 end
 
+-- Get the data for the given weapon (or create it, if missing)
+-- When searching, it'll check using the following priority:
+-- > Weapon + material combination
+-- > Weapon by itself
+-- If neither is found, it will create an entry for that particular
+-- weapon (NOT weapon + material combo) so that all ranged weapons
+-- are consistently using this new system
 function get_weapon_data(weapon_token, material_token)
-  local key = weapon_token
-
-  -- Prioritise getting a particular weapon + material combination first
-  if ( material_token ~= nil ) then
-    local key_with_mat = key .. separator .. material_token
-
-    if ( weapon_data[key_with_mat] ~= nil ) then
-      return weapon_data[key_with_mat]
-    end
-  end
-
-  -- Otherwise, attempt to find just the weapon's particular data
-  if ( weapon_data[key] ~= nil ) then
-    return weapon_data[key]
-  end
-
-  -- If we get here, there is no entry
-  -- Just so that all ranged weapons are consistently using this new system,
-  -- we'll create one.
-  -- Only for the weapon, not any particular weapon + material combo.
-  return register_weapon(weapon_token, nil)
+  return weapon_data[weapon_token..separator..(material_token or '')] or
+        weapon_data[weapon_token] or
+        register_weapon(weapon_token)
 end
 
 function get_weapon_fire_rate(weapon_token, material_token, game_mode)
