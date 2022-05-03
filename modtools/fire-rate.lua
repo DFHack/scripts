@@ -40,6 +40,9 @@ Targets:
   This is specifically for thrown attacks without a weapon - if you have a
   weapon that uses ``THROW`` as its skill, you need to use the ``-item``
   argument for it.
+
+Modifiers:
+
 :-material <material token>:
   Apply only to items made of the given material token. With the ``-item``
   argument, this will apply to the material that the weapon is made of, whereas
@@ -47,9 +50,6 @@ Targets:
   fired, in the case of interactions). This is optional.
   Format examples: "CREATURE:COW:MILK", "PLANT:MUSHROOM_HELMET_PLUMP:DRINK",
   "INORGANIC:GOLD", "VOMIT"
-
-Modifiers:
-
 :-fortBase <integer> -advBase <integer>:
   Set the base fire rate for the weapon in ticks to use in the respective mode
   (fortress/adventure). Means one shot per x ticks. Defaults to the game default
