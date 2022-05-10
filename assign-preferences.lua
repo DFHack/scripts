@@ -29,11 +29,7 @@ page, you must specify the particular type of preference. For
 each type, a description is provided in the section below.
 
 You will need to know the token of the object you want your dwarf to like.
-Unless told otherwise, the best way to get those tokens is to activate
-the plugin `stonesense`, load a world and let the plugin generate a file
-named "MatList.csv" in the root DF folder. Browse this file (import it
-as a .csv file with Excel or similar program) to get the desired token
-(in the "id" column). Otherwise, in the folder "/raw/objects/" under
+You can find them in the wiki, otherwise in the folder "/raw/objects/" under
 the main DF directory you will find all the raws defined in the game.
 
 For more information:
@@ -55,16 +51,14 @@ Usage:
                     pearl, a type of ivory, a decoration material - coral
                     or amber, a type of bone, a type of shell, a type
                     of silk, a type of yarn, or a type of plant cloth.
-                    Write the tokens as found in the "id" column of the
-                    file "MatList.csv", generated as explained above.
+                    Write the full tokens.
                     There must be a space before and after each square
                     bracket.
 
 ``-likecreature [ <TOKEN> <TOKEN> <...> ]``:
                     one or more creatures liked by the unit. You can
-                    just list the species: if you are using the file
-                    "MatList.csv" as explained above, the creature token
-                    will be something similar to ``CREATURE:SPARROW:SKIN``,
+                    just list the species: the creature token will be
+                    something similar to ``CREATURE:SPARROW:SKIN``,
                     so the name of the species will be ``SPARROW``. Nothing
                     will stop you to write the full token, if you want: the
                     script will just ignore the first and the last parts.
@@ -76,8 +70,7 @@ Usage:
                     meat, a type of fish, a type of cheese, a type of edible
                     plant, a cookable plant/creature extract, a cookable
                     mill powder, a cookable plant seed or a cookable plant
-                    leaf. Write the tokens as found in the "id" column of
-                    the file "MatList.csv", generated as explained above.
+                    leaf. Write the full tokens.
                     There must be a space before and after each square
                     bracket.
 
@@ -115,7 +108,7 @@ Usage:
 ``-likeplant [ <TOKEN> <TOKEN> <...> ]``:
                     works in a similar way as ``-likecreature``, this time
                     with plants. You can just List the plant species (the
-                    middle part of the token as listed in "MatList.csv").
+                    middle part of the token).
                     There must be a space before and after each square
                     bracket.
 
@@ -256,7 +249,7 @@ local preference_functions = {
     -- ---------------- LIKECREATURE ---------------- --
     LIKECREATURE = function(token)
         local creature_id
-        local parts = utils.split_string(token, ":")
+        local parts = token:split(":")
         if #parts == 1 then
             creature_id = parts[1]
         else
@@ -368,7 +361,7 @@ local preference_functions = {
     -- ---------------- HATECREATURE ---------------- --
     HATECREATURE = function(token)
         local creature_id
-        local parts = utils.split_string(token, ":")
+        local parts = token:split(":")
         if #parts == 1 then
             creature_id = parts[1]
         else
@@ -402,7 +395,7 @@ local preference_functions = {
     LIKEITEM = function(token)
         local item_type
         local item_subtype = -1
-        local parts = utils.split_string(token, ":")
+        local parts = token:split(":")
         if #parts == 1 then
             item_type = df.item_type[parts[1]]
         else
@@ -444,7 +437,7 @@ local preference_functions = {
     -- ---------------- LIKEPLANT ---------------- --
     LIKEPLANT = function(token)
         local plant_id
-        local parts = utils.split_string(token, ":")
+        local parts = token:split(":")
         if #parts == 1 then
             plant_id = parts[1]
         else
@@ -477,7 +470,7 @@ local preference_functions = {
     -- ---------------- LIKETREE ---------------- --
     LIKETREE = function(token)
         local plant_id
-        local parts = utils.split_string(token, ":")
+        local parts = token:split(":")
         if #parts == 1 then
             plant_id = parts[1]
         else
@@ -510,7 +503,7 @@ local preference_functions = {
     -- ---------------- LIKECOLOR ---------------- --
     LIKECOLOR = function(token)
         local color_name
-        local parts = utils.split_string(token, ":")
+        local parts = token:split(":")
         if #parts == 1 then
             color_name = parts[1]
         else
@@ -544,7 +537,7 @@ local preference_functions = {
     -- ---------------- LIKESHAPE ---------------- --
     LIKESHAPE = function(token)
         local shape_name
-        local parts = utils.split_string(token, ":")
+        local parts = token:split(":")
         if #parts == 1 then
             shape_name = parts[1]
         else

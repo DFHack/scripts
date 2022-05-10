@@ -6,8 +6,10 @@
 warn-starving
 =============
 If any (live) units are starving, very thirsty, or very drowsy, the game will
-be paused and a warning shown and logged to the console.  Use with the
-`repeat` command for regular checks.
+be paused and a warning shown and logged to the console. If you only want
+to be warned about sane dwarves, use ``warn-starving sane``.
+
+Use with the `repeat` command for regular checks.
 
 Use ``warn-starving all`` to display a list of all problematic units.
 
@@ -30,6 +32,11 @@ local units = df.global.world.units.active
 local args = utils.invert({...})
 if args.all or args.clear then
     clear()
+end
+
+local checkOnlySane = false
+if args.sane then
+    checkOnlySane = true
 end
 
 warning = defclass(warning, gui.FramedScreen)
@@ -121,9 +128,11 @@ function doCheck()
         local unit = units[i]
         local rraw = findRaceCaste(unit)
         if rraw and dfhack.units.isActive(unit) and not dfhack.units.isOpposedToLife(unit) then
-            table.insert(messages, checkVariable(unit.counters2.hunger_timer, 75000, 'starving', starvingUnits, unit))
-            table.insert(messages, checkVariable(unit.counters2.thirst_timer, 50000, 'dehydrated', dehydratedUnits, unit))
-            table.insert(messages, checkVariable(unit.counters2.sleepiness_timer, 150000, 'very drowsy', sleepyUnits, unit))
+            if not checkOnlySane or dfhack.units.isSane(unit) then
+                table.insert(messages, checkVariable(unit.counters2.hunger_timer, 75000, 'starving', starvingUnits, unit))
+                table.insert(messages, checkVariable(unit.counters2.thirst_timer, 50000, 'dehydrated', dehydratedUnits, unit))
+                table.insert(messages, checkVariable(unit.counters2.sleepiness_timer, 150000, 'very drowsy', sleepyUnits, unit))
+            end
         end
     end
     if #messages > 0 then

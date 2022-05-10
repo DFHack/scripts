@@ -19,9 +19,9 @@ elseif df.global.cursor.x ~= -30000 then
         new=df.fire,
         timer=1000,
         pos=curpos,
-        temperature=60000,
-        temp_unk1=60000,
-        temp_unk2=60000,
-        temp_unk3=60000,
+        inner_temp_cur=60000,
+        outer_temp_cur=60000,
+        inner_temp_max=60000,
+        outer_temp_max=60000,
     })
 end

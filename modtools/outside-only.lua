@@ -139,4 +139,3 @@ end
 registeredBuildings[args.building] = buildingType[args['type']]
 
 checkBuildings()
-

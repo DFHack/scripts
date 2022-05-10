@@ -53,7 +53,6 @@ Usage::
 ]====]
 
 local utils = require 'utils'
-local teleport = reqscript("teleport").teleport
 
 function getFeatureID(cavernType)
   local features = df.global.world.features
@@ -220,7 +219,7 @@ function moveEmbarkStuff(selectedBlock, embarkTiles)
   for i, unit in ipairs(unitsAtSpawn) do
     if unit.civ_id == df.global.ui.civ_id and not unit.flags1.inactive and not unit.flags2.killed then
       local pos = embarkTiles[math.random(1, #embarkTiles)]
-      teleport(unit, pos)
+      dfhack.units.teleport(unit, pos)
       reveal(pos)
       movedUnit = true
     end

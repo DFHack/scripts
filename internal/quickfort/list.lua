@@ -7,37 +7,46 @@ end
 
 local utils = require('utils')
 local xlsxreader = require('plugins.xlsxreader')
-local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_parse = reqscript('internal/quickfort/parse')
+local quickfort_set = reqscript('internal/quickfort/set')
+
+-- blueprint_name is relative to the blueprints dir
+function get_blueprint_filepath(blueprint_name)
+    return string.format("%s/%s",
+                         quickfort_set.get_setting('blueprints_dir'),
+                         blueprint_name)
+end
 
 local blueprint_cache = {}
 
 local function scan_csv_blueprint(path)
-    local filepath = quickfort_common.get_blueprint_filepath(path)
+    local filepath = get_blueprint_filepath(path)
     local mtime = dfhack.filesystem.mtime(filepath)
     if not blueprint_cache[path] or blueprint_cache[path].mtime ~= mtime then
+        local modelines, aliases = quickfort_parse.get_metadata(filepath)
         blueprint_cache[path] =
-                {modelines=quickfort_parse.get_modelines(filepath), mtime=mtime}
+                {modelines=modelines, aliases=aliases, mtime=mtime}
     end
     if #blueprint_cache[path].modelines == 0 then
         print(string.format('skipping "%s": empty file', path))
     end
-    return blueprint_cache[path].modelines
+    return blueprint_cache[path].modelines, blueprint_cache[path].aliases
 end
 
 local function get_xlsx_file_sheet_infos(filepath)
-    local sheet_infos = {}
+    local sheet_infos = {aliases={}}
     local xlsx_file = xlsxreader.open_xlsx_file(filepath)
     if not xlsx_file then return sheet_infos end
     return dfhack.with_finalize(
         function() xlsxreader.close_xlsx_file(xlsx_file) end,
         function()
             for _, sheet_name in ipairs(xlsxreader.list_sheets(xlsx_file)) do
-                local modelines =
-                        quickfort_parse.get_modelines(filepath, sheet_name)
+                local modelines, aliases =
+                        quickfort_parse.get_metadata(filepath, sheet_name)
+                utils.assign(sheet_infos.aliases, aliases)
                 if #modelines > 0 then
-                    table.insert(sheet_infos,
-                                 {name=sheet_name, modelines=modelines})
+                    local metadata = {name=sheet_name, modelines=modelines}
+                    table.insert(sheet_infos, metadata)
                 end
             end
             return sheet_infos
@@ -46,7 +55,7 @@ local function get_xlsx_file_sheet_infos(filepath)
 end
 
 local function scan_xlsx_blueprint(path)
-    local filepath = quickfort_common.get_blueprint_filepath(path)
+    local filepath = get_blueprint_filepath(path)
     local mtime = dfhack.filesystem.mtime(filepath)
     if blueprint_cache[path] and blueprint_cache[path].mtime == mtime then
         return blueprint_cache[path].sheet_infos
@@ -59,46 +68,6 @@ local function scan_xlsx_blueprint(path)
     return sheet_infos
 end
 
-local blueprints = {}
-local num_library_blueprints = 0
-
-local function scan_blueprints()
-    local paths = dfhack.filesystem.listdir_recursive(
-        quickfort_common.settings['blueprints_dir'].value, nil, false)
-    blueprints = {}
-    local library_blueprints = {}
-    for _, v in ipairs(paths) do
-        local is_library = string.find(v.path, '^library/') ~= nil
-        local target_list = blueprints
-        if is_library then target_list = library_blueprints end
-        if not v.isdir and string.find(v.path:lower(), '[.]csv$') then
-            local modelines = scan_csv_blueprint(v.path)
-            for _,modeline in ipairs(modelines) do
-                table.insert(target_list,
-                        {path=v.path, modeline=modeline, is_library=is_library})
-            end
-        elseif not v.isdir and string.find(v.path:lower(), '[.]xlsx$') then
-            local sheet_infos = scan_xlsx_blueprint(v.path)
-            if #sheet_infos > 0 then
-                for _,sheet_info in ipairs(sheet_infos) do
-                    for _,modeline in ipairs(sheet_info.modelines) do
-                        table.insert(target_list,
-                                     {path=v.path,
-                                      sheet_name=sheet_info.name,
-                                      modeline=modeline,
-                                      is_library=is_library})
-                    end
-                end
-            end
-        end
-    end
-    -- tack library files on to the end so user files are contiguous
-    num_library_blueprints = #library_blueprints
-    for i=1, num_library_blueprints do
-        blueprints[#blueprints + 1] = library_blueprints[i]
-    end
-end
-
 local function get_section_name(sheet_name, label)
     if not sheet_name and not (label and label ~= "1") then return nil end
     local sheet_name_str, label_str = '', ''
@@ -107,18 +76,111 @@ local function get_section_name(sheet_name, label)
     return string.format('%s%s', sheet_name_str, label_str)
 end
 
-function get_blueprint_by_number(list_num)
-    if #blueprints == 0 then
-        scan_blueprints()
+-- normalize paths on windows
+local function normalize_path(path)
+    return path:gsub(package.config:sub(1,1), "/")
+end
+
+local function make_blueprint_modes_key(path, section_name)
+    return normalize_path(path) .. '//' .. (section_name or '')
+end
+
+local blueprints, blueprint_modes, file_scope_aliases = {}, {}, {}
+local num_library_blueprints = 0
+
+local function scan_blueprints()
+    local paths = dfhack.filesystem.listdir_recursive(
+        quickfort_set.get_setting('blueprints_dir'), nil, false)
+    blueprints, blueprint_modes, file_scope_aliases = {}, {}, {}
+    local library_blueprints = {}
+    for _, v in ipairs(paths) do
+        local is_library = string.find(v.path, '^library/') ~= nil
+        local target_list = blueprints
+        if is_library then target_list = library_blueprints end
+        local file_aliases = {}
+        if not v.isdir and string.find(v.path:lower(), '[.]csv$') then
+            local modelines, aliases = scan_csv_blueprint(v.path)
+            file_aliases = aliases
+            local first = true
+            for _,modeline in ipairs(modelines) do
+                table.insert(target_list,
+                        {path=v.path, modeline=modeline, is_library=is_library})
+                local key = make_blueprint_modes_key(
+                        v.path, get_section_name(nil, modeline.label))
+                blueprint_modes[key] = modeline.mode
+                if first then
+                    -- first blueprint is also accessible via blank name
+                    key = make_blueprint_modes_key(v.path)
+                    blueprint_modes[key] = modeline.mode
+                    first = false
+                end
+            end
+        elseif not v.isdir and string.find(v.path:lower(), '[.]xlsx$') then
+            local sheet_infos = scan_xlsx_blueprint(v.path)
+            file_aliases = sheet_infos.aliases
+            local first = true
+            if #sheet_infos > 0 then
+                for _,sheet_info in ipairs(sheet_infos) do
+                    local sheet_first = true
+                    for _,modeline in ipairs(sheet_info.modelines) do
+                        table.insert(target_list,
+                                     {path=v.path,
+                                      sheet_name=sheet_info.name,
+                                      modeline=modeline,
+                                      is_library=is_library})
+                        local key = make_blueprint_modes_key(
+                            v.path,
+                            get_section_name(sheet_info.name, modeline.label))
+                        blueprint_modes[key] = modeline.mode
+                        if first then
+                            -- first blueprint in first sheet is also accessible
+                            -- via blank name
+                            key = make_blueprint_modes_key(v.path)
+                            blueprint_modes[key] = modeline.mode
+                            first = false
+                        end
+                        if sheet_first then
+                            -- first blueprint in each sheet is also accessible
+                            -- via blank label
+                            key = make_blueprint_modes_key(
+                                    v.path, get_section_name(sheet_info.name))
+                            blueprint_modes[key] = modeline.mode
+                            sheet_first = false
+                        end
+                    end
+                end
+            end
+        end
+        file_scope_aliases[normalize_path(v.path)] = file_aliases
     end
+    -- tack library files on to the end so user files are contiguous
+    num_library_blueprints = #library_blueprints
+    for i=1, num_library_blueprints do
+        blueprints[#blueprints + 1] = library_blueprints[i]
+    end
+end
+
+function get_blueprint_by_number(list_num)
+    scan_blueprints()
     list_num = tonumber(list_num)
     local blueprint = blueprints[list_num]
     if not blueprint then
-        qerror(string.format('invalid list index: %d', list_num))
+        qerror(string.format('invalid list index: "%s"', tostring(list_num)))
     end
     local section_name =
             get_section_name(blueprint.sheet_name, blueprint.modeline.label)
-    return blueprint.path, section_name
+    return blueprint.path, section_name, blueprint.modeline.mode
+end
+
+function get_blueprint_mode(path, section_name)
+    scan_blueprints()
+    return blueprint_modes[make_blueprint_modes_key(path, section_name)]
+end
+
+-- returns the aliases that are scoped to the given file
+function get_aliases(path)
+    scan_blueprints()
+    return file_scope_aliases[normalize_path(path)]
 end
 
 -- returns a sequence of structured data to display. note that the id may not
@@ -141,7 +203,7 @@ function do_list_internal(show_library, show_hidden)
         for _,v in pairs(display_data) do
             if v then
                 -- order doesn't matter; we just need all the strings in there
-                search_key = string.format('%s %s', search_key, tostring(v))
+                search_key = ('%s %s'):format(search_key, v)
             end
         end
         display_data.search_key = search_key
@@ -151,34 +213,29 @@ function do_list_internal(show_library, show_hidden)
     return display_list
 end
 
-local valid_list_args = utils.invert({
-    'h',
-    '-hidden',
-    'l',
-    '-library',
-    'm',
-    '-mode',
-})
-
-function do_list(in_args)
-    local filter_string = nil
-    if #in_args > 0 and not in_args[1]:startswith('-') then
-        filter_string = table.remove(in_args, 1)
-    end
-    local args = utils.processArgs(in_args, valid_list_args)
-    local show_library = args['l'] ~= nil or args['-library'] ~= nil
-    local show_hidden = args['h'] ~= nil or args['-hidden'] ~= nil
-    local filter_mode = args['m'] or args['-mode']
-    if filter_mode and not quickfort_common.valid_modes[filter_mode] then
+function do_list(args)
+    local show_library, show_hidden, filter_mode = false, false, nil
+    local filter_strings = utils.processArgsGetopt(args, {
+            {'l', 'library', handler=function() show_library = true end},
+            {'h', 'hidden', handler=function() show_hidden = true end},
+            {'m', 'mode', hasArg=true,
+             handler=function(optarg) filter_mode = optarg end},
+        })
+    if filter_mode and not quickfort_parse.valid_modes[filter_mode] then
         qerror(string.format('invalid mode: "%s"', filter_mode))
     end
     local list = do_list_internal(show_library, show_hidden)
     local num_filtered = 0
     for _,v in ipairs(list) do
-        if (filter_string and not string.find(v.search_key, filter_string)) or
-                (filter_mode and v.mode ~= filter_mode) then
+        if filter_mode and v.mode ~= filter_mode then
             num_filtered = num_filtered + 1
             goto continue
+        end
+        for _,filter_string in ipairs(filter_strings) do
+            if not string.find(v.search_key, filter_string) then
+                num_filtered = num_filtered + 1
+                goto continue
+            end
         end
         local sheet_spec = ''
         if v.section_name then

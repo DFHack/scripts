@@ -61,6 +61,11 @@ local function address(name,base,field,...)
 
     value(name, addr)
 end
+local function vtable(name,class)
+    local addr = dfhack.internal.getVTable(class)
+    addr = addr - rdelta
+    value(name, addr)
+end
 
 
 -- List of actual values
@@ -124,7 +129,7 @@ address('historical_figures_vector',globals,'world','history','figures')
 address('world_site_type',df.world_site,'type')
 address('active_sites_vector',df.world_data,'active_site')
 address('gview',globals,'gview')
-value('viewscreen_setupdwarfgame_vtable',dfhack.internal.getVTable('viewscreen_setupdwarfgamest'))
+vtable('viewscreen_setupdwarfgame_vtable','viewscreen_setupdwarfgamest')
 
 header('offsets')
 address('word_table',df.language_translation,'words')

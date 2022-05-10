@@ -189,22 +189,6 @@ function isBlank(x)
     return not not x:find("^%s*$")
 end
 
---http://lua-users.org/wiki/StringRecipes  (removed indents since I am not using them)
-function wrap(str, limit)--, indent, indent1)
- --indent = indent or ""
- --indent1 = indent1 or indent
- local limit = limit or 72
- local here = 1 ---#indent1
- return str:gsub("(%s+)()(%S+)()",    --indent1..str:gsub(
-  function(sp, st, word, fi)
-  if fi-here > limit then
-   here = st -- - #indent
-   return "\n"..word --..indent..word
-  end
- end)
-end
-
-
 --------------------------------------------------
 ---------------------- Time ----------------------
 --------------------------------------------------
@@ -604,7 +588,7 @@ function UnitInfoViewer:onGetSelectedUnit()
  return self.ident.unit
 end
 function UnitInfoViewer:insert_chunk(str,pen)
- local lines = utils.split_string( wrap(str,self.frame_width) , NEWLINE )
+ local lines = str:wrap(self.frame_width):split(NEWLINE)
  for i = 1,#lines do
   table.insert(self.text,{text=lines[i],pen=pen})
   table.insert(self.text,NEWLINE)
@@ -738,7 +722,7 @@ end
 function UnitInfoViewer:chunk_BodySize()
  local i = self.ident
  local pat = i.unit.body.physical_attrs
- local blurb = i.pronoun..' appears to be about '..pat.STRENGTH.value..':'..pat.AGILITY.value..' cubic decimeters in size.'
+ local blurb = i.pronoun..' appears to be about ' .. i.unit.body.size_info.size_cur .. ' cubic decimeters in size.'
  self:insert_chunk(blurb,pens.LIGHTBLUE)
 end
 function UnitInfoViewer:chunk_Ghostly()
@@ -797,4 +781,3 @@ if dfhack.gui.getCurFocus() ~= 'dfhack/lua/'..UnitInfoViewer.focus_path then
   kan_viewscreen:show()
  end
 end
-

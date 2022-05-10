@@ -6,9 +6,12 @@ if not dfhack_flags.module then
 end
 
 local quickfort_common = reqscript('internal/quickfort/common')
+local quickfort_parse = reqscript('internal/quickfort/parse')
 
-function do_run(zlevel, grid, ctx)
-    local cells = quickfort_common.get_ordered_grid_cells(grid)
+local log = quickfort_common.log
+
+function do_run(_, grid, ctx)
+    local cells = quickfort_parse.get_ordered_grid_cells(grid)
     local lines = {}
     local prev_y = nil
     for _,cell in ipairs(cells) do

@@ -512,9 +512,6 @@ function SiegeEngine:onInput(keys)
     elseif keys.LEAVESCREEN_ALL then
         self:dismiss()
         self.no_select_building = true
-        guidm.clearCursorPos()
-        df.global.ui.main.mode = df.ui_sidebar_mode.Default
-        df.global.world.selected_building = nil
     end
 end
 
@@ -531,5 +528,4 @@ if building:getBuildStage() < building:getMaxBuildStage() then
     qerror("This engine is not completely built yet")
 end
 
-local list = SiegeEngine{ building = building }
-list:show()
+SiegeEngine{building=building}:show()

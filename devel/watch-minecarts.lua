@@ -81,4 +81,3 @@ if cmd == 'start' then
 elseif cmd == 'stop' then
     dfhack.timeout_active(timeout_id, nil)
 end
-

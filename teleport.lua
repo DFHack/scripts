@@ -29,23 +29,7 @@ Examples:
 ]====]
 
 function teleport(unit,pos)
- local oldOccupancy = dfhack.maps.getTileBlock(unit.pos).occupancy[unit.pos.x%16][unit.pos.y%16]
- local newOccupancy = dfhack.maps.getTileBlock(pos).occupancy[tonumber(pos.x)%16][tonumber(pos.y)%16]
- unit.pos.x = tonumber(pos.x)
- unit.pos.y = tonumber(pos.y)
- unit.pos.z = tonumber(pos.z)
- if unit.flags1.on_ground then
-  oldOccupancy.unit_grounded = false
-  newOccupancy.unit_grounded = true
- else
-  oldOccupancy.unit = false
-  if newOccupancy.unit then -- only 1 non-prone unit is normally allowed to occupy a tile
-   unit.flags1.on_ground = true
-   newOccupancy.unit_grounded = true
-  else
-   newOccupancy.unit = true
-  end
- end
+ dfhack.units.teleport(unit, pos)
 end
 
 local utils = require('utils')

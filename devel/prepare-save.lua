@@ -98,4 +98,3 @@ dfhack.persistent.save{
 -- Save
 
 dfhack.run_script('quicksave')
-

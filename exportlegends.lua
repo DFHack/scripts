@@ -403,7 +403,7 @@ function export_more_legends_xml()
         if idV.race >= 0 then file:write("\t\t<race>"..(df.global.world.raws.creatures.all[idV.race].creature_id):lower().."</race>\n") end
         if idV.race >= 0  and idV.caste >= 0 then file:write("\t\t<caste>"..(df.global.world.raws.creatures.all[idV.race].caste[idV.caste].caste_id):lower().."</caste>\n") end
         file:write("\t\t<birth_year>"..idV.birth_year.."</birth_year>\n")
-        file:write("\t\t<birth_second>"..idV.birth_year.."</birth_second>\n")
+        file:write("\t\t<birth_second>"..idV.birth_second.."</birth_second>\n")
         if idV.profession >= 0 then file:write("\t\t<profession>"..(df_enums.profession[idV.profession]):lower().."</profession>\n") end
         file:write("\t\t<entity_id>"..idV.entity_id.."</entity_id>\n")
         file:write("\t</identity>\n")

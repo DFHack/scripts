@@ -102,12 +102,6 @@ function paintStringCenter(pen, y, str)
     local cols, rows = dfhack.screen.getWindowSize()
     paintString(pen, math.floor((cols - #str) / 2), y, str)
 end
-function string:split(sep)
-    local sep, fields = sep or " ", {}
-    local pattern = string.format("([^%s]+)", sep)
-    self:gsub(pattern, function(c) fields[#fields+1] = c end)
-    return fields
-end
 
 load_screen = defclass(load_screen, gui.Screen)
 load_screen.focus_path = 'load_screen'
@@ -520,7 +514,7 @@ function mkscreen()
 end
 
 if initialized == nil then
-    local major_version = tonumber(dfhack.getDFVersion():split('.')[2])
+    local major_version = tonumber(dfhack.getDFVersion():split('.', true)[2])
     if not major_version or major_version < 40 then
         qerror('gui/load-screen only supports DF 0.40.xx and above')
     end

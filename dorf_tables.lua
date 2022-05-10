@@ -21,6 +21,9 @@ Arguments:
 
 Examples::
 
+    dorf_tables -list all
+    dorf_tables -list job_distributions
+    dorf_tables -list attrib_levels
     dorf_tables -list jobs
     dorf_tables -list professions
     dorf_tables -list types
@@ -33,6 +36,12 @@ job_distributions:
     Defines thresholds for each column of distributions. The columns must
     add up to the values in the thresholds row for that column.
     Every other row references an entry in 'jobs'
+
+attrib_levels:
+    Defines stat distributions, used for both physical and mental attributes.
+    Each level gives a probability of a dwarf randomly being assigned an
+    attribute level, and it provides a mean and standard deviation for the
+    attribute's value.
 
 jobs:
     Defines `dwarf-op`'s nameable jobs. This is preferable to taking every
@@ -72,8 +81,8 @@ types:
 
 To see a full list of built-in professions and jobs, you can run these commands::
 
-    devel/query -table df.profession -listkeys
-    devel/query -table df.job_skill -listkeys
+    devel/query -table df.profession
+    devel/query -table df.job_skill
 
 ]====]
 
@@ -89,32 +98,32 @@ end
 local O = 0
 --luacheck:global
 job_distributions = {
-    Thresholds      = { 7,  14, 21, 28, 30, 35, 42, 49, 56, 63, 70, 77, 80, 110, 120, 200, 770 }, --Don't touch unless you wanna recalculate the distributions,
-    _hauler         = { O,  1,  3,  3,  O,  3,  2,  O,  4,  1,  1,  4,  O,  10,  O,   20,  70;   cur = 0; max = nil },
-    _soldier        = { O,  1,  O,  O,  O,  1,  O,  1,  O,  1,  O,  O,  1,  4,   3,   10,  40;   cur = 0; max = nil },
-    Miner           = { 2,  1,  O,  O,  O,  1,  O,  O,  O,  O,  2,  O,  O,  O,   7,   5,   80;   cur = 0; max = nil },
-    Admin           = { 1,  O,  O,  1,  O,  O,  O,  O,  O,  O,  O,  O,  O,  1,   O,   2,   30;   cur = 0; max = nil },
-    General         = { O,  O,  O,  1,  O,  O,  O,  O,  O,  1,  O,  O,  O,  2,   O,   1,   30;   cur = 0; max = nil },
-    Doctor          = { O,  1,  O,  O,  O,  O,  O,  O,  O,  O,  O,  O,  1,  1,   O,   2,   30;   cur = 0; max = nil },
-    Architect       = { 1,  O,  O,  O,  O,  O,  1,  O,  O,  O,  O,  O,  O,  2,   O,   2,   20;   cur = 0; max = nil },
+    Thresholds      = {4,  9,  14, 21, 28, 30, 35, 42, 49, 56, 63, 70, 77, 80, 110, 120, 200, 770 }, --Don't touch unless you wanna recalculate the distributions,
+    _hauler         = {O,  O,  1,  3,  3,  O,  3,  2,  O,  4,  1,  1,  4,  O,  10,  O,   20,  70;   cur = 0; max = nil },
+    _soldier        = {O,  O,  1,  O,  O,  O,  1,  O,  1,  O,  1,  O,  O,  1,  4,   3,   10,  40;   cur = 0; max = nil },
+    Miner           = {2,  O,  1,  O,  O,  O,  1,  O,  O,  O,  O,  2,  O,  O,  O,   7,   5,   80;   cur = 0; max = nil },
+    Admin           = {1,  O,  O,  O,  1,  O,  O,  O,  O,  O,  O,  O,  O,  O,  1,   O,   2,   30;   cur = 0; max = nil },
+    General         = {O,  O,  O,  O,  1,  O,  O,  O,  O,  O,  1,  O,  O,  O,  2,   O,   1,   30;   cur = 0; max = nil },
+    Doctor          = {O,  O,  1,  O,  O,  O,  O,  O,  O,  O,  O,  O,  O,  1,  1,   O,   2,   30;   cur = 0; max = nil },
+    Architect       = {O,  1,  O,  O,  O,  O,  O,  1,  O,  O,  O,  O,  O,  O,  2,   O,   2,   20;   cur = 0; max = nil },
 
-    Farmer          = { 1,  O,  O,  O,  O,  O,  1,  O,  1,  1,  O,  O,  O,  2,   O,   2,   30;   cur = 0; max = nil },
-    Rancher         = { O,  1,  O,  O,  O,  O,  O,  O,  O,  1,  O,  O,  O,  O,   O,   2,   30;   cur = 0; max = nil },
-    Brewer          = { 1,  O,  O,  O,  O,  O,  O,  O,  O,  1,  O,  O,  O,  1,   O,   3,   30;   cur = 0; max = nil },
-    Woodworker      = { 1,  O,  O,  O,  O,  O,  O,  1,  O,  O,  O,  O,  O,  O,   O,   1,   50;   cur = 0; max = nil },
-    Stoneworker     = { O,  1,  O,  O,  O,  O,  O,  1,  O,  O,  2,  O,  O,  O,   O,   5,   50;   cur = 0; max = nil },
-    Smelter         = { O,  1,  O,  O,  O,  O,  1,  O,  O,  O,  O,  O,  O,  1,   O,   5,   80;   cur = 0; max = nil },
-    Blacksmith      = { O,  O,  1,  O,  O,  O,  O,  O,  O,  O,  O,  1,  O,  1,   O,   5,   50;   cur = 0; max = nil },
+    Farmer          = {1,  O,  O,  O,  O,  O,  O,  1,  O,  1,  1,  O,  O,  O,  2,   O,   2,   30;   cur = 0; max = nil },
+    Rancher         = {O,  O,  1,  O,  O,  O,  O,  O,  O,  O,  1,  O,  O,  O,  O,   O,   2,   30;   cur = 0; max = nil },
+    Brewer          = {O,  1,  O,  O,  O,  O,  O,  O,  O,  O,  1,  O,  O,  O,  1,   O,   3,   30;   cur = 0; max = nil },
+    Woodworker      = {O,  O,  O,  O,  O,  O,  O,  O,  1,  O,  O,  O,  O,  O,  O,   O,   1,   50;   cur = 0; max = nil },
+    Stoneworker     = {O,  O,  1,  O,  O,  O,  O,  O,  1,  O,  O,  2,  O,  O,  O,   O,   5,   50;   cur = 0; max = nil },
+    Smelter         = {O,  O,  1,  O,  O,  O,  O,  1,  O,  O,  O,  O,  O,  O,  1,   O,   5,   80;   cur = 0; max = nil },
+    Blacksmith      = {O,  O,  O,  1,  O,  O,  O,  O,  O,  O,  O,  O,  1,  O,  1,   O,   5,   50;   cur = 0; max = nil },
 
-    Artison         = { O,  O,  O,  1,  O,  O,  O,  2,  O,  O,  2,  2,  O,  3,   O,   2,   40;   cur = 0; max = nil },
-    Jeweler         = { O,  O,  O,  O,  1,  O,  O,  1,  O,  O,  O,  O,  O,  1,   O,   2,   30;   cur = 0; max = nil },
-    Textileworker   = { O,  O,  O,  O,  1,  O,  1,  O,  O,  O,  O,  O,  O,  O,   O,   5,   20;   cur = 0; max = nil },
+    Artison         = {O,  O,  O,  O,  1,  O,  O,  O,  2,  O,  O,  2,  2,  O,  3,   O,   2,   40;   cur = 0; max = nil },
+    Jeweler         = {O,  O,  O,  O,  O,  1,  O,  O,  1,  O,  O,  O,  O,  O,  1,   O,   2,   30;   cur = 0; max = nil },
+    Textileworker   = {O,  O,  O,  O,  O,  1,  O,  1,  O,  O,  O,  O,  O,  O,  O,   O,   5,   20;   cur = 0; max = nil },
 
-    Hunter          = { O,  O,  1,  O,  O,  O,  O,  O,  1,  O,  O,  O,  O,  O,   O,   2,   20;   cur = 0; max = nil },
-    Fisher          = { O,  O,  1,  O,  O,  O,  1,  O,  1,  O,  O,  O,  O,  O,   O,   1,   20;   cur = 0; max = nil },
-    Butcher         = { O,  O,  1,  O,  O,  O,  O,  O,  O,  O,  O,  O,  O,  O,   O,   2,   20;   cur = 0; max = nil },
+    Hunter          = {O,  1,  O,  1,  O,  O,  O,  O,  O,  1,  O,  O,  O,  O,  O,   O,   2,   20;   cur = 0; max = nil },
+    Fisher          = {O,  1,  O,  1,  O,  O,  O,  1,  O,  1,  O,  O,  O,  O,  O,   O,   1,   20;   cur = 0; max = nil },
+    Butcher         = {O,  1,  O,  1,  O,  O,  O,  O,  O,  O,  O,  O,  O,  O,  O,   O,   2,   20;   cur = 0; max = nil },
 
-    Engineer        = { O,  O,  O,  1,  O,  O,  O,  1,  O,  1,  O,  O,  1,  1,   O,   1,   30;   cur = 0; max = nil }
+    Engineer        = {O,  O,  O,  O,  1,  O,  O,  O,  1,  O,  1,  O,  O,  1,  1,   O,   1,   30;   cur = 0; max = nil }
 }
 --[[
 Stat Rolling:
@@ -178,8 +187,8 @@ jobs = {
         STANDARD=1.0, RECRUIT=0.5,
         types={'strong6','strong5','fast3','spaceaware3','soldier','fighter','social','social'}},
     Miner = {
-        req={'MINER'}, max={1},
-        BREWER=0.2, STONEWORKER=0.12, ENGRAVER=0.333,
+        req={'MINER'}, max={2},
+        BREWER=0.35, STONEWORKER=0.42, ENGRAVER=0.51, FISHER=0.41,
         types={'spaceaware3','strong3','fast3','resilient2','social'}},
     Admin = {
         req={'ADMINISTRATOR'}, max={4},
@@ -476,20 +485,21 @@ types = {
         skills  = {DISCIPLINE={7,14},SITUATIONAL_AWARENESS={5,10},MELEE_COMBAT={4,6},RANGED_COMBAT={4,6},ARMOR={4,6},HAMMER={4,6},CROSSBOW={4,6},COORDINATION={4,6},BALANCE={4,6},MILITARY_TACTICS={5,8}}}
 }
 
-function ListFields(t)
-    for k,_ in pairs(t) do
-        print("  " .. tostring(k))
-    end
-end
-
 if args.list then
-    if args.list == "jobs" then
-        ListFields(jobs)
+    if args.list == "all" then
+        dfhack.run_command("devel/query -1 -alignto 38 -script dorf_tables -nopointers")
+    elseif args.list == "job_distributions" then
+        dfhack.run_command("devel/query -1 -alignto 21 -script dorf_tables -getfield job_distributions -nopointers")
+    elseif args.list == "attrib_levels" then
+        dfhack.run_command("devel/query -1 -alignto 21 -script dorf_tables -getfield attrib_levels -nopointers")
+    elseif args.list == "jobs" then
+        dfhack.run_command("devel/query -1 -alignto 18 -script dorf_tables -getfield jobs -nopointers")
     elseif args.list == "professions" then
-        ListFields(professions)
+        dfhack.run_command("devel/query -1 -alignto 28 -script dorf_tables -getfield professions -nopointers")
     elseif args.list == "types" then
-        ListFields(types)
+        dfhack.run_command("devel/query -1 -alignto 38 -script dorf_tables -getfield types -nopointers")
     else
-        print("invalid argument provided. valid arguments: 'jobs','professions','types'")
+        error("Invalid argument provided.")
     end
+    print("Read " .. dfhack.getDFPath() .. "/hack/scripts/dorf_tables.lua\nfor a clearer understanding, and better formatting.")
 end

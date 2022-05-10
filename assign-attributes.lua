@@ -117,12 +117,12 @@ local function generate_medians_table(race)
         assert(creature ~= nil)
         for _, raw in ipairs(creature.raws) do
             if string.match(raw.value, "PHYS_ATT_RANGE") then
-                local token_parts = utils.split_string(raw.value, ":")
+                local token_parts = raw.value:split(":")
                 --     part 1         *2*    3   4   5   *6*   7    8    9
                 -- [PHYS_ATT_RANGE:STRENGTH:450:950:1150:1250:1350:1550:2250]
                 medians.PHYSICAL[token_parts[2]] = tonumber(token_parts[6])
             elseif string.match(raw.value, "MENT_ATT_RANGE") then
-                local token_parts = utils.split_string(raw.value, ":")
+                local token_parts = raw.value:split(":")
                 --     part 1         *2*    3   4   5   *6*   7    8    9
                 -- [MENT_ATT_RANGE:PATIENCE:450:950:1150:1250:1350:1550:2250]
                 medians.MENTAL[token_parts[2]] = tonumber(token_parts[6])

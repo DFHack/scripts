@@ -24,24 +24,18 @@ UnitPathUI.ATTRS {
     unit = default_nil_unit,
     has_path = false,
     has_goal = false,
+    sidebar_mode=df.ui_sidebar_mode.LookAround,
 }
 
 function UnitPathUI:init()
-    self.saved_mode = df.global.ui.main.mode
     if self.unit then
         self.has_path = #self.unit.path.path.x > 0
         self.has_goal = self.unit.path.dest.x >= 0
     end
 end
 
-function UnitPathUI:onShow()
-    -- with cursor, but without those ugly lines from native hauling mode
-    df.global.ui.main.mode = df.ui_sidebar_mode.Stockpiles
-end
-
 function UnitPathUI:onDestroy()
     self:moveCursorTo(copyall(self.unit.pos))
-    df.global.ui.main.mode = self.saved_mode
 end
 
 local function getTileType(cursor)
@@ -221,7 +215,7 @@ end
 local unit = dfhack.gui.getSelectedUnit(true)
 
 if not unit or not string.match(dfhack.gui.getCurFocus(), '^dwarfmode/ViewUnits/Some/') then
-    qerror("This script requires the main dwarfmode view in 'v' mode with a unit selected")
+    qerror("This script requires 'v' mode with a unit selected")
 end
 
 UnitPathUI{ unit = unit }:show()

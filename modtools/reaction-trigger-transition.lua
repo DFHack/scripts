@@ -132,5 +132,3 @@ file:flush()
 io.close(file)
 --io.output()
 print('transition information written to reaction-trigger-transition.txt')
-
-

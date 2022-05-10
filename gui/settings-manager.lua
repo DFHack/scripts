@@ -32,7 +32,7 @@ function dup_table(tbl)
 end
 
 function set_variable(name, value)
-    local parts = name:split('.')
+    local parts = name:split('.', true)
     local last_field = table.remove(parts, #parts)
     parent = _G
     for _, field in pairs(parts) do

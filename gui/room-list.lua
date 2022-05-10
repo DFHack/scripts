@@ -242,5 +242,5 @@ elseif string.match(dfhack.gui.getCurFocus(), '^dwarfmode/QueryBuilding/Some') t
     local base = df.global.world.selected_building
     RoomList{ unit = base.owner }:show()
 else
-    qerror("This script requires the main dwarfmode view in 'q' mode")
+    qerror("This script requires 'q' mode")
 end

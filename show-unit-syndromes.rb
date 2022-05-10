@@ -837,7 +837,7 @@ def get_effect(logger, ce, ticks, showdisplayeffects)
   when "BODY_MAT_INTERACTION"
     # interactionId, SundromeTriggerType
     name = "Body material interaction"
-    desc = "a???=#{ce.unk_6c}, b???=#{ce.unk_88}, c???=#{ce.unk_8c}, d???=#{ce.unk_90}, e???=#{ce.unk_94}"
+    desc = "a???=#{ce.interaction_name}, b???=#{ce.interaction_id}, c???=#{ce.unk_8c}, d???=#{ce.unk_90}, e???=#{ce.unk_94}"
     color = Output::DEFAULT
   when "BODY_APPEARANCE_MODIFIER"
     if !showdisplayeffects then return "", Output::DEFAULT end

@@ -124,4 +124,3 @@ end
 
 productHooks[args.reactionName] = productHooks[args.reactionName] or {}
 table.insert(productHooks[args.reactionName], args)
-

@@ -34,4 +34,10 @@ end
 dfhack.color(COLOR_RESET)
 dfhack.print('\n\n')
 
+print(('Press %s or %s in the DF window to continue...'):format(gui.getKeyDisplay('SELECT'), gui.getKeyDisplay('LEAVESCREEN')))
+local instructions = {NEWLINE, NEWLINE, 'Press ', {key = 'SELECT'}, ' or ', {key = 'LEAVESCREEN'}, ' to continue.'}
+for _, v in ipairs(instructions) do
+    table.insert(message, v)
+end
+
 dlg.showMessage('DFHack is not configured', message, COLOR_YELLOW)

@@ -464,9 +464,9 @@ local function create_orders(orders)
                     condition.has_tool_use = tmp
                 end
 
-                condition.anon_1 = -1
-                -- condition.anon_2 = ?
-                condition.anon_3 = -1
+                condition.min_dimension = -1
+                -- condition.contains = ?
+                condition.reaction_id = -1
 
                 order.item_conditions:insert('#', condition)
                 end)

@@ -1,109 +1,109 @@
--- query-related logic for the quickfort script
+-- query mode-related logic for the quickfort script
 --@ module = true
 
 if not dfhack_flags.module then
     qerror('this script cannot be called directly')
 end
 
-local gui = require('gui')
+local guidm = require('gui.dwarfmode')
+local utils = require('utils')
 local quickfort_common = reqscript('internal/quickfort/common')
+local quickfort_config = reqscript('internal/quickfort/config')
+local quickfort_map = reqscript('internal/quickfort/map')
+local quickfort_set = reqscript('internal/quickfort/set')
+
 local log = quickfort_common.log
-local quickfort_aliases = reqscript('internal/quickfort/aliases')
-local quickfort_keycodes = reqscript('internal/quickfort/keycodes')
-
-local common_aliases_filename = 'hack/data/quickfort/aliases-common.txt'
-local user_aliases_filename = 'dfhack-config/quickfort/aliases.txt'
-
-local function load_aliases()
-    -- ensure we're starting from a clean alias stack, even if the previous
-    -- invocation of this function returned early with an error
-    quickfort_aliases.reset_aliases()
-    quickfort_aliases.push_aliases_csv_file(common_aliases_filename)
-    quickfort_aliases.push_aliases_csv_file(user_aliases_filename)
-end
 
 local function is_queryable_tile(pos)
     local flags, occupancy = dfhack.maps.getTileFlags(pos)
+    if not flags then return false end
     return not flags.hidden and
         (occupancy.building ~= 0 or
          dfhack.buildings.findCivzonesAt(pos))
 end
 
-local function handle_modifiers(token, modifiers)
-    local token_lower = token:lower()
-    if token_lower == 'shift' or
-            token_lower == 'ctrl' or
-            token_lower == 'alt' then
-        modifiers[token_lower] = true
-        return true
+local function query_pre_tile_fn(ctx, tile_ctx)
+    local pos = tile_ctx.pos
+    if not quickfort_set.get_setting('query_unsafe') and
+            not is_queryable_tile(pos) then
+        if not ctx.quiet then
+            dfhack.printerr(string.format(
+                    'no building at coordinates (%d, %d, %d); skipping ' ..
+                    'text in spreadsheet cell %s: "%s"',
+                    pos.x, pos.y, pos.z, tile_ctx.cell, tile_ctx.text))
+        end
+        ctx.stats.query_skipped_tiles.value =
+                ctx.stats.query_skipped_tiles.value + 1
+        return false
     end
-    if token_lower == 'wait' then
-        print('{Wait} not yet implemented')
-        return true
+    if not ctx.dry_run then
+        quickfort_map.move_cursor(pos)
+        tile_ctx.focus_string = dfhack.gui.getCurFocus(true)
     end
-    return false
+    log('applying spreadsheet cell %s with text "%s" to map ' ..
+        'coordinates (%d, %d, %d)',
+        tile_ctx.cell, tile_ctx.text, pos.x, pos.y, pos.z)
+    return true
+end
+
+-- If a tile starts or ends with one of these focus strings, the start and end
+-- focus strings can differ without us flagging it as an error.
+local exempt_focus_strings = utils.invert({
+    'dwarfmode/QueryBuilding/Destroying',
+    })
+
+local function query_post_tile_fn(ctx, tile_ctx)
+    ctx.stats.query_tiles.value = ctx.stats.query_tiles.value + 1
+    if ctx.dry_run or quickfort_set.get_setting('query_unsafe') then
+        return
+    end
+    local pos, focus_string = tile_ctx.pos, tile_ctx.focus_string
+    local cursor = guidm.getCursorPos()
+    if not cursor then
+        qerror(string.format(
+            'expected to be at cursor position (%d, %d, %d) on ' ..
+            'screen "%s" but there is no active cursor; there ' ..
+            'is likely a problem with the blueprint text in ' ..
+            'cell %s: "%s" (do you need a "q" at the end to get ' ..
+            'back into query mode?)',
+            pos.x, pos.y, pos.z, focus_string, tile_ctx.cell, tile_ctx.text))
+    elseif not same_xyz(pos, cursor) then
+        qerror(string.format(
+            'expected to be at cursor position (%d, %d, %d) on ' ..
+            'screen "%s" but cursor is at (%d, %d, %d); there ' ..
+            'is likely a problem with the blueprint text in ' ..
+            'cell %s: "%s"', pos.x, pos.y, pos.z, focus_string,
+            cursor.x, cursor.y, cursor.z, tile_ctx.cell, tile_ctx.text))
+    end
+    local new_focus_string = dfhack.gui.getCurFocus(true)
+    local is_exempt = exempt_focus_strings[focus_string] or
+            exempt_focus_strings[new_focus_string]
+    if not is_exempt and focus_string ~= new_focus_string then
+        qerror(string.format(
+            'expected to be at cursor position (%d, %d, %d) on ' ..
+            'screen "%s" but screen is "%s"; there is likely a ' ..
+            'problem with the blueprint text in cell %s: "%s" ' ..
+            '(do you need a "^" at the end to escape back to ' ..
+            'the map screen?)', pos.x, pos.y, pos.z, focus_string,
+            new_focus_string, tile_ctx.cell, tile_ctx.text))
+    end
+end
+
+local function query_post_blueprint_fn(ctx)
+    quickfort_map.move_cursor(ctx.cursor)
 end
 
 function do_run(zlevel, grid, ctx)
     local stats = ctx.stats
-    stats.query_keystrokes = stats.query_keystrokes or
-            {label='Keystrokes sent', value=0, always=true}
-    stats.query_tiles = stats.query_tiles or
-            {label='Tiles modified', value=0}
+    stats.query_tiles = stats.query_tiles or {label='Tiles configured', value=0}
+    stats.query_skipped_tiles = stats.query_skipped_tiles
+            or {label='Tiles not configured due to missing buildings', value=0}
 
-    load_aliases()
-
-    local saved_mode = df.global.ui.main.mode
-    df.global.ui.main.mode = df.ui_sidebar_mode.QueryBuilding
-
-    for y, row in pairs(grid) do
-        for x, cell_and_text in pairs(row) do
-            local pos = xyz2pos(x, y, zlevel)
-            local cell, text = cell_and_text.cell, cell_and_text.text
-            if not quickfort_common.settings['query_unsafe'].value and
-                    not is_queryable_tile(pos) then
-                print(string.format(
-                        'no building at coordinates (%d, %d, %d); skipping ' ..
-                        'text in spreadsheet cell %s: "%s"',
-                        pos.x, pos.y, pos.z, cell, text))
-                goto continue
-            end
-            log('applying spreadsheet cell %s with text "%s" to map ' ..
-                'coordinates (%d, %d, %d)', cell, text, pos.x, pos.y, pos.z)
-            local tokens = quickfort_aliases.expand_aliases(text)
-            quickfort_common.move_cursor(pos)
-            local focus_string =
-                    dfhack.gui.getFocusString(dfhack.gui.getCurViewscreen(true))
-            local modifiers = {} -- tracks ctrl, shift, and alt modifiers
-            for _,token in ipairs(tokens) do
-                if handle_modifiers(token, modifiers) then goto continue end
-                local kcodes = quickfort_keycodes.get_keycodes(token, modifiers)
-                if not kcodes then
-                    qerror(string.format(
-                            'unknown alias or keycode: "%s"', token))
-                end
-                gui.simulateInput(dfhack.gui.getCurViewscreen(true), kcodes)
-                modifiers = {}
-                stats.query_keystrokes.value = stats.query_keystrokes.value + 1
-                ::continue::
-            end
-            local new_focus_string =
-                    dfhack.gui.getFocusString(dfhack.gui.getCurViewscreen(true))
-            if not quickfort_common.settings['query_unsafe'].value and
-                    focus_string ~= new_focus_string then
-                qerror(string.format(
-                    'expected to be back on screen "%s" but screen is "%s"; ' ..
-                    'there is likely a problem with the blueprint text in ' ..
-                    'cell %s: "%s" (do you need a "^" at the end?)',
-                    focus_string, new_focus_string, cell, text))
-            end
-            stats.query_tiles.value = stats.query_tiles.value + 1
-            ::continue::
-        end
-    end
-
-    df.global.ui.main.mode = saved_mode
-    quickfort_common.move_cursor(ctx.cursor)
+    quickfort_config.do_query_config_blueprint(zlevel, grid, ctx,
+                                               df.ui_sidebar_mode.QueryBuilding,
+                                               query_pre_tile_fn,
+                                               query_post_tile_fn,
+                                               query_post_blueprint_fn)
 end
 
 function do_orders()

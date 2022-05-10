@@ -89,4 +89,3 @@ if civ then
 end
 
 df.global.timed_events:insert('#', timedEvent)
-

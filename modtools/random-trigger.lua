@@ -196,5 +196,3 @@ outcome.weight = weight
 outcome.command = args.command
 outcomeList.outcomes = outcomeList.outcomes or {}
 table.insert(outcomeList.outcomes, outcome)
-
-

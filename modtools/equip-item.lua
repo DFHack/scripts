@@ -97,4 +97,3 @@ local mode = args.mode
 mode = df.unit_inventory_item.T_mode[mode] --luacheck: retype
 
 equipItem(unit, item, partId, mode)
-

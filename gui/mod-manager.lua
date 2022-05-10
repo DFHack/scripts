@@ -247,7 +247,7 @@ function manager:formDescription()
     if self.selected.description then
         return self.selected.description
         --[[
-        local str=require('utils').split_string(self.selected.description,"\n")
+        local str=self.selected.description:split("\n")
         for _,s in ipairs(str) do
             table.insert(ret,{text=s})
             table.insert(ret,NEWLINE)

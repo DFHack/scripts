@@ -115,8 +115,9 @@ end
 local function listdir(path)
     local paths = dfhack.filesystem.listdir_recursive(ROOT .. path)
     for _,v in ipairs(paths) do
-        local b, e = string.find(v.path, ROOT)
-        v.path = string.sub(v.path, e + 1)
+        if string.startswith(v.path, ROOT) then
+            v.path = string.sub(v.path, #ROOT + 1)
+        end
     end
     return paths
 end
@@ -785,7 +786,7 @@ function Parser:parse(args, result)
         self:_action(result, self._name)
         return result
     end
-    
+
     -- Options
     if arg:sub(1, 1) == "-" and self._options then
         local o = arg
@@ -809,7 +810,7 @@ function Parser:parse(args, result)
             end
         end
     end
-    
+
     -- Commands
     local c = arg
     if self._commands then

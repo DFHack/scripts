@@ -9,7 +9,9 @@ require('dfhack.buildings') -- loads additional functions into dfhack.buildings
 local utils = require('utils')
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_building = reqscript('internal/quickfort/building')
+local quickfort_map = reqscript('internal/quickfort/map')
 local quickfort_parse = reqscript('internal/quickfort/parse')
+
 local log = quickfort_common.log
 local logfn = quickfort_common.logfn
 
@@ -78,12 +80,15 @@ local hospital_max_values = {
     cloth=1000000,
     splints=100,
     crutches=100,
-    powder=15000,
+    plaster=15000,
     buckets=100,
     soap=15000
 }
 
 local function set_hospital_supplies(key, val, flags)
+    if not hospital_max_values[key] then
+        qerror(string.format('invalid hospital setting: "%s"', key))
+    end
     local val_num = tonumber(val)
     if not val_num or val_num < 0 or val_num > hospital_max_values[key] then
         qerror(string.format(
@@ -95,16 +100,13 @@ local function set_hospital_supplies(key, val, flags)
 end
 
 -- full format (all params optional):
--- {hospital thread=num cloth=num splints=num crutches=num powder=num buckets=num soap=num}
+-- {hospital thread=num cloth=num splints=num crutches=num plaster=num buckets=num soap=num}
 local function parse_hospital_subconfig(keys, flags)
     local etoken, params = quickfort_parse.parse_extended_token(keys)
     if etoken:lower() ~= 'hospital' then
         qerror(string.format('invalid hospital settings: "%s"', keys))
     end
     for k,v in pairs(params) do
-        if not hospital_max_values[k] then
-            qerror(string.format('invalid hospital setting: "%s"', k))
-        end
         set_hospital_supplies(k, v, flags)
     end
 end
@@ -145,7 +147,7 @@ local function custom_zone(_, keys)
     local zone_data = {zone_flags={}}
     -- subconfig sequences are separated by '^' characters
     for zone_config in keys:gmatch('[^^]+') do
-        parse_zone_config(keys, labels, zone_data)
+        parse_zone_config(zone_config, labels, zone_data)
     end
     zone_data.label = table.concat(labels, '+')
     utils.assign(zone_data, zone_template)
@@ -163,44 +165,48 @@ local function dump_flags(args)
     end
 end
 
-local function assign_flags(bld, db_entry, key)
+local function assign_flags(bld, db_entry, key, dry_run)
     local flags = db_entry[key]
     if flags then
         log('assigning %s:', key)
         logfn(dump_flags, flags)
-        utils.assign(bld[key], flags)
+        if not dry_run then utils.assign(bld[key], flags) end
     end
 end
 
-local function create_zone(zone)
+local function create_zone(zone, dry_run)
     local db_entry = zone_db[zone.type]
     log('creating %s zone at map coordinates (%d, %d, %d), defined' ..
         ' from spreadsheet cells: %s',
         db_entry.label, zone.pos.x, zone.pos.y, zone.pos.z,
         table.concat(zone.cells, ', '))
-    local fields = {room={x=zone.pos.x, y=zone.pos.y,
-                          width=zone.width, height=zone.height},
-                    is_room=true}
-    local bld, err = dfhack.buildings.constructBuilding{
-        type=df.building_type.Civzone, subtype=df.civzone_type.ActivityZone,
-        abstract=true, pos=zone.pos, width=zone.width, height=zone.height,
-        fields=fields}
-    if not bld then
-        -- this is an error instead of a qerror since our validity checking
-        -- is supposed to prevent this from ever happening
-        error(string.format('unable to designate zone: %s', err))
+    local extents, ntiles =
+            quickfort_building.make_extents(zone, dry_run)
+    local bld, err = nil, nil
+    if not dry_run then
+        local fields = {room={x=zone.pos.x, y=zone.pos.y, width=zone.width,
+                              height=zone.height, extents=extents},
+                        is_room=true}
+        bld, err = dfhack.buildings.constructBuilding{
+            type=df.building_type.Civzone, subtype=df.civzone_type.ActivityZone,
+            abstract=true, pos=zone.pos, width=zone.width, height=zone.height,
+            fields=fields}
+        if not bld then
+            -- this is an error instead of a qerror since our validity checking
+            -- is supposed to prevent this from ever happening
+            error(string.format('unable to designate zone: %s', err))
+        end
+        -- set defaults (should move into constructBuilding)
+        bld.zone_flags.active = true
+        bld.gather_flags.pick_trees = true
+        bld.gather_flags.pick_shrubs = true
+        bld.gather_flags.gather_fallen = true
     end
-    local extents, ntiles = quickfort_building.make_extents(zone, zone_db)
-    quickfort_building.assign_extents(bld, extents)
-    -- set defaults (should move into constructBuilding)
-    bld.gather_flags.pick_trees = true
-    bld.gather_flags.pick_shrubs = true
-    bld.gather_flags.gather_fallen = true
     -- set specified flags
-    assign_flags(bld, db_entry, 'zone_flags')
-    assign_flags(bld, db_entry, 'pit_flags')
-    assign_flags(bld, db_entry, 'gather_flags')
-    assign_flags(bld, db_entry, 'hospital')
+    assign_flags(bld, db_entry, 'zone_flags', dry_run)
+    assign_flags(bld, db_entry, 'pit_flags', dry_run)
+    assign_flags(bld, db_entry, 'gather_flags', dry_run)
+    assign_flags(bld, db_entry, 'hospital', dry_run)
     return ntiles
 end
 
@@ -216,23 +222,22 @@ function do_run(zlevel, grid, ctx)
     local zones = {}
     stats.invalid_keys.value =
             stats.invalid_keys.value + quickfort_building.init_buildings(
-                zlevel, grid, zones, zone_db)
+                ctx, zlevel, grid, zones, zone_db)
     stats.out_of_bounds.value =
             stats.out_of_bounds.value + quickfort_building.crop_to_bounds(
-                zones, zone_db)
+                ctx, zones, zone_db)
     stats.zone_occupied.value =
             stats.zone_occupied.value +
             quickfort_building.check_tiles_and_extents(
-                zones, zone_db)
+                ctx, zones, zone_db)
 
     for _,zone in ipairs(zones) do
         if zone.pos then
-            local ntiles = create_zone(zone)
+            local ntiles = create_zone(zone, ctx.dry_run)
             stats.zone_tiles.value = stats.zone_tiles.value + ntiles
             stats.zone_designated.value = stats.zone_designated.value + 1
         end
     end
-    dfhack.job.checkBuildingsNow()
 end
 
 function do_orders()
@@ -259,7 +264,7 @@ function do_undo(zlevel, grid, ctx)
     local zones = {}
     stats.invalid_keys.value =
             stats.invalid_keys.value + quickfort_building.init_buildings(
-                zlevel, grid, zones, zone_db)
+                ctx, zlevel, grid, zones, zone_db)
 
     -- ensure a zone is not currently selected when we delete it. that causes
     -- crashes. note that we move the cursor, but we have to keep the ui mode
@@ -267,8 +272,8 @@ function do_undo(zlevel, grid, ctx)
     -- move the cursor when we're in mode Zones to avoid having the viewport
     -- jump around when it doesn't need to
     local restore_cursor = false
-    if df.global.ui.main.mode == df.ui_sidebar_mode.Zones then
-        quickfort_common.move_cursor(xyz2pos(-1, -1, ctx.cursor.z))
+    if not dry_run and df.global.ui.main.mode == df.ui_sidebar_mode.Zones then
+        quickfort_map.move_cursor(xyz2pos(-1, -1, ctx.cursor.z))
         restore_cursor = true
     end
 
@@ -282,7 +287,9 @@ function do_undo(zlevel, grid, ctx)
                 for _,activity_zone in ipairs(activity_zones) do
                     log('removing zone at map coordinates (%d, %d, %d)',
                         pos.x, pos.y, pos.z)
-                    dfhack.buildings.deconstruct(activity_zone)
+                    if not dry_run then
+                        dfhack.buildings.deconstruct(activity_zone)
+                    end
                     stats.zone_removed.value = stats.zone_removed.value + 1
                 end
                 ::continue::
@@ -290,5 +297,5 @@ function do_undo(zlevel, grid, ctx)
         end
     end
 
-    if restore_cursor then quickfort_common.move_cursor(ctx.cursor) end
+    if restore_cursor then quickfort_map.move_cursor(ctx.cursor) end
 end

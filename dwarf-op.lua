@@ -520,11 +520,8 @@ function GenerateStatValue(stat, atr_lvl)
 end
 
 function LoopStatsTable(statsTable, callback)
-    local ok,f,t,k = pcall(pairs,statsTable)
-    if ok then
-        for k,v in f,t,k do
-            callback(v)
-        end
+    for k, v in safe_pairs(statsTable) do
+        callback(v)
     end
 end
 

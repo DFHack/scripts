@@ -3,9 +3,17 @@
 
 questport
 =========
-Sends your adventurer to the location of your quest log map cursor.
-Usable from travel mode or on foot.
-Can be used in situations where fast travel is normally prohibited.
+Teleports your adventurer to the location of your quest log map cursor.
+
+Use by opening the quest log map and moving the cursor to your target location
+before running the script. Note that this can be done both within and outside of
+fast travel mode, and that it is possible to questport in situations where
+fast travel is normally prohibited.
+
+It is currently not possible to questport into inaccessible locations like
+ocean and mountain tiles.
+
+See `reveal-adv-map` if you wish to teleport into hidden map tiles.
 
 ]====]
 
@@ -31,9 +39,9 @@ local advScreen = dfhack.gui.getViewscreenByType(df.viewscreen_dungeonmodest, 0)
 local questMap = dfhack.gui.getViewscreenByType(df.viewscreen_adventure_logst, 0)
     or qerror("You must first select your destination on the quest log map!")
 
-local target_x = questMap.cursor_x
-local target_y = questMap.cursor_y
-if questMap.player_region_x == target_x and questMap.player_region_y == target_y then
+local target_x = questMap.cursor.x
+local target_y = questMap.cursor.y
+if questMap.player_region.x == target_x and questMap.player_region.y == target_y then
     qerror("You already seem to be at the target location!")
 end
 
@@ -50,17 +58,11 @@ if advmode.menu == df.ui_advmode_menu.Default then
 
 elseif advmode.menu == df.ui_advmode_menu.Travel then
     if not advmode.travel_not_moved then -- player is already moving in fast travel mode; just relocate the player army
-        local armies = df.global.world.armies.all
-        for i = #armies-1, 0, -1 do
-            local army = armies[i]
-            if army.flags.player then
-                army.pos.x = target_x
-                army.pos.y = target_y
-                gui.simulateInput(advScreen.child, 'LEAVESCREEN') -- close map
-                gui.simulateInput(advScreen.child, 'LEAVESCREEN') -- close log
-                break -- there's never more than 1 player army
-            end
-        end
+        local army = df.army.find(advmode.player_army_id)
+        army.pos.x = target_x
+        army.pos.y = target_y
+        gui.simulateInput(advScreen.child, 'LEAVESCREEN') -- close map
+        gui.simulateInput(advScreen.child, 'LEAVESCREEN') -- close log
     else -- player has opened travel mode but hasn't moved yet, so the player army hasn't been created
         processTravelNoArmy(advmode, advScreen, target_x, target_y)
     end

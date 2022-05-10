@@ -101,7 +101,7 @@ local function process_filter(order_specs, filter, reactions)
         label = 'iron spear'
     end
     if not label then
-        print('unhandled filter:')
+        dfhack.printerr('unhandled filter:')
         printall_recurse(filter)
         error('quickfort out of sync with DFHack filters; please file a bug')
     end
@@ -123,17 +123,25 @@ function create_orders(ctx)
     for k,order_spec in pairs(ctx.order_specs or {}) do
         local quantity = math.ceil(order_spec.quantity)
         log('ordering %d %s', quantity, k)
-        stockflow.create_orders(order_spec.order, quantity)
-        table.insert(ctx.stats, {label=k, value=quantity})
+        if not ctx.dry_run then
+            stockflow.create_orders(order_spec.order, quantity)
+        end
+        table.insert(ctx.stats, {label=k, value=quantity, is_order=true})
     end
 end
 
--- ensure we don't reinit this; it contains allocated memory
-reactions = reactions or stockflow.collect_reactions()
+-- we only need to init this once, even if a new save is loaded, since we only
+-- care about the built-in reactions, not the mod-added ones.
+-- note that we also shouldn't reinit this because it contains allocated memory
+local function get_reactions()
+    g_reactions = g_reactions or stockflow.collect_reactions()
+    return g_reactions
+end
 
-function enqueue_orders(stats, buildings, building_db, ctx)
+function enqueue_building_orders(buildings, building_db, ctx)
     local order_specs = ctx.order_specs or {}
     ctx.order_specs = order_specs
+    local reactions = get_reactions()
     for _, b in ipairs(buildings) do
         local db_entry = building_db[b.type]
         log('processing %s, defined from spreadsheet cell(s): %s',
@@ -150,7 +158,7 @@ function enqueue_orders(stats, buildings, building_db, ctx)
             for _,label in ipairs(db_entry.additional_orders) do
                 local quantity = 1
                 if additional_order == df.item_type.BLOCKS then
-                    quantity = 1 /4
+                    quantity = 1 / 4
                 end
                 inc_order_spec(order_specs, quantity, reactions, label)
             end
@@ -164,5 +172,21 @@ function enqueue_orders(stats, buildings, building_db, ctx)
             end
             process_filter(order_specs, filter, reactions)
         end
+    end
+end
+
+function enqueue_container_orders(ctx, num_bins, num_barrels, num_wheelbarrows)
+    local order_specs = ctx.order_specs or {}
+    ctx.order_specs = order_specs
+    local reactions = get_reactions()
+    if num_bins and num_bins > 0 then
+        inc_order_spec(order_specs, num_bins, reactions, "wooden bin")
+    end
+    if num_barrels and num_barrels > 0 then
+        inc_order_spec(order_specs, num_barrels, reactions, "rock pot")
+    end
+    if num_wheelbarrows and num_wheelbarrows > 0 then
+        inc_order_spec(
+            order_specs, num_wheelbarrows, reactions, "wooden wheelbarrow")
     end
 end

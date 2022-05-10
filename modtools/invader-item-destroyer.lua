@@ -184,4 +184,3 @@ if args.entity then
  end
  entities[args.entity] = true
 end
-

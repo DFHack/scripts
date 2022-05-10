@@ -47,7 +47,7 @@ log_version('Is map loaded', 'isMapLoaded')
 function log_command(cmd)
     log('\nOutput of "' .. cmd .. '":')
     local output = select(1, dfhack.run_command_silent(cmd))
-    for _, line in pairs(utils.split_string(output, '\n')) do
+    for _, line in pairs(output:split('\n')) do
         log('    ' .. line)
     end
 end

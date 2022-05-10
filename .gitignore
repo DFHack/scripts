@@ -1,0 +1,13 @@
+# kdevelop
+*.kdev4
+.kdev4
+
+# vim files
+*.swp
+.vimrc
+
+# VSCode files
+.vscode
+
+# CLion
+.idea

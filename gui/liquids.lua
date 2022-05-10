@@ -109,6 +109,10 @@ end
 
 LiquidsUI = defclass(LiquidsUI, guidm.MenuOverlay)
 
+LiquidsUI.ATTRS = {
+    sidebar_mode=df.ui_sidebar_mode.LookAround,
+}
+
 LiquidsUI.focus_path = 'liquids'
 
 function LiquidsUI:init()
@@ -325,9 +329,8 @@ function LiquidsUI:onInput(keys)
     end
 end
 
-if not string.match(dfhack.gui.getCurFocus(), '^dwarfmode/LookAround') then
-    qerror("This script requires the main dwarfmode view in 'k' mode")
+if not dfhack.isMapLoaded() then
+    qerror("This script requires a fortress map to be loaded")
 end
 
-local list = LiquidsUI()
-list:show()
+LiquidsUI{}:show()

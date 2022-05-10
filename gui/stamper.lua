@@ -22,19 +22,11 @@ StamperUI.ATTRS {
     offsetDirection=0,
     cull=true,
     blink=false,
-    option="normal"
+    option="normal",
+    sidebar_mode=df.ui_sidebar_mode.LookAround,
 }
 
 local digSymbols={" ", "X", "_", 30, ">", "<"}
-
-function StamperUI:init()
-    self.saved_mode = df.global.ui.main.mode
-    df.global.ui.main.mode=df.ui_sidebar_mode.LookAround
-end
-
-function StamperUI:onDestroy()
-    df.global.ui.main.mode = self.saved_mode
-end
 
 local function paintMapTile(dc, vp, cursor, pos, ...)
     if not same_xyz(cursor, pos) then
@@ -378,9 +370,8 @@ function StamperUI:onInput(keys)
     end
 end
 
-if not (dfhack.gui.getCurFocus():match("^dwarfmode/Default") or dfhack.gui.getCurFocus():match("^dwarfmode/Designate") or dfhack.gui.getCurFocus():match("^dwarfmode/LookAround"))then
-    qerror("This screen requires the main dwarfmode view or the designation screen")
+if not dfhack.isMapLoaded() then
+    qerror('This script requires a fortress map to be loaded')
 end
 
-local list = StamperUI{state="mark", blink=false,cull=true}
-list:show()
+StamperUI{state="mark", blink=false,cull=true}:show()

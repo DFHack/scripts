@@ -52,4 +52,3 @@ if selected ~= nil then
 else
     qerror("select a valid unit")
 end
-

@@ -11,7 +11,6 @@ using the in-game cursor.
 ]====]
 
 guidm = require 'gui.dwarfmode'
-teleport = reqscript 'teleport'
 widgets = require 'gui.widgets'
 
 function uiMultipleUnits()
@@ -19,6 +18,10 @@ function uiMultipleUnits()
 end
 
 TeleportSidebar = defclass(TeleportSidebar, guidm.MenuOverlay)
+
+TeleportSidebar.ATTRS = {
+    sidebar_mode=df.ui_sidebar_mode.ViewUnits,
+}
 
 function TeleportSidebar:init()
     self:addviews{
@@ -44,30 +47,11 @@ function TeleportSidebar:init()
     self.in_pick_pos = false
 end
 
-function TeleportSidebar:onAboutToShow(parent)
-    if not df.viewscreen_dwarfmodest:is_instance(parent) then
-        qerror("This screen requires the main dwarfmode view")
-    end
-
-    self.old_mode = df.global.ui.main.mode
-    if df.global.ui.main.mode == df.ui_sidebar_mode.Default then
-        parent:feed_key(df.interface_key.D_VIEWUNIT)
-    end
-
-    local mode = df.global.ui.main.mode
-    if mode ~= df.ui_sidebar_mode.ViewUnits then
-        qerror(("Use '%s' to select a unit"):format(
-            dfhack.screen.getKeyDisplay(df.interface_key.D_VIEWUNIT)
-        ))
-    end
-end
-
 function TeleportSidebar:choose()
     if not self.in_pick_pos then
         self.in_pick_pos = true
-        df.global.ui.main.mode = df.ui_sidebar_mode.LookAround
     else
-        teleport.teleport(self.unit, xyz2pos(pos2xyz(df.global.cursor)))
+        dfhack.units.teleport(self.unit, xyz2pos(pos2xyz(df.global.cursor)))
         self:dismiss()
     end
 end
@@ -75,7 +59,6 @@ end
 function TeleportSidebar:back()
     if self.in_pick_pos then
         self.in_pick_pos = false
-        df.global.ui.main.mode = self.old_mode
     else
         self:dismiss()
     end
@@ -122,12 +105,12 @@ function TeleportSidebar:onInput(keys)
     TeleportSidebar.super.propagateMoveKeys(self, keys)
 end
 
-function TeleportSidebar:onDismiss()
-    df.global.ui.main.mode = self.old_mode
-end
-
 function TeleportSidebar:onGetSelectedUnit()
     return self.unit
+end
+
+if not dfhack.isMapLoaded() then
+    qerror('This script requires a fortress map to be loaded')
 end
 
 TeleportSidebar():show()

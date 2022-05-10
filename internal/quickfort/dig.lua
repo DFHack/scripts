@@ -13,6 +13,11 @@ end
 
 local utils = require('utils')
 local quickfort_common = reqscript('internal/quickfort/common')
+local quickfort_map = reqscript('internal/quickfort/map')
+local quickfort_parse = reqscript('internal/quickfort/parse')
+local quickfort_preview = reqscript('internal/quickfort/preview')
+local quickfort_set = reqscript('internal/quickfort/set')
+
 local log = quickfort_common.log
 
 local function is_construction(tileattrs)
@@ -21,6 +26,10 @@ end
 
 local function is_floor(tileattrs)
     return tileattrs.shape == df.tiletype_shape.FLOOR
+end
+
+local function is_ramp(tileattrs)
+    return tileattrs.shape == df.tiletype_shape.RAMP
 end
 
 local function is_diggable_floor(tileattrs)
@@ -50,9 +59,9 @@ local function is_down_stair(tileattrs)
 end
 
 local function is_removable_shape(tileattrs)
-    return tileattrs.shape == df.tiletype_shape.RAMP or
-            tileattrs.shape == df.tiletype_shape.STAIR_UP or
-            tileattrs.shape == df.tiletype_shape.STAIR_UPDOWN
+    return is_ramp(tileattrs) or
+            is_up_stair(tileattrs) or
+            is_down_stair(tileattrs)
 end
 
 local function is_gatherable(tileattrs)
@@ -79,27 +88,15 @@ local function is_smooth(tileattrs)
     return tileattrs.special == df.tiletype_special.SMOOTH
 end
 
-local function get_engraving(pos)
-    -- scan through engravings until we find the one at this pos
-    -- super inefficient. we could cache, but it's unlikely that players will
-    -- have so many engravings that it would matter.
-    for _, engraving in ipairs(df.global.world.engravings) do
-        if same_xyz(pos, engraving.pos) then
-            return engraving
-        end
-    end
-    return nil
-end
-
 -- TODO: it would be useful to migrate has_designation and clear_designation to
 -- the Maps module
 local function has_designation(flags, occupancy)
     return flags.dig ~= df.tile_dig_designation.No or
             flags.smooth > 0 or
-            occupancy.carve_track_north == 1 or
-            occupancy.carve_track_east == 1 or
-            occupancy.carve_track_south == 1 or
-            occupancy.carve_track_west == 1
+            occupancy.carve_track_north or
+            occupancy.carve_track_east or
+            occupancy.carve_track_south or
+            occupancy.carve_track_west
 end
 
 local function clear_designation(flags, occupancy)
@@ -166,206 +163,180 @@ local values_undo = {
     traffic_restricted=0,
 }
 
--- these functions return whether a designation was made
-local function do_mine(ctx)
-    if ctx.on_map_edge then return false end
-    if not ctx.flags.hidden then -- always designate if the tile is hidden
-        if is_construction(ctx.tileattrs) or
-                (not is_wall(ctx.tileattrs) and
-                 not is_fortification(ctx.tileattrs)) then
-            return false
+-- these functions return a function if a designation needs to be made; else nil
+local function do_mine(digctx)
+    if digctx.on_map_edge then return nil end
+    if not digctx.flags.hidden then -- always designate if the tile is hidden
+        if is_construction(digctx.tileattrs) or
+                (not is_wall(digctx.tileattrs) and
+                 not is_fortification(digctx.tileattrs)) then
+            return nil
         end
     end
-    ctx.flags.dig = values.dig_default
-    return true
+    return function() digctx.flags.dig = values.dig_default end
 end
 
-local function do_channel(ctx)
-    if ctx.on_map_edge then return false end
-    if not ctx.flags.hidden then -- always designate if the tile is hidden
-        if is_construction(ctx.tileattrs) or
-                is_tree(ctx.tileattrs) or
-                (not is_wall(ctx.tileattrs) and
-                 not is_fortification(ctx.tileattrs) and
-                 not is_diggable_floor(ctx.tileattrs) and
-                 not is_down_stair(ctx.tileattrs) and
-                 not is_removable_shape(ctx.tileattrs) and
-                 not is_gatherable(ctx.tileattrs) and
-                 not is_sapling(ctx.tileattrs)) then
-            return false
+local function do_channel(digctx)
+    if digctx.on_map_edge then return nil end
+    if not digctx.flags.hidden then -- always designate if the tile is hidden
+        if is_construction(digctx.tileattrs) or
+                is_tree(digctx.tileattrs) or
+                (not is_wall(digctx.tileattrs) and
+                 not is_fortification(digctx.tileattrs) and
+                 not is_diggable_floor(digctx.tileattrs) and
+                 not is_down_stair(digctx.tileattrs) and
+                 not is_removable_shape(digctx.tileattrs) and
+                 not is_gatherable(digctx.tileattrs) and
+                 not is_sapling(digctx.tileattrs)) then
+            return nil
         end
     end
-    ctx.flags.dig = values.dig_channel
-    return true
+    return function() digctx.flags.dig = values.dig_channel end
 end
 
-local function do_up_stair(ctx)
-    if ctx.on_map_edge then return false end
-    if not ctx.flags.hidden then -- always designate if the tile is hidden
-        if is_construction(ctx.tileattrs) or
-                (not is_wall(ctx.tileattrs) and
-                 not is_fortification(ctx.tileattrs)) then
-            return false
+local function do_up_stair(digctx)
+    if digctx.on_map_edge then return nil end
+    if not digctx.flags.hidden then -- always designate if the tile is hidden
+        if is_construction(digctx.tileattrs) or
+                (not is_wall(digctx.tileattrs) and
+                 not is_fortification(digctx.tileattrs)) then
+            return nil
         end
     end
-    ctx.flags.dig = values.dig_upstair
-    return true
+    return function() digctx.flags.dig = values.dig_upstair end
 end
 
-local function do_down_stair(ctx)
-    if ctx.on_map_edge then return false end
-    if not ctx.flags.hidden then -- always designate if the tile is hidden
-        if is_construction(ctx.tileattrs) or
-                is_tree(ctx.tileattrs) or
-                (not is_wall(ctx.tileattrs) and
-                 not is_fortification(ctx.tileattrs) and
-                 not is_diggable_floor(ctx.tileattrs) and
-                 not is_removable_shape(ctx.tileattrs) and
-                 not is_gatherable(ctx.tileattrs) and
-                 not is_sapling(ctx.tileattrs)) then
-            return false
+local function do_down_stair(digctx)
+    if digctx.on_map_edge then return nil end
+    if not digctx.flags.hidden then -- always designate if the tile is hidden
+        if is_construction(digctx.tileattrs) or
+                is_tree(digctx.tileattrs) or
+                (not is_wall(digctx.tileattrs) and
+                 not is_fortification(digctx.tileattrs) and
+                 not is_diggable_floor(digctx.tileattrs) and
+                 not is_removable_shape(digctx.tileattrs) and
+                 not is_gatherable(digctx.tileattrs) and
+                 not is_sapling(digctx.tileattrs)) then
+            return nil
         end
     end
-    ctx.flags.dig = values.dig_downstair
-    return true
+    return function() digctx.flags.dig = values.dig_downstair end
 end
 
-local function do_up_down_stair(ctx)
-    if ctx.on_map_edge then return false end
-    if not ctx.flags.hidden then -- always designate if the tile is hidden
-        if is_construction(ctx.tileattrs) or
-                (not is_wall(ctx.tileattrs) and
-                 not is_fortification(ctx.tileattrs) and
-                 not is_up_stair(ctx.tileattrs)) then
-            return false
+local function do_up_down_stair(digctx)
+    if digctx.on_map_edge then return nil end
+    if not digctx.flags.hidden then -- always designate if the tile is hidden
+        if is_construction(digctx.tileattrs) or
+                (not is_wall(digctx.tileattrs) and
+                 not is_fortification(digctx.tileattrs) and
+                 not is_up_stair(digctx.tileattrs)) then
+            return nil
         end
     end
-    if is_up_stair(ctx.tileattrs) then
-        ctx.flags.dig = values.dig_downstair
-    else
-        ctx.flags.dig = values.dig_updownstair
+    if is_up_stair(digctx.tileattrs) then
+        return function() digctx.flags.dig = values.dig_downstair end
     end
-    return true
+    return function() digctx.flags.dig = values.dig_updownstair end
 end
 
-local function do_ramp(ctx)
-    if ctx.on_map_edge then return false end
-    if not ctx.flags.hidden then -- always designate if the tile is hidden
-        if is_construction(ctx.tileattrs) or
-                (not is_wall(ctx.tileattrs) and
-                 not is_fortification(ctx.tileattrs)) then
-            return false
+local function do_ramp(digctx)
+    if digctx.on_map_edge then return nil end
+    if not digctx.flags.hidden then -- always designate if the tile is hidden
+        if is_construction(digctx.tileattrs) or
+                (not is_wall(digctx.tileattrs) and
+                 not is_fortification(digctx.tileattrs)) then
+            return nil
         end
     end
-    ctx.flags.dig = values.dig_ramp
-    return true
+    return function() digctx.flags.dig = values.dig_ramp end
 end
 
-local function do_remove_ramps(ctx)
-    if ctx.on_map_edge or ctx.flags.hidden then return false end
-    if is_construction(ctx.tileattrs) or
-            not is_removable_shape(ctx.tileattrs) then
-        return false
+local function do_remove_ramps(digctx)
+    if digctx.on_map_edge or digctx.flags.hidden then return nil end
+    if is_construction(digctx.tileattrs) or
+            not is_removable_shape(digctx.tileattrs) then
+        return mo;
     end
-    ctx.flags.dig = values.dig_default
-    return true
+    return function() digctx.flags.dig = values.dig_default end
 end
 
-local function do_gather(ctx)
-    if ctx.flags.hidden then return false end
-    if not is_gatherable(ctx.tileattrs) then return false end
-    ctx.flags.dig = values.dig_default
-    return true
+local function do_gather(digctx)
+    if digctx.flags.hidden then return nil end
+    if not is_gatherable(digctx.tileattrs) then return nil end
+    return function() digctx.flags.dig = values.dig_default end
 end
 
-local function do_smooth(ctx)
-    if ctx.flags.hidden then return false end
-    if is_construction(ctx.tileattrs) or
-            not is_hard(ctx.tileattrs) or
-            is_smooth(ctx.tileattrs) or
-            (not is_floor(ctx.tileattrs) and not is_wall(ctx.tileattrs)) then
-        return false
+local function do_smooth(digctx)
+    if digctx.flags.hidden then return nil end
+    if is_construction(digctx.tileattrs) or
+            not is_hard(digctx.tileattrs) or
+            is_smooth(digctx.tileattrs) or
+            (not is_floor(digctx.tileattrs) and
+             not is_wall(digctx.tileattrs)) then
+        return nil
     end
-    ctx.flags.smooth = values.tile_smooth
-    return true
+    return function() digctx.flags.smooth = values.tile_smooth end
 end
 
-local function do_engrave(ctx)
-    if ctx.flags.hidden or
-            is_construction(ctx.tileattrs) or
-            not is_smooth(ctx.tileattrs) or
-            get_engraving(ctx.pos) ~= nil then
-        return false
+local function do_engrave(digctx)
+    if digctx.flags.hidden or
+            is_construction(digctx.tileattrs) or
+            not is_smooth(digctx.tileattrs) or
+            digctx.engraving ~= nil then
+        return nil
     end
-    ctx.flags.smooth = values.tile_engrave
-    return true
+    return function() digctx.flags.smooth = values.tile_engrave end
 end
 
-local function do_fortification(ctx)
-    if ctx.flags.hidden then return false end
-    if not is_wall(ctx.tileattrs) or
-            not is_smooth(ctx.tileattrs) then return false end
-    ctx.flags.smooth = values.tile_smooth
-    return true
+local function do_fortification(digctx)
+    if digctx.flags.hidden then return nil end
+    if not is_wall(digctx.tileattrs) or
+            not is_smooth(digctx.tileattrs) then return nil end
+    return function() digctx.flags.smooth = values.tile_smooth end
 end
 
-local function do_track(ctx)
-    if ctx.on_map_edge or
-            ctx.flags.hidden or
-            is_construction(ctx.tileattrs) or
-            not is_floor(ctx.tileattrs) or
-            not is_hard(ctx.tileattrs) then
-        return false
+local function do_track(digctx)
+    if digctx.on_map_edge or
+            digctx.flags.hidden or
+            is_construction(digctx.tileattrs) or
+            not (is_floor(digctx.tileattrs) or is_ramp(digctx.tileattrs)) or
+            not is_hard(digctx.tileattrs) then
+        return nil
     end
-    local extent_adjacent = ctx.extent_adjacent
-    if not extent_adjacent.north and not  extent_adjacent.south and
-            not extent_adjacent.east and not extent_adjacent.west then
-        print('ambiguous direction for track; please use T(width x height)' ..
-              ' syntax (specify both width > 1 and height > 1 for a' ..
-              ' track that extends both South and East from this corner')
-        return false
+    local direction, occupancy = digctx.direction, digctx.occupancy
+    return function()
+        -- don't overwrite all directions, only 'or' in the new bits. we could
+        -- be adding to a previously-designated track.
+        if direction.north then occupancy.carve_track_north = values.track end
+        if direction.east then occupancy.carve_track_east = values.track end
+        if direction.south then occupancy.carve_track_south = values.track end
+        if direction.west then occupancy.carve_track_west = values.track end
     end
-    if extent_adjacent.north and extent_adjacent.west then
-        -- we're in the "empty" interior of a track extent - tracks can only be
-        -- built in lines along the top or left of an extent.
-        return false
+end
+
+local function do_toggle_engravings(digctx)
+    if digctx.flags.hidden then return nil end
+    local engraving = digctx.engraving
+    if engraving == nil then return nil end
+    return function() engraving.flags.hidden = not engraving.flags.hidden end
+end
+
+local function do_toggle_marker(digctx)
+    if not has_designation(digctx.flags, digctx.occupancy) then return nil end
+    return function()
+        digctx.occupancy.dig_marked = not digctx.occupancy.dig_marked end
+end
+
+local function do_remove_construction(digctx)
+    if digctx.flags.hidden or not is_construction(digctx.tileattrs) then
+        return nil
     end
-    -- don't overwrite all directions, only 'or' in the new bits. we could be
-    -- adding to a previously-designated track.
-    local occupancy = ctx.occupancy
-    if extent_adjacent.north then occupancy.carve_track_north = values.track end
-    if extent_adjacent.east then occupancy.carve_track_east = values.track end
-    if extent_adjacent.south then occupancy.carve_track_south = values.track end
-    if extent_adjacent.west then occupancy.carve_track_west = values.track end
-    return true
+    return function() digctx.flags.dig = values.dig_default end
 end
 
-local function do_toggle_engravings(ctx)
-    if ctx.flags.hidden then return false end
-    local engraving = get_engraving(ctx.pos)
-    if engraving == nil then return false end
-    engraving.flags.hidden = not engraving.flags.hidden
-    return true
-end
-
-local function do_toggle_marker(ctx)
-    if not has_designation(ctx.flags, ctx.occupancy) then return false end
-    ctx.occupancy.dig_marked = not ctx.occupancy.dig_marked
-    return true
-end
-
-local function do_remove_construction(ctx)
-    if ctx.flags.hidden or not is_construction(ctx.tileattrs) then
-        return false
-    end
-    ctx.flags.dig = values.dig_default
-    return true
-end
-
-local function do_remove_designation(ctx)
-    if not has_designation(ctx.flags, ctx.occupancy) then return false end
-    clear_designation(ctx.flags, ctx.occupancy)
-    return true
+local function do_remove_designation(digctx)
+    if not has_designation(digctx.flags, digctx.occupancy) then return nil end
+    return function() clear_designation(digctx.flags, digctx.occupancy) end
 end
 
 local function is_valid_item(item)
@@ -395,82 +366,88 @@ local function get_items_at(pos, include_buildings)
 end
 
 local function do_item_flag(pos, flag_name, flag_value, include_buildings)
-    local ret = false
-    for _, item in ipairs(get_items_at(pos, include_buildings)) do
-        item.flags[flag_name] = flag_value
-        ret = true
+    local items = get_items_at(pos, include_buildings)
+    if #items == 0 then return nil end
+    return function()
+        for _,item in ipairs(items) do item.flags[flag_name] = flag_value end
     end
-    return ret
 end
 
-local function do_claim(ctx)
-    return do_item_flag(ctx.pos, "forbid", values.item_claimed, true)
+local function do_claim(digctx)
+    return do_item_flag(digctx.pos, "forbid", values.item_claimed, true)
 end
 
-local function do_forbid(ctx)
-    return do_item_flag(ctx.pos, "forbid", values.item_forbidden, true)
+local function do_forbid(digctx)
+    return do_item_flag(digctx.pos, "forbid", values.item_forbidden, true)
 end
 
-local function do_melt(ctx)
+local function do_melt(digctx)
     -- the game appears to autoremove the flag from unmeltable items, so we
     -- don't actually need to do any filtering here
-    return do_item_flag(ctx.pos, "melt", values.item_melted, false)
+    return do_item_flag(digctx.pos, "melt", values.item_melted, false)
 end
 
-local function do_remove_melt(ctx)
-    return do_item_flag(ctx.pos, "melt", values.item_unmelted, false)
+local function do_remove_melt(digctx)
+    return do_item_flag(digctx.pos, "melt", values.item_unmelted, false)
 end
 
-local function do_dump(ctx)
-    return do_item_flag(ctx.pos, "dump", values.item_dumped, false)
+local function do_dump(digctx)
+    return do_item_flag(digctx.pos, "dump", values.item_dumped, false)
 end
 
-local function do_remove_dump(ctx)
-    return do_item_flag(ctx.pos, "dump", values.item_undumped, false)
+local function do_remove_dump(digctx)
+    return do_item_flag(digctx.pos, "dump", values.item_undumped, false)
 end
 
-local function do_hide(ctx)
-    return do_item_flag(ctx.pos, "hidden", values.item_hidden, true)
+local function do_hide(digctx)
+    return do_item_flag(digctx.pos, "hidden", values.item_hidden, true)
 end
 
-local function do_unhide(ctx)
-    return do_item_flag(ctx.pos, "hidden", values.item_unhidden, true)
+local function do_unhide(digctx)
+    return do_item_flag(digctx.pos, "hidden", values.item_unhidden, true)
 end
 
-local function do_traffic_high(ctx)
-    if ctx.flags.hidden then return false end
-    ctx.flags.traffic = values.traffic_high
+local function do_traffic_high(digctx)
+    if digctx.flags.hidden then return nil end
+    return function() digctx.flags.traffic = values.traffic_high end
 end
 
-local function do_traffic_normal(ctx)
-    if ctx.flags.hidden then return false end
-    ctx.flags.traffic = values.traffic_normal
+local function do_traffic_normal(digctx)
+    if digctx.flags.hidden then return nil end
+    return function() digctx.flags.traffic = values.traffic_normal end
 end
 
-local function do_traffic_low(ctx)
-    if ctx.flags.hidden then return false end
-    ctx.flags.traffic = values.traffic_low
+local function do_traffic_low(digctx)
+    if digctx.flags.hidden then return nil end
+    return function() digctx.flags.traffic = values.traffic_low end
 end
 
-local function do_traffic_restricted(ctx)
-    if ctx.flags.hidden then return false end
-    ctx.flags.traffic = values.traffic_restricted
+local function do_traffic_restricted(digctx)
+    if digctx.flags.hidden then return nil end
+    return function() digctx.flags.traffic = values.traffic_restricted end
+end
+
+local function track_alias_entry(directions)
+    return {action=do_track, use_priority=true, can_clobber_engravings=true,
+            direction={single_tile=true, north=directions.north,
+                       south=directions.south, east=directions.east,
+                       west=directions.west}}
 end
 
 local dig_db = {
-    d={action=do_mine, use_priority=true},
-    h={action=do_channel, use_priority=true},
-    u={action=do_up_stair, use_priority=true},
-    j={action=do_down_stair, use_priority=true},
-    i={action=do_up_down_stair, use_priority=true},
-    r={action=do_ramp, use_priority=true},
+    d={action=do_mine, use_priority=true, can_clobber_engravings=true},
+    h={action=do_channel, use_priority=true, can_clobber_engravings=true},
+    u={action=do_up_stair, use_priority=true, can_clobber_engravings=true},
+    j={action=do_down_stair, use_priority=true, can_clobber_engravings=true},
+    i={action=do_up_down_stair, use_priority=true, can_clobber_engravings=true},
+    r={action=do_ramp, use_priority=true, can_clobber_engravings=true},
     z={action=do_remove_ramps, use_priority=true},
     t={action=do_mine, use_priority=true},
     p={action=do_gather, use_priority=true},
     s={action=do_smooth, use_priority=true},
     e={action=do_engrave, use_priority=true},
-    F={action=do_fortification, use_priority=true},
-    T={action=do_track, use_priority=true},
+    F={action=do_fortification, use_priority=true, can_clobber_engravings=true},
+    T={action=do_track, use_priority=true, can_clobber_engravings=true},
     v={action=do_toggle_engravings},
     -- the semantics are unclear if the code is M but m or force_marker_mode is
     -- also specified. skipping all other marker mode settings when toggling
@@ -490,7 +467,40 @@ local dig_db = {
     on={action=do_traffic_normal},
     ol={action=do_traffic_low},
     ['or']={action=do_traffic_restricted},
+    -- single-tile track aliases
+    trackN=track_alias_entry{north=true},
+    trackS=track_alias_entry{south=true},
+    trackE=track_alias_entry{east=true},
+    trackW=track_alias_entry{west=true},
+    trackNS=track_alias_entry{north=true, south=true},
+    trackNE=track_alias_entry{north=true, east=true},
+    trackNW=track_alias_entry{north=true, west=true},
+    trackSE=track_alias_entry{south=true, east=true},
+    trackSW=track_alias_entry{south=true, west=true},
+    trackEW=track_alias_entry{east=true, west=true},
+    trackNSE=track_alias_entry{north=true, south=true, east=true},
+    trackNSW=track_alias_entry{north=true, south=true, west=true},
+    trackNEW=track_alias_entry{north=true, east=true, west=true},
+    trackSEW=track_alias_entry{south=true, east=true, west=true},
+    trackNSEW=track_alias_entry{north=true, south=true, east=true, west=true},
 }
+
+-- add trackramp aliases for the track aliases
+dig_db.trackrampN = dig_db.trackN
+dig_db.trackrampS = dig_db.trackS
+dig_db.trackrampE = dig_db.trackE
+dig_db.trackrampW = dig_db.trackW
+dig_db.trackrampNS = dig_db.trackNS
+dig_db.trackrampNE = dig_db.trackNE
+dig_db.trackrampNW = dig_db.trackNW
+dig_db.trackrampSE = dig_db.trackSE
+dig_db.trackrampSW = dig_db.trackSW
+dig_db.trackrampEW = dig_db.trackEW
+dig_db.trackrampNSE = dig_db.trackNSE
+dig_db.trackrampNSW = dig_db.trackNSW
+dig_db.trackrampNEW = dig_db.trackNEW
+dig_db.trackrampSEW = dig_db.trackSEW
+dig_db.trackrampNSEW = dig_db.trackNSEW
 
 -- set default dig priorities
 for _,v in pairs(dig_db) do
@@ -536,45 +546,110 @@ end
 
 -- modifies any existing priority block_square_event to the specified priority.
 -- if the block_square_event doesn't already exist, create it.
-local function set_priority(ctx, priority)
+local function set_priority(digctx, priority)
     log('setting priority to %d', priority)
-    local block_events = dfhack.maps.getTileBlock(ctx.pos).block_events
+    local block_events = dfhack.maps.getTileBlock(digctx.pos).block_events
     local pbse = get_priority_block_square_event(block_events)
     if not pbse then
         block_events:insert('#',
                             {new=df.block_square_event_designation_priorityst})
         pbse = block_events[#block_events-1]
     end
-    pbse.priority[ctx.pos.x % 16][ctx.pos.y % 16] = priority * 1000
+    pbse.priority[digctx.pos.x % 16][digctx.pos.y % 16] = priority * 1000
 end
 
-local function dig_tile(ctx, db_entry)
-    ctx.flags, ctx.occupancy = dfhack.maps.getTileFlags(ctx.pos)
-    ctx.tileattrs = df.tiletype.attrs[dfhack.maps.getTileType(ctx.pos)]
-    if db_entry.action(ctx) then
+local function dig_tile(digctx, db_entry)
+    local action_fn = db_entry.action(digctx)
+    if not action_fn then return nil end
+    return function()
+        action_fn()
         -- set the block's designated flag so the game does a check to see what
         -- jobs need to be created
-        dfhack.maps.getTileBlock(ctx.pos).flags.designated = true
-        if not has_designation(ctx.flags, ctx.occupancy) then
+        dfhack.maps.getTileBlock(digctx.pos).flags.designated = true
+        if not has_designation(digctx.flags, digctx.occupancy) then
             -- reset marker mode and priority to defaults
-            ctx.occupancy.dig_marked = false
-            set_priority(ctx, 4)
+            digctx.occupancy.dig_marked = false
+            set_priority(digctx, 4)
         else
             if not db_entry.skip_marker_mode then
                 local marker_mode = db_entry.marker_mode or
-                        quickfort_common.settings['force_marker_mode'].value
-                ctx.occupancy.dig_marked = marker_mode
+                        quickfort_set.get_setting('force_marker_mode')
+                digctx.occupancy.dig_marked = marker_mode
             end
             if db_entry.use_priority then
-                set_priority(ctx, db_entry.priority)
+                set_priority(digctx, db_entry.priority)
             end
         end
-        return true
     end
-    return false
 end
 
-local function do_run_impl(zlevel, grid, stats)
+local function ensure_engravings_cache(ctx)
+    if ctx.engravings_cache then return end
+    local engravings_cache = {}
+    for _,engraving in ipairs(df.global.world.engravings) do
+        local pos = engraving.pos
+        local grid = quickfort_common.ensure_key(engravings_cache, pos.z)
+        local row = quickfort_common.ensure_key(grid, pos.y)
+        row[pos.x] = engraving
+    end
+    ctx.engravings_cache = engravings_cache
+end
+
+local function init_dig_ctx(ctx, pos, direction)
+    local flags, occupancy = dfhack.maps.getTileFlags(pos)
+    local tileattrs = df.tiletype.attrs[dfhack.maps.getTileType(pos)]
+    local engraving = nil
+    if is_smooth(tileattrs) then
+        -- potentially has an engraving
+        ensure_engravings_cache(ctx)
+        engraving = safe_index(ctx.engravings_cache, pos.z, pos.y, pos.x)
+    end
+    return {
+        pos=pos,
+        direction=direction,
+        on_map_edge=ctx.bounds:is_on_map_edge(pos),
+        flags=flags,
+        occupancy=occupancy,
+        tileattrs=tileattrs,
+        engraving=engraving,
+    }
+end
+
+local function should_preserve_engraving(ctx, db_entry, engraving)
+    if not db_entry.can_clobber_engravings or not engraving then
+        return false
+    end
+    return ctx.preserve_engravings and
+            engraving.quality >= ctx.preserve_engravings
+end
+
+-- returns a map of which track directions should be enabled
+-- width and height can be negative
+local function get_track_direction(x, y, width, height)
+    local neg_width, w = width < 0, math.abs(width)
+    local neg_height, h = height < 0, math.abs(height)
+
+    -- initialize assuming positive width and height
+    local north = x == 1 and y > 1
+    local east = x < w and y == 1
+    local south = x == 1 and y < h
+    local west = x > 1 and y == 1
+
+    if neg_width then
+        north = x == w and y > 1
+        south = x == w and y < h
+    end
+    if neg_height then
+        east = x < w and y == h
+        west = x > 1 and y == h
+    end
+
+    return {north=north, east=east, south=south, west=west}
+end
+
+local function do_run_impl(zlevel, grid, ctx)
+    local stats = ctx.stats
+    ctx.bounds = ctx.bounds or quickfort_map.MapBoundsChecker{}
     for y, row in pairs(grid) do
         for x, cell_and_text in pairs(row) do
             local cell, text = cell_and_text.cell, cell_and_text.text
@@ -582,56 +657,97 @@ local function do_run_impl(zlevel, grid, stats)
             log('applying spreadsheet cell %s with text "%s" to map' ..
                 ' coordinates (%d, %d, %d)', cell, text, pos.x, pos.y, pos.z)
             local db_entry = nil
-            local keys, extent = quickfort_common.parse_cell(text)
+            local keys, extent = quickfort_parse.parse_cell(ctx, text)
             if keys then db_entry = dig_db[keys] end
             if not db_entry then
-                print(string.format('invalid key sequence: "%s" in cell %s',
-                                    text, cell))
+                dfhack.printerr(('invalid key sequence: "%s" in cell %s')
+                                :format(text, cell))
                 stats.invalid_keys.value = stats.invalid_keys.value + 1
                 goto continue
             end
-            for extent_x=1,extent.width do
-                for extent_y=1,extent.height do
+            if db_entry.action == do_track and not db_entry.direction and
+                    math.abs(extent.width) == 1 and
+                    math.abs(extent.height) == 1 then
+                dfhack.printerr(('Warning: ambiguous direction for track:' ..
+                    ' "%s" in cell %s; please use T(width x height) syntax' ..
+                    ' (e.g. specify both width > 1 and height > 1 for a' ..
+                    ' track that extends both South and East from this corner')
+                               :format(text, cell))
+                stats.invalid_keys.value = stats.invalid_keys.value + 1
+                goto continue
+            end
+            if extent.specified then
+                -- shift pos to the upper left corner of the extent and convert
+                -- the extent dimenions to positive, simplifying the logic below
+                pos.x = math.min(pos.x, pos.x + extent.width + 1)
+                pos.y = math.min(pos.y, pos.y + extent.height + 1)
+            end
+            for extent_x=1,math.abs(extent.width) do
+                for extent_y=1,math.abs(extent.height) do
                     local extent_pos = xyz2pos(
                         pos.x+extent_x-1,
                         pos.y+extent_y-1,
                         pos.z)
-                    local extent_adjacent = {
-                        north=extent_y>1,
-                        east=extent_x<extent.width,
-                        south=extent_y<extent.height,
-                        west=extent_x>1,
-                    }
-                    local ctx = {
-                        pos=extent_pos,
-                        extent_adjacent=extent_adjacent,
-                        on_map_edge=quickfort_common.is_on_map_edge(extent_pos)
-                    }
-                    if not quickfort_common.is_within_map_bounds(ctx.pos) and
-                            not ctx.on_map_edge then
-                        log('coordinates out of bounds; skipping')
+                    if not ctx.bounds:is_on_map(extent_pos) then
+                        log('coordinates out of bounds; skipping (%d, %d, %d)',
+                            extent_pos.x, extent_pos.y, extent_pos.z)
                         stats.out_of_bounds.value =
                                 stats.out_of_bounds.value + 1
+                        goto inner_continue
+                    end
+                    local direction = db_entry.direction or
+                            (db_entry.action == do_track and
+                             get_track_direction(extent_x, extent_y,
+                                                 extent.width, extent.height))
+                    local digctx = init_dig_ctx(ctx, extent_pos, direction)
+                    -- can't dig through buildings
+                    if digctx.occupancy.building ~= 0 then
+                        goto inner_continue
+                    end
+                    local action_fn = dig_tile(digctx, db_entry)
+                    quickfort_preview.set_preview_tile(ctx, extent_pos,
+                                                       action_fn ~= nil)
+                    if not action_fn then
+                        log('cannot apply "%s" to coordinate (%d, %d, %d)',
+                            keys, extent_pos.x, extent_pos.y, extent_pos.z)
+                        stats.dig_invalid_tiles.value =
+                                stats.dig_invalid_tiles.value + 1
                     else
-                        if dig_tile(ctx, db_entry) then
+                        if should_preserve_engraving(ctx, db_entry,
+                                                     digctx.engraving) then
+                            stats.dig_protected_engraving.value =
+                                    stats.dig_protected_engraving.value + 1
+                        else
+                            if not ctx.dry_run then action_fn() end
                             stats.dig_designated.value =
                                     stats.dig_designated.value + 1
                         end
                     end
+                    ::inner_continue::
                 end
             end
             ::continue::
         end
     end
-    return stats
+end
+
+local function ensure_ctx_stats(ctx, prefix)
+    local designated_label = ('Tiles %sdesignated for digging'):format(prefix)
+    ctx.stats.dig_designated = ctx.stats.dig_designated or
+            {label=designated_label, value=0, always=true}
+    ctx.stats.dig_invalid_tiles = ctx.stats.dig_invalid_tiles or
+            {label='Tiles that could not be designated for digging', value=0}
+    ctx.stats.dig_protected_engraving = ctx.stats.dig_protected_engraving or
+            {label='Engravings protected from destruction', value=0}
 end
 
 function do_run(zlevel, grid, ctx)
     values = values_run
-    ctx.stats.dig_designated = ctx.stats.dig_designated or
-            {label='Tiles designated for digging', value=0, always=true}
-    do_run_impl(zlevel, grid, ctx.stats)
-    dfhack.job.checkDesignationsNow()
+    ensure_ctx_stats(ctx, '')
+    do_run_impl(zlevel, grid, ctx)
+    if not ctx.dry_run then
+        dfhack.job.checkDesignationsNow()
+    end
 end
 
 function do_orders()
@@ -640,7 +756,6 @@ end
 
 function do_undo(zlevel, grid, ctx)
     values = values_undo
-    ctx.stats.dig_designated = ctx.stats.dig_designated or
-            {label='Tiles undesignated for digging', value=0, always=true}
-    do_run_impl(zlevel, grid, ctx.stats)
+    ensure_ctx_stats(ctx, 'un')
+    do_run_impl(zlevel, grid, ctx)
 end

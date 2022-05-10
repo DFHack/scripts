@@ -87,17 +87,17 @@ yourself, please report this to your pack's maintainer.]]
 
 path = dfhack.getHackPath():lower()
 if #pack_message > 0 and (path:find('lnp') or path:find('starter') or path:find('newb') or path:find('lazy') or path:find('pack')) then
-    for _, v in pairs(utils.split_string(pack_message, '\n')) do
+    for _, v in pairs(pack_message:split('\n')) do
         table.insert(message, NEWLINE)
         table.insert(message, {text=v, pen=COLOR_LIGHTMAGENTA})
     end
 end
 
-for _, v in pairs(utils.split_string([[
+for _, v in pairs(([[
 
 REMINDER: Please report any issues you encounter while
 using this DFHack build on GitHub (github.com/dfhack/dfhack/issues)
-or the Bay12 forums (dfhack.org/bay12).]], '\n')) do
+or the Bay12 forums (dfhack.org/bay12).]]):split('\n')) do
     table.insert(message, NEWLINE)
     table.insert(message, {text=v, pen=COLOR_LIGHTCYAN})
 end
@@ -107,7 +107,7 @@ nightly_message = [[
 You appear to be using a nightly build of DFHack. If you
 experience problems, check dfhack.org/builds for updates.]]
 if dfhack.getDFHackBuildID() ~= '' then
-    for _, v in pairs(utils.split_string(nightly_message, '\n')) do
+    for _, v in pairs(nightly_message:split('\n')) do
         table.insert(message, NEWLINE)
         table.insert(message, {text=v, pen=COLOR_LIGHTGREEN})
     end
