@@ -22,7 +22,7 @@ local num = tonumber(({...})[1])
 if not num then
     qerror('argument must be a number')
 elseif num < 7 then
-    qerror('argument must be at least 7')
+    qerror('argument too small: must be at least 7')
 end
 
 dfhack.with_temp_object(df.new('uint32_t'), function(temp)
