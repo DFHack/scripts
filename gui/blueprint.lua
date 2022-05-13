@@ -83,9 +83,10 @@ function NamePanel:init()
             view_id='name',
             frame={h=1},
             key='CUSTOM_N',
-            active=false,
             text=self.name,
             on_change=self:callback('update_tooltip'),
+            on_focus=self:callback('on_edit_focus'),
+            on_unfocus=self:callback('on_edit_unfocus'),
         },
         widgets.TooltipLabel{
             view_id='name_help',
@@ -98,6 +99,20 @@ function NamePanel:init()
     }
 
     self:detect_name_collision()
+end
+function NamePanel:on_edit_focus()
+    local name_view = self.subviews.name
+    if name_view.text == 'blueprint' then
+        name_view.text = ''
+        self:update_tooltip()
+    end
+end
+function NamePanel:on_edit_unfocus()
+    local name_view = self.subviews.name
+    if name_view.text == '' then
+        name_view.text = 'blueprint'
+        self:update_tooltip()
+    end
 end
 function NamePanel:detect_name_collision()
     -- don't let base names start with a slash - it would get ignored by
@@ -460,31 +475,6 @@ function BlueprintUI:onRenderBody()
 end
 
 function BlueprintUI:onInput(keys)
-    -- the 'name' edit field must have its 'active' state managed at this level.
-    -- we also have to implement 'cancel edit' logic here
-    local name_view = self.subviews.name
-    if not name_view.active and keys[name_view.key] then
-        self.saved_name = name_view.text
-        if name_view.text == 'blueprint' then
-            name_view.text = ''
-            name_view:on_change()
-        end
-        name_view.active = true
-        return true
-    end
-    if name_view.active then
-        if keys.SELECT or keys.LEAVESCREEN then
-            name_view.active = false
-            if keys.LEAVESCREEN or name_view.text == '' then
-                name_view.text = self.saved_name
-                name_view:on_change()
-            end
-            return true
-        end
-        name_view:onInput(keys)
-        return true
-    end
-
     if self:inputToSubviews(keys) then return true end
 
     local pos = nil

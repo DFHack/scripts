@@ -157,11 +157,7 @@ function GmEditorUi:init(args)
         subviews={
             mainList,
             widgets.Label{text={{text="<no item>",id="name"},{gap=1,text="Help",key=keybindings.help.key,key_sep = '()'}}, view_id = 'lbl_current_item',frame = {l=1,t=1,yalign=0}},
-            widgets.Label{text={{text="Search",key=keybindings.start_filter.key,key_sep = '()'},{text=": "}},frame={l=1,t=2},
-                on_click=function() self:enable_input(true) end},
-            widgets.EditField{frame={l=12,t=2},active=false,on_change=self:callback('text_input'),on_submit=self:callback("enable_input",false),view_id="filter_input"},
-            --widgets.Label{text="BLAH2"}
-                }
+            widgets.EditField{frame={l=1,t=2,h=1},label_text="Search",key=keybindings.start_filter.key,key_sep='(): ',on_change=self:callback('text_input'),on_submit=self:callback('onInput', {SELECT=true}),view_id="filter_input"}}
         ,view_id='page_main'}
 
     local pages=widgets.Pages{subviews={mainPage,helpPage},view_id="pages"}
@@ -172,9 +168,6 @@ function GmEditorUi:init(args)
 end
 function GmEditorUi:text_input(new_text)
     self:updateTarget(true,true)
-end
-function GmEditorUi:enable_input(enable)
-    self.subviews.filter_input.active=enable
 end
 function GmEditorUi:find(test)
     local trg=self:currentTarget()
@@ -436,11 +429,10 @@ function GmEditorUi:onInput(keys)
     if keys.LEAVESCREEN_ALL  then
         self:dismiss()
     end
+
+    if self:inputToSubviews(keys) then return true end
+
     if keys.LEAVESCREEN  then
-        if self.subviews.filter_input.active then
-            self:enable_input(false)
-            return
-        end
         if self.subviews.pages:getSelected()==2 then
             self.subviews.pages:setSelected(1)
         else
@@ -449,11 +441,6 @@ function GmEditorUi:onInput(keys)
     end
 
     if self.subviews.pages:getSelected() == 2 then
-        return
-    end
-
-    if self.subviews.filter_input.active then
-        self.super.onInput(self,keys)
         return
     end
 
@@ -478,12 +465,7 @@ function GmEditorUi:onInput(keys)
         self:deleteSelected(self:getSelectedKey())
     elseif keys[keybindings.reinterpret.key] then
         self:openReinterpret(self:getSelectedKey())
-    elseif keys[keybindings.start_filter.key] then
-        self:enable_input(true)
-        return
     end
-
-    self.super.onInput(self,keys)
 end
 function getStringValue(trg,field)
     local obj=trg.target
