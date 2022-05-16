@@ -15,15 +15,20 @@ that repo.
 
 ## New Scripts
 
+- `deteriorate`: combines, replaces, and extends previous `deteriorateclothes`, `deterioratecorpses`, and `deterioratefood` scripts.
 - `gui/petitions`: shows list of fort's petitions
 - `modtools/fire-rate`: allows users to adjust the rate of fire for ranged attacks
 
 ## Fixes
 
 ## Misc Improvements
+- `deteriorate`: new ``now`` command immediately deteriorates all items of the specified types.
 
 ## Removed
 - `devel/unforbidall`: please use `unforbid` instead. You can silence the output with ``unforbid all --quiet``
+- `deteriorateclothes`: please use ``deteriorate --types=clothes`` instead
+- `deterioratecorpses`: please use ``deteriorate --types=corpses`` instead
+- `deterioratefood`: please use ``deteriorate --types=food`` instead
 
 # 0.47.05-r5
 

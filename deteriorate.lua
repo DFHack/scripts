@@ -13,9 +13,9 @@ Now all those slightly worn wool shoes that dwarves scatter all over the place
 or the toes, teeth, fingers, and limbs from the last undead siege will
 deteriorate at a greatly increased rate, and eventually just crumble into
 nothing. As warm and fuzzy as a dining room full of used socks makes your
-dwarves feel, your FPS does not like it.
+dwarves feel, your FPS does not like it!
 
-To always have this script running in your forts, add a line like this to your
+To always have deteriorate running in your forts, add a line like this to your
 ``onMapLoad.init`` file (use your preferred options, of course)::
 
     deteriorate start --types=corpses
@@ -35,7 +35,7 @@ Usage::
 You can control which item types are being monitored and their rotting rates by
 running the command multiple times with different options.
 
-**<options>** can be zero or more of:
+**<options>** are:
 
 ``-f``, ``--freq``, ``--frequency <number>[,<timeunits>]``
     How often to increment the wear counters. ``<timeunits>`` can be one of
@@ -44,24 +44,23 @@ running the command multiple times with different options.
     after several months. The number does not need to be a whole number. E.g.
     ``--freq=0.5,days`` is perfectly valid.
 ``-q``, ``--quiet``
-    Silence non-error output text.
+    Silence non-error output.
 ``-t``, ``--types <types>``
-    The item types to affect. See below for options.
+    The item types to affect. This option is required for ``start``, ``stop``,
+    and ``now`` commands. See below for valid types.
 
 **<types>** is any of:
 
-:clothes:  All clothing types that have an armor rating of 0 and are already
-           starting to show signs of wear..
+:clothes:  All clothing types that have an armor rating of 0, are on the ground,
+           and are already starting to show signs of wear.
 :corpses:  All non-dwarf corpses and body parts. This includes potentially
-           useful remains such as hair, wool, hooves, bones, and skulls.
+           useful remains such as hair, wool, hooves, bones, and skulls. Use
+           them before you lose them!
 :food:     All food and plants, regardles of whether they are in barrels or
            stockpiles. Seeds are left untouched.
 
 You can specify multiple types by separating them with commas, e.g.
-``deteriorate clothes,food``.
-
-Note that only items that are on the ground and are not currently being used
-(e.g. they're not currently tasked for hauling) will be affected.
+``deteriorate start --types=clothes,food``.
 
 Examples:
 
@@ -105,12 +104,12 @@ local function get_food_vectors()
 end
 
 local function is_valid_clothing(item)
-    return item.subtype.armorlevel == 0 and item.flags.on_ground == true
+    return item.subtype.armorlevel == 0 and item.flags.on_ground
             and item.wear > 0
 end
 
 local function is_valid_corpse(item)
-    return item.flags.dead_dwarf == false
+    return not item.flags.dead_dwarf
 end
 
 local function is_valid_food(item)
@@ -180,21 +179,29 @@ local type_fns = {
     food=deteriorate_food,
 }
 
--- active timeouts, indexed by the type string
-timeout_ids = timeout_ids or {}
+-- maps the type string to {id=int, time=int, timeunit=string}
+timeout_ids = timeout_ids or {
+    clothes={},
+    corpses={},
+    food={},
+}
 
 local function _stop(item_type)
-    local timeout_id = timeout_ids[item_type]
+    local timeout_id = timeout_ids[item_type].id
     if timeout_id then
         dfhack.timeout_active(timeout_id, nil) -- cancel callback
-        timeout_ids[item_type] = nil
+        timeout_ids[item_type].id = nil
+        return true
     end
 end
 
 local function make_timeout_cb(item_type, opts)
-    local fn = function(first_time)
-        timeout_ids[item_type] = dfhack.timeout(opts.time, opts.mode, fn)
-        if not timeout_ids[item_type] then
+    local fn
+    fn = function(first_time)
+        local timeout_data = timeout_ids[item_type]
+        timeout_data.time, timeout_data.mode = opts.time, opts.mode
+        timeout_data.id = dfhack.timeout(opts.time, opts.mode, fn)
+        if not timeout_ids[item_type].id then
             print('Map has been unloaded; stopping deteriorate')
             for k in pairs(type_fns) do
                 _stop(k)
@@ -203,6 +210,7 @@ local function make_timeout_cb(item_type, opts)
         end
         if not first_time then type_fns[item_type]() end
     end
+    return fn
 end
 
 local function start(opts)
@@ -218,8 +226,7 @@ end
 
 local function stop(opts)
     for _,v in ipairs(opts.types) do
-        _stop(v)
-        if not opts.quiet then
+        if _stop(v) and not opts.quiet then
             print('Stopped deteriorating ' .. v)
         end
     end
@@ -227,7 +234,16 @@ end
 
 local function status()
     for k in pairs(type_fns) do
-        print(('%s:\t%s'):format(k, timeout_ids[k] and 'Running' or 'Stopped'))
+        local timeout_data = timeout_ids[k]
+        local status_str = 'Stopped'
+        if timeout_data.id then
+            local time, mode = timeout_data.time, timeout_data.mode
+            if time == 1 then
+                mode = mode:sub(1, #mode - 1) -- make singular
+            end
+            status_str = ('Running (every %s %s)') :format(time, mode)
+        end
+        print(('%7s:\t%s'):format(k, status_str))
     end
 end
 
@@ -262,26 +278,23 @@ local command_switch = {
 local valid_timeunits = utils.invert{'days', 'months', 'years'}
 
 local function parse_freq(arg)
-    local elems = argparse.stringList(optarg)
-    if #elems == 0 then
-        qerror('missing required numeric parameter to --freq option')
-    end
+    local elems = argparse.stringList(arg)
     local num = tonumber(elems[1])
-    if num <= 0 then
+    if not num or num <= 0 then
         qerror('number parameter for --freq option must be greater than 0')
     end
     if #elems == 1 then
         return num, 'days'
     end
     local timeunit = elems[2]:lower()
-    if valid_timeunits[timeunit] then return timeunit end
+    if valid_timeunits[timeunit] then return num, timeunit end
     timeunit = timeunit .. 's' -- it's ok if the user specified a singular
-    if valid_timeunits[timeunit] then return timeunit end
+    if valid_timeunits[timeunit] then return num, timeunit end
     qerror(('invalid time unit: "%s"'):format(elems[2]))
 end
 
 local function parse_types(arg)
-    local types = argparse.stringList(optarg)
+    local types = argparse.stringList(arg)
     for _,v in ipairs(types) do
         if not type_fns[v] then
             qerror(('unrecognized type: "%s"'):format(v))
@@ -307,9 +320,9 @@ local nonoptions = argparse.processArgsGetopt({...}, {
          handler=function(optarg) opts.types = parse_types(optarg) end}})
 
 local command = nonoptions[1]
-if not command then opts.help = true end
+if not command or not command_switch[command] then opts.help = true end
 
-if not opts.help and #opts.types == 0 then
+if not opts.help and command ~= 'status' and #opts.types == 0 then
     qerror('no item types specified! try adding a --types parameter.')
 end
 
