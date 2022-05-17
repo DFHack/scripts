@@ -17,6 +17,7 @@ that repo.
 
 - `deteriorate`: combines, replaces, and extends previous `deteriorateclothes`, `deterioratecorpses`, and `deterioratefood` scripts.
 - `gui/petitions`: shows list of fort's petitions
+- `gui/quantum`: interactive tool for creating quantum stockpiles
 - `modtools/fire-rate`: allows modders to adjust the rate of fire for ranged attacks
 
 ## Fixes
