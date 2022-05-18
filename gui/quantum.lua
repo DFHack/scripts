@@ -19,19 +19,20 @@ quantum stockpile.
 
 Before you run this script, create and configure your "feeder" stockpile. The
 size of the stockpile determines how many dwarves can be tasked with bringing
-items to this quantum stockpile. Somewhere between 1x3 and 3x3 is usually a good
+items to this quantum stockpile. Somewhere between 1x3 and 5x5 is usually a good
 size.
 
 The script will walk you through the steps:
 1) Select the feeder stockpile
-2) Configure the quantum stockpile with the onscreen options
-3) Select an empty space on your map to create the quantum stockpile
+2) Configure your quantum stockpile with the onscreen options
+3) Select a spot on the map to build the quantum stockpile
 
 If there are any minecarts available, one will be automatically associated with
 the hauling route. If you don't have a free minecart, ``gui/quantum`` can
 enqueue a manager order to make one for you. Once it is built, enter the
-:key:('h')auling menu, select the quantum stop, and hit :key:('v') to assign the
-minecart to the stop. The quantum stockpile will not work without a minecart.
+:key:`h`auling menu, select the quantum stockpile hauling route stop, and hit
+:key:`v` to assign the minecart to the stop. The quantum stockpile needs a
+minecart to function.
 
 Quantum stockpiles work much more efficiently if you add the following line to
 your `onMapLoad.init` file::
@@ -41,8 +42,8 @@ your `onMapLoad.init` file::
 This prioritizes moving of items from the feeder stockpile to the minecart.
 Otherwise, the feeder stockpile can get full and block the quantum pipeline.
 
-See the wiki for more information on quantum stockpiles:
-http://dwarffortresswiki.org/index.php/Quantum_stockpile
+See :wiki:`the wiki <Quantum_stockpile>` for more information on quantum
+stockpiles.
 ]====]
 
 local gui = require('gui')
