@@ -46,6 +46,7 @@ See :wiki:`the wiki <Quantum_stockpile>` for more information on quantum
 stockpiles.
 ]====]
 
+local dialogs = require('gui.dialogs')
 local gui = require('gui')
 local guidm = require('gui.dwarfmode')
 local widgets = require('gui.widgets')
@@ -100,17 +101,12 @@ function QuantumUI:init()
             widgets.TooltipLabel{
                 text_to_wrap='Set the dump direction of the quantum stop.',
                 show_tooltip=true}}},
-        widgets.ResizingPanel{autoarrange_subviews=true, subviews={
-            widgets.CycleHotkeyLabel{
-                view_id='minecart',
-                key='CUSTOM_M',
-                options={{label='Automatic', value='auto'},
-                         {label='Manager orders only', value='orders'},
-                         {label='Manual', value='manual'}}},
-            widgets.TooltipLabel{
-                text_to_wrap='Autoassign minecarts? Number free: ' ..
-                        #self.minecarts,
-                show_tooltip=true}}},
+        widgets.WrappedLabel{
+            text_to_wrap=('%d minecart%s available: one will be %s'):format(
+                #self.minecarts, #self.minecarts == 1 and '' or 's',
+                #self.minecarts > 0 and 'automatically assigned'
+                    or 'ordered via the manager for you to assign to the route later'),
+            show_tooltip=true},
         widgets.HotkeyLabel{
             key='LEAVESCREEN',
             label=self:callback('get_back_text'),
@@ -353,7 +349,25 @@ function QuantumUI:commit(pos, qsp_pos)
               :format(qsp_pos.x, qsp_pos.y, qsp_pos.z))
     end
 
+    local message = nil
+    if #self.minecarts > 0 then
+        -- TODO: assign first minecart to route
+        message = 'An available minecart was assigned to your new' ..
+                ' quantum stockpile. You\'re all done!'
+    else
+        -- TODO: order a wooden minecart
+        message = 'There are no minecarts available to assign to the' ..
+                ' quantum stockpile, but a manager order to produce' ..
+                ' one was created for you. Once the minecart is' ..
+                ' built, please add it to the quantum stockpile route' ..
+                ' in the (h)auling menu.'
+    end
+    -- display a message box telling the user what we just did
+    dialogs.MessageBox{text=message}:show()
+end
 
+if dfhack_flags.module then
+    return
 end
 
 QuantumUI{}:show()
