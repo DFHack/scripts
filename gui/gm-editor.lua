@@ -51,7 +51,7 @@ local keybindings_raw = {
     {name='insert', key="CUSTOM_ALT_I",desc="Insert a new value to the vector"},
     {name='delete', key="CUSTOM_ALT_D",desc="Delete selected entry"},
     {name='reinterpret', key="CUSTOM_ALT_R",desc="Open selected entry as something else"},
-    {name='start_filter', key="CUSTOM_S",desc="Start typing filter, Enter to finish"},
+    {name='start_filter', key="CUSTOM_S",desc="Start typing filter"},
     {name='help', key="HELP",desc="Show this help"},
     {name='displace', key="STRING_A093",desc="Open reference offseted by index"},
     {name='NOT_USED', key="SEC_SELECT",desc="Edit selected entry as a number (for enums)"}, --not a binding...
