@@ -52,6 +52,19 @@ local guidm = require('gui.dwarfmode')
 local widgets = require('gui.widgets')
 local quickfort = reqscript('quickfort')
 
+-- ensure the list of available minecarts has been calculated by the game
+local function init_minecarts()
+    -- if there is a route, move to the vehicle screen and back out
+    if #df.global.ui.hauling.routes > 0 then
+        quickfort.apply_blueprint{mode='config', data='hv^^'}
+    else
+        -- if no current routes, create a route, moving to the vehicle screen,
+        -- back out, and remove the route.
+        quickfort.apply_blueprint{mode='config', data='hrv^^'}
+        df.global.ui.hauling.routes:erase(0)
+    end
+end
+
 local function get_free_minecarts()
     local free_minecarts = {}
     -- read directly from the list of minecarts that are assignable to routes
@@ -363,11 +376,12 @@ function QuantumUI:commit(pos, qsp_pos)
                 ' in the (h)auling menu.'
     end
     -- display a message box telling the user what we just did
-    dialogs.MessageBox{text=message}:show()
+    dialogs.MessageBox{text=message:wrap(70)}:show()
 end
 
 if dfhack_flags.module then
     return
 end
 
+init_minecarts()
 QuantumUI{}:show()
