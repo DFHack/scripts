@@ -30,7 +30,8 @@ Usage::
 :stop:    Stops running.
 :status:  Shows the item types that are currently being monitored and their
           deterioration frequencies.
-:now:     Causes all items (of the specified item types) to instantly rot away.
+:now:     Causes all items (of the specified item types) to rot away within a
+          few ticks.
 
 You can control which item types are being monitored and their rotting rates by
 running the command multiple times with different options.
@@ -117,7 +118,7 @@ local function is_valid_food(item)
 end
 
 local function increment_clothes_wear(item)
-    item.wear_timer = item.wear_timer * (item.wear + 0.5)
+    item.wear_timer = math.ceil(item.wear_timer * (item.wear + 0.5))
     return item.wear > 2
 end
 
@@ -143,13 +144,17 @@ local function increment_food_wear(item)
 end
 
 local function deteriorate(get_item_vectors_fn, is_valid_fn, increment_wear_fn)
+    local count = 0
     for _,v in ipairs(get_item_vectors_fn()) do
         for _,item in ipairs(v) do
-            if is_valid_fn(item) and increment_wear_fn(item) then
+            if is_valid_fn(item) and increment_wear_fn(item)
+                    and not item.flags.garbage_collect then
                 item.flags.garbage_collect = true
+                count = count + 1
             end
         end
     end
+    return count
 end
 
 local function always_worn()
@@ -157,20 +162,20 @@ local function always_worn()
 end
 
 local function deteriorate_clothes(now)
-    deteriorate(get_clothes_vectors, is_valid_clothing,
-                now and always_worn or increment_clothes_wear)
+    return deteriorate(get_clothes_vectors, is_valid_clothing,
+                       now and always_worn or increment_clothes_wear)
 end
 
 local function deteriorate_corpses(now)
-    deteriorate(get_corpse_vectors, is_valid_corpse,
-                now and always_worn or increment_corpse_wear)
-    deteriorate(get_remains_vectors, is_valid_corpse,
-                now and always_worn or increment_remains_wear)
+    return deteriorate(get_corpse_vectors, is_valid_corpse,
+                       now and always_worn or increment_corpse_wear)
+            + deteriorate(get_remains_vectors, is_valid_corpse,
+                          now and always_worn or increment_remains_wear)
 end
 
 local function deteriorate_food(now)
-    deteriorate(get_food_vectors, is_valid_food,
-                now and always_worn or increment_food_wear)
+    return deteriorate(get_food_vectors, is_valid_food,
+                       now and always_worn or increment_food_wear)
 end
 
 local type_fns = {
@@ -208,7 +213,12 @@ local function make_timeout_cb(item_type, opts)
             end
             return
         end
-        if not first_time then type_fns[item_type]() end
+        if not first_time then
+            local count = type_fns[item_type]()
+            if count > 0 then
+                print(('Deteriorated %d %s'):format(count, item_type))
+            end
+        end
     end
     return fn
 end
@@ -249,10 +259,10 @@ end
 
 local function now(opts)
     for _,v in ipairs(opts.types) do
+        local count = type_fns[v](true)
         if not opts.quiet then
-            print(('Immediately deteriorating all %s'):format(v))
+            print(('Deteriorated %d %s'):format(count, v))
         end
-        type_fns[v](true)
     end
 end
 
