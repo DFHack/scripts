@@ -51,6 +51,8 @@ local gui = require('gui')
 local guidm = require('gui.dwarfmode')
 local widgets = require('gui.widgets')
 local quickfort = reqscript('quickfort')
+local quickfort_command = reqscript('internal/quickfort/command')
+local quickfort_orders = reqscript('internal/quickfort/orders')
 
 -- ensure the list of available minecarts has been calculated by the game
 local function init_minecarts()
@@ -59,7 +61,10 @@ local function init_minecarts()
         quickfort.apply_blueprint{mode='config', data='hv^^'}
     else
         -- if no current routes, create a route, moving to the vehicle screen,
-        -- back out, and remove the route.
+        -- back out, and remove the route. We remove the route by erasing it
+        -- from the vector instead of through the UI since the confirm plugin
+        -- may or may not ask for confirmation, and we can't be sure what the
+        -- appropriate keypresses will be.
         quickfort.apply_blueprint{mode='config', data='hrv^^'}
         df.global.ui.hauling.routes:erase(0)
     end
@@ -70,7 +75,7 @@ local function get_free_minecarts()
     -- read directly from the list of minecarts that are assignable to routes
     for _,minecart in ipairs(df.global.ui.hauling.vehicles) do
         if minecart and minecart.route_id == -1 then
-            table.insert(free_minecarts, minecart.item_id)
+            table.insert(free_minecarts, minecart)
         end
     end
     return free_minecarts
@@ -328,6 +333,21 @@ local function get_quantum_data(name)
     return ('{quantum%s}'):format(name_part)
 end
 
+-- assign first minecart to the route we just created
+local function assign_minecart_to_last_route(minecart)
+    local route = df.global.ui.hauling.routes[#df.global.ui.hauling.routes - 1]
+    route.vehicle_ids:insert('#', minecart.id)
+    route.vehicle_stops:insert('#', 0)
+    minecart.route_id = route.id
+end
+
+local function order_minecart(pos)
+    local quickfort_ctx = quickfort_command.init_ctx{
+            command='orders', blueprint_name='gui/quantum', cursor=pos}
+    quickfort_orders.enqueue_additional_order(quickfort_ctx, 'wooden minecart')
+    quickfort_orders.create_orders(quickfort_ctx)
+end
+
 -- only call if is_valid_pos() has validated the blueprint positions
 function QuantumUI:commit(pos, qsp_pos)
     local stats = quickfort.apply_blueprint{mode='place', data='c', pos=qsp_pos}
@@ -364,11 +384,11 @@ function QuantumUI:commit(pos, qsp_pos)
 
     local message = nil
     if #self.minecarts > 0 then
-        -- TODO: assign first minecart to route
+        assign_minecart_to_last_route(self.minecarts[1])
         message = 'An available minecart was assigned to your new' ..
                 ' quantum stockpile. You\'re all done!'
     else
-        -- TODO: order a wooden minecart
+        order_minecart(pos)
         message = 'There are no minecarts available to assign to the' ..
                 ' quantum stockpile, but a manager order to produce' ..
                 ' one was created for you. Once the minecart is' ..

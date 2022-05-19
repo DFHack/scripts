@@ -138,6 +138,21 @@ local function get_reactions()
     return g_reactions
 end
 
+local function enqueue_additional_order_internal(order_specs, reactions, label)
+    local quantity = 1
+    if label == 'blocks' or label == 'rock blocks' then
+        quantity = 1 / 4
+    end
+    inc_order_spec(order_specs, quantity, reactions, label)
+end
+
+function enqueue_additional_order(ctx, label)
+    local order_specs = ctx.order_specs or {}
+    ctx.order_specs = order_specs
+    local reactions = get_reactions()
+    enqueue_additional_order_internal(order_specs, reactions, label)
+end
+
 function enqueue_building_orders(buildings, building_db, ctx)
     local order_specs = ctx.order_specs or {}
     ctx.order_specs = order_specs
@@ -156,17 +171,13 @@ function enqueue_building_orders(buildings, building_db, ctx)
         end
         if db_entry.additional_orders then
             for _,label in ipairs(db_entry.additional_orders) do
-                local quantity = 1
-                if additional_order == df.item_type.BLOCKS then
-                    quantity = 1 / 4
-                end
-                inc_order_spec(order_specs, quantity, reactions, label)
+                enqueue_additional_order_internal(order_specs, reactions, label)
             end
         end
         for _,filter in ipairs(filters) do
             if filter.quantity == -1 then filter.quantity = get_num_items(b) end
             if filter.flags2 and filter.flags2.building_material then
-                -- blocks get produced at a ratio of 4:1
+                -- rock blocks get produced at a ratio of 4:1
                 filter.quantity = filter.quantity or 1
                 filter.quantity = filter.quantity / 4
             end
