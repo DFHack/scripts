@@ -30,12 +30,12 @@ The script will walk you through the steps:
 If there are any minecarts available, one will be automatically associated with
 the hauling route. If you don't have a free minecart, ``gui/quantum`` can
 enqueue a manager order to make one for you. Once it is built, enter the
-:key:`h`auling menu, select the quantum stockpile hauling route stop, and hit
-:key:`v` to assign the minecart to the stop. The quantum stockpile needs a
+(h)auling menu, select the quantum stockpile hauling route stop, and hit
+(v) to assign the minecart to the stop. The quantum stockpile needs a
 minecart to function.
 
 Quantum stockpiles work much more efficiently if you add the following line to
-your `onMapLoad.init` file::
+your ``onMapLoad.init`` file::
 
     prioritize -a StoreItemInVehicle
 
