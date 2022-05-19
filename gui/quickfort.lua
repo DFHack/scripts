@@ -5,8 +5,9 @@ gui/quickfort
 =============
 Graphical interface for the `quickfort` script. Once you load a blueprint, you
 will see a blinking "shadow" over the tiles that will be modified. You can use
-the cursor to reposition the blueprint. Once you are satisfied, hit :kbd:`ENTER`
-to apply the blueprint to the map.
+the cursor to reposition the blueprint or the hotkeys to rotate and repeat the
+blueprint. Once you are satisfied, hit :kbd:`ENTER` to apply the blueprint to
+the map.
 
 Usage::
 
