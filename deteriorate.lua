@@ -150,6 +150,7 @@ local function deteriorate(get_item_vectors_fn, is_valid_fn, increment_wear_fn)
             if is_valid_fn(item) and increment_wear_fn(item)
                     and not item.flags.garbage_collect then
                 item.flags.garbage_collect = true
+                item.flags.hidden = true
                 count = count + 1
             end
         end
