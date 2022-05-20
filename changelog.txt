@@ -15,6 +15,7 @@ that repo.
 
 ## New Scripts
 
+- `assign-minecarts`: assign minecarts to hauling routes that don't have one
 - `deteriorate`: combines, replaces, and extends previous `deteriorateclothes`, `deterioratecorpses`, and `deterioratefood` scripts.
 - `gui/petitions`: shows list of fort's petitions
 - `gui/quantum`: interactive tool for creating quantum stockpiles

@@ -1,0 +1,175 @@
+-- assigns minecarts to hauling routes
+--@ module = true
+--[====[
+
+assign-minecarts
+================
+This script allows you to assign minecarts to hauling routes without having to
+use the in-game interface.
+
+Usage::
+
+    assign-minecarts list|all|<route id>
+
+:list: will show you information about your hauling routes, including whether
+       they have minecarts assigned to them.
+:all: will automatically assign a free minecart to all hauling routes that don't
+      have a minecart assigned to them.
+
+If you specifiy a route id, only that route will get a minecart assigned to it
+(if it doesn't already have one and there is a free minecart available).
+
+Note that a hauling route must have at least one stop defined before a minecart
+can be assigned to it.
+]====]
+
+local quickfort = reqscript('quickfort')
+
+-- ensures the list of available minecarts has been calculated by the game
+local function refresh_ui_hauling_vehicles()
+    -- if there is an existing route, move to the vehicle screen and back out
+    -- to force the game to scan for assignable minecarts
+    if #df.global.ui.hauling.routes > 0 then
+        quickfort.apply_blueprint{mode='config', data='hv^^'}
+    else
+        -- if no current routes, create a route, moving to the vehicle screen,
+        -- back out, and remove the route. We remove the route by erasing it
+        -- from the vector instead of through the UI since the confirm plugin
+        -- may or may not ask for confirmation, and we can't be sure what the
+        -- appropriate keypresses will be.
+        quickfort.apply_blueprint{mode='config', data='hrv^^'}
+        df.global.ui.hauling.routes:erase(0)
+    end
+end
+
+function get_free_vehicles()
+    refresh_ui_hauling_vehicles()
+    local free_vehicles = {}
+    for _,minecart in ipairs(df.global.ui.hauling.vehicles) do
+        if minecart and minecart.route_id == -1 then
+            table.insert(free_vehicles, minecart)
+        end
+    end
+    return free_vehicles
+end
+
+local function has_minecart(route)
+    return #route.vehicle_ids > 0
+end
+
+local function has_stops(route)
+    return #route.stops > 0
+end
+
+local function get_name(route)
+    return #route.name > 0 and route.name or ('Route '..route.id)
+end
+
+local function get_id_and_name(route)
+    return ('%d (%s)'):format(route.id, get_name(route))
+end
+
+local function assign_minecart_to_route(route, minecart)
+    if has_minecart(route) then
+        return true
+    end
+    if not has_stops(route) then
+        dfhack.printerr(
+            ('Route %s has no stops defined. Cannot assign minecart.')
+            :format(get_id_and_name(route)))
+        return false
+    end
+    if not minecart then
+        minecart = get_free_vehicles()[1]
+        if not minecart then
+            dfhack.printerr('No minecarts available! Please build some.')
+            return false
+        end
+    end
+    route.vehicle_ids:insert('#', minecart.id)
+    route.vehicle_stops:insert('#', 0)
+    minecart.route_id = route.id
+    print(('Assigned a minecart to route %s.'):format(get_id_and_name(route)))
+    return true
+end
+
+-- assign first free minecart to the most recently-created route
+-- returns whether route now has a minecart assigned
+function assign_minecart_to_last_route()
+    local route = df.global.ui.hauling.routes[#df.global.ui.hauling.routes - 1]
+    return assign_minecart_to_route(route)
+end
+
+if dfhack_flags.module then
+    return
+end
+
+local function get_route_by_id(route_id)
+    for _,route in ipairs(df.global.ui.hauling.routes) do
+        if route.id == route_id then
+            return route
+        end
+    end
+end
+
+local function list()
+    local routes = df.global.ui.hauling.routes
+    if 0 == #routes then
+        print('No hauling routes defined.')
+    else
+        print(('Found %d routes:\n'):format(#routes))
+        print('route id  minecart?  has stops?  route name')
+        print('--------  ---------  ----------  ----------')
+        for _,route in ipairs(routes) do
+            print(('%-8d  %-9s  %-9s  %s')
+                  :format(route.id,
+                          has_minecart(route) and 'yes' or 'NO',
+                          has_stops(route) and 'yes' or 'NO',
+                          get_name(route)))
+        end
+    end
+    local minecarts = get_free_vehicles()
+    print(('\nYou have %d unassigned minecart%s.')
+          :format(#minecarts, #minecarts == 1 and '' or 's'))
+end
+
+local function all()
+    local minecarts, idx = get_free_vehicles(), 1
+    local routes = df.global.ui.hauling.routes
+    for _,route in ipairs(routes) do
+        if has_minecart(route) then
+            goto continue
+        end
+        if not assign_minecart_to_route(route, minecarts[idx]) then
+            return
+        end
+        idx = idx + 1
+        ::continue::
+    end
+end
+
+local function help()
+    print(dfhack.script_help())
+end
+
+local command_switch = {
+    list=list,
+    all=all,
+}
+
+local command = ({...})[1]
+local requested_route_id = tonumber(command)
+if requested_route_id then
+    local route = get_route_by_id(requested_route_id)
+    if not route then
+        dfhack.printerr('route id not found: '..tostring(route_id))
+    elseif has_minecart(route) then
+        print(('Route %s already has a minecart assigned.')
+              :format(get_id_and_name(route)))
+    else
+        assign_minecart_to_route(route)
+    end
+    return
+end
+
+(command_switch[command or 'help'] or help)()
