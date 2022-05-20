@@ -28,11 +28,10 @@ The script will walk you through the steps:
 3) Select a spot on the map to build the quantum stockpile
 
 If there are any minecarts available, one will be automatically associated with
-the hauling route. If you don't have a free minecart, ``gui/quantum`` can
-enqueue a manager order to make one for you. Once it is built, enter the
-(h)auling menu, select the quantum stockpile hauling route stop, and hit
-(v) to assign the minecart to the stop. The quantum stockpile needs a
-minecart to function.
+the hauling route. If you don't have a free minecart, ``gui/quantum`` will
+enqueue a manager order to make one for you. Once it is built, run
+``assign-minecarts all`` to assign it to the route, or enter the (h)auling menu
+and assign one manually. The quantum stockpile needs a minecart to function.
 
 Quantum stockpiles work much more efficiently if you add the following line to
 your ``onMapLoad.init`` file::
@@ -50,36 +49,11 @@ local dialogs = require('gui.dialogs')
 local gui = require('gui')
 local guidm = require('gui.dwarfmode')
 local widgets = require('gui.widgets')
+
+local assign_minecarts = reqscript('assign-minecarts')
 local quickfort = reqscript('quickfort')
 local quickfort_command = reqscript('internal/quickfort/command')
 local quickfort_orders = reqscript('internal/quickfort/orders')
-
--- ensure the list of available minecarts has been calculated by the game
-local function init_minecarts()
-    -- if there is a route, move to the vehicle screen and back out
-    if #df.global.ui.hauling.routes > 0 then
-        quickfort.apply_blueprint{mode='config', data='hv^^'}
-    else
-        -- if no current routes, create a route, moving to the vehicle screen,
-        -- back out, and remove the route. We remove the route by erasing it
-        -- from the vector instead of through the UI since the confirm plugin
-        -- may or may not ask for confirmation, and we can't be sure what the
-        -- appropriate keypresses will be.
-        quickfort.apply_blueprint{mode='config', data='hrv^^'}
-        df.global.ui.hauling.routes:erase(0)
-    end
-end
-
-local function get_free_minecarts()
-    local free_minecarts = {}
-    -- read directly from the list of minecarts that are assignable to routes
-    for _,minecart in ipairs(df.global.ui.hauling.vehicles) do
-        if minecart and minecart.route_id == -1 then
-            table.insert(free_minecarts, minecart)
-        end
-    end
-    return free_minecarts
-end
 
 QuantumUI = defclass(QuantumUI, guidm.MenuOverlay)
 QuantumUI.ATTRS {
@@ -89,7 +63,7 @@ QuantumUI.ATTRS {
 }
 
 function QuantumUI:init()
-    self.minecarts = get_free_minecarts()
+    local cart_count = #assign_minecarts.get_free_vehicles()
 
     local main_panel = widgets.Panel{autoarrange_subviews=true,
                                      autoarrange_gap=1}
@@ -121,9 +95,9 @@ function QuantumUI:init()
                 show_tooltip=true}}},
         widgets.WrappedLabel{
             text_to_wrap=('%d minecart%s available: one will be %s'):format(
-                #self.minecarts, #self.minecarts == 1 and '' or 's',
-                #self.minecarts > 0 and 'automatically assigned'
-                    or 'ordered via the manager for you to assign to the route later'),
+                cart_count, cart_count == 1 and '' or 's',
+                cart_count > 0 and 'automatically assigned'
+                    or 'ordered via the manager for you to assign later'),
             show_tooltip=true},
         widgets.HotkeyLabel{
             key='LEAVESCREEN',
@@ -333,14 +307,6 @@ local function get_quantum_data(name)
     return ('{quantum%s}'):format(name_part)
 end
 
--- assign first minecart to the route we just created
-local function assign_minecart_to_last_route(minecart)
-    local route = df.global.ui.hauling.routes[#df.global.ui.hauling.routes - 1]
-    route.vehicle_ids:insert('#', minecart.id)
-    route.vehicle_stops:insert('#', 0)
-    minecart.route_id = route.id
-end
-
 local function order_minecart(pos)
     local quickfort_ctx = quickfort_command.init_ctx{
             command='orders', blueprint_name='gui/quantum', cursor=pos}
@@ -383,8 +349,7 @@ function QuantumUI:commit(pos, qsp_pos)
     end
 
     local message = nil
-    if #self.minecarts > 0 then
-        assign_minecart_to_last_route(self.minecarts[1])
+    if assign_minecarts.assign_minecart_to_last_route() then
         message = 'An available minecart was assigned to your new' ..
                 ' quantum stockpile. You\'re all done!'
     else
@@ -393,7 +358,8 @@ function QuantumUI:commit(pos, qsp_pos)
                 ' quantum stockpile, but a manager order to produce' ..
                 ' one was created for you. Once the minecart is' ..
                 ' built, please add it to the quantum stockpile route' ..
-                ' in the (h)auling menu.'
+                ' with the "assign-minecarts all" command or manually in' ..
+                ' the (h)auling menu.'
     end
     -- display a message box telling the user what we just did
     dialogs.MessageBox{text=message:wrap(70)}:show()
@@ -403,5 +369,4 @@ if dfhack_flags.module then
     return
 end
 
-init_minecarts()
 QuantumUI{}:show()
