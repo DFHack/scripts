@@ -97,8 +97,7 @@ function QuantumUI:init()
             text_to_wrap=('%d minecart%s available: one will be %s'):format(
                 cart_count, cart_count == 1 and '' or 's',
                 cart_count > 0 and 'automatically assigned'
-                    or 'ordered via the manager for you to assign later'),
-            show_tooltip=true},
+                    or 'ordered via the manager for you to assign later')},
         widgets.HotkeyLabel{
             key='LEAVESCREEN',
             label=self:callback('get_back_text'),
