@@ -51,9 +51,9 @@ function get_guildhall_profession(agr)
 end
 
 function get_guildhall_name(agr)
-	guild_id = agr.parties[0].entity_ids[0]
-	guild_name = dfhack.TranslateName(df.global.world.entities.all[guild_id].name,true)
-	return guild_name
+    guild_id = agr.parties[0].entity_ids[0]
+    guild_name = dfhack.TranslateName(df.global.world.entities.all[guild_id].name,true)
+    return guild_name
 end
 
 function get_religion_name(agr)
