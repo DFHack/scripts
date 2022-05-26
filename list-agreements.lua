@@ -50,6 +50,12 @@ function get_guildhall_profession(agr)
     return profname:gsub("_", " ")
 end
 
+function get_guildhall_name(agr)
+	guild_id = agr.parties[0].entity_ids[0]
+	guild_name = dfhack.TranslateName(df.global.world.entities.all[guild_id].name,true)
+	return guild_name
+end
+
 function get_religion_name(agr)
     religion_id = agr.details[0].data.Location.deity_data.Religion
     religion_name = dfhack.TranslateName(df.global.world.entities.all[religion_id].name, true)
@@ -66,13 +72,14 @@ function is_denied(agr)
     return denied
 end
 
+--May need a/an handling for armorers (although DF doesn't do this itself)
 function generate_output_guild(agr)
     if is_satisfied(agr) == true then
-        print("Establish a "..get_location_name(agr).." for the "..get_guildhall_profession(agr).." guild, as agreed on "..get_petition_date(agr).." (satisfied)")
+        print("Establish a "..get_location_name(agr).." for \""..get_guildhall_name(agr)..",\" a "..get_guildhall_profession(agr).." guild, as agreed on "..get_petition_date(agr).." (satisfied)")
     elseif is_denied(agr) == true then
-        print("Establish a "..get_location_name(agr).." for the "..get_guildhall_profession(agr).." guild, as agreed on "..get_petition_date(agr).." (denied)")
+        print("Establish a "..get_location_name(agr).." for \""..get_guildhall_name(agr)..",\" a "..get_guildhall_profession(agr).." guild, as agreed on "..get_petition_date(agr).." (denied)")
     else
-        print("Establish a "..get_location_name(agr).." for the "..get_guildhall_profession(agr).." guild, as agreed on "..get_petition_date(agr))
+        print("Establish a "..get_location_name(agr).." for \""..get_guildhall_name(agr)..",\" a "..get_guildhall_profession(agr).." guild, as agreed on "..get_petition_date(agr))
     end
 end
 
