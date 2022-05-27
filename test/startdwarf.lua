@@ -81,9 +81,9 @@ function test.not_number()
 end
 
 function test.too_small()
-    test_invalid_args({'4'}, 'too small')
-    test_invalid_args({'6'}, 'too small')
-    test_invalid_args({'-1'}, 'too small')
+    test_invalid_args({'4'}, 'less than 7')
+    test_invalid_args({'6'}, 'less than 7')
+    test_invalid_args({'-1'}, 'less than 7')
 end
 
 function test.missing_address()

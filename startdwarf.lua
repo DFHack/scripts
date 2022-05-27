@@ -4,7 +4,8 @@
 
 startdwarf
 ==========
-Use at the embark screen to embark with the specified number of dwarves.
+Use before embarking (e.g. at the site selection screen or any time before) to
+change the number of dwarves you embark with from the default of 7.
 
 - ``startdwarf 10`` would just allow a few more warm bodies to dig in
 - ``startdwarf 500`` would lead to a severe food shortage and FPS issues
@@ -19,10 +20,8 @@ if not addr then
 end
 
 local num = tonumber(({...})[1])
-if not num then
-    qerror('argument must be a number')
-elseif num < 7 then
-    qerror('argument too small: must be at least 7')
+if not num or num < 7 then
+    qerror('argument must be a number no less than 7')
 end
 
 dfhack.with_temp_object(df.new('uint32_t'), function(temp)
