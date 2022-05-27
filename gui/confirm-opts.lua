@@ -17,7 +17,7 @@ Opts.ATTRS = {
     frame_style = gui.GREY_LINE_FRAME,
     frame_title = 'Confirmation dialogs',
     frame_width = 32,
-    frame_height = 10,
+    frame_height = 12,
     frame_inset = 1,
     focus_path = 'confirm/opts',
 }
@@ -33,6 +33,12 @@ function Opts:init()
             on_submit = self:callback('toggle'),
             on_submit2 = self:callback('toggle_all'),
         },
+        widgets.HotkeyLabel{
+            frame = {b=2, l=0},
+            label='Resume paused confirmations',
+            key='CUSTOM_P',
+            on_activate=function() confirm.unpause() self:refresh() end,
+            enabled=function() return self.paused end},
         widgets.Label{
             view_id = 'controls',
             frame = {b = 0, l = 0},
@@ -62,7 +68,7 @@ function Opts:init()
     self:refresh()
 
     -- restrict the list to above the controls
-    self.subviews.list.frame.h = self.frame_height - self.subviews.controls.frame.h - 1
+    self.subviews.list.frame.h = self.frame_height - self.subviews.controls.frame.h - 2
     -- move the down arrow next to the bottom of the list
     self.subviews.scroll_down.frame.t = self.subviews.list.frame.h - 1
 
@@ -77,6 +83,7 @@ end
 
 function Opts:refresh()
     self.data = confirm.get_conf_data()
+    self.paused = confirm.get_paused()
     local choices = {}
     for i, c in ipairs(self.data) do
         table.insert(choices, {
