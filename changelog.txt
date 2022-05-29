@@ -23,7 +23,7 @@ that repo.
 
 ## Misc Improvements
 - `deteriorate`: new ``now`` command immediately deteriorates all items of the specified types.
-- `list-agreements`: now displays translated Guild Name 
+- `list-agreements`: now displays translated Guild Name
 
 ## Removed
 - `devel/unforbidall`: please use `unforbid` instead. You can silence the output with ``unforbid all --quiet``
