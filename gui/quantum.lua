@@ -75,7 +75,6 @@ function QuantumUI:init()
         widgets.ResizingPanel{autoarrange_subviews=true, subviews={
             widgets.EditField{
                 view_id='name',
-                frame={h=1},
                 key='CUSTOM_N',
                 on_char=self:callback('on_name_char'),
                 text=''},
