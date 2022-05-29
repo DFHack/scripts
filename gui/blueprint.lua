@@ -81,7 +81,6 @@ function NamePanel:init()
     self:addviews{
         widgets.EditField{
             view_id='name',
-            frame={h=1},
             key='CUSTOM_N',
             text=self.name,
             on_change=self:callback('update_tooltip'),
