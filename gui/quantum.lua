@@ -93,9 +93,10 @@ function QuantumUI:init()
                 text_to_wrap='Set the dump direction of the quantum stop.',
                 show_tooltip=true}}},
         widgets.WrappedLabel{
-            text_to_wrap=('%d minecart%s available: one will be %s'):format(
+            text_to_wrap=('%d minecart%s available: %s will be %s'):format(
                 cart_count, cart_count == 1 and '' or 's',
-                cart_count > 0 and 'automatically assigned'
+                cart_count == 1 and 'it' or 'one',
+                cart_count > 0 and 'automatically assigned to the quantum route'
                     or 'ordered via the manager for you to assign later')},
         widgets.HotkeyLabel{
             key='LEAVESCREEN',
