@@ -20,6 +20,12 @@ unit_vectors_revmap = {
     west='x=-1, y=0'
 }
 
+function resolve_vector(transformed_vector, revmap)
+    local serialized = ('x=%d, y=%d')
+            :format(transformed_vector.x, transformed_vector.y)
+    return revmap[serialized]
+end
+
 -- the revmap maps serialized vector strings to a string. for example:
 -- local bridge_revmap = {
 --     [unit_vectors_revmap.north]='gw',
@@ -28,10 +34,7 @@ unit_vectors_revmap = {
 --     [unit_vectors_revmap.west]='ga'
 -- }
 function resolve_transformed_vector(ctx, vector, revmap)
-    local transformed_vector = ctx.transform_fn(vector, true)
-    local serialized = ('x=%d, y=%d')
-            :format(transformed_vector.x, transformed_vector.y)
-    return revmap[serialized]
+    return resolve_vector(ctx.transform_fn(vector, true), revmap)
 end
 
 local function make_transform_fn(tfn)

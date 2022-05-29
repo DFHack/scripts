@@ -6,8 +6,8 @@ gui/quickfort
 Graphical interface for the `quickfort` script. Once you load a blueprint, you
 will see a blinking "shadow" over the tiles that will be modified. You can use
 the cursor to reposition the blueprint or the hotkeys to rotate and repeat the
-blueprint. Once you are satisfied, hit :kbd:`ENTER` to apply the blueprint to
-the map.
+blueprint up or down z-levels. Once you are satisfied, hit :kbd:`ENTER` to apply
+the blueprint to the map.
 
 Usage::
 
@@ -43,6 +43,7 @@ local quickfort_list = reqscript('internal/quickfort/list')
 local quickfort_map = reqscript('internal/quickfort/map')
 local quickfort_parse = reqscript('internal/quickfort/parse')
 local quickfort_preview = reqscript('internal/quickfort/preview')
+local quickfort_transform = reqscript('internal/quickfort/transform')
 
 local argparse = require('argparse')
 local dialogs = require('gui.dialogs')
@@ -60,6 +61,10 @@ show_library = show_library == nil and true or show_library
 show_hidden = show_hidden or false
 filter_text = filter_text or ''
 selected_id = selected_id or 1
+repeat_dir = repeat_dir or 'No'
+repetitions = repetitions or 1
+transform = transform or false
+transformations = transformations or {}
 
 -- displays blueprint details, such as the full modeline and comment, that
 -- otherwise might be truncated for length in the blueprint selection list
@@ -273,14 +278,64 @@ function QuickfortUI:init()
                 text_pen=COLOR_GREY,
                 text_to_wrap=self:callback('get_blueprint_name')}
             }},
-        widgets.Label{
-            text={'Invalid tiles: ',
-                  {text=self:callback('get_invalid_tiles')}},
-            text_dpen=COLOR_RED,
-            disabled=self:callback('has_invalid_tiles')},
+        widgets.ResizingPanel{autoarrange_subviews=true, subviews={
+            widgets.Label{
+                text={'Blueprint tiles: ',
+                    {text=self:callback('get_total_tiles')}}},
+            widgets.Label{
+                text={'Invalid tiles:   ',
+                    {text=self:callback('get_invalid_tiles')}},
+                text_dpen=COLOR_RED,
+                disabled=self:callback('has_invalid_tiles')}}},
         widgets.HotkeyLabel{key='CUSTOM_SHIFT_L',
             label=self:callback('get_lock_cursor_label'),
             on_activate=self:callback('toggle_lock_cursor')},
+        widgets.ResizingPanel{autoarrange_subviews=true, subviews={
+            widgets.CycleHotkeyLabel{key='CUSTOM_R',
+                view_id='repeat_cycle',
+                label='Repeat',
+                options={'No', 'Up', 'Down'},
+                initial_option=repeat_dir,
+                on_change=self:callback('on_repeat_change')},
+            widgets.ResizingPanel{view_id='repeat_times_panel',
+                    visible=repeat_dir ~= 'No',
+                    subviews={
+                widgets.HotkeyLabel{key='SECONDSCROLL_UP',
+                    frame={l=2}, key_sep='',
+                    on_activate=self:callback('on_adjust_repetitions', -1)},
+                widgets.HotkeyLabel{key='SECONDSCROLL_DOWN',
+                    frame={l=3}, key_sep='',
+                    on_activate=self:callback('on_adjust_repetitions', 1)},
+                widgets.HotkeyLabel{key='SECONDSCROLL_PAGEUP',
+                    frame={l=4}, key_sep='',
+                    on_activate=self:callback('on_adjust_repetitions', -10)},
+                widgets.HotkeyLabel{key='SECONDSCROLL_PAGEDOWN',
+                    frame={l=5}, key_sep='',
+                    on_activate=self:callback('on_adjust_repetitions', 10)},
+                widgets.EditField{key='CUSTOM_SHIFT_R',
+                    view_id='repeat_times',
+                    frame={l=6, h=1},
+                    label_text='x ',
+                    text=tostring(repetitions),
+                    on_char=function(ch) return ch:match('%d') end,
+                    on_submit=self:callback('on_repeat_times_submit')}}}}},
+        widgets.ResizingPanel{autoarrange_subviews=true, subviews={
+            widgets.ToggleHotkeyLabel{key='CUSTOM_T',
+                view_id='transform',
+                label='Transform',
+                initial_option=transform,
+                on_change=self:callback('on_transform_change')},
+            widgets.ResizingPanel{view_id='transform_panel',
+                    visible=transform,
+                    subviews={
+                widgets.Label{text={{text='Ctrl+Arrow', pen=COLOR_LIGHTGREEN},
+                                    {text=':'}},
+                    frame={l=2}},
+                widgets.WrappedLabel{
+                    frame={l=14},
+                    text_to_wrap=function()
+                            return #transformations == 0 and 'No transform'
+                                or table.concat(transformations, ', ') end}}}}},
         widgets.HotkeyLabel{key='CUSTOM_O', label='Generate manager orders',
             on_activate=self:callback('do_command', 'orders')},
         widgets.HotkeyLabel{key='CUSTOM_SHIFT_O',
@@ -325,6 +380,11 @@ function QuickfortUI:toggle_lock_cursor()
     self.cursor_locked = not self.cursor_locked
 end
 
+function QuickfortUI:get_total_tiles()
+    if not self.saved_preview then return '0' end
+    return tostring(self.saved_preview.total_tiles)
+end
+
 function QuickfortUI:has_invalid_tiles()
     return self:get_invalid_tiles() ~= '0'
 end
@@ -332,6 +392,68 @@ end
 function QuickfortUI:get_invalid_tiles()
     if not self.saved_preview then return '0' end
     return tostring(self.saved_preview.invalid_tiles)
+end
+
+function QuickfortUI:on_repeat_change(val)
+    repeat_dir = val
+    self.subviews.repeat_times_panel.visible = val ~= 'No'
+    self:updateLayout()
+    self.dirty = true
+end
+
+function QuickfortUI:on_adjust_repetitions(amt)
+    repetitions = math.max(1, repetitions + amt)
+    self.subviews.repeat_times.text = tostring(repetitions)
+    self.dirty = true
+end
+
+function QuickfortUI:on_repeat_times_submit(val)
+    repetitions = tonumber(val)
+    if not repetitions or repetitions < 1 then
+        repetitions = 1
+    end
+    self.subviews.repeat_times.text = tostring(repetitions)
+    self.dirty = true
+end
+
+function QuickfortUI:on_transform_change(val)
+    transform = val
+    self.subviews.transform_panel.visible = val
+    self:updateLayout()
+    self.dirty = true
+end
+
+local origin, test_point = {x=0, y=0}, {x=1, y=-2}
+local minimal_sequence = {
+    ['x=1, y=-2'] = {},
+    ['x=2, y=-1'] = {'cw', 'flipv'},
+    ['x=2, y=1'] = {'cw'},
+    ['x=1, y=2'] = {'flipv'},
+    ['x=-1, y=2'] = {'cw', 'cw'},
+    ['x=-2, y=1'] = {'ccw', 'flipv'},
+    ['x=-2, y=-1'] = {'ccw'},
+    ['x=-1, y=-2'] = {'fliph'}
+}
+
+-- reduces the list of transformations to a minimal sequence
+local function reduce_transform(elements)
+    local pos = test_point
+    for _,elem in ipairs(elements) do
+        pos = quickfort_transform.make_transform_fn_from_name(elem)(pos, origin)
+    end
+    local ret = quickfort_transform.resolve_vector(pos, minimal_sequence)
+    if #ret == #elements then
+        -- if we're not making the sequence any shorter, prefer the existing set
+        return elements
+    end
+    return copyall(ret)
+end
+
+function QuickfortUI:on_transform(val)
+    table.insert(transformations, val)
+    transformations = reduce_transform(transformations)
+    self:updateLayout()
+    self.dirty = true
 end
 
 function QuickfortUI:dialog_cb(text)
@@ -404,6 +526,16 @@ function QuickfortUI:refresh_preview()
     local section_name = self.section_name
     local modifiers = quickfort_parse.get_modifiers_defaults()
 
+    if repeat_dir ~= 'No' and repetitions > 1 then
+        local repeat_str = repeat_dir .. tostring(repetitions)
+        quickfort_parse.parse_repeat_params(repeat_str, modifiers)
+    end
+
+    if transform and #transformations > 0 then
+        local transform_str = table.concat(transformations, ',')
+        quickfort_parse.parse_transform_params(transform_str, modifiers)
+    end
+
     quickfort_command.do_command_section(ctx, section_name, modifiers)
 
     self.saved_preview = ctx.preview
@@ -438,6 +570,12 @@ end
 function QuickfortUI:onInput(keys)
     if self:inputToSubviews(keys) then
         return true
+    elseif transform then
+        if keys.A_MOVE_E_DOWN then self:on_transform('cw')
+        elseif keys.A_MOVE_W_DOWN then self:on_transform('ccw')
+        elseif keys.A_MOVE_N_DOWN then self:on_transform('flipv')
+        elseif keys.A_MOVE_S_DOWN then self:on_transform('fliph')
+        end
     end
 
     if keys.SELECT then
