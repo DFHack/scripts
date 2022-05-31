@@ -138,24 +138,19 @@ local function get_reactions()
     return g_reactions
 end
 
-local function enqueue_additional_order_internal(order_specs, reactions, label)
-    local quantity = 1
-    if label == 'blocks' or label == 'rock blocks' then
-        quantity = 1 / 4
-    end
-    inc_order_spec(order_specs, quantity, reactions, label)
+local function ensure_order_specs(ctx)
+    local order_specs = ctx.order_specs or {}
+    ctx.order_specs = order_specs
+    return order_specs
 end
 
 function enqueue_additional_order(ctx, label)
-    local order_specs = ctx.order_specs or {}
-    ctx.order_specs = order_specs
-    local reactions = get_reactions()
-    enqueue_additional_order_internal(order_specs, reactions, label)
+    local order_specs = ensure_order_specs(ctx)
+    inc_order_spec(order_specs, 1, get_reactions(), label)
 end
 
 function enqueue_building_orders(buildings, building_db, ctx)
-    local order_specs = ctx.order_specs or {}
-    ctx.order_specs = order_specs
+    local order_specs = ensure_order_specs(ctx)
     local reactions = get_reactions()
     for _, b in ipairs(buildings) do
         local db_entry = building_db[b.type]
@@ -171,7 +166,7 @@ function enqueue_building_orders(buildings, building_db, ctx)
         end
         if db_entry.additional_orders then
             for _,label in ipairs(db_entry.additional_orders) do
-                enqueue_additional_order_internal(order_specs, reactions, label)
+                inc_order_spec(order_specs, 1, reactions, label)
             end
         end
         for _,filter in ipairs(filters) do
