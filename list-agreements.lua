@@ -91,9 +91,9 @@ function get_guildhall_profession(agr)
         profname = string.gsub(profname,"man",string.lower(dfhack.units.getRaceNameById(df.global.ui.race_id)))
     end
     if not profname then
-		profname = 'profession-less'
-	end
-	return profname:gsub("_", " ")
+        profname = 'profession-less'
+    end
+    return profname:gsub("_", " ")
 end
 
 function get_agr_party_name(agr)
@@ -101,9 +101,9 @@ function get_agr_party_name(agr)
     local party_id = agr.parties[0].entity_ids[0]
     local party_name = dfhack.TranslateName(df.global.world.entities.all[party_id].name, true)
     if not party_name then
-		party_name = 'An Unknown Entity or Group'
-	end
-	return party_name
+        party_name = 'An Unknown Entity or Group'
+    end
+    return party_name
 end
 
 function get_deity_name(agr)
