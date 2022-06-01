@@ -85,21 +85,25 @@ end
 
 function get_guildhall_profession(agr)
     local prof = agr.details[0].data.Location.profession
-    local profname = 'profession-less'
-    profname = string.lower(df.profession[prof])
+    local profname = string.lower(df.profession[prof])
     -- *VERY* important code follows
     if string.find(profname, "man") then
         profname = string.gsub(profname,"man",string.lower(dfhack.units.getRaceNameById(df.global.ui.race_id)))
     end
-    return profname:gsub("_", " ")
+    if not profname then
+		profname = 'profession-less'
+	end
+	return profname:gsub("_", " ")
 end
 
 function get_agr_party_name(agr)
     --assume party 0 is guild/order, 1 is local government as siteid = playerfortid
     local party_id = agr.parties[0].entity_ids[0]
-    local party_name = 'An Unknown Entity or Group'
-    party_name = dfhack.TranslateName(df.global.world.entities.all[party_id].name, true)
-    return party_name
+    local party_name = dfhack.TranslateName(df.global.world.entities.all[party_id].name, true)
+    if not party_name then
+		party_name = 'An Unknown Entity or Group'
+	end
+	return party_name
 end
 
 function get_deity_name(agr)
