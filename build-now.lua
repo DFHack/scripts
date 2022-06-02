@@ -367,7 +367,7 @@ local function create_and_link_construction(pos, item, top_of_wall, use_open_spa
     construction.mat_type = item:getMaterial()
     construction.mat_index = item:getMaterialIndex()
     construction.flags.top_of_wall = top_of_wall
-    construction.flags.no_build_item = false
+    construction.flags.no_build_item = not top_of_wall
     construction.original_tile = use_open_space_for_original_tile and df.tiletype.OpenSpace or dfhack.maps.getTileType(pos)
     utils.insert_sorted(df.global.world.constructions, construction,
                         'pos', pos_cmp)
@@ -436,10 +436,11 @@ local function build_construction(bld)
     dfhack.buildings.deconstruct(bld)
 
     -- check for and remove a construction on the tile already (i.e. building a construction on top of a wall)
-    local use_open_space_for_original_tile = true
+    local use_open_space_for_original_tile = false
     for i, construction in ipairs(df.global.world.constructions) do
         if pos.x == construction.pos.x and pos.y == construction.pos.y and pos.z == construction.pos.z then
             df.global.world.constructions:erase(i)
+            use_open_space_for_original_tile = true
             break
         end
     end
