@@ -60,8 +60,6 @@ local function set_setting(key, value)
 end
 
 local function read_settings(reader)
-    print(string.format('reading quickfort configuration from "%s"',
-                        reader.filepath))
     local line = reader:get_next_row()
     while line do
         local _, _, key, value = string.find(line, '^%s*([%a_]+)%s*=%s*(%S.*)')
@@ -116,6 +114,8 @@ function do_set(args)
 end
 
 function do_reset()
+    print(string.format('reading quickfort configuration from "%s"',
+                        config_file))
     local get_reader_fn = function()
         return quickfort_reader.TextReader{filepath=config_file}
     end

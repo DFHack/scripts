@@ -9,7 +9,7 @@ use the in-game interface.
 
 Usage::
 
-    assign-minecarts list|all|<route id>
+    assign-minecarts list|all|<route id> [-q|--quiet]
 
 :list: will show you information about your hauling routes, including whether
        they have minecarts assigned to them.
@@ -19,10 +19,13 @@ Usage::
 If you specifiy a route id, only that route will get a minecart assigned to it
 (if it doesn't already have one and there is a free minecart available).
 
+Add ``-q`` or ``--quiet`` to suppress informational output.
+
 Note that a hauling route must have at least one stop defined before a minecart
 can be assigned to it.
 ]====]
 
+local argparse = require('argparse')
 local quickfort = reqscript('quickfort')
 
 -- ensures the list of available minecarts has been calculated by the game
@@ -69,35 +72,46 @@ local function get_id_and_name(route)
     return ('%d (%s)'):format(route.id, get_name(route))
 end
 
-local function assign_minecart_to_route(route, minecart)
+local function assign_minecart_to_route(route, quiet, minecart)
     if has_minecart(route) then
         return true
     end
     if not has_stops(route) then
-        dfhack.printerr(
-            ('Route %s has no stops defined. Cannot assign minecart.')
-            :format(get_id_and_name(route)))
+        if not quiet then
+            dfhack.printerr(
+                ('Route %s has no stops defined. Cannot assign minecart.')
+                :format(get_id_and_name(route)))
+        end
         return false
     end
     if not minecart then
         minecart = get_free_vehicles()[1]
         if not minecart then
-            dfhack.printerr('No minecarts available! Please build some.')
+            if not quiet then
+                dfhack.printerr('No minecarts available! Please build some.')
+            end
             return false
         end
     end
     route.vehicle_ids:insert('#', minecart.id)
     route.vehicle_stops:insert('#', 0)
     minecart.route_id = route.id
-    print(('Assigned a minecart to route %s.'):format(get_id_and_name(route)))
+    if not quiet then
+        print(('Assigned a minecart to route %s.')
+              :format(get_id_and_name(route)))
+    end
     return true
 end
 
 -- assign first free minecart to the most recently-created route
 -- returns whether route now has a minecart assigned
-function assign_minecart_to_last_route()
-    local route = df.global.ui.hauling.routes[#df.global.ui.hauling.routes - 1]
-    return assign_minecart_to_route(route)
+function assign_minecart_to_last_route(quiet)
+    local route_idx = #df.global.ui.hauling.routes - 1
+    if route_idx < 0 then
+        return false
+    end
+    local route = df.global.ui.hauling.routes[route_idx]
+    return assign_minecart_to_route(route, quiet)
 end
 
 if dfhack_flags.module then
@@ -133,14 +147,14 @@ local function list()
           :format(#minecarts, #minecarts == 1 and '' or 's'))
 end
 
-local function all()
+local function all(quiet)
     local minecarts, idx = get_free_vehicles(), 1
     local routes = df.global.ui.hauling.routes
     for _,route in ipairs(routes) do
         if has_minecart(route) then
             goto continue
         end
-        if not assign_minecart_to_route(route, minecarts[idx]) then
+        if not assign_minecart_to_route(route, quiet, minecarts[idx]) then
             return
         end
         idx = idx + 1
@@ -157,7 +171,10 @@ local command_switch = {
     all=all,
 }
 
-local command = ({...})[1]
+local quiet = false
+local command = argparse.processArgsGetopt({...}, {
+        {'q', 'quiet', handler=function() quiet = true end}})[1]
+
 local requested_route_id = tonumber(command)
 if requested_route_id then
     local route = get_route_by_id(requested_route_id)
@@ -167,9 +184,9 @@ if requested_route_id then
         print(('Route %s already has a minecart assigned.')
               :format(get_id_and_name(route)))
     else
-        assign_minecart_to_route(route)
+        assign_minecart_to_route(route, quiet)
     end
     return
 end
 
-(command_switch[command or 'help'] or help)()
+(command_switch[command] or help)(quiet)

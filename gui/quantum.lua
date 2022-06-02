@@ -348,7 +348,7 @@ function QuantumUI:commit(pos, qsp_pos)
     end
 
     local message = nil
-    if assign_minecarts.assign_minecart_to_last_route() then
+    if assign_minecarts.assign_minecart_to_last_route(true) then
         message = 'An available minecart was assigned to your new' ..
                 ' quantum stockpile. You\'re all done!'
     else
