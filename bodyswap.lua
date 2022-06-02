@@ -39,10 +39,6 @@ if args.help then
   return
 end
 
-if df.global.gamemode ~= df.game_mode.ADVENTURE then
-  qerror("This script can only be used in adventure mode!")
-end
-
 function setNewAdvNemFlags(nem)
   nem.flags.ACTIVE_ADVENTURER = true
   nem.flags.RETIRED_ADVENTURER = false
@@ -186,6 +182,10 @@ function swapAdvUnit(newUnit)
 end
 
 if not dfhack_flags.module then
+  if df.global.gamemode ~= df.game_mode.ADVENTURE then
+    qerror("This script can only be used in adventure mode!")
+  end
+
   local unit = args.unit and df.unit.find(tonumber(args.unit)) or dfhack.gui.getSelectedUnit()
   if not unit then
     print("Enter the following if you require assistance: bodyswap -help")
