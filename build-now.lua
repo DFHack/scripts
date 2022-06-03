@@ -364,6 +364,15 @@ local function get_original_tile(pos)
     return dfhack.maps.getTileType(pos)
 end
 
+local function reuse_construction(construction, item)
+    construction.item_type = item:getType()
+    construction.item_subtype = item:getSubtype()
+    construction.mat_type = item:getMaterial()
+    construction.mat_index = item:getMaterialIndex()
+    construction.flags.top_of_wall = false
+    construction.flags.no_build_item = true
+end
+
 local function create_and_link_construction(pos, item, top_of_wall)
     local construction = df.construction:new()
     utils.assign(construction.pos, pos)
@@ -447,8 +456,9 @@ local function build_construction(bld)
         -- modify the construction to the new type
         local construction, found = utils.binsearch(df.global.world.constructions, pos, "pos", pos_cmp)
         if not found then
-            error("Error: could not find construction entry for construction tile at " .. pos.x, .. ", " .. pos.y .. ", " .. pos.z)
+            error("Error: could not find construction entry for construction tile at " .. pos.x .. ", " .. pos.y .. ", " .. pos.z)
         end
+        reuse_construction(construction, item)
     else
         -- add entries to df.global.world.constructions and adjust tiletypes for
         -- the construction itself
