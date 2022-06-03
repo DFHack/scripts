@@ -314,7 +314,7 @@ function QuickfortUI:init()
                     on_activate=self:callback('on_adjust_repetitions', 10)},
                 widgets.EditField{key='CUSTOM_SHIFT_R',
                     view_id='repeat_times',
-                    frame={l=6, h=1},
+                    frame={l=7, h=1},
                     label_text='x ',
                     text=tostring(repetitions),
                     on_char=function(ch) return ch:match('%d') end,
