@@ -343,7 +343,10 @@ function QuickfortUI:init()
             widgets.ResizingPanel{view_id='transform_panel',
                     visible=transform,
                     subviews={
-                widgets.Label{text={{text='Ctrl+Arrow', pen=COLOR_LIGHTGREEN},
+                widgets.Label{text={{text='Ctrl+'..string.char(24)..
+                                          string.char(25)..string.char(26)..
+                                          string.char(27),
+                                     pen=COLOR_LIGHTGREEN},
                                     {text=':'}},
                     frame={l=2}},
                 widgets.WrappedLabel{
