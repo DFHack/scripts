@@ -135,7 +135,7 @@ function QuantumUI:on_name_char(char, text)
     return #text < 12
 end
 
-local function is_in_extent(bld, x, y)
+local function is_in_extents(bld, x, y)
     local extents = bld.room.extents
     if not extents then return true end -- building is solid
     local yoff = (y - bld.y1) * (bld.x2 - bld.x1 + 1)
@@ -153,7 +153,7 @@ function QuantumUI:select_stockpile(pos)
 
     for x=bld.x1,bld.x2 do
         for y=bld.y1,bld.y2 do
-            if is_in_extent(bld, x, y) then
+            if is_in_extents(bld, x, y) then
                 ensure_key(ensure_key(tiles, bld.z), y)[x] = true
             end
         end
@@ -313,24 +313,21 @@ local function order_minecart(pos)
     quickfort_orders.create_orders(quickfort_ctx)
 end
 
--- only call if is_valid_pos() has validated the blueprint positions
-function QuantumUI:commit(pos, qsp_pos)
+local function create_quantum(pos, qsp_pos, feeder_tiles, name, trackstop_dir)
     local stats = quickfort.apply_blueprint{mode='place', data='c', pos=qsp_pos}
     if stats.place_designated.value == 0 then
         error(('failed to place quantum stockpile at (%d, %d, %d)')
               :format(qsp_pos.x, qsp_pos.y, qsp_pos.z))
     end
 
-    local trackstop_dir = self.subviews.dir:getOptionLabel():sub(1,1)
     stats = quickfort.apply_blueprint{mode='build',
                                       data='trackstop'..trackstop_dir, pos=pos}
     if stats.build_designated.value == 0 then
-        error(('failed to place trackstop at (%d, %d, %d)')
+        error(('failed to build trackstop at (%d, %d, %d)')
               :format(pos.x, pos.y, pos.z))
     end
 
-    local name = self.subviews.name.text
-    local feeder_pos = get_feeder_pos(self.feeder_tiles)
+    local feeder_pos = get_feeder_pos(feeder_tiles)
     local quantumstop_data = get_quantumstop_data(pos, feeder_pos, name)
     stats = quickfort.apply_blueprint{mode='query', data=quantumstop_data,
                                       pos=pos}
@@ -346,6 +343,13 @@ function QuantumUI:commit(pos, qsp_pos)
         error(('failed to query quantum stockpile at (%d, %d, %d)')
               :format(qsp_pos.x, qsp_pos.y, qsp_pos.z))
     end
+end
+
+-- this function assumes that is_valid_pos() has already validated the positions
+function QuantumUI:commit(pos, qsp_pos)
+    local name = self.subviews.name.text
+    local trackstop_dir = self.subviews.dir:getOptionLabel():sub(1,1)
+    create_quantum(pos, qsp_pos, self.feeder_tiles, name, trackstop_dir)
 
     local message = nil
     if assign_minecarts.assign_minecart_to_last_route(true) then
@@ -362,6 +366,18 @@ function QuantumUI:commit(pos, qsp_pos)
     end
     -- display a message box telling the user what we just did
     dialogs.MessageBox{text=message:wrap(70)}:show()
+end
+
+if dfhack.internal.IN_TEST then
+    unit_test_hooks = {
+        is_in_extents=is_in_extents,
+        is_valid_pos=is_valid_pos,
+        get_feeder_pos=get_feeder_pos,
+        get_moves=get_moves,
+        get_quantumstop_data=get_quantumstop_data,
+        get_quantum_data=get_quantum_data,
+        create_quantum=create_quantum,
+    }
 end
 
 if dfhack_flags.module then
