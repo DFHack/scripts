@@ -280,9 +280,15 @@ function QuickfortUI:init()
                                      autoarrange_gap=1}
     main_panel:addviews{
         widgets.Label{text='Quickfort'},
-        widgets.WrappedLabel{view_id='summary',
-            text_pen=COLOR_GREY,
-            text_to_wrap=self:callback('get_summary_label')},
+        widgets.ResizingPanel{subviews={
+            widgets.WrappedLabel{view_id='summary',
+                frame={t=0, l=0},
+                text_pen=COLOR_GREY,
+                text_to_wrap=self:callback('get_summary_label')},
+            widgets.HotkeyLabel{view_id='commit_label',
+                frame={t=1, l=13}, key='SELECT', key_sep=' ', label='to apply.',
+                text_pen=COLOR_GREY, on_activate=self:callback('commit')}
+        }},
         widgets.HotkeyLabel{key='CUSTOM_L', label='Load new blueprint',
             on_activate=self:callback('show_dialog')},
         widgets.ResizingPanel{autoarrange_subviews=true, subviews={
@@ -368,12 +374,16 @@ function QuickfortUI:init()
 end
 
 function QuickfortUI:get_summary_label()
+    local commit_label_frame = self.subviews.commit_label.frame
     if self.mode == 'config' then
-        return 'Blueprint configures game, not map. Hit ENTER to apply.'
+        commit_label_frame.l = 13
+        return 'Blueprint configures game, not map. Hit'
     elseif self.mode == 'notes' then
-        return 'Blueprint shows help text. Hit ENTER to apply.'
+        commit_label_frame.l = 4
+        return 'Blueprint shows help text. Hit'
     end
-    return 'Reposition with the cursor keys and hit ENTER to apply.'
+    commit_label_frame.l = 13
+    return 'Reposition with the cursor keys and hit'
 end
 
 function QuickfortUI:get_blueprint_name()
@@ -588,7 +598,9 @@ end
 function QuickfortUI:onInput(keys)
     if self:inputToSubviews(keys) then
         return true
-    elseif transform then
+    end
+
+    if transform then
         if keys.A_MOVE_E_DOWN then self:on_transform('cw')
         elseif keys.A_MOVE_W_DOWN then self:on_transform('ccw')
         elseif keys.A_MOVE_N_DOWN then self:on_transform('flipv')
@@ -596,12 +608,14 @@ function QuickfortUI:onInput(keys)
         end
     end
 
-    if keys.SELECT then
-        local post_fn = self.mode ~= 'notes' and self:dismiss() or nil
-        self:do_command('run', false, post_fn)
-    end
-
     return self:propagateMoveKeys(keys)
+end
+
+function QuickfortUI:commit()
+    if self.mode ~= 'notes' then
+        self:dismiss()
+    end
+    self:do_command('run', false)
 end
 
 function QuickfortUI:do_command(command, dry_run, post_fn)
