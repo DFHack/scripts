@@ -61,7 +61,7 @@ show_library = show_library == nil and true or show_library
 show_hidden = show_hidden or false
 filter_text = filter_text or ''
 selected_id = selected_id or 1
-repeat_dir = repeat_dir or 'No'
+repeat_dir = repeat_dir or false
 repetitions = repetitions or 1
 transform = transform or false
 transformations = transformations or {}
@@ -294,11 +294,13 @@ function QuickfortUI:init()
             widgets.CycleHotkeyLabel{key='CUSTOM_R',
                 view_id='repeat_cycle',
                 label='Repeat',
-                options={'No', 'Up', 'Down'},
+                options={{label='No', value=false},
+                         {label='Down z-levels', value='>'},
+                         {label='Up z-levels', value='<'}},
                 initial_option=repeat_dir,
                 on_change=self:callback('on_repeat_change')},
             widgets.ResizingPanel{view_id='repeat_times_panel',
-                    visible=repeat_dir ~= 'No',
+                    visible=repeat_dir,
                     subviews={
                 widgets.HotkeyLabel{key='SECONDSCROLL_UP',
                     frame={l=2}, key_sep='',
@@ -396,7 +398,7 @@ end
 
 function QuickfortUI:on_repeat_change(val)
     repeat_dir = val
-    self.subviews.repeat_times_panel.visible = val ~= 'No'
+    self.subviews.repeat_times_panel.visible = val
     self:updateLayout()
     self.dirty = true
 end
@@ -526,7 +528,7 @@ function QuickfortUI:refresh_preview()
     local section_name = self.section_name
     local modifiers = quickfort_parse.get_modifiers_defaults()
 
-    if repeat_dir ~= 'No' and repetitions > 1 then
+    if repeat_dir and repetitions > 1 then
         local repeat_str = repeat_dir .. tostring(repetitions)
         quickfort_parse.parse_repeat_params(repeat_str, modifiers)
     end
