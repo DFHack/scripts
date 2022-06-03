@@ -384,4 +384,5 @@ if dfhack_flags.module then
     return
 end
 
-QuantumUI{}:show()
+view = QuantumUI{}
+view:show()
