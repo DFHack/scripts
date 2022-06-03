@@ -24,8 +24,21 @@ will be filtered as you type. You can search for directory names, file names,
 blueprint labels, modes, or comments. Note that, depending on the active list
 filters, the id numbers in the list may not be contiguous.
 
-Any settings you set in the UI, such as search terms for the blueprint list, are
-saved between invocations.
+To rotate or flip the blueprint around, enable transformations with :kbd:`t` and
+use :kbd:`Ctrl` with the arrow keys to add a transformation step:
+
+:kbd:`Ctrl`:kbd:`Left`:  Rotate counterclockwise (ccw)
+:kbd:`Ctrl`:kbd:`Right`: Rotate clockwise (cw)
+:kbd:`Ctrl`:kbd:`Up`:    Flip vertically (vflip)
+:kbd:`Ctrl`:kbd:`Down`:  Flip horizontally (hflip)
+
+If a shorter transformation sequence can be used to get the blueprint into the
+configuration you want, it will automatically be used. For example, if you
+rotate clockwise three times, gui/quickfort will shorten the sequence to a
+single counterclockwise rotation for you.
+
+Any settings you set in the UI, such as search terms for the blueprint list or
+transformation options, are saved for the next time you run the script.
 
 Examples:
 
