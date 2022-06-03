@@ -26,9 +26,8 @@ Examples:
 
 Options:
 
-:``all``     list all agreements; past and present
-
-:``help``    shows this help screen
+:all:   list all agreements; past and present
+:help:  shows this help screen
 
 ]====]
 local playerfortid = df.global.ui.site_id -- Player fortress id
