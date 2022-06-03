@@ -30,19 +30,19 @@ local quickfort = reqscript('quickfort')
 
 -- ensures the list of available minecarts has been calculated by the game
 local function refresh_ui_hauling_vehicles()
-    -- if there is an existing route, move to the vehicle screen and back out
-    -- to force the game to scan for assignable minecarts
+    local qfdata
     if #df.global.ui.hauling.routes > 0 then
-        quickfort.apply_blueprint{mode='config', data='hv^^'}
+        -- if there is an existing route, move to the vehicle screen and back
+        -- out to force the game to scan for assignable minecarts
+        qfdata = 'hv^^'
     else
-        -- if no current routes, create a route, moving to the vehicle screen,
-        -- back out, and remove the route. We remove the route by erasing it
-        -- from the vector instead of through the UI since the confirm plugin
-        -- may or may not ask for confirmation, and we can't be sure what the
-        -- appropriate keypresses will be.
-        quickfort.apply_blueprint{mode='config', data='hrv^^'}
-        df.global.ui.hauling.routes:erase(0)
+        -- if no current routes, create a route, move to the vehicle screen,
+        -- back out, and remove the route. The extra "px" is in the string in
+        -- case the user has the confirm plugin enabled. "p" pauses the plugin
+        -- and "x" retries the route deletion.
+        qfdata = 'hrv^xpx^'
     end
+    quickfort.apply_blueprint{mode='config', data=qfdata}
 end
 
 function get_free_vehicles()
@@ -65,7 +65,7 @@ local function has_stops(route)
 end
 
 local function get_name(route)
-    return #route.name > 0 and route.name or ('Route '..route.id)
+    return route.name and #route.name > 0 and route.name or ('Route '..route.id)
 end
 
 local function get_id_and_name(route)
@@ -106,16 +106,13 @@ end
 -- assign first free minecart to the most recently-created route
 -- returns whether route now has a minecart assigned
 function assign_minecart_to_last_route(quiet)
-    local route_idx = #df.global.ui.hauling.routes - 1
+    local routes = df.global.ui.hauling.routes
+    local route_idx = #routes - 1
     if route_idx < 0 then
         return false
     end
-    local route = df.global.ui.hauling.routes[route_idx]
+    local route = routes[route_idx]
     return assign_minecart_to_route(route, quiet)
-end
-
-if dfhack_flags.module then
-    return
 end
 
 local function get_route_by_id(route_id)
@@ -131,7 +128,8 @@ local function list()
     if 0 == #routes then
         print('No hauling routes defined.')
     else
-        print(('Found %d routes:\n'):format(#routes))
+        print(('Found %d route%s:\n')
+              :format(#routes, #routes == 1 and '' or 's'))
         print('route id  minecart?  has stops?  route name')
         print('--------  ---------  ----------  ----------')
         for _,route in ipairs(routes) do
@@ -162,7 +160,7 @@ local function all(quiet)
     end
 end
 
-local function help()
+local function do_help()
     print(dfhack.script_help())
 end
 
@@ -171,22 +169,35 @@ local command_switch = {
     all=all,
 }
 
-local quiet = false
-local command = argparse.processArgsGetopt({...}, {
-        {'q', 'quiet', handler=function() quiet = true end}})[1]
+local function main(args)
+    local help, quiet = false, false
+    local command = argparse.processArgsGetopt(args, {
+            {'h', 'help', handler=function() help = true end},
+            {'q', 'quiet', handler=function() quiet = true end}})[1]
 
-local requested_route_id = tonumber(command)
-if requested_route_id then
-    local route = get_route_by_id(requested_route_id)
-    if not route then
-        dfhack.printerr('route id not found: '..tostring(route_id))
-    elseif has_minecart(route) then
-        print(('Route %s already has a minecart assigned.')
-              :format(get_id_and_name(route)))
-    else
-        assign_minecart_to_route(route, quiet)
+    if help then
+        command = nil
     end
-    return
+
+    local requested_route_id = tonumber(command)
+    if requested_route_id then
+        local route = get_route_by_id(requested_route_id)
+        if not route then
+            dfhack.printerr('route id not found: '..requested_route_id)
+        elseif has_minecart(route) then
+            if not quiet then
+                print(('Route %s already has a minecart assigned.')
+                    :format(get_id_and_name(route)))
+            end
+        else
+            assign_minecart_to_route(route, quiet)
+        end
+        return
+    end
+
+    (command_switch[command] or do_help)(quiet)
 end
 
-(command_switch[command] or help)(quiet)
+if not dfhack_flags.module then
+    main({...})
+end
