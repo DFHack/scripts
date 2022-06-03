@@ -463,10 +463,10 @@ local function build_construction(bld)
         -- add entries to df.global.world.constructions and adjust tiletypes for
         -- the construction itself
         create_and_link_construction(pos, item, false)
-        set_tiletype(pos, const_to_tile[construction_type])
-        if construction_type == df.construction_type.Wall then
-            dig_now.link_adjacent_smooth_walls(pos)
-        end
+    end
+    set_tiletype(pos, const_to_tile[construction_type])
+    if construction_type == df.construction_type.Wall then
+        dig_now.link_adjacent_smooth_walls(pos)
     end
 
     -- for walls and ramps with empty space above, adjust the tile above
