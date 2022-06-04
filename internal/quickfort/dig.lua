@@ -176,6 +176,14 @@ local function do_mine(digctx)
     return function() digctx.flags.dig = values.dig_default end
 end
 
+local function do_chop(digctx)
+    if digctx.flags.hidden then return nil end
+    if is_tree(digctx.tileattrs) then
+        return function() digctx.flags.dig = values.dig_default end
+    end
+    return function() end -- noop, but not an error
+end
+
 local function do_channel(digctx)
     if digctx.on_map_edge then return nil end
     if not digctx.flags.hidden then -- always designate if the tile is hidden
@@ -262,7 +270,9 @@ end
 
 local function do_gather(digctx)
     if digctx.flags.hidden then return nil end
-    if not is_gatherable(digctx.tileattrs) then return nil end
+    if not is_gatherable(digctx.tileattrs) then
+        return function() end
+    end
     return function() digctx.flags.dig = values.dig_default end
 end
 
@@ -442,7 +452,7 @@ local dig_db = {
     i={action=do_up_down_stair, use_priority=true, can_clobber_engravings=true},
     r={action=do_ramp, use_priority=true, can_clobber_engravings=true},
     z={action=do_remove_ramps, use_priority=true},
-    t={action=do_mine, use_priority=true},
+    t={action=do_chop, use_priority=true},
     p={action=do_gather, use_priority=true},
     s={action=do_smooth, use_priority=true},
     e={action=do_engrave, use_priority=true},
