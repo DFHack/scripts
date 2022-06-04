@@ -359,7 +359,7 @@ local function pos_cmp(a, b)
     return utils.compare(a.z, b.z)
 end
 
-local function get_original_tile(pos)
+local function get_original_tiletype(pos)
     -- TODO
     return dfhack.maps.getTileType(pos)
 end
@@ -382,7 +382,7 @@ local function create_and_link_construction(pos, item, top_of_wall)
     construction.mat_index = item:getMaterialIndex()
     construction.flags.top_of_wall = top_of_wall
     construction.flags.no_build_item = not top_of_wall
-    construction.original_tile = get_original_tile(pos)
+    construction.original_tile = get_original_tiletype(pos)
     utils.insert_sorted(df.global.world.constructions, construction,
                         'pos', pos_cmp)
 end
@@ -456,14 +456,14 @@ local function build_construction(bld)
         -- modify the construction to the new type
         local construction, found = utils.binsearch(df.global.world.constructions, pos, 'pos', pos_cmp)
         if not found then
-            error('could not find construction entry for construction tile at ' .. pos.x .. ', ' .. pos.y .. ', ' .. pos.z)
+            error('Could not find construction entry for construction tile at ' .. pos.x .. ', ' .. pos.y .. ', ' .. pos.z)
         end
         reuse_construction(construction, item)
     else
-        -- add entries to df.global.world.constructions and adjust tiletypes for
-        -- the construction itself
+        -- add entry to df.global.world.constructions
         create_and_link_construction(pos, item, false)
     end
+    -- adjust tiletypes for the construction itself
     set_tiletype(pos, const_to_tile[construction_type])
     if construction_type == df.construction_type.Wall then
         dig_now.link_adjacent_smooth_walls(pos)
