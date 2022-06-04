@@ -588,8 +588,8 @@ local function ensure_engravings_cache(ctx)
     local engravings_cache = {}
     for _,engraving in ipairs(df.global.world.engravings) do
         local pos = engraving.pos
-        local grid = quickfort_common.ensure_key(engravings_cache, pos.z)
-        local row = quickfort_common.ensure_key(grid, pos.y)
+        local grid = ensure_key(engravings_cache, pos.z)
+        local row = ensure_key(grid, pos.y)
         row[pos.x] = engraving
     end
     ctx.engravings_cache = engravings_cache
