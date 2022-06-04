@@ -456,7 +456,7 @@ local function build_construction(bld)
         -- modify the construction to the new type
         local construction, found = utils.binsearch(df.global.world.constructions, pos, 'pos', pos_cmp)
         if not found then
-            error("Error: could not find construction entry for construction tile at " .. pos.x .. ", " .. pos.y .. ", " .. pos.z)
+            error('could not find construction entry for construction tile at ' .. pos.x .. ', ' .. pos.y .. ', ' .. pos.z)
         end
         reuse_construction(construction, item)
     else
