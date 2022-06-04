@@ -454,7 +454,7 @@ local function build_construction(bld)
     local tileattrs = df.tiletype.attrs[tiletype]
     if tileattrs.material == df.tiletype_material.CONSTRUCTION then
         -- modify the construction to the new type
-        local construction, found = utils.binsearch(df.global.world.constructions, pos, "pos", pos_cmp)
+        local construction, found = utils.binsearch(df.global.world.constructions, pos, 'pos', pos_cmp)
         if not found then
             error("Error: could not find construction entry for construction tile at " .. pos.x .. ", " .. pos.y .. ", " .. pos.z)
         end
