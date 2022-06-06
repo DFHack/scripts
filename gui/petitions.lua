@@ -81,6 +81,9 @@ end
 function Time:getMonths() -- >>int<< Months as age (not including years)
  return math.floor (self.ticks / TU_PER_MONTH)
 end
+function Time:getYears() -- >>int<<
+ return self.year
+end
 function Time:getMonthStr() -- Month as date
  return MONTHS[self:getMonths()+1] or 'error'
 end
@@ -132,6 +135,17 @@ local function getAgreementDetails(a)
             e_descr[#e_descr+1] = table.concat{"The ", df.historical_entity_type[e.type], " ", dfhack.TranslateName(e.name, true)}
             if we == e_id then our = true end
         end
+        for _, hf_id in ipairs(p.histfig_ids) do
+            local hf = df.global.world.history.figures[hf_id]
+            local race = df.creature_raw.find(hf.race)
+            local civ = df.historical_entity.find(hf.civ_id)
+            e_descr[#e_descr+1] = table.concat{"The ", race.creature_id, " ", df.profession[hf.profession],
+                                " ", dfhack.TranslateName(hf.name, true),
+                                NEWLINE,
+                                "of ", dfhack.TranslateName( civ.name , true )
+                            }
+        end
+
         if our then
             us = table.concat(e_descr, ", ")
         else
@@ -144,6 +158,7 @@ local function getAgreementDetails(a)
     sb[#sb+1] = NEWLINE
     sb[#sb+1] = us
     sb[#sb+1] = NEWLINE
+    local expired = false
     for _, d in ipairs (a.details) do
         local petition_date = Time{year = d.year, ticks = d.year_tick}
         local petition_date_str = petition_date:getDayStr()..' of '..petition_date:getMonthStr()..' in the year '..tostring(petition_date.year)
@@ -151,12 +166,18 @@ local function getAgreementDetails(a)
         sb[#sb+1] = ("On " .. petition_date_str)
         sb[#sb+1] = NEWLINE
         local diff = (cur_date - petition_date)
+        expired = expired or diff:getYears() >= 1
+        
         if diff:getDays() < 1.0 then
             sb[#sb+1] = ("(this was today)")
         elseif diff:getMonths() == 0 then
             sb[#sb+1] = ("(this was " .. math.floor( diff:getDays() ) .. " days ago)" )
-        else
+        elseif diff:getYears() == 0 then
             sb[#sb+1] = ("(this was " .. diff:getMonths() .. " months and " ..  diff:getDayInMonth() .. " days ago)" )
+        elseif diff:getYears() == 1 then
+            sb[#sb+1] = ("(this was " .. diff:getYears() .. " year " .. diff:getMonths() .. " months and " ..  diff:getDayInMonth() .. " days ago)" )
+        else
+            sb[#sb+1] = ("(this was " .. diff:getYears() .. " years " .. diff:getMonths() .. " months and " ..  diff:getDayInMonth() .. " days ago)" )
         end
         sb[#sb+1] = NEWLINE
 
@@ -166,7 +187,8 @@ local function getAgreementDetails(a)
             local details = d.data.Location
             sb[#sb+1] = "Provide a "
             sb[#sb+1] = {text = df.abstract_building_type[details.type], pen = COLOR_LIGHTGREEN}
-            sb[#sb+1] = " of tier " .. details.tier
+            sb[#sb+1] = " of tier "
+            sb[#sb+1] = {text = details.tier, pen = COLOR_LIGHTGREEN}
             if details.deity_type ~= -1 then
                 sb[#sb+1] = " of a "
                 -- None/Deity/Religion
@@ -175,6 +197,11 @@ local function getAgreementDetails(a)
                 sb[#sb+1] = " for "
                 sb[#sb+1] = {text = df.profession[details.profession], pen = COLOR_LIGHTGREEN}
             end
+            sb[#sb+1] = NEWLINE
+        elseif d.type == df.agreement_details_type.Residency then
+            local details = d.data.Residency
+            sb[#sb+1] = "            to "
+            sb[#sb+1] = {text = df.history_event_reason[details.reason], pen = COLOR_LIGHTGREEN}
             sb[#sb+1] = NEWLINE
         end
     end
@@ -187,6 +214,9 @@ local function getAgreementDetails(a)
     elseif a.flags.convicted_accepted then
         sb[#sb+1] = {text = "This petition was fulfilled!", pen = COLOR_GREEN}
         petition.status = 'FULFILLED'
+    elseif expired then
+        sb[#sb+1] = {text = "This petition expired!", pen = COLOR_LIGHTRED}
+        petition.status = 'EXPIRED'
     else
         petition.status = 'ACCEPTED'
     end
@@ -219,7 +249,7 @@ petitions.ATTRS = {
     frame_title = 'Petitions',
     frame_width = 21, -- is calculated in :refresh
     min_frame_width = 21,
-    frame_height = 16,
+    frame_height = 26,
     frame_inset = 0,
     focus_path = 'petitions',
 }
@@ -242,7 +272,7 @@ function petitions:refresh()
     local lines = {}
     -- list of petitions
     for _, p in ipairs(self.list) do
-        if not self.fulfilled and p.status == 'FULFILLED' then goto continue end
+        if not self.fulfilled and (p.status == 'FULFILLED' or p.status == 'EXPIRED') then goto continue end
         -- each petition is a status and a text
         for _, tok in ipairs(p.text) do
             -- where text is a list of tokens
@@ -266,6 +296,7 @@ function petitions:refresh()
 
     self.frame_width = math.max(label:getTextWidth()+1, self.min_frame_width)
     self.frame_width = math.min(df.global.gps.dimx - 2, self.frame_width)
+    self.frame_height = math.min(df.global.gps.dimy - 4, self.frame_height)
     self:onResize(dfhack.screen.getWindowSize()) -- applies new frame_width
 end
 
