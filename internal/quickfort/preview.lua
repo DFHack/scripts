@@ -5,9 +5,6 @@ if not dfhack_flags.module then
     qerror('this script cannot be called directly')
 end
 
-local quickfort_common = reqscript('internal/quickfort/common')
-local ensure_key = quickfort_common.ensure_key
-
 -- sets the given preview position to the given value if it is not already set
 -- if override is true, ignores whether the tile was previously set
 -- returns whether the tile was set
