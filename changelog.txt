@@ -22,6 +22,7 @@ that repo.
 - `modtools/fire-rate`: allows modders to adjust the rate of fire for ranged attacks
 
 ## Fixes
+- `build-now`: walls built above other walls can now be deconstructed as normal
 
 ## Misc Improvements
 - `deteriorate`: new ``now`` command immediately deteriorates all items of the specified types.
