@@ -40,6 +40,7 @@ Options:
 ]====]
 
 local argparse = require('argparse')
+local buildingplan = require('plugins.buildingplan')
 local dig_now = require('plugins.dig-now')
 local gui = require('gui')
 local utils = require('utils')
@@ -360,7 +361,8 @@ local function pos_cmp(a, b)
 end
 
 local function get_original_tiletype(pos)
-    -- TODO
+    -- TODO: this is not always exactly the existing tile type. for example,
+    -- tracks are ignored
     return dfhack.maps.getTileType(pos)
 end
 
@@ -518,6 +520,10 @@ end
 -- main script
 local opts = parse_commandline({...})
 if opts.help then print(dfhack.script_help()) return end
+
+-- ensure buildingplan is up to date so we don't skip buildings just because
+-- buildingplan hasn't scanned them yet
+buildingplan.doCycle()
 
 local num_jobs = 0
 for _,job in ipairs(get_jobs(opts)) do
