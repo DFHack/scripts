@@ -126,7 +126,7 @@ function dfstatus:init()
     end
 
     for _, item in ipairs(df.global.world.items.all) do
-        local flags =  item.flags
+        local flags = item.flags
         if not (flags.rotten or flags.dump or flags.forbid or flags.construction or flags.trader) then
             if item:getType() == df.item_type.WOOD then
                 wood = wood + item:getStackSize()
