@@ -126,7 +126,8 @@ function dfstatus:init()
     end
 
     for _, item in ipairs(df.global.world.items.all) do
-        if not item.flags.rotten and not item.flags.dump and not item.flags.forbid and not item.flags.construction then
+        local flags =  item.flags
+        if not (flags.rotten or flags.dump or flags.forbid or flags.construction or flags.trader) then
             if item:getType() == df.item_type.WOOD then
                 wood = wood + item:getStackSize()
             elseif item:getType() == df.item_type.DRINK then
