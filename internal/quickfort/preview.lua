@@ -12,6 +12,9 @@ function set_preview_tile(ctx, pos, is_valid_tile, override)
     local preview = ctx.preview
     if not preview then return false end
     local preview_row = ensure_key(ensure_key(ctx.preview.tiles, pos.z), pos.y)
+    if preview_row[pos.x] == nil then
+        preview.total_tiles = preview.total_tiles + 1
+    end
     if not override and preview_row[pos.x] ~= nil then
         return false
     end

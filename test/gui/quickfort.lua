@@ -26,6 +26,10 @@ local function test_wrapper(test_fn)
     q.show_hidden = false
     q.filter_text = ''
     q.selected_id = 1
+    q.repeat_dir = false
+    q.repetitions = 1
+    q.transform = false
+    q.transformations = {}
 
     -- reset global test state
     mock_do_command_section, mock_print = mock.func(), mock.func()
@@ -354,5 +358,91 @@ function test.messages()
               view._dialog.subviews.label.text)
 
     send_keys('LEAVESCREEN', 'LEAVESCREEN')
+    delay_until(view:callback('isDismissed'))
+end
+
+function test.repeat_widgets()
+    local view = load_ui('b') -- autoload the default blueprint
+
+    -- validate initial state
+    expect.false_(q.repeat_dir)
+    expect.false_(view.subviews.repeat_times_panel.visible)
+    expect.eq(1, q.repetitions)
+
+    send_keys('CUSTOM_R')
+
+    expect.true_(q.repeat_dir)
+    expect.true_(view.subviews.repeat_times_panel.visible)
+    expect.eq(1, q.repetitions)
+
+    send_keys('SECONDSCROLL_UP')
+    expect.eq(1, q.repetitions, 'cannot go below minimum')
+    send_keys('SECONDSCROLL_DOWN')
+    expect.eq(2, q.repetitions)
+    send_keys('SECONDSCROLL_PAGEDOWN')
+    expect.eq(12, q.repetitions)
+    send_keys('SECONDSCROLL_UP', 'SECONDSCROLL_UP')
+    expect.eq(10, q.repetitions)
+    send_keys('SECONDSCROLL_PAGEUP')
+    expect.eq(1, q.repetitions, 'cannot go below minimum')
+
+    send_keys('CUSTOM_SHIFT_R')
+    view:onInput{_STRING=string.byte('0')}
+    view:onInput{_STRING=string.byte('0')}
+    send_keys('SELECT')
+    expect.eq(100, q.repetitions)
+
+    view:refresh_preview()
+    expect.eq(1, mock_do_command_section.call_count)
+    local modifiers = mock_do_command_section.call_args[1][3]
+    expect.eq(-1, modifiers.repeat_zoff)
+    expect.eq(100, modifiers.repeat_count)
+
+    send_keys('CUSTOM_SHIFT_R')
+    view:onInput{_STRING=0}
+    view:onInput{_STRING=0}
+    view:onInput{_STRING=0}
+    send_keys('SELECT')
+    expect.eq(1, q.repetitions, '0 repetitions bumped up to 1')
+
+    view:refresh_preview()
+    expect.eq(2, mock_do_command_section.call_count)
+    local modifiers = mock_do_command_section.call_args[2][3]
+    expect.eq(0, modifiers.repeat_zoff)
+    expect.eq(1, modifiers.repeat_count)
+
+    send_keys('LEAVESCREEN')
+    delay_until(view:callback('isDismissed'))
+end
+
+function test.transform_widgets()
+    local view = load_ui('b') -- autoload the default blueprint
+
+    -- validate initial state
+    expect.false_(q.transform)
+    expect.false_(view.subviews.transform_panel.visible)
+    expect.table_eq({}, q.transformations)
+
+    send_keys('CUSTOM_T')
+
+    expect.true_(q.transform)
+    expect.true_(view.subviews.transform_panel.visible)
+    expect.table_eq({}, q.transformations)
+
+    send_keys('A_MOVE_E_DOWN')
+    expect.table_eq({'cw'}, q.transformations)
+    send_keys('A_MOVE_W_DOWN')
+    expect.table_eq({}, q.transformations, 'ccw undoes cw')
+    send_keys('A_MOVE_N_DOWN', 'A_MOVE_S_DOWN')
+    expect.table_eq({'flipv', 'fliph'}, q.transformations)
+    send_keys('A_MOVE_E_DOWN')
+    expect.table_eq({'ccw'}, q.transformations, 'flipv+fliph+cw=ccw')
+
+    view:refresh_preview()
+    expect.eq(1, mock_do_command_section.call_count)
+    local modifiers = mock_do_command_section.call_args[1][3]
+    expect.eq(1, #modifiers.transform_fn_stack)
+
+    send_keys('LEAVESCREEN')
     delay_until(view:callback('isDismissed'))
 end

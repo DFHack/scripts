@@ -76,7 +76,8 @@ function init_ctx(params)
         params.aliases or {},
         params.quiet,
         params.dry_run,
-        params.preview and {tiles={}, bounds={}, invalid_tiles=0} or nil,
+        params.preview and
+                {tiles={}, bounds={}, invalid_tiles=0, total_tiles=0} or nil,
         params.preserve_engravings or df.item_quality.Masterful)
 end
 
@@ -93,7 +94,8 @@ function do_command_raw(mode, zlevel, grid, ctx)
 end
 
 local function make_transform_fn(prev_transform_fn, modifiers, cursor)
-    if modifiers.transform_fn_stack == 0 and modifiers.shift_fn_stack == 0 then
+    if #modifiers.transform_fn_stack == 0 and
+            #modifiers.shift_fn_stack == 0 then
         return prev_transform_fn
     end
     -- when no_shift is true, we transform around the origin instead of the
