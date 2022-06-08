@@ -24,6 +24,7 @@ that repo.
 
 ## Fixes
 - `build-now`: walls built above other walls can now be deconstructed as normal
+- `gui/dfstatus`: no longer count items owned by traders
 
 ## Misc Improvements
 - `build-now`: buildings that were just designated with `buildingplan` are now handled properly instead of being skipped (as long as there are items available to build the buildings with)
