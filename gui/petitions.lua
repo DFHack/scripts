@@ -139,10 +139,12 @@ local function getAgreementDetails(a)
             local hf = df.global.world.history.figures[hf_id]
             local race = df.creature_raw.find(hf.race)
             local civ = df.historical_entity.find(hf.civ_id)
-            e_descr[#e_descr+1] = table.concat{"The ", race.creature_id, " ", df.profession[hf.profession],
+            e_descr[#e_descr+1] = table.concat{
+                                "The ", race.creature_id,
+                                " ", df.profession[hf.profession],
                                 " ", dfhack.TranslateName(hf.name, true),
                                 NEWLINE,
-                                "of ", dfhack.TranslateName( civ.name , true )
+                                "of ", dfhack.TranslateName(civ.name, true)
                             }
         end
 
@@ -167,7 +169,7 @@ local function getAgreementDetails(a)
         sb[#sb+1] = NEWLINE
         local diff = (cur_date - petition_date)
         expired = expired or diff:getYears() >= 1
-        
+
         if diff:getDays() < 1.0 then
             sb[#sb+1] = ("(this was today)")
         elseif diff:getMonths() == 0 then
