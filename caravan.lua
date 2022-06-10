@@ -20,6 +20,8 @@ specified, then the commands apply to all caravans on the map.
   annoying merchants, etc.). Also causes caravans to return to the depot if
   applicable.
 - ``leave [IDS]``: makes caravans pack up and leave immediately.
+- ``rejoin_pack_animals``: reconnects merchant pack animals that were
+  disconnected from their owners (fixes endless unloading at the depot).
 
 ]====]
 
@@ -92,6 +94,45 @@ end
 function commands.leave(...)
     for id, car in pairs(caravans_from_ids{...}) do
         car.trade_state = df.caravan_state.T_trade_state.Leaving
+    end
+end
+
+local function isDisconnectedPackAnimal(unit)
+    if unit.following then
+        local dragger = unit.following
+        return (
+            unit.relationship_ids[ df.unit_relationship_type.Dragger ] == -1 and
+            dragger.relationship_ids[ df.unit_relationship_type.Draggee ] == -1
+        )
+    end
+end
+
+local function getPrintableUnitName(unit)
+    local visible_name = dfhack.units.getVisibleName(unit)
+    local profession_name = dfhack.units.getProfessionName(unit)
+    if visible_name.has_name then
+        return dfhack.TranslateName( visible_name ) .. ' (' .. profession_name .. ')'
+    else
+        return profession_name  -- for unnamed animals
+    end
+end
+
+function commands.rejoin_pack_animals(...)
+    local found = false
+    for _, unit in pairs(df.global.world.units.active) do
+        if unit.flags1.merchant and isDisconnectedPackAnimal(unit) then
+            local dragger = unit.following
+            print(('Reconnecting disconnected pack animal:\n  %s  <->  %s'):format(
+                dfhack.df2console(getPrintableUnitName(unit)),
+                dfhack.df2console(getPrintableUnitName(dragger))
+            ))
+            unit.relationship_ids[ df.unit_relationship_type.Dragger ] = dragger.id
+            dragger.relationship_ids[ df.unit_relationship_type.Draggee ] = unit.id
+            found = true
+        end
+    end
+    if (not found) then
+        print('No disconnected pack animals found.')
     end
 end
 
