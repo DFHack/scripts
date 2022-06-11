@@ -111,10 +111,9 @@ local function getPrintableUnitName(unit)
     local visible_name = dfhack.units.getVisibleName(unit)
     local profession_name = dfhack.units.getProfessionName(unit)
     if visible_name.has_name then
-        return dfhack.TranslateName( visible_name ) .. ' (' .. profession_name .. ')'
-    else
-        return profession_name  -- for unnamed animals
+        return ('%s (%s)'):format(dfhack.TranslateName(visible_name), profession_name)
     end
+    return profession_name  -- for unnamed animals
 end
 
 function commands.rejoin_pack_animals(...)
