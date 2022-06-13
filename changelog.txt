@@ -28,7 +28,7 @@ that repo.
 
 ## Misc Improvements
 - `build-now`: buildings that were just designated with `buildingplan` are now handled properly instead of being skipped (as long as there are items available to build the buildings with)
-- `caravan`: new ``rejoin_pack_animals`` command, reconnects merchant pack animals that were disconnected from their owners (fixes endless unloading at the depot).
+- `caravan`: new ``unload`` command, fixes endless unloading at the depot, by reconnecting merchant pack animals that were disconnected from their owners.
 - `deteriorate`: new ``now`` command immediately deteriorates all items of the specified types.
 - `list-agreements`: now displays translated Guild Names, worshiped Deity, age of petition, and "man" to race-specific professions (e.g. "Craftsman" -> "Craftsdwarf")
 - `workorder`: doesn't check for an assigned manager anymore.

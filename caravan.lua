@@ -20,8 +20,8 @@ specified, then the commands apply to all caravans on the map.
   annoying merchants, etc.). Also causes caravans to return to the depot if
   applicable.
 - ``leave [IDS]``: makes caravans pack up and leave immediately.
-- ``rejoin_pack_animals``: reconnects merchant pack animals that were
-  disconnected from their owners (fixes endless unloading at the depot).
+- ``unload``: fixes endless unloading at the depot, by reconnecting merchant
+  pack animals that were disconnected from their owners.
 
 ]====]
 
@@ -116,12 +116,13 @@ local function getPrintableUnitName(unit)
     return profession_name  -- for unnamed animals
 end
 
-function commands.rejoin_pack_animals(...)
+local function rejoin_pack_animals()
+    print('Reconnecting disconnected pack animals...')
     local found = false
     for _, unit in pairs(df.global.world.units.active) do
         if unit.flags1.merchant and isDisconnectedPackAnimal(unit) then
             local dragger = unit.following
-            print(('Reconnecting disconnected pack animal:\n  %s  <->  %s'):format(
+            print(('  %s  <->  %s'):format(
                 dfhack.df2console(getPrintableUnitName(unit)),
                 dfhack.df2console(getPrintableUnitName(dragger))
             ))
@@ -130,9 +131,15 @@ function commands.rejoin_pack_animals(...)
             found = true
         end
     end
-    if (not found) then
+    if (found) then
+        print('All pack animals reconnected.')
+    else
         print('No disconnected pack animals found.')
     end
+end
+
+function commands.unload(...)
+    rejoin_pack_animals()
 end
 
 function commands.help()
