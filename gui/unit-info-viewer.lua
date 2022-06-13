@@ -719,10 +719,14 @@ function UnitInfoViewer:chunk_Shearable()
   end
  end
 end
+local function get_size_in_cc(unit)
+  -- internal measure is cubic centimeters divided by 10
+  return unit.body.size_info.size_cur * 10
+end
 function UnitInfoViewer:chunk_BodySize()
  local i = self.ident
  local pat = i.unit.body.physical_attrs
- local blurb = i.pronoun..' appears to be about ' .. i.unit.body.size_info.size_cur .. ' cubic decimeters in size.'
+ local blurb = i.pronoun..' appears to be about ' .. get_size_in_cc(i.unit) .. ' cubic centimeters in size.'
  self:insert_chunk(blurb,pens.LIGHTBLUE)
 end
 function UnitInfoViewer:chunk_Ghostly()
