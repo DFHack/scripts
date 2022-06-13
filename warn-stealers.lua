@@ -1,0 +1,59 @@
+-- Script to warn when creatures that may steal food enter the map
+--[====[
+warn-stealers
+============
+Will make a zoomable announcement whenever a creature that can eat food, guzzle drinks, or steal items enters the map in a revealed location.
+Takes ``start`` and ``stop`` as parameters.
+]====]
+
+local eventful = require("plugins.eventful")
+local eventfulKey = "warn-stealers"
+
+local function isUnitHidden(unit)
+    return dfhack.maps.getTileBlock(unit.pos).designation[unit.pos.x%16][unit.pos.y%16].hidden
+end
+
+local races = df.global.world.raws.creatures.all
+local function checkStealer(unitId)
+    local unit = df.unit.find(unitId)
+    if isUnitHidden(unit) then
+        return
+    end
+    local caste = races[unit.race].caste[unit.caste]
+    local casteFlags = caste.flags
+    if casteFlags.CURIOUS_BEAST_EATER or casteFlags.CURIOUS_BEAST_GUZZLER or casteFlags.CURIOUS_BEAST_ITEM then
+        local str = ""
+        if casteFlags.CURIOUS_BEAST_EATER then
+            str = str .. "eat food + "
+        end
+        if casteFlags.CURIOUS_BEAST_GUZZLER then
+            str = str .. "guzzle drinks + "
+        end
+        if casteFlags.CURIOUS_BEAST_ITEM then
+            str = str .. "steal items + "
+        end
+        str = str:sub(1, -4)
+        dfhack.gui.showZoomAnnouncement(-1, unit.pos, "A " .. caste.caste_name[0] .. " has appeared, it may " .. str .. ".", COLOR_RED, true)
+    end
+end
+
+local function help()
+    print("syntax: warn-stealers [start|stop]")
+end
+
+local function stop()
+    eventful.onUnitNewActive[eventfulKey] = nil
+    print("warn-stealers stopped")
+end
+
+local function start()
+    eventful.enableEvent(eventful.eventType.NEW_UNIT_ACTIVE, 1)
+    eventful.onUnitNewActive[eventfulKey] = checkStealer
+    print("warn-stealers running")
+end
+
+local action_switch = {start = start, stop = stop}
+setmetatable(action_switch, {__index = function() return help end})
+
+local args = {...}
+action_switch[args[1] or "help"]()
