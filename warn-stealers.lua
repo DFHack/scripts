@@ -66,7 +66,7 @@ end
 
 local function onTick()
     for _, unitIdStr in ipairs(cache._children) do
-        if not cache[unitIdStr] then -- For a bug in persist-table
+        if cache[unitIdStr] then -- For a bug in persist-table
             local unitId = tonumber(unitIdStr)
             local unit = df.unit.find(unitId)
             if not unit or unit.flags1.inactive then
