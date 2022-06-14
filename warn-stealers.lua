@@ -1,7 +1,7 @@
 -- Script to warn when creatures that may steal food become visible
 --[====[
 warn-stealers
-============
+=============
 Will make a zoomable announcement whenever a creature that can eat food, guzzle drinks, or steal items enters the map and moves into a revealed location.
 Takes ``start`` or ``stop`` as parameters.
 ]====]
