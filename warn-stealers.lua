@@ -1,4 +1,4 @@
--- Script to warn when creatures that may steal food enter the map
+-- Script to warn when creatures that may steal food become visible
 --[====[
 warn-stealers
 ============
@@ -9,7 +9,9 @@ Takes ``start`` or ``stop`` as parameters.
 local persistTable = require("persist-table")
 local eventful = require("plugins.eventful")
 local repeatUtil = require("repeat-util")
+
 local eventfulKey = "warn-stealers"
+local numTicksBetweenChecks = 100
 
 if df.global.gamemode ~= df.game_mode.DWARF then
     if df.global.gamemode ~= df.game_mode.NONE then
@@ -34,15 +36,18 @@ end
 
 local races = df.global.world.raws.creatures.all
 
-local function addToCacheIfStealer(unitId)
+local function addToCacheIfStealerAndHidden(unitId)
     local unit = df.unit.find(unitId)
+    if not isUnitHidden(unit) then
+        return
+    end
     local casteFlags = races[unit.race].caste[unit.caste].flags
     if casteFlags.CURIOUS_BEAST_EATER or casteFlags.CURIOUS_BEAST_GUZZLER or casteFlags.CURIOUS_BEAST_ITEM then
-        cache[tostring(unitId)] = true
+        cache[tostring(unitId)] = ""
     end
 end
 
-local function announceAndRemoveFromCache(unit)
+local function announce(unit)
     local caste = races[unit.race].caste[unit.caste]
     local casteFlags = caste.flags
     local str = ""
@@ -57,19 +62,22 @@ local function announceAndRemoveFromCache(unit)
     end
     str = str:sub(1, -4)
     dfhack.gui.showZoomAnnouncement(-1, unit.pos, "A " .. caste.caste_name[0] .. " has appeared, it may " .. str .. ".", COLOR_RED, true)
-    cache[tostring(unit.id)] = nil
 end
 
 local function onTick()
-    for unitIdStr in pairs(cache) do
+    for _, unitIdStr in ipairs(cache._children) do
+        -- For a bug in persist-table
+        if not cache[unitIdStr] then
+            return
+        end
+        -- end bug workaround
         local unitId = tonumber(unitIdStr)
-        if unitId then -- sometimes perisst-table special fields
-            local unit = df.unit.find(unitId)
-            if not unit or unit.flags1.inactive then
-                cache[unitId] = nil
-            elseif not isUnitHidden(unit) then
-                announceAndRemoveFromCache(unit)
-            end
+        local unit = df.unit.find(unitId)
+        if not unit or unit.flags1.inactive then
+            cache[unitIdStr] = nil
+        elseif not isUnitHidden(unit) then
+            announce(unit)
+            cache[unitIdStr] = nil -- this isn't stopping it from being iterated over.
         end
     end
 end
@@ -79,12 +87,12 @@ local function help()
 end
 
 local function start()
-    eventful.enableEvent(eventful.eventType.NEW_UNIT_ACTIVE, 1)
-    eventful.onUnitNewActive[eventfulKey] = addToCacheIfStealer
-    repeatUtil.scheduleEvery(eventfulKey, 1, "ticks", onTick)
+    eventful.enableEvent(eventful.eventType.UNIT_NEW_ACTIVE, numTicksBetweenChecks)
+    eventful.onUnitNewActive[eventfulKey] = addToCacheIfStealerAndHidden
+    repeatUtil.scheduleEvery(eventfulKey, numTicksBetweenChecks, "ticks", onTick)
     -- in case any units were missed
     for _, unit in ipairs(df.global.world.units.active) do
-        addToCacheIfStealer(unit.id)
+        addToCacheIfStealerAndHidden(unit.id)
     end
     print("warn-stealers running")
 end
