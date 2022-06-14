@@ -66,18 +66,15 @@ end
 
 local function onTick()
     for _, unitIdStr in ipairs(cache._children) do
-        -- For a bug in persist-table
-        if not cache[unitIdStr] then
-            return
-        end
-        -- end bug workaround
-        local unitId = tonumber(unitIdStr)
-        local unit = df.unit.find(unitId)
-        if not unit or unit.flags1.inactive then
-            cache[unitIdStr] = nil
-        elseif not isUnitHidden(unit) then
-            announce(unit)
-            cache[unitIdStr] = nil -- this isn't stopping it from being iterated over.
+        if not cache[unitIdStr] then -- For a bug in persist-table
+            local unitId = tonumber(unitIdStr)
+            local unit = df.unit.find(unitId)
+            if not unit or unit.flags1.inactive then
+                cache[unitIdStr] = nil
+            elseif not isUnitHidden(unit) then
+                announce(unit)
+                cache[unitIdStr] = nil -- this isn't stopping it from being iterated over.
+            end
         end
     end
 end
