@@ -140,14 +140,6 @@ end
 
 -- [[ from stockflow.lua:
 
--- is a manager assigned in the fortress?
-local function has_manager()
-    return #df.historical_entity
-        .find(df.global.ui.group_id)
-        .assignments_by_type
-        .MANAGE_PRODUCTION > 0
-end
-
 -- Compare the job specification of two orders.
 local function orders_match(a, b)
     local fields = {
@@ -599,11 +591,6 @@ default_action = function (...)
         for k,v in pairs({...}) do
             print(k,v)
         end
-    end
-
-    if not has_manager() then
-        printerr "You should assign a manager first."
-        return
     end
 
     local v, n = ...

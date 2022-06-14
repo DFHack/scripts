@@ -540,15 +540,15 @@ function QuickfortUI:onShow()
     self:show_dialog(true)
 end
 
-function QuickfortUI:refresh_preview()
+function QuickfortUI:run_quickfort_command(command, dry_run, preview)
     local ctx = quickfort_command.init_ctx{
-        command='run',
+        command=command,
         blueprint_name=self.blueprint_name,
         cursor=self.saved_cursor,
         aliases=quickfort_list.get_aliases(self.blueprint_name),
         quiet=true,
-        dry_run=true,
-        preview=true,
+        dry_run=dry_run,
+        preview=preview,
     }
 
     local section_name = self.section_name
@@ -566,6 +566,11 @@ function QuickfortUI:refresh_preview()
 
     quickfort_command.do_command_section(ctx, section_name, modifiers)
 
+    return ctx
+end
+
+function QuickfortUI:refresh_preview()
+    local ctx = self:run_quickfort_command('run', true, true)
     self.saved_preview = ctx.preview
 end
 
@@ -622,16 +627,7 @@ function QuickfortUI:do_command(command, dry_run, post_fn)
     print(string.format('executing via gui/quickfort: quickfort %s',
                         quickfort_parse.format_command(
                             command, self.blueprint_name, self.section_name)))
-    local ctx = quickfort_command.init_ctx{
-        command=command,
-        blueprint_name=self.blueprint_name,
-        cursor=self.saved_cursor,
-        aliases=quickfort_list.get_aliases(self.blueprint_name),
-        quiet=true,
-        dry_run=dry_run,
-        preview=false,
-    }
-    quickfort_command.do_command_section(ctx, self.section_name)
+    local ctx = self:run_quickfort_command(command, dry_run, false)
     quickfort_command.finish_command(ctx, self.section_name)
     if command == 'run' then
         if #ctx.messages > 0 then
