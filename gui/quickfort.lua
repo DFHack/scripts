@@ -624,9 +624,9 @@ function QuickfortUI:commit()
 end
 
 function QuickfortUI:do_command(command, dry_run, post_fn)
-    print(string.format('executing via gui/quickfort: quickfort %s',
-                        quickfort_parse.format_command(
-                            command, self.blueprint_name, self.section_name)))
+    print(('executing via gui/quickfort: quickfort %s'):format(
+                quickfort_parse.format_command(
+                    command, self.blueprint_name, self.section_name, dry_run)))
     local ctx = self:run_quickfort_command(command, dry_run, false)
     quickfort_command.finish_command(ctx, self.section_name)
     if command == 'run' then
