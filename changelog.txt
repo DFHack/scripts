@@ -18,6 +18,7 @@ that repo.
 ## Fixes
 
 ## Misc Improvements
+- `gui/quickfort`: better formatting for generated manager orders report
 
 ## Removed
 
