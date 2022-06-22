@@ -50,17 +50,17 @@ end
 local function announce(unit)
     local caste = races[unit.race].caste[unit.caste]
     local casteFlags = caste.flags
-    local str = ""
+    local desires = {}
     if casteFlags.CURIOUS_BEAST_EATER then
-        str = str .. "eat food + "
+        table.insert(desires, "eat food")
     end
     if casteFlags.CURIOUS_BEAST_GUZZLER then
-        str = str .. "guzzle drinks + "
+        table.insert(desires, "guzzle drinks")
     end
     if casteFlags.CURIOUS_BEAST_ITEM then
-        str = str .. "steal items + "
+        table.insert(desires, "steal items")
     end
-    str = str:sub(1, -4)
+    local str = table.concat(str, " + ")
     dfhack.gui.showZoomAnnouncement(-1, unit.pos, "A " .. caste.caste_name[0] .. " has appeared, it may " .. str .. ".", COLOR_RED, true)
 end
 
