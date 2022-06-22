@@ -80,7 +80,7 @@ local function onTick()
 end
 
 local function help()
-    print("syntax: warn-stealers [start|stop]")
+    print(dfhack.script_help())
 end
 
 local function start()
