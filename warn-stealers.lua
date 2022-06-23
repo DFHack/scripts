@@ -13,11 +13,19 @@ local repeatUtil = require("repeat-util")
 local eventfulKey = "warn-stealers"
 local numTicksBetweenChecks = 100
 
-if df.global.gamemode ~= df.game_mode.DWARF then
-    if df.global.gamemode ~= df.game_mode.NONE then
-        -- errors when gamemode is NONE
-        persistTable.GlobalTable.warnStealersCache = nil
+function gamemodeCheck()
+    if df.global.gamemode ~= df.game_mode.DWARF then
+        if df.global.gamemode ~= df.game_mode.NONE then
+            -- errors when gamemode is NONE
+            persistTable.GlobalTable.warnStealersCache = nil
+        end
+        stop()
+        return false
     end
+    return true
+end
+
+if not gamemodeCheck() then
     return
 end
 
@@ -26,19 +34,11 @@ if not persistTable.GlobalTable.warnStealersCache then
 end
 local cache = persistTable.GlobalTable.warnStealersCache
 
-local function isUnitHidden(unit)
-    local block = dfhack.maps.getTileBlock(unit.pos)
-    if not block then
-        return false
-    end
-    return block.designation[unit.pos.x%16][unit.pos.y%16].hidden
-end
-
 local races = df.global.world.raws.creatures.all
 
-local function addToCacheIfStealerAndHidden(unitId)
+function addToCacheIfStealerAndHidden(unitId)
     local unit = df.unit.find(unitId)
-    if not isUnitHidden(unit) then
+    if not dfhack.units.isHidden(unit) then
         return
     end
     local casteFlags = races[unit.race].caste[unit.caste].flags
@@ -47,7 +47,7 @@ local function addToCacheIfStealerAndHidden(unitId)
     end
 end
 
-local function announce(unit)
+function announce(unit)
     local caste = races[unit.race].caste[unit.caste]
     local casteFlags = caste.flags
     local desires = {}
@@ -64,14 +64,17 @@ local function announce(unit)
     dfhack.gui.showZoomAnnouncement(-1, unit.pos, "A " .. caste.caste_name[0] .. " has appeared, it may " .. str .. ".", COLOR_RED, true)
 end
 
-local function onTick()
+function onTick()
+    if not gamemodeCheck() then
+        return
+    end
     for _, unitIdStr in ipairs(cache._children) do
         if cache[unitIdStr] then -- For a bug in persist-table
             local unitId = tonumber(unitIdStr)
             local unit = df.unit.find(unitId)
             if not unit or unit.flags1.inactive then
                 cache[unitIdStr] = nil
-            elseif not isUnitHidden(unit) then
+            elseif not dfhack.units.isHidden(unit) then
                 announce(unit)
                 cache[unitIdStr] = nil -- this isn't stopping it from being iterated over.
             end
@@ -79,12 +82,15 @@ local function onTick()
     end
 end
 
-local function help()
+function help()
     print(dfhack.script_help())
 end
 
-local function start()
-    eventful.enableEvent(eventful.eventType.UNIT_NEW_ACTIVE, numTicksBetweenChecks)
+function start()
+    if not gamemodeCheck() then
+        return
+    end
+    eventful.enableEvent(eventful.eventType.NEW_UNIT_ACTIVE, numTicksBetweenChecks)
     eventful.onUnitNewActive[eventfulKey] = addToCacheIfStealerAndHidden
     repeatUtil.scheduleEvery(eventfulKey, numTicksBetweenChecks, "ticks", onTick)
     -- in case any units were missed
@@ -94,7 +100,7 @@ local function start()
     print("warn-stealers running")
 end
 
-local function stop()
+function stop()
     eventful.onUnitNewActive[eventfulKey] = nil
     repeatUtil.cancel(eventfulKey)
     print("warn-stealers stopped")
