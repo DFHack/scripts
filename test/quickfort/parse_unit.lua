@@ -117,6 +117,8 @@ function test.format_command()
     expect.eq('run file.csv -n /somelabel',
               parse.format_command('run', 'file.csv', '/somelabel'))
     expect.eq('"f name.xlsx"', parse.format_command(nil, 'f name.xlsx', nil))
+    expect.eq('run file.csv --dry-run',
+              parse.format_command('run', 'file.csv', nil, true))
     expect.error(function() parse.format_command(nil, nil, nil) end)
 end
 

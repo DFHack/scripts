@@ -316,7 +316,7 @@ function test.orders_empty()
     send_keys('CUSTOM_SHIFT_O')
     expect.eq('dfhack/lua/MessageBox', dfhack.gui.getCurFocus(true))
 
-    expect.eq('0 order(s) would be enqueued for bp1.csv.',
+    expect.eq('0 order(s) would be enqueued for\nbp1.csv.',
               view._dialog.subviews.label.text)
 
     send_keys('LEAVESCREEN')
@@ -337,7 +337,7 @@ function test.orders_nonempty()
     mock.patch(quickfort_command, 'do_command_section', populate_orders,
                function() send_keys('CUSTOM_SHIFT_O') end)
 
-    expect.eq('1 order(s) would be enqueued for bp1.csv.\n\n  a: 4',
+    expect.eq('1 order(s) would be enqueued for\nbp1.csv.\n\n  a: 4',
               view._dialog.subviews.label.text)
 
     send_keys('LEAVESCREEN', 'LEAVESCREEN')

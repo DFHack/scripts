@@ -109,18 +109,21 @@ end
 -- returns a string like:
 --   orders library/dreamfort.csv -n /apartments2
 --   run "some file.csv"
-function format_command(command, blueprint_name, section_name)
+function format_command(command, blueprint_name, section_name, dry_run)
     local command_str = ''
     if command then
-        command_str = string.format('%s ', command)
+        command_str = ('%s '):format(command)
     end
     local section_name_str = ''
     if section_name then
-        section_name_str = string.format(' -n %s',
-                                         quote_if_has_spaces(section_name))
+        section_name_str = (' -n %s'):format(quote_if_has_spaces(section_name))
     end
-    return string.format('%s%s%s', command_str,
-                         quote_if_has_spaces(blueprint_name), section_name_str)
+    local dry_run_str = ''
+    if dry_run then
+        dry_run_str = ' --dry-run'
+    end
+    return ('%s%s%s%s'):format(command_str, quote_if_has_spaces(blueprint_name),
+                               section_name_str, dry_run_str)
 end
 
 -- returns the next token, the current (possibly reassembed multiline) line, and

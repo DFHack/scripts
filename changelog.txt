@@ -17,21 +17,35 @@ that repo.
 
 - `warn-stealers`: warn when creatures that may steal your food, drinks, or items become visible
 - `assign-minecarts`: assign minecarts to hauling routes that don't have one
+## Fixes
+
+## Misc Improvements
+- `gui/quickfort`: better formatting for generated manager orders report
+
+## Removed
+
+# 0.47.05-r6
+
+## New Scripts
+
+- `assign-minecarts`: automatically assign minecarts to hauling routes that don't have one
 - `deteriorate`: combines, replaces, and extends previous `deteriorateclothes`, `deterioratecorpses`, and `deterioratefood` scripts.
-- `gui/petitions`: shows list of fort's petitions
-- `gui/quantum`: interactive tool for creating quantum stockpiles
-- `gui/quickfort`: interactive previews and transformations of quickfort blueprints
+- `gui/petitions`: shows petitions. now you can see which guildhall/temple you agreed to build!
+- `gui/quantum`: point-and-click tool for creating quantum stockpiles
+- `gui/quickfort`: shows blueprint previews on the live map so you can apply them interactively
 - `modtools/fire-rate`: allows modders to adjust the rate of fire for ranged attacks
 
 ## Fixes
-- `build-now`: walls built above other walls can now be deconstructed as normal
+- `build-now`: walls built above other walls can now be deconstructed like regularly-built walls
 - `gui/dfstatus`: no longer count items owned by traders
+- `gui/unit-info-viewer`: fix calculation/labeling of unit size
 
 ## Misc Improvements
-- `build-now`: buildings that were just designated with `buildingplan` are now handled properly instead of being skipped (as long as there are items available to build the buildings with)
-- `deteriorate`: new ``now`` command immediately deteriorates all items of the specified types.
-- `list-agreements`: now displays translated Guild Names, worshiped Deity, age of petition, and "man" to race-specific professions (e.g. "Craftsman" -> "Craftsdwarf")
-- `workorder`: doesn't check for an assigned manager anymore.
+- `build-now`: buildings that were just designated with `buildingplan` are now built immediately (as long as there are items available to build the buildings with) instead of being skipped until buildingplan gets around to doing its regular scan
+- `caravan`: new ``unload`` command, fixes endless unloading at the depot by reconnecting merchant pack animals that were disconnected from their owners
+- `deteriorate`: new ``now`` command immediately deteriorates items of the specified types
+- `list-agreements`: now displays translated guild names, worshipped deities, petition age, and race-appropriate professions (e.g. "Craftsdwarf" instead of "Craftsman")
+- `workorder`: a manager is no longer required for orders to be created (matching bevavior in the game itself)
 
 ## Removed
 - `devel/unforbidall`: please use `unforbid` instead. You can silence the output with ``unforbid all --quiet``

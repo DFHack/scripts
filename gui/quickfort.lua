@@ -624,9 +624,9 @@ function QuickfortUI:commit()
 end
 
 function QuickfortUI:do_command(command, dry_run, post_fn)
-    print(string.format('executing via gui/quickfort: quickfort %s',
-                        quickfort_parse.format_command(
-                            command, self.blueprint_name, self.section_name)))
+    print(('executing via gui/quickfort: quickfort %s'):format(
+                quickfort_parse.format_command(
+                    command, self.blueprint_name, self.section_name, dry_run)))
     local ctx = self:run_quickfort_command(command, dry_run, false)
     quickfort_command.finish_command(ctx, self.section_name)
     if command == 'run' then
@@ -642,11 +642,10 @@ function QuickfortUI:do_command(command, dry_run, post_fn)
     elseif command == 'orders' then
         local count = 0
         for _,_ in pairs(ctx.order_specs or {}) do count = count + 1 end
-        local messages = {string.format(
-            '%d order(s) %senqueued for %s.', count,
-            dry_run and 'would be ' or '',
-            quickfort_parse.format_command(nil, self.blueprint_name,
-                                           self.section_name))}
+        local messages = {('%d order(s) %senqueued for\n%s.'):format(count,
+                dry_run and 'would be ' or '',
+                quickfort_parse.format_command(nil, self.blueprint_name,
+                                               self.section_name))}
         if count > 0 then
             table.insert(messages, '')
         end
