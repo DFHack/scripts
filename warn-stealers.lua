@@ -15,10 +15,7 @@ local numTicksBetweenChecks = 100
 
 function gamemodeCheck()
     if df.global.gamemode ~= df.game_mode.DWARF then
-        if df.global.gamemode ~= df.game_mode.NONE then
-            -- errors when gamemode is NONE
-            persistTable.GlobalTable.warnStealersCache = nil
-        end
+        cache = nil
         stop()
         return false
     end
@@ -29,10 +26,7 @@ if not gamemodeCheck() then
     return
 end
 
-if not persistTable.GlobalTable.warnStealersCache then
-    persistTable.GlobalTable.warnStealersCache = {}
-end
-local cache = persistTable.GlobalTable.warnStealersCache
+cache = {}
 
 local races = df.global.world.raws.creatures.all
 
@@ -43,7 +37,7 @@ function addToCacheIfStealerAndHidden(unitId)
     end
     local casteFlags = races[unit.race].caste[unit.caste].flags
     if casteFlags.CURIOUS_BEAST_EATER or casteFlags.CURIOUS_BEAST_GUZZLER or casteFlags.CURIOUS_BEAST_ITEM then
-        cache[tostring(unitId)] = ""
+        cache[unit] = true
     end
 end
 
@@ -60,7 +54,7 @@ function announce(unit)
     if casteFlags.CURIOUS_BEAST_ITEM then
         table.insert(desires, "steal items")
     end
-    local str = table.concat(str, " + ")
+    local str = table.concat(desires, " + ")
     dfhack.gui.showZoomAnnouncement(-1, unit.pos, "A " .. caste.caste_name[0] .. " has appeared, it may " .. str .. ".", COLOR_RED, true)
 end
 
@@ -68,16 +62,12 @@ function onTick()
     if not gamemodeCheck() then
         return
     end
-    for _, unitIdStr in ipairs(cache._children) do
-        if cache[unitIdStr] then -- For a bug in persist-table
-            local unitId = tonumber(unitIdStr)
-            local unit = df.unit.find(unitId)
-            if not unit or unit.flags1.inactive then
-                cache[unitIdStr] = nil
-            elseif not dfhack.units.isHidden(unit) then
-                announce(unit)
-                cache[unitIdStr] = nil -- this isn't stopping it from being iterated over.
-            end
+    for unit in pairs(cache) do
+        if unit.flags1.inactive then
+            cache[unit] = nil
+        elseif not dfhack.units.isHidden(unit) then
+            announce(unit)
+            cache[unit] = nil
         end
     end
 end
