@@ -31,6 +31,9 @@ cache = {}
 local races = df.global.world.raws.creatures.all
 
 function addToCacheIfStealerAndHidden(unitId)
+    if not gamemodeCheck() then
+        return
+    end
     local unit = df.unit.find(unitId)
     if not dfhack.units.isHidden(unit) then
         return
