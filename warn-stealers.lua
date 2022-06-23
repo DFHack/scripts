@@ -1,4 +1,5 @@
 -- Script to warn when creatures that may steal food become visible
+--@ enable = true
 --[====[
 warn-stealers
 =============
@@ -16,14 +17,11 @@ local numTicksBetweenChecks = 100
 function gamemodeCheck()
     if df.global.gamemode ~= df.game_mode.DWARF then
         cache = nil
-        stop()
+        print("warn-stealers must be run in fort mode")
+        disable()
         return false
     end
     return true
-end
-
-if not gamemodeCheck() then
-    return
 end
 
 cache = {}
@@ -79,7 +77,7 @@ function help()
     print(dfhack.script_help())
 end
 
-function start()
+function enable()
     if not gamemodeCheck() then
         return
     end
@@ -93,14 +91,17 @@ function start()
     print("warn-stealers running")
 end
 
-function stop()
+function disable()
     eventful.onUnitNewActive[eventfulKey] = nil
     repeatUtil.cancel(eventfulKey)
     print("warn-stealers stopped")
 end
 
-local action_switch = {start = start, stop = stop}
+local action_switch = {enable = enable, disable = disable}
 setmetatable(action_switch, {__index = function() return help end})
 
-local args = {...}
+args = {...}
+if dfhack_flags and dfhack_flags.enable then
+    args = {dfhack_flags.enable_state and "enable" or "disable"}
+end
 action_switch[args[1] or "help"]()
