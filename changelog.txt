@@ -16,6 +16,7 @@ that repo.
 ## New Scripts
 
 - `warn-stealers`: warn when creatures that may steal your food, drinks, or items become visible
+
 ## Fixes
 
 ## Misc Improvements
