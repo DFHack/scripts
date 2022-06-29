@@ -24,7 +24,7 @@ function gamemodeCheck()
     return true
 end
 
-cache = {}
+cache = cache or {}
 
 local races = df.global.world.raws.creatures.all
 
