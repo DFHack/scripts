@@ -16,7 +16,6 @@ that repo.
 ## New Scripts
 
 - `warn-stealers`: warn when creatures that may steal your food, drinks, or items become visible
-- `assign-minecarts`: assign minecarts to hauling routes that don't have one
 ## Fixes
 
 ## Misc Improvements
