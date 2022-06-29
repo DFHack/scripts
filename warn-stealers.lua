@@ -14,13 +14,13 @@ local eventfulKey = "warn-stealers"
 local numTicksBetweenChecks = 100
 
 function gamemodeCheck()
-    if df.global.gamemode ~= df.game_mode.DWARF then
-        cache = nil
-        print("warn-stealers must be run in fort mode")
-        disable()
-        return false
+    if df.global.gamemode == df.game_mode.DWARF then
+        return true
     end
-    return true
+    cache = nil
+    print("warn-stealers must be run in fort mode")
+    disable()
+    return false
 end
 
 cache = cache or {}
