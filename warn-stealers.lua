@@ -54,7 +54,7 @@ function announce(unit)
     if casteFlags.CURIOUS_BEAST_ITEM then
         table.insert(desires, "steal items")
     end
-    local str = table.concat(desires, " + ")
+    local str = table.concat(desires, " and ")
     dfhack.gui.showZoomAnnouncement(-1, unit.pos, "A " .. caste.caste_name[0] .. " has appeared, it may " .. str .. ".", COLOR_RED, true)
 end
 
