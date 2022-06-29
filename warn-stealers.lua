@@ -7,7 +7,6 @@ Will make a zoomable announcement whenever a creature that can eat food, guzzle 
 Takes ``start`` or ``stop`` as parameters.
 ]====]
 
-local persistTable = require("persist-table")
 local eventful = require("plugins.eventful")
 local repeatUtil = require("repeat-util")
 
