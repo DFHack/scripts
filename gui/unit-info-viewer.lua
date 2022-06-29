@@ -484,10 +484,10 @@ function Identity:init(args)
  local prof = self.raw_prof
  if self.undead then
   prof = str2TitleCase( self.caste_name[SINGULAR] )
-  if isBlank(u.enemy.undead.anon_7) then
+  if isBlank(u.enemy.undead.undead_name) then
    prof = prof..' Corpse'
   else
-   prof = u.enemy.undead.anon_7 -- a reanimated body part will use this string instead
+   prof = u.enemy.undead.undead_name -- a reanimated body part will use this string instead
   end
  end
  --[[

@@ -477,13 +477,13 @@ local function create_orders(orders)
                 condition.condition = ensure_df_id(df.manager_order_condition_order.T_condition, it2["condition"])
                                     or qerror ( "Invalid order condition type for manager order: " .. it2["condition"] )
 
-                -- condition.anon_1
+                -- condition.unk_1
 
                 order.order_conditions:insert('#', condition)
                 end)
             end
         end
-        --order.anon_1 = vector<job_item*>
+        --order.items = vector<job_item*>
 
         local amount = it.amount_total
         if it.__reduce_amount then

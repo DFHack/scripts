@@ -18,6 +18,7 @@ that repo.
 - `warn-stealers`: warn when creatures that may steal your food, drinks, or items become visible
 
 ## Fixes
+- `gui/unit-info-viewer`: fix logic for displaying undead creature names
 
 ## Misc Improvements
 - `gui/quickfort`: better formatting for generated manager orders report
