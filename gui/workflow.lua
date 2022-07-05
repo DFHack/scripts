@@ -702,6 +702,8 @@ function ConstraintList:init(args)
             frame = { w = 30, r = 0, t = 7, b = 0 },
         }
     }
+    -- allow hotkeys to be interpreted before the list filter reads them
+    self.focus_group.cur:setFocus(false)
 
     self:initListChoices(nil, args.select_token)
 end
