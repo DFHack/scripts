@@ -12,4 +12,3 @@ A happy dwarf (ie with negative stress) will never emigrate.
 Usage::
 
     emigration enable|disable
-

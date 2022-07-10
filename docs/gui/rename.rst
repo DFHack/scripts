@@ -23,4 +23,3 @@ via a simple dialog in the game ui.
   their species string.
 
 The ``building`` or ``unit`` options are automatically assumed when in relevant UI state.
-

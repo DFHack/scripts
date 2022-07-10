@@ -11,4 +11,3 @@ Usage:  ``brainwash <type>``, with one of the following types:
 :baseline:  reset all personality traits to the average
 :stepford:  amplifies all good qualities to an excessive degree
 :wrecked:   amplifies all bad qualities to an excessive degree
-

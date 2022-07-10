@@ -176,4 +176,3 @@ Examples:
 * "likes stars"::
 
     assign-preferences -reset -likeshape STAR
-

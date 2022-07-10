@@ -16,4 +16,3 @@ to handle :kbd:`Esc` entirely).
     * The main adventure mode screen (``viewscreen_dungeonmodest``)
     * The main legends mode screen (``viewscreen_legendsst``)
     * The title screen (``viewscreen_titlest``)
-

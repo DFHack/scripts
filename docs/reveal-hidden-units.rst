@@ -6,4 +6,3 @@ are currently sneaking or waiting in ambush
 and thus hidden from the player's view.
 
 Usable in both fortress and adventure mode.
-

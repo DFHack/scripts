@@ -13,4 +13,3 @@ This figure will be added to the 'Specific Person' list at the
 bottom of the creature selection page. They can then be picked
 for use as a player character, as if regaining control of a
 retired adventurer.
-

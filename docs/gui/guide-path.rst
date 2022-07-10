@@ -8,4 +8,3 @@ a :guilabel:`Guide` order.
 
 The script displays the cached path that will be used by the order; the game
 computes it when the order is executed for the first time.
-

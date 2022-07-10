@@ -29,4 +29,3 @@ Arguments:
 * ``all`` to force all globals
 * ``nofeed`` to block automated fake input searches
 * ``nozoom`` to disable neighboring object heuristics
-

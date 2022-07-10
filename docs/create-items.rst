@@ -25,4 +25,3 @@ Examples::
     create-items web CREATURE:SPIDER_CAVE_GIANT:SILK
     create-items bar CREATURE:CAT:SOAP
     create-items bar adamantine
-

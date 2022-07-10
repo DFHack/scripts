@@ -17,4 +17,3 @@ in-game help. There are multiple ways to open this editor:
   the same position you left it
 
 .. image:: /docs/images/gm-editor.png
-

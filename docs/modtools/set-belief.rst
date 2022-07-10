@@ -62,4 +62,3 @@ Other arguments:
     Use this argument to disable that functionality.
 :listunit:
     Prints a list of all a unit's beliefs. Cultural defaults are marked with ``*``.
-

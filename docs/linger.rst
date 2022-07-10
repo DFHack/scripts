@@ -13,4 +13,3 @@ This will fail if the unit in question is no longer present
 on the local map.
 
 (Adventure mode only!)
-

@@ -32,4 +32,3 @@ this script with `repeat` is recommended if:
 - You have experienced crashes likely caused by :bug:`11014`, and running this
   script a single time produces output but does not fix the crash
 - You are running large military operations, or have sent squads out on raids
-

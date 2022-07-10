@@ -59,4 +59,3 @@ conflicted by this as she values parties and merrymaking in the abstract."
 
 Note that the facets are compared to the beliefs, and if conflicts arise they
 will be reported.
-

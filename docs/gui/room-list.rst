@@ -8,4 +8,3 @@ assign owner page.
 
 The script lists other rooms owned by the same owner, or by the unit
 selected in the assign list, and allows unassigning them.
-

@@ -15,4 +15,3 @@ This dumps the contents of the table of global addresses (new in 0.44.01).
 
 Passing global names as arguments calls setAddress() to set those globals'
 addresses in-game. Passing "all" does this for all globals.
-

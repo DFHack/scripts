@@ -19,4 +19,3 @@ Usage:
         Augment (or diminish) all populations of TOKEN by factor (additive).
 :region-pops incr-all <pattern> <factor>:
         Same as above, but match using a pattern acceptable to list.
-

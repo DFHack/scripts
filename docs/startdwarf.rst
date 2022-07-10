@@ -8,4 +8,3 @@ change the number of dwarves you embark with from the default of 7.
 - ``startdwarf 500`` would lead to a severe food shortage and FPS issues
 
 The number must be 7 or greater.
-

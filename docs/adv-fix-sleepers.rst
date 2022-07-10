@@ -9,5 +9,3 @@ adventure mode, simply run the script and all nearby sleepers will be cured.
 Usage::
 
     adv-fix-sleepers
-
-

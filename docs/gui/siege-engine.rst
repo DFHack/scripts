@@ -31,4 +31,3 @@ Exiting from the siege engine script via :kbd:`Esc` reverts the
 view to the state prior to starting the script.
 :kbd:`Shift`:kbd:`Esc` retains the current viewport, and also
 exits from the :kbd:`q` mode to main menu.
-

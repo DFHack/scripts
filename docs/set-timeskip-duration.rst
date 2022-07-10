@@ -64,4 +64,3 @@ Example::
 
     set-timeskip-duration -years 2 -months 1 -days 9 -hours 8 -ticks 49
         Does the same thing as the previous example
-

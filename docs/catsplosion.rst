@@ -11,4 +11,3 @@ Usage:
 :catsplosion ID ...:    Make animals with given ID(s) pregnant
 
 Animals will give birth within two in-game hours (100 ticks or fewer).
-

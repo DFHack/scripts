@@ -22,4 +22,3 @@ The target/s must be alive, sane, and in fortress mode.
         divorces the two specified units and their partners,
         then arranges for the two units to marry, bypassing
         almost all checks.  Use with caution.
-

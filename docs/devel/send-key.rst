@@ -17,4 +17,3 @@ Usage::
 * ``X`` (optional) - if specified, the key is sent to the screen ``X`` screens
   above the current screen in the screen stack (e.g. ``1`` corresponds to the
   current screen's parent)
-

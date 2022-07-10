@@ -12,4 +12,3 @@ Parameters:
 --help            display this help
 --rerun commands  ignore saved commands
 --reset           deletes saved commands
-

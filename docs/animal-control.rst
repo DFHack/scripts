@@ -67,4 +67,3 @@ as follows:
 - ``endur``: endurance
 - ``recup``: recuperation
 - ``disres``: disease resistance
-

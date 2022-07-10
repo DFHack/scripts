@@ -10,4 +10,3 @@ Usage:
   events
 
 See `modtools/force` for a complete list of event types.
-

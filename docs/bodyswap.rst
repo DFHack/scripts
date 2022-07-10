@@ -16,4 +16,3 @@ Arguments::
         replace "id" with the unit id of your target
         example:
             bodyswap -unit 42
-

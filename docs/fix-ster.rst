@@ -10,4 +10,3 @@ infertility on creatures that you do not want to breed.  Usage::
 or sterile.  Optional arguments specify the target: no argument for the
 selected unit, ``all`` for all units on the map, ``animals`` for all non-dwarf
 creatures, or ``only:<creature>`` to only process matching creatures.
-

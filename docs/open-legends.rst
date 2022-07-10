@@ -20,4 +20,3 @@ which can lead to save corruption.
 
 The optional ``force`` argument will bypass all safety checks, as well as the
 save corruption warning.
-

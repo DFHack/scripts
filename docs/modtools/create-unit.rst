@@ -166,4 +166,3 @@ Creates a unit.  Usage::
 
     -flagClear [ flag1 flag2 ... ]
         As above, but sets the specified unit flags to false.
-

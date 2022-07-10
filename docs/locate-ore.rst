@@ -13,4 +13,3 @@ Examples::
     locate-ore list
     locate-ore hematite
     locate-ore iron
-

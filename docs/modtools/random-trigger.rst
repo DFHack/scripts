@@ -65,4 +65,3 @@ Arguments::
     The list is NOT retained across game save/load, as nobody has yet had
     a use for this feature.  Contact expwnent if you would use it; it's
     not that hard but if nobody wants it he won't bother.
-

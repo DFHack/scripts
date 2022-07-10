@@ -62,4 +62,3 @@ worthless."
 
 Note that the beliefs aligned with the cultural values of the unit have not
 triggered a report.
-

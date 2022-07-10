@@ -18,4 +18,3 @@ the map. With the ``here`` argument, considers only the in-game selected cage
 alternatively pass cage IDs as arguments::
 
   stripcaged weapons 25321 34228
-

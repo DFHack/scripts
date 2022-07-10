@@ -17,4 +17,3 @@ To queue a job at high priority, add ``--high`` or ``--priority``::
 To magically toggle the lever immediately, add ``--now`` or ``--cheat``::
 
     lever pull 42 --now
-

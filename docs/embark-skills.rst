@@ -11,4 +11,3 @@ Note that already-used skill points are not taken into account or reset.
 :max all:       Sets all skills of all dwarves to "Proficient".
 :legendary:     Sets all skills of the selected dwarf to "Legendary".
 :legendary all: Sets all skills of all dwarves to "Legendary".
-

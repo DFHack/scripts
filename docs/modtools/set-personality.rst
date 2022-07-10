@@ -62,4 +62,3 @@ Other arguments:
     Use this argument to disable that functionality.
 :listunit:
     Prints a list of all a unit's personality traits, with their modified trait value in brackets.
-

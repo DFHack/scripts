@@ -41,4 +41,3 @@ To kill a single creature, select the unit with the 'v' cursor and::
 To purify all elves on the map with fire (may have side-effects)::
 
     exterminate elve magma
-

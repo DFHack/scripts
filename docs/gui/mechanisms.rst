@@ -10,4 +10,3 @@ To exit, press :kbd:`Esc` or :kbd:`Enter`; :kbd:`Esc` recenters on
 the original building, while :kbd:`Enter` leaves focus on the current
 one. :kbd:`Shift`:kbd:`Enter` has an effect equivalent to pressing
 :kbd:`Enter`, and then re-entering the mechanisms UI.
-

@@ -20,4 +20,3 @@ Examples:
 * teleports unit ``1234`` to ``56,115,26``
 
     teleport -unit 1234 -x 56 -y 115 -z 26
-

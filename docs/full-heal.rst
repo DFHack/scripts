@@ -22,4 +22,3 @@ including death.  Usage:
 For example, ``full-heal -r -keep_corpse -unit ID_NUM`` will fully heal
 unit ID_NUM.  If this unit was dead, it will be resurrected without deleting
 the corpse - creepy!
-

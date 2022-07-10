@@ -19,4 +19,3 @@ product.  Usage::
             \\OUTPUT_ITEMS
             \\anything -> \anything
             anything -> anything
-

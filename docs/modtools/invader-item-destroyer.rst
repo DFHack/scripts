@@ -22,4 +22,3 @@ Arguments::
         items shortly after death.  examples:
             MOUNTAIN
             EVIL
-

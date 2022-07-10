@@ -73,4 +73,3 @@ See description of ``<json>``-parameter for more details.
 --verbose        toggle script's verbosity.
 --very-verbose   toggle script's very verbose mode.
 --reset          reset script environment for next execution.
-

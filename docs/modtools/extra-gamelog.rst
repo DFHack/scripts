@@ -8,4 +8,3 @@ Usage::
 
     modtools/extra-gamelog enable
     modtools/extra-gamelog disable
-

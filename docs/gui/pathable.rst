@@ -18,4 +18,3 @@ from the tile at the cursor - green if possible, red if not, similar to
     climbing. If an area of the map is only accessible by climbing, this tool
     may report it as inaccessible. Care should be taken when digging into the
     upper levels of caverns, for example.
-

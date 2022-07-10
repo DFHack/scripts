@@ -9,4 +9,3 @@ Using the argument ``-value 0`` will reduce stress to the value 0 instead of -1,
 Negative values must be preceded by a backslash (\): ``-value \-10000``.
 Note that this can only be used to *decrease* stress - it cannot be increased
 with this argument.
-

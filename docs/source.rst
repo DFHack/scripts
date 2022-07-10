@@ -26,4 +26,3 @@ Examples::
     source add water     - water source
     source add magma 7   - magma source
     source add water 0   - water drain
-

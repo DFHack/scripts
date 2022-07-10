@@ -16,4 +16,3 @@ Arguments::
         specify what sort of restriction to put on the building
     -building name
         specify the id of the building
-

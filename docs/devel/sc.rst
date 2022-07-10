@@ -23,4 +23,3 @@ Examples:
 * scan result of expression::
 
     devel/sc [expr]
-

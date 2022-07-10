@@ -14,4 +14,3 @@ With Arena spawn data initialized:
 
 - To convert spawned creatures to livestock, select each one with
   the :kbd:`v` menu, and enter ``rb_eval df.unit_find.civ_id = df.ui.civ_id``
-

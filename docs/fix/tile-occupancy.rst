@@ -7,4 +7,3 @@ building and unit occupancy. Requires that a tile is selected with the in-game
 cursor (``k``).
 
 Can be used to fix problematic tiles caused by :issue:`1047`.
-

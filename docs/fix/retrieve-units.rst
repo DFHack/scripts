@@ -14,4 +14,3 @@ such as the following:
     For caravans that are missing entirely, this script may retrieve the
     merchants but not the items. Using `fix/stuck-merchants` followed by `force`
     to create a new caravan may work better.
-

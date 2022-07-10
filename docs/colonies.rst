@@ -13,4 +13,3 @@ convert to honey bees, as this is the most commonly useful.
 However both accept an optional flag to use a different vermin
 type, for example ``colonies place ANT`` creates an ant colony
 and ``colonies convert TERMITE`` ends your beekeeping industry.
-

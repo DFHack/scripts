@@ -18,4 +18,3 @@ When selecting a game with :kbd:`Enter`, a dialog will give options to load the
 selected game (:kbd:`Enter` again), cancel (:kbd:`Esc`), or rename the game's
 folder (:kbd:`r`). See the ``title-start-rename`` `tweak` to rename folders in
 the "start playing" menu.
-

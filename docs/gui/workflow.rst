@@ -59,4 +59,3 @@ The chart on the right is a plot of the last 14 days (28 half day plots) worth
 of stock history for the selected item, with the rightmost point representing
 the current stock value. The bright green dashed line is the target
 limit (maximum) and the dark green line is that minus the gap (minimum).
-

@@ -33,4 +33,3 @@ Usage::
 You must specify both an attack string and a defend string to guarantee
 correct performance. Either will trigger the script when it happens, but
 it will not be triggered twice in a row if both happen.
-

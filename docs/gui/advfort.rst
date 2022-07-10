@@ -21,4 +21,3 @@ keybinding (see below for the default binding). Possible arguments:
 An example of a player digging in adventure mode:
 
 .. image:: /docs/images/advfort.png
-

@@ -6,4 +6,3 @@ Works best with an animal stockpile on top of the zone.
 
 Works with a zone number as argument (eg ``Activity Zone #6`` -> ``masspit 6``)
 or with the game cursor on top of the area.
-

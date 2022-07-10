@@ -46,4 +46,3 @@ it produced anything, once per completion.  Arguments::
             anything -> anything
         when used with -syndrome, the target must be valid for the syndrome
         otherwise, the command will not be run for that target
-

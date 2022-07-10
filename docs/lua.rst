@@ -19,4 +19,3 @@ There are the following ways to invoke this command:
 4. ``:lua`` *lua statement...*
 
    Parses and executes the lua statement like the interactive interpreter would.
-

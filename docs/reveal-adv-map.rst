@@ -14,4 +14,3 @@ Arguments::
     -hide
         Include this if you want to hide all world tiles instead
         of revealing them
-

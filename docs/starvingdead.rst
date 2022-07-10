@@ -11,4 +11,3 @@ one month gradually decay, losing strength, speed, and toughness.
 After six months, they collapse upon themselves, never to be reanimated.
 
 Usage: ``starvingdead (start|stop)``
-

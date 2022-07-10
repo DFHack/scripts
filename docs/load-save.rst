@@ -14,4 +14,3 @@ This can also be run when starting DFHack from the command line. For example,
 on Linux/macOS::
 
     ./dfhack +load-save region1
-

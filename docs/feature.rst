@@ -14,4 +14,3 @@ Options:
 :magma:         Enable magma furnaces (discovers a random magma feature).
 :show X:        Marks the selected map feature as discovered.
 :hide X:        Marks the selected map feature as undiscovered.
-

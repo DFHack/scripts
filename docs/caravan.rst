@@ -20,4 +20,3 @@ specified, then the commands apply to all caravans on the map.
 - ``leave [IDS]``: makes caravans pack up and leave immediately.
 - ``unload``: fixes endless unloading at the depot. Run this if merchant pack
   animals were startled and now refuse to come to the trade depot.
-

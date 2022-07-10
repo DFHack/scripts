@@ -25,4 +25,3 @@ for an area, and :kbd:`r` operates on the "permanent flow" property that makes
 rivers power water wheels even when full and technically not flowing.
 
 After setting up the desired operations using the described keys, use :kbd:`Enter` to apply them.
-

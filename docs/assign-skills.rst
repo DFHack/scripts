@@ -61,4 +61,3 @@ Example::
 
 Clears all the unit skills, then adds the Wood cutter skill (competent level)
 and the Axeman skill (adequate level).
-

@@ -18,4 +18,3 @@ Use one or more of the following options:
 :world:                 Show all defined syndromes in the world
 :export:                ``export:<filename>`` sends output to the given file, showing all
                         syndromes affecting each unit with the maximum and present duration.
-

@@ -24,4 +24,3 @@ with "lazuli" in their name (only 1).
 
 ``x`` clears all filters, which is currently the only way to undo filters
 (besides searching), and is useful to verify the gems selected.
-

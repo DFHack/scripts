@@ -9,4 +9,3 @@ The associated script `item-descriptions` supplies custom descriptions
 of items.  Individual descriptions can be added or overridden by a similar
 script :file:`raw/scripts/more-item-descriptions.lua`.  Both work as sparse lists,
 so missing items simply go undescribed if not defined in the fallback.
-

@@ -28,4 +28,3 @@ Valid targets:
 
 If no target is given, the provided unit can't be found, or no unit id is given with the unit
 argument, the script will try and default to targeting the currently selected unit.
-

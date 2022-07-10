@@ -30,4 +30,3 @@ Arguments::
         create two of this item
     -matchingGloves
         create two of this item, and set handedness appropriately
-

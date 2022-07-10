@@ -17,4 +17,3 @@ This triggers dfhack commands when projectiles hit their targets.  Usage::
         \\FIRER_ID
         \\anything -> \anything
         anything -> anything
-

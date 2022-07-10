@@ -6,4 +6,3 @@ influences output quality.  Examples::
 
     autolabor-artisans 0 2 3
     autolabor-artisans disable
-

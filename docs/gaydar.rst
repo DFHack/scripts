@@ -18,4 +18,3 @@ Orientation filters:
 :-biOnly:       only creatures who can get into romances with both sexes
 :-straightOnly: only creatures who are strictly straight
 :-asexualOnly:  only creatures who are strictly asexual
-

@@ -7,4 +7,3 @@ Displays announcements and reports in the console.
 :disable|stop:      Stops monitoring
 :report enable:     Show combat reports
 :report disable:    Only show announcements
-

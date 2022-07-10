@@ -42,4 +42,3 @@ Examples:
 * Export just the custom XML file to the DF folder (no subfolder)::
 
     exportlegends custom .
-

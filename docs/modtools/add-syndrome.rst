@@ -31,4 +31,3 @@ Arguments::
             28
     -skipImmunities
         add the syndrome to the target even if it is immune to the syndrome
-

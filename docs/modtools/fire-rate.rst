@@ -63,4 +63,3 @@ Other:
   Vanilla mode attempts to replicate behaviour for fire rates - skill rolls
   determine which of 6 fixed increments of speeds is used, with a unit's skill
   affecting the range and averages. **NOT YET IMPLEMENTED!**
-

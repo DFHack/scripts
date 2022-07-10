@@ -64,4 +64,3 @@ Examples:
   those new values will be applied)::
 
     assign-profile -file /hack/scripts/military_profiles.json -profile ARCHER -reset [ ATTRIBUTES SKILLS ]
-

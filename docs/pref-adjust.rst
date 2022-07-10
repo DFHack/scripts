@@ -24,4 +24,3 @@ To see what values can be used with each type of preference, use
 their preferences cleared manually with the use of ``pref-adjust clear``
 and ``pref-adjust clear_all``, respectively. Existing preferences are
 automatically cleared, normally.
-

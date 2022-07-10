@@ -12,4 +12,3 @@ Use ``enable`` or ``disable`` to enable/disable, or ``help`` for this help.
     This does not block sieges, and may not block visitors or monarchs.
 
 .. _hermit challenge: http://dwarffortresswiki.org/index.php/DF2014:Playstyle_challenge#Hermit
-

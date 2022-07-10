@@ -13,4 +13,3 @@ Usage:
 
 Don't forget to ``enable stockpiles`` and create the ``stocksettings`` directory in
 the DF folder before trying to use the GUI.
-

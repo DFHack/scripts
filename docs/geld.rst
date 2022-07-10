@@ -13,4 +13,3 @@ Valid options:
 ``-toggle``:    Toggles the gelded status of the specified unit.
 
 ``-help``:      Shows this help information
-

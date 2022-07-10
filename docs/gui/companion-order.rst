@@ -19,4 +19,3 @@ Can be called with '-c' flag to display "cheating" commands.
 
 * patch up - fully heals the companion
 * get in - rides e.g. minecart at cursor. Bit buggy as unit will teleport to the item when e.g. pushing it.
-

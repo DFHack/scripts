@@ -8,4 +8,3 @@ it with `repeat` is not recommended.
 
 Run ``fix/stuck-merchants -n`` or ``fix/stuck-merchants --dry-run`` to list all
 merchants that would be dismissed but make no changes.
-

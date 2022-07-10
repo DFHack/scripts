@@ -43,4 +43,3 @@ drink or milk), it will let you select any material, since in this case the
 material is matched against the barrel itself. Then, if you select, say, iron,
 and then try to change the input item type, now it won't let you select *plant*;
 you have to unset the material first.
-

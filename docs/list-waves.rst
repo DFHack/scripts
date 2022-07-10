@@ -31,4 +31,3 @@ These options are used to specify what wave information to display
     Shows the arrival information for the selected unit.
     If ``-all`` is specified the info displayed will be relative to the
     granularity used. Note: this option is always used when ``-unit`` is used.
-

@@ -17,4 +17,3 @@ Arguments::
         often depicted as a str
     -verbose
         if specified, prints details about the created god
-

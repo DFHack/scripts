@@ -19,4 +19,3 @@ This is useful enough for modders and some users to justify the danger.
 Usage example::
 
     devel/inject-raws trapcomp ITEM_TRAPCOMP_STEAM_PISTON workshop STEAM_ENGINE MAGMA_STEAM_ENGINE reaction STOKE_BOILER
-

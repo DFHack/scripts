@@ -12,4 +12,3 @@ It is currently not possible to questport into inaccessible locations like
 ocean and mountain tiles.
 
 See `reveal-adv-map` if you wish to teleport into hidden map tiles.
-

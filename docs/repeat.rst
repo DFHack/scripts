@@ -31,4 +31,3 @@ Arguments:
     cancels the repetition with the name NAME
 ``-list``
     prints names of scheduled commands
-

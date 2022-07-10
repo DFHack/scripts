@@ -13,4 +13,3 @@ It has to be run from a work order's detail screen
 For best experience add the following to your ``dfhack*.init``::
 
     keybinding add D@workquota_details gui/workorder-details
-

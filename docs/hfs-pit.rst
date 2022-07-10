@@ -21,4 +21,3 @@ Examples::
 
     hfs-pit 2 1 0
         A two-across pit with stairs but no walls.
-

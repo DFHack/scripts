@@ -14,4 +14,3 @@ where ``data-type`` is a primitive type (int32_t, uint8_t, long, etc.) and each
 ``val`` is a valid value for that type.
 
 Use ``devel/find-primitive help`` for a list of valid data types.
-

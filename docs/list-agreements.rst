@@ -25,4 +25,3 @@ Options:
 
 :all:   list all agreements; past and present
 :help:  shows this help screen
-

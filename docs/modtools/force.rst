@@ -23,4 +23,3 @@ Usage::
             MOUNTAIN
             EVIL
             28
-

@@ -31,4 +31,3 @@ following should also be defined:
 :guard_init:    a token for lua file
 :[pre|post]_(un)install:
                 Callback functions, which can trigger more complicated behavior
-

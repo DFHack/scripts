@@ -43,4 +43,3 @@ Example::
 
 Clears all the unit goals, then sets the "master a skill" goal. The final result
 will be: "dreams of mastering a skill".
-

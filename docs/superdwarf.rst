@@ -10,4 +10,3 @@ To make any creature superfast, target it ingame using 'v' and::
 Other options available: ``del``, ``clear``, ``list``.
 
 This script also shortens the 'sleeping' periods of targets.
-

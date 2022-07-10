@@ -8,4 +8,3 @@ own script file.  Example::
 
     anonymous-script "print(args[1])" arg1 arg2
     # prints "arg1"
-

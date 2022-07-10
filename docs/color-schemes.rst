@@ -23,4 +23,3 @@ For more information about arguments and return values, see ``hack/scripts/color
 Related scripts:
     * `gui/color-schemes` is the in-game GUI for this script.
     * `season-palette` swaps color schemes when the season changes.
-

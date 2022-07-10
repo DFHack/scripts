@@ -39,4 +39,3 @@ There may be other screens to which the script applies.  It should be
 safe to attempt running the script with any screen active, with an
 error message to inform you when the selected screen is not appropriate
 for this script.
-

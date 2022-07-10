@@ -23,4 +23,3 @@ Example:
 
 - Grow plump helmet spawn:
    ``growcrops plump``
-

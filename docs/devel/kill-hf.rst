@@ -20,4 +20,3 @@ Arguments:
 
 ``-n``, ``--dry-run``:
     if specified, only print the name of the historical figure
-

@@ -7,4 +7,3 @@ watch combat in slow motion.
 Usage::
 
     setfps <number>
-

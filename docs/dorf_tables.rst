@@ -70,4 +70,3 @@ To see a full list of built-in professions and jobs, you can run these commands:
 
     devel/query -table df.profession
     devel/query -table df.job_skill
-

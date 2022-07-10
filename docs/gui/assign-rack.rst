@@ -5,4 +5,3 @@ gui/assign-rack
 been available since DF 0.34.11
 
 See :bug:`1445` for more info about the patches.
-

@@ -32,4 +32,3 @@ Arguments:
    example: ``armoks-blessing Medical``
 
    All Dwarves will have all medical related skills set to legendary
-

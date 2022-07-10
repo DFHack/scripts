@@ -38,4 +38,3 @@ Arguments::
                 heals units when they acquire the specified syndrome
             -command [ modtools/spawn-flow -flowType Dragonfire -location [ \\LOCATION ] ]
                 spawns dragonfire at the location of infected units
-

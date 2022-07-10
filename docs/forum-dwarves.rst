@@ -34,4 +34,3 @@ will be displayed if the script is successful.
     characters (eg. :guilabel:`é õ ç` = ``é õ ç``).  You can fix this by
     opening the file in an editor such as Notepad++ and selecting the
     correct encoding before using the text.
-
