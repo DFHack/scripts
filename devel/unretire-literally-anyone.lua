@@ -61,7 +61,7 @@ function showNemesisPrompt(advSetUpScreen)
         table.insert(choices, {text = name, nemesis = nemesis, search_key = name:lower()})
       end
   end
-  dialogs.showListPrompt('unretire-anyone', "Select someone to add to the \"Specific Person\" list:", COLOR_WHITE, choices, function(id, choice)
+  dialogs.showListPrompt('unretire-literally-anyone', "Select someone to add to the \"Specific Person\" list:", COLOR_WHITE, choices, function(id, choice)
     addNemesisToUnretireList(advSetUpScreen, choice.nemesis)
   end, nil, nil, true)
 end
