@@ -1,21 +1,3 @@
--- Function:     Turn any historical figure into a playable adventurer. Even dead ones.
--- Author:       Dikbutdagrate
--- Credit:       This is almost 1-for-1 Atomic Chicken's unretire-anyone script, only now it lets you revive dead npcs.
--- More Credit:  "devel/kill-hf.lua", which was converted into a script for resurrecting an off-site histfig.
-
---[====[
-dikbutdagrate/unretire-literally-anyone
-===============
-
-Useage:
-Litrally the same as unretire-anyone, except now you can choose dead npcs using the adv-unretire startup gui.
-
-Note about dead characters:
-When unretiring a dead npc or an adventurer, you will likely be greeted by immidiate death due to not having a body. This is normal.
-Just run the resurrect-adv command.
-
-]====]
-
 local dialogs = require 'gui.dialogs'
 
 local viewscreen = dfhack.gui.getCurViewscreen()
@@ -27,7 +9,7 @@ end
 function addNemesisToUnretireList(advSetUpScreen, nemesis)
   local unretireOption = false
   for i = #advSetUpScreen.race_ids-1, 0, -1 do
-    if advSetUpScreen.race_ids[i] == -2 then -- this is the "Specific Person" option on the menu
+    if advSetUpScreen.race_ids[i] == -2 then
       unretireOption = true
       break
     end
@@ -45,13 +27,12 @@ end
 function showNemesisPrompt(advSetUpScreen)
   local choices = {}
   for _,nemesis in ipairs(df.global.world.nemesis.all) do
-    if nemesis.figure and not nemesis.flags.ADVENTURER then -- these are already available for unretiring
+    if nemesis.figure and not nemesis.flags.ADVENTURER then
       local histFig = nemesis.figure
       local histFlags = histFig.flags
 
       local creature = df.creature_raw.find(histFig.race).caste[histFig.caste]
       local name = creature.caste_name[0]
-        -- Beginning of revive function
         if histFig.died_year >= -1 then
             histFig.old_year = df.global.cur_year
             histFig.old_seconds = df.global.cur_year_tick + 1
