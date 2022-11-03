@@ -11,8 +11,8 @@ Useage:
 Litrally the same as unretire-anyone, except now you can choose dead npcs using the adv-unretire startup gui.
 
 Note about dead characters:
-When unretiring a dead npc or adventurer, you will likely be greeted by immidiate death due to not having a body. This is normal.
-Run the resurrect-adv command in the console window after the immidiate death spawn, and your character should have a body again.
+When unretiring a dead npc or an adventurer, you will likely be greeted by immidiate death due to not having a body. This is normal.
+Just run the resurrect-adv command.
 
 ]====]
 
