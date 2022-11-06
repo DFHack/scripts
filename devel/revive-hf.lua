@@ -1,23 +1,3 @@
--- Revives the specified historical figure
-
---[====[
-
-devel/revive-hf
-=============
-
-Revivs the specified historical figure, even if off-site.
-
-Usage::
-
-    devel/revive-hf HISTFIG_ID
-
-Arguments:
-
-``histfig_id``:
-    the ID of the historical figure to target
-
-]====]
-
 local target_hf = -1
 
 for _, arg in ipairs({...}) do
