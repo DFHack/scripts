@@ -1,5 +1,5 @@
 unretire-anyone
-===============
+=========================
 
 .. dfhack-tool::
     :summary: Adventure as any living historical figure.
