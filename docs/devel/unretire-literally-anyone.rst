@@ -1,4 +1,4 @@
-unretire-literally-anyone
+devel/unretire-literally-anyone
 ===============
 
 .. dfhack-tool::
