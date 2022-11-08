@@ -23,9 +23,9 @@ Usage
 
     unretire-anyone
 
-Options:
+Options
+-------
 
-::``-d``, ``--dead``:
-
-Enables user to unretire a dead historical figure to play as in adventure mode.
-For instance, a user may wish to unretire and then play as a particular megabeast that had died during world-gen.
+``-d``, ``--dead``
+    Enables user to unretire a dead historical figure to play as in adventure mode.
+    For instance, a user may wish to unretire and then play as a particular megabeast that had died during world-gen.
