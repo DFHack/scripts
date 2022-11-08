@@ -37,7 +37,7 @@ function showNemesisPrompt(advSetUpScreen)
     if nemesis.figure and not nemesis.flags.ADVENTURER then -- these are already available for unretiring
       local histFig = nemesis.figure
       local histFlags = histFig.flags
-      if (histFig.died_year == -1 or histFlags.ghost or options.dead == true) and not histFlags.deity and not histFlags.force then
+      if (histFig.died_year == -1 or histFlags.ghost or options.dead) and not histFlags.deity and not histFlags.force then
         local creature = df.creature_raw.find(histFig.race).caste[histFig.caste]
         local name = creature.caste_name[0]
         if histFig.died_year >= -1 then
