@@ -1,24 +1,9 @@
--- Turn any historical figure into a playable adventurer.
--- author: Atomic Chicken
+local options = {}
 
---[====[
-
-unretire-anyone
-===============
-This script allows the user to play as any living (or undead)
-historical figure (except for deities) in adventure mode.
-
-To use, simply enter "unretire-anyone" in the DFHack console
-at the start of adventure mode character creation. You will be
-presented with a searchable list from which you may choose
-your desired historical figure.
-
-This figure will be added to the 'Specific Person' list at the
-bottom of the creature selection page. They can then be picked
-for use as a player character, as if regaining control of a
-retired adventurer.
-
-]====]
+local argparse = require('argparse')
+local commands = argparse.processArgsGetopt({...}, {
+    {'d', 'dead', handler=function() options.dead = true end}
+})
 
 local dialogs = require 'gui.dialogs'
 
@@ -52,9 +37,13 @@ function showNemesisPrompt(advSetUpScreen)
     if nemesis.figure and not nemesis.flags.ADVENTURER then -- these are already available for unretiring
       local histFig = nemesis.figure
       local histFlags = histFig.flags
-      if (histFig.died_year == -1 or histFlags.ghost) and not histFlags.deity and not histFlags.force then
+      if (histFig.died_year == -1 or histFlags.ghost or options.dead == true) and not histFlags.deity and not histFlags.force then
         local creature = df.creature_raw.find(histFig.race).caste[histFig.caste]
         local name = creature.caste_name[0]
+        if histFig.died_year >= -1 then
+          histFig.died_year = -1
+          histFig.died_seconds = -1
+        end
         if histFig.info and histFig.info.curse then
           local curse = histFig.info.curse
           if curse.name ~= '' then
