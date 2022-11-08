@@ -1,5 +1,5 @@
 devel/unretire-literally-anyone
-===============
+=========================
 
 .. dfhack-tool::
     :summary: Use any historical figure as an adventurer
