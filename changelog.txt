@@ -413,3 +413,5 @@ that repo.
     - added ``-duration`` argument to make the unit vanish after some time
     - added ``-locationRange`` argument to allow spawning in a random position within a defined area
     - added ``-locationType`` argument to specify the type of location to spawn in
+- `unretire-anyone`:
+    - added ``-dead`` argument to allow revival and ability to select a dead hisotrical figure to use as an adventuerer.
