@@ -84,7 +84,7 @@ if args.untransform then
  caste = normalRace[args.unit].caste
  normalRace[args.unit] = nil
 else
- if not args.race or not args.caste then
+ if not args.race then
   error 'Specficy a target form.'
  end
 
@@ -109,7 +109,12 @@ else
  end
 
  if not caste then
-  error 'Invalid caste.'
+  local rand_caste = math.random( 0, math.abs(#race.caste-1) )
+  if not race.caste[rand_caste] then
+    error 'Creature has no castes or non have been found'
+  else
+    caste = rand_caste
+  end
  end
 end
 
