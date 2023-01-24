@@ -14,10 +14,16 @@ that repo.
 # Future
 
 ## New Scripts
+- `autofish`: Auto-manage fishing labors to control your stock of fish.
 
 ## Fixes
+- `quickfort`: allow floor bars, floor grates, and hatches to be placed over all stair types like vanilla allows
 
 ## Misc Improvements
+- `ban-cooking`: ban announcements are now hidden by default; use new option ``--verbose`` to show them.
+- `ban-cooking`: report number of items banned.
+- `gui/launcher`: make command output scrollback separate from the help text so players can continue to see the output of the previous command as they type the next one
+- `gui/quickfort`: don't close the window when applying a blueprint so players can apply the same blueprint multiple times more easily
 
 ## Removed
 

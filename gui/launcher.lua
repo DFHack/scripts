@@ -18,6 +18,10 @@ local CONSOLE_HISTORY_FILE = 'dfhack-config/dfhack.history'
 local CONSOLE_HISTORY_FILE_OLD = 'dfhack.history'
 local TITLE = 'DFHack Launcher'
 
+-- this size chosen since it's reasonably large and it also keeps the latency
+-- within 1s when adding text to a full scrollback buffer
+local SCROLLBACK_CHARS = 2^18
+
 config = config or json.open('dfhack-config/launcher.json')
 base_freq = base_freq or json.open('hack/data/base_command_counts.json')
 user_freq = user_freq or json.open('dfhack-config/command_counts.json')
@@ -318,50 +322,102 @@ function HelpPanel:init()
     self.cur_entry = ''
 
     self:addviews{
-        widgets.WrappedLabel{
-            view_id='help_label',
-            frame={l=1, t=0, b=1},
-            frame_inset={r=1},
-            auto_height=false,
-            scroll_keys={
-                KEYBOARD_CURSOR_UP_FAST=-1,  -- Shift-Up
-                KEYBOARD_CURSOR_DOWN_FAST=1, -- Shift-Down
-                STANDARDSCROLL_PAGEUP='-halfpage',
-                STANDARDSCROLL_PAGEDOWN='+halfpage',
+        widgets.CycleHotkeyLabel{
+            view_id='page_selector',
+            frame={l=1, t=0},
+            label='Showing:',
+            key='CUSTOM_CTRL_T',
+            options={{label='command help', value='help_label'},
+                     {label='command output', value='output_label'}},
+            on_change=function(val) self.subviews.pages:setSelected(val) end,
+        },
+        widgets.Pages{
+            view_id='pages',
+            frame={l=0, t=1, b=0},
+            frame_inset=1,
+            subviews={
+                widgets.WrappedLabel{
+                    view_id='help_label',
+                    auto_height=false,
+                    scroll_keys={
+                        KEYBOARD_CURSOR_UP_FAST=-1,  -- Shift-Up
+                        KEYBOARD_CURSOR_DOWN_FAST=1, -- Shift-Down
+                        STANDARDSCROLL_PAGEUP='-halfpage',
+                        STANDARDSCROLL_PAGEDOWN='+halfpage',
+                    },
+                    text_to_wrap=DEFAULT_HELP_TEXT},
+                widgets.WrappedLabel{
+                    view_id='output_label',
+                    auto_height=false,
+                    scroll_keys={
+                        KEYBOARD_CURSOR_UP_FAST=-1,  -- Shift-Up
+                        KEYBOARD_CURSOR_DOWN_FAST=1, -- Shift-Down
+                        STANDARDSCROLL_PAGEUP='-halfpage',
+                        STANDARDSCROLL_PAGEDOWN='+halfpage',
+                    },
+                    text_to_wrap=''},
             },
-            text_to_wrap=DEFAULT_HELP_TEXT}
+        },
     }
 end
 
-function HelpPanel:set_help(help_text, in_layout)
-    local label = self.subviews.help_label
-    label.text_to_wrap = help_text
-    if not in_layout then
-        self.cur_entry = ''
-        label:postComputeFrame()
-        label:updateLayout() -- update the scroll arrows after rewrapping text
+local function HelpPanel_update_label(label, text)
+    label.text_to_wrap = text
+    label:postComputeFrame() -- wrap
+    label:updateLayout() -- update the scroll arrows after rewrapping text
+end
+
+function HelpPanel:add_output(output)
+    self.subviews.page_selector:setOption('output_label')
+    self.subviews.pages:setSelected('output_label')
+    local label = self.subviews.output_label
+    local text_height = label:getTextHeight()
+    label:scroll('end')
+    local line_num = label.start_line_num
+    local text = output
+    if label.text_to_wrap ~= '' then
+        text = label.text_to_wrap .. NEWLINE .. output
+    end
+    local text_len = #text
+    if text_len > SCROLLBACK_CHARS then
+        text = text:sub(-SCROLLBACK_CHARS)
+        local text_diff = text_len - #text
+        HelpPanel_update_label(label, label.text_to_wrap:sub(text_len - #text))
+        text_height = label:getTextHeight()
+        label:scroll('end')
+        line_num = label.start_line_num
+    end
+    HelpPanel_update_label(label, text)
+    if line_num == 1 then
+        label:scroll(text_height - 1)
+    else
+        label:scroll('home')
+        label:scroll(line_num - 1)
+        label:scroll('+page')
     end
 end
 
 function HelpPanel:set_entry(entry_name)
+    local label = self.subviews.help_label
     if #entry_name == 0 then
-        self:set_help(DEFAULT_HELP_TEXT)
+        HelpPanel_update_label(label, DEFAULT_HELP_TEXT)
         self.cur_entry = ''
         return
     end
     if not helpdb.is_entry(entry_name) or entry_name == self.cur_entry then
         return
     end
-    self:set_help(helpdb.get_entry_long_help(entry_name,
-                                             self.frame_body.width - 5))
+    local wrapped_help = helpdb.get_entry_long_help(entry_name,
+                                                    self.frame_body.width - 5)
+    HelpPanel_update_label(label, wrapped_help)
     self.cur_entry = entry_name
 end
 
 function HelpPanel:postComputeFrame()
     if #self.cur_entry == 0 then return end
-    self:set_help(helpdb.get_entry_long_help(self.cur_entry,
-                                             self.frame_body.width - 5),
-                  true)
+    local wrapped_help = helpdb.get_entry_long_help(self.cur_entry,
+                                                    self.frame_body.width - 5)
+    HelpPanel_update_label(self.subviews.help_label, wrapped_help)
 end
 
 ----------------------------------
@@ -376,6 +432,7 @@ MainPanel.ATTRS{
     resize_min={w=AUTOCOMPLETE_PANEL_WIDTH+49, h=EDIT_PANEL_HEIGHT+20},
     get_minimal=DEFAULT_NIL,
     update_autocomplete=DEFAULT_NIL,
+    on_edit_input=DEFAULT_NIL,
 }
 
 function MainPanel:postUpdateLayout()
@@ -383,12 +440,21 @@ function MainPanel:postUpdateLayout()
     config:write(self.frame)
 end
 
-local H_SPLIT_PEN = dfhack.pen.parse{tile=906, ch=196, fg=COLOR_GREY, bg=COLOR_BLACK}
-local V_SPLIT_PEN = dfhack.pen.parse{tile=905, ch=179, fg=COLOR_GREY, bg=COLOR_BLACK}
-local TOP_SPLIT_PEN = dfhack.pen.parse{tile=911, ch=209, fg=COLOR_GREY, bg=COLOR_BLACK}
-local BOTTOM_SPLIT_PEN = dfhack.pen.parse{tile=912, ch=207, fg=COLOR_GREY, bg=COLOR_BLACK}
-local LEFT_SPLIT_PEN = dfhack.pen.parse{tile=913, ch=199, fg=COLOR_GREY, bg=COLOR_BLACK}
-local RIGHT_SPLIT_PEN = dfhack.pen.parse{tile=918, ch=180, fg=COLOR_GREY, bg=COLOR_BLACK}
+local texpos = dfhack.textures.getThinBordersTexposStart()
+local tp = function(offset)
+    if texpos == -1 then return nil end
+    return texpos + offset
+end
+
+local H_SPLIT_PEN = dfhack.pen.parse{tile=tp(5), ch=196, fg=COLOR_GREY, bg=COLOR_BLACK}
+local V_SPLIT_PEN = dfhack.pen.parse{tile=tp(4), ch=179, fg=COLOR_GREY, bg=COLOR_BLACK}
+local TOP_SPLIT_PEN = dfhack.pen.parse{tile=gui.WINDOW_FRAME.t_frame_pen.tile,
+        ch=209, fg=COLOR_GREY, bg=COLOR_BLACK}
+local BOTTOM_SPLIT_PEN = dfhack.pen.parse{tile=gui.WINDOW_FRAME.b_frame_pen.tile,
+        ch=207, fg=COLOR_GREY, bg=COLOR_BLACK}
+local LEFT_SPLIT_PEN = dfhack.pen.parse{tile=gui.WINDOW_FRAME.l_frame_pen.tile,
+        ch=199, fg=COLOR_GREY, bg=COLOR_BLACK}
+local RIGHT_SPLIT_PEN = dfhack.pen.parse{tile=tp(17), ch=180, fg=COLOR_GREY, bg=COLOR_BLACK}
 
 -- paint autocomplete panel border
 local function paint_vertical_border(rect)
@@ -427,7 +493,7 @@ function MainPanel:onInput(keys)
     elseif keys.CUSTOM_CTRL_C then
         if self.focus_group.cur == self.subviews.editfield then
             self.subviews.edit:set_text('')
-            self:on_edit_input('')
+            self.on_edit_input('')
         else
             self.focus_group.cur:setText('')
         end
@@ -478,6 +544,7 @@ function LauncherUI:init(args)
         view_id='main',
         get_minimal=function() return self.minimal end,
         update_autocomplete=self:callback('update_autocomplete'),
+        on_edit_input=self:callback('on_edit_input'),
     }
 
     local frame_r = get_frame_r()
@@ -496,7 +563,7 @@ function LauncherUI:init(args)
             end
         end
         main_panel.frame = new_frame
-        main_panel.frame_style = not self.minimal and gui.GREY_LINE_FRAME or nil
+        main_panel.frame_style = not self.minimal and gui.WINDOW_FRAME or nil
 
         local edit_frame = self.subviews.edit.frame
         edit_frame.r = self.minimal and
@@ -669,7 +736,7 @@ function LauncherUI:run_command(reappear, command)
     if #output == 0 then
         output = 'Command finished successfully'
     end
-    self.subviews.help:set_help(('> %s\n\n%s'):format(command, output))
+    self.subviews.help:add_output(('> %s\n\n%s'):format(command, output))
 end
 
 function LauncherUI:onDismiss()

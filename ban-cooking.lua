@@ -2,9 +2,11 @@
 -- based on ban-cooking.rb by Putnam: https://github.com/DFHack/scripts/pull/427/files
 -- Putnams work completed by TBSTeun
 
+local options = {}
+local argparse = require('argparse')
 local kitchen = df.global.plotinfo.kitchen
-
 local already_banned = {}
+local count = 0
 
 local function make_key(mat_type, mat_index, type, subtype)
     return ('%s:%s:%s:%s'):format(mat_type, mat_index, type, subtype)
@@ -27,7 +29,11 @@ local function ban_cooking(print_name, mat_type, mat_index, type, subtype)
         return
     end
     -- The item hasn't already been banned, so we do that here by appending its values to the various arrays
-    print(print_name .. ' has been banned!')
+    count = count + 1
+    if options.verbose then
+        print(print_name .. ' has been banned!')
+    end
+
     kitchen.mat_types:insert('#', mat_type)
     kitchen.mat_indices:insert('#', mat_index)
     kitchen.item_types:insert('#', type)
@@ -410,23 +416,28 @@ funcs.show = function()
     end
 end
 
-if ... == "help" then
+local commands = argparse.processArgsGetopt({...}, {
+    {'h', 'help', handler=function() options.help = true end},
+    {'v', 'verbose', handler=function() options.verbose = true end},
+})
+
+if options.help == true then
     print(dfhack.script_help())
     return
 end
 
-if ... == 'all' then
-    for _, v in pairs(funcs) do
-        if _ ~= 'show' then
-            funcs[_]()
+if commands[1] == 'all' then
+    for func, _ in pairs(funcs) do
+        if func ~= 'show' then
+            funcs[func]()
         end
     end
 end
 
-local args = {...}
-
-for _, v in ipairs(args) do
+for _, v in ipairs(commands) do
     if funcs[v] then
         funcs[v]()
     end
 end
+
+print('banned ' .. count .. ' items.')

@@ -160,6 +160,8 @@ local function is_tile_coverable(pos)
             (shape ~= df.tiletype_shape.FLOOR and
              shape ~= df.tiletype_shape.EMPTY and
              shape ~= df.tiletype_shape.RAMP_TOP and
+             shape ~= df.tiletype_shape.STAIR_UP and
+             shape ~= df.tiletype_shape.STAIR_UPDOWN and
              shape ~= df.tiletype_shape.STAIR_DOWN) then
         return false
     end

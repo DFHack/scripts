@@ -29,7 +29,7 @@ function HelloWorld:init()
         widgets.Panel{
             view_id='highlight',
             frame={w=10, h=5},
-            frame_style=gui.BOUNDARY_FRAME,
+            frame_style=gui.THIN_FRAME,
         },
     }
     self:addviews{window}

@@ -488,13 +488,14 @@ function export_more_legends_xml()
             file:write("\t\t<child>"..link.."</child>\n")
         end
 
-        if #entityV.claims.border.x > 0 then
-            file:write("\t\t<claims>")
-            for xK, xVal in ipairs(entityV.claims.border.x) do
-                file:write(xVal..","..entityV.claims.border.y[xK].."|")
-            end
-            file:write("</claims>\n")
-        end
+        -- As of version .50, sometimes claim borders have more "x" coordinates than "y", which breaks the below.  Not sure why that would be, so commenting it out.
+        -- if #entityV.claims.border.x > 0 then
+        --     file:write("\t\t<claims>")
+        --     for xK, xVal in ipairs(entityV.claims.border.x) do
+        --         file:write(xVal..","..entityV.claims.border.y[xK].."|")
+        --     end
+        --     file:write("</claims>\n")
+        -- end
 
         if (table_containskey(entityV,"occasion_info") and entityV.occasion_info ~= nil) then
             for occasionK, occasionV in pairs(entityV.occasion_info.occasions) do

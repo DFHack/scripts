@@ -12,7 +12,7 @@ Usage
 -----
 
 ::
-    ban-cooking <type|all> [<type> ...]
+    ban-cooking <type|all> [<type> ...] [<options>]
 
 Valid types are ``booze``, ``brew``, ``fruit``, ``honey``, ``milk``, ``mill``,
 ``oil``, ``seeds`` (i.e. non-tree plants with seeds), ``tallow``, and
@@ -27,3 +27,9 @@ Examples::
     ban-cooking seeds; ban-cooking tallow; ban-cooking thread
 
 Ban cooking all otherwise useful ingredients once when starting a new fortress.
+
+Options
+-------
+
+``-v``, ``--verbose``
+    Print each ban as it happens.

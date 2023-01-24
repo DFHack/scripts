@@ -10,7 +10,7 @@ local overlay = require('plugins.overlay')
 local DIALOG_WIDTH = 59
 local LIST_HEIGHT = 14
 
-local SHADOW_FRAME = copyall(gui.GREY_LINE_FRAME)
+local SHADOW_FRAME = copyall(gui.PANEL_FRAME)
 SHADOW_FRAME.signature_pen = false
 
 local to_pen = dfhack.pen.parse
@@ -68,6 +68,7 @@ function DraggablePanel:onInput(keys)
 end
 
 function DraggablePanel:postUpdateLayout()
+    if not self.is_selected then return end
     local frame = self.frame
     local matcher = {t=not not frame.t, b=not not frame.b,
                      l=not not frame.l, r=not not frame.r}
@@ -225,6 +226,9 @@ function OverlayConfig:refresh_list(filter)
                 text=cfg.enabled and 'enabled' or 'disabled'})
         table.insert(tokens, (']%s '):format(cfg.enabled and ' ' or ''))
         table.insert(tokens, name)
+        if widget.overlay_only then
+            table.insert(tokens, ' (no repositionable panel)')
+        end
         table.insert(tokens, {text=function()
                 if self.reposition_panel and self.reposition_panel == panel then
                     return ' (repositioning with keyboard)'
@@ -247,6 +251,7 @@ end
 function OverlayConfig:highlight_selected(_, obj)
     if self.selected_panel then
         self.selected_panel.frame_style = SHADOW_FRAME
+        self.selected_panel.is_selected = false
         self.selected_panel = nil
     end
     if self.reposition_panel then
@@ -255,6 +260,7 @@ function OverlayConfig:highlight_selected(_, obj)
     end
     if not obj or not obj.panel then return end
     local panel = obj.panel
+    panel.is_selected = true
     panel.frame_style = make_highlight_frame_style(panel.frame)
     self.selected_panel = panel
 end

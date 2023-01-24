@@ -610,9 +610,7 @@ function Quickfort:onInput(keys)
 end
 
 function Quickfort:commit()
-    if self.mode ~= 'notes' then
-        self.parent_view:dismiss()
-    end
+    -- don't dismiss the window in case the player wants to lay down more copies
     self:do_command('run', false)
 end
 

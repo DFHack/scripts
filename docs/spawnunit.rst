@@ -26,7 +26,7 @@ information on what you can pass through.
 To see the full list of races and castes for your world, run the following
 command::
 
-  dfhack-run devel/query --table df.global.world.raws.creatures.all --search [ creature_id caste_id ] --maxdepth 3 --maxlength 5000
+    devel/query --table df.global.world.raws.creatures.all --search [ creature_id caste_id ] --maxdepth 3 --maxlength 5000
 
 Examples
 --------
