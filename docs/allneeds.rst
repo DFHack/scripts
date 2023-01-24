@@ -18,7 +18,7 @@ Usage
 ::
 
     allneeds
-    allneeds [<rename with NDS tag options>]
+    allneeds [<options>]
 
 Examples
 --------
@@ -27,4 +27,13 @@ Examples
     it adds a TAG NDS_ NEEDS_CODE _NDS to citizens prefix names
 
 ``allneeds r``
+    it removes all NDS TAGS citizens prefix names
+
+Options
+-------
+
+``n``
+    it adds a TAG NDS_ NEEDS_CODE _NDS to citizens prefix names
+    
+``r``
     it removes all NDS TAGS citizens prefix names
