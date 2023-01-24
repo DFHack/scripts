@@ -30,12 +30,12 @@ end
 
 local function parse_commandline(args)
     local opts = {}
-    
+
     for i,v in ipairs(args) do
         if v == 'n' then opts.setnick = true return opts end
         if v == 'r' then opts.removenick = true return opts end
     end
-    
+
     return opts
 end
 
@@ -100,15 +100,15 @@ for _, unit in pairs(df.global.world.units.all) do
             else
                 table.insert(needs.units, unit)
             end
-            
+
         end
     end
-    
+
     unit_name=getNick(unit)
     if opts.removenick and string.find(unit_name, "NDS_") then
         dfhack.units.setNickname(unit, string.sub(unit_name, string.find(unit_name, "_NDS")+5))
     end
-        
+
 
     :: skipunit ::
 end
@@ -134,7 +134,7 @@ print(([[%20s %8s %8s %10s]]):format("Need", "Weight", "Focus", "# Dwarves"))
 for i, need in pairs(sorted_fort_needs) do
     local names = ""
     --if i < 4 then --CAN limit only the firsts #3 needs
-        for _, unit in pairs(need[5]) do        
+        for _, unit in pairs(need[5]) do
             local modResult = ""
             local nickMod = convertNeeds[need[1]]
             unit_name=getNick(unit)
@@ -152,7 +152,7 @@ for i, need in pairs(sorted_fort_needs) do
             names = names .. modResult
         end
     --end
-    
+
     --print(([[%20s %8.f %8.f %10d %20s]]):format(need[1] .. " ".. convertNeeds[need[1]], need[2], need[3], need[4],  names)) --DEBUG show units names
     print(([[%20s %8.f %8.f %10d]]):format(need[1] .. " ".. convertNeeds[need[1]], need[2], need[3], need[4]))
 end
