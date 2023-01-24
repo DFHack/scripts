@@ -24,14 +24,10 @@ that repo.
 - `ban-cooking`: report number of items banned.
 - `gui/launcher`: make command output scrollback separate from the help text so players can continue to see the output of the previous command as they type the next one
 - `gui/quickfort`: don't close the window when applying a blueprint so players can apply the same blueprint multiple times more easily
-
-## Removed
-
-# 50.05-alpha3
-
-## Misc Improvements
 - `allneeds`: list unique (fix multiple Pray needs) needs per dwarves that needs attention (is current damaging focus)
 - `allneeds [rename NDS options]`: add a prefix name in dwarves with unmet needs (that is damaging focus)
+
+## Removed
 
 # 50.05-alpha2
 
