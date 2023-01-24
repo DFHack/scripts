@@ -29,6 +29,9 @@ Examples
 ``allneeds r``
     it removes all NDS TAGS citizens prefix names
 
+``allneeds u``
+    it update all NDS TAGS citizens prefix names
+
 Options
 -------
 
@@ -37,3 +40,6 @@ Options
 
 ``r``
     it removes all NDS TAGS citizens prefix names
+
+``u``
+    it update all NDS TAGS citizens prefix names

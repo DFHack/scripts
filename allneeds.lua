@@ -34,6 +34,7 @@ local function parse_commandline(args)
     for i,v in ipairs(args) do
         if v == 'n' then opts.setnick = true return opts end
         if v == 'r' then opts.removenick = true return opts end
+        if v == 'u' then opts.removenick = true opts.setnick = true return opts end
     end
 
     return opts
