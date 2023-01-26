@@ -7,6 +7,7 @@
 local json = require("json")
 local persist = require("persist-table")
 local argparse = require("argparse")
+local repeatutil = require("repeat-util")
 
 local GLOBAL_KEY = "autofish"
 
@@ -16,6 +17,7 @@ set_maxFish = set_maxFish or 100
 set_minFish = set_minFish or 50
 set_useRaw = set_useRaw or true
 isFishing = isFishing or true
+local timer = nil
 
 function isEnabled()
     return enabled
@@ -81,7 +83,6 @@ function isValidItem(item)
 end
 
 function event_loop()
-    --print(enabled, set_minFish, set_maxFish, set_useRaw, isFishing)
     if not enabled then return end
     local world = df.global.world
 
@@ -91,31 +92,30 @@ function event_loop()
         if v:getType() == df.item_type.FISH and isValidItem(v) then
             prepared = prepared + v:getStackSize()
         end
-        if (v:getType() == df.item_type.RAW_FISH and isValidItem(v)) and set_useRaw then
+        if (v:getType() == df.item_type.FISH_RAW and isValidItem(v)) and set_useRaw then
             raw = raw + v:getStackSize()
         end
     end
 
     -- hande pausing/resuming labour
-    local numFish = set_useRaw and (prepared + raw) or prepared
-    --print(numFish)
-    if numFish >= set_maxFish and isFishing then
+    local numFish = set_useRaw and (prepared+raw) or prepared
+    if isFishing and (numFish >= set_maxFish) then
         toggle_fishing_labour(false)
-    elseif numFish < set_minFish and not isFishing then
+    elseif not isFishing and (numFish < set_minFish) then
         toggle_fishing_labour(true)
     end
-    -- don't need to check *that* often
-    dfhack.timeout(1, "days", event_loop)
+
+    persist_state()
+
+    -- check weekly
+    repeatutil.scheduleUnlessAlreadyScheduled(GLOBAL_KEY, 7, "days", event_loop)
 end
 
 
 
 local function print_status()
-    load_state()
-    --print(string.format("%s max, %s min, %s useraw", settings.maxFish, settings.minFish, tostring(settings.useRawFish)))
     print(string.format("autofish is currently %s.\n", (enabled and "enabled" or "disabled")))
     if enabled then
-
         local rfs
         rfs = set_useRaw and "raw & prepared" or "prepared"
 
@@ -155,6 +155,7 @@ end
 
 if df.global.gamemode ~= df.game_mode.DWARF or not dfhack.isMapLoaded() then
     dfhack.printerr("autofish needs a loaded fortress to work")
+    return
 end
 
 -- argument handling
@@ -169,14 +170,20 @@ local positionals = argparse.processArgsGetopt(args,
     handler=function() set_useRaw = not set_useRaw end}
 })
 
+load_state()
 if positionals[1] == "enable" then
     enabled = true
-    --print_status()
+
 elseif positionals[1] == "disable" then
     enabled = false
+    persist_state()
+    repeatutil.cancel(GLOBAL_KEY)
+    return
+
 elseif positionals[1] == "status" then
     print_status()
     return
+
 elseif positionals ~= nil then
     -- positionals is a number?
     if positionals[1] and tonumber(positionals[1]) then
@@ -186,15 +193,16 @@ elseif positionals ~= nil then
         -- invalid or no argument
         return
     end
+
     if positionals[2] and tonumber(positionals[2]) then
         set_minFish = tonumber(positionals[2])
     end
+
     -- a setting probably changed, save & show the updated settings.
     persist_state()
     print_status()
     return
 end
 
---load_state()
 event_loop()
 persist_state()

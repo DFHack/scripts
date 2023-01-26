@@ -29,7 +29,9 @@ end
 
 warning = defclass(warning, gui.ZScreen)
 warning.ATTRS = {
-    focus_path = 'warn-starving',
+    focus_path='warn-starving',
+    force_pause=true,
+    pass_mouse_clicks=false,
 }
 
 function warning:init(args)

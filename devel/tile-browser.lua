@@ -2,6 +2,9 @@ local gui = require('gui')
 local widgets = require('gui.widgets')
 
 TileBrowser = defclass(TileBrowser, gui.ZScreen)
+TileBrowser.ATTRS{
+    focus_string='tile-browser',
+}
 
 function TileBrowser:init()
     self.max_texpos = #df.global.enabler.textures.raws

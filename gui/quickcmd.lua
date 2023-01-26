@@ -47,22 +47,18 @@ local function save_commands(data)
     json.encode_file(data, CONFIG_FILE)
 end
 
-QCMDDialog = defclass(QCMDDialog, gui.Screen)
+QCMDDialog = defclass(QCMDDialog, widgets.Window)
 QCMDDialog.ATTRS {
-    focus_path='quickcmd',
+    frame_title='Quick Command',
+    frame={w=40, h=28},
+    resizable=true,
+    resize_min={h=10},
 }
 
 function QCMDDialog:init(info)
     self.commands = load_commands()
 
-    local main_panel = widgets.Window{
-        view_id='main',
-        frame_title='Quick Command',
-        frame={w=40, h=28},
-        resizable=true,
-    }
-
-    main_panel:addviews{
+    self:addviews{
         widgets.Label{
             frame={t=0},
             text={{text='Hotkey', width=HOTKEYWIDTH}, ' Command'},
@@ -91,7 +87,6 @@ function QCMDDialog:init(info)
         },
     }
 
-    self:addviews{main_panel}
     self:updateList()
 end
 

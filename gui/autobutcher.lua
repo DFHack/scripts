@@ -7,6 +7,9 @@ local dlg = require 'gui.dialogs'
 local plugin = require 'plugins.autobutcher'
 
 WatchList = defclass(WatchList, gui.ZScreen)
+WatchList.ATTRS{
+    focus_string='autobutcher',
+}
 
 -- width of the race name column in the UI
 local racewidth = 25

@@ -314,6 +314,11 @@ function Inspect:onInput(keys)
 end
 
 InspectScreen = defclass(InspectScreen, gui.ZScreen)
+InspectScreen.ATTRS{
+    focus_string='inspect-screen',
+    force_pause=true,
+    pass_mouse_clicks=false,
+}
 
 function InspectScreen:init()
     -- prevent hotspot widgets from reacting

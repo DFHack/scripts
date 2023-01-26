@@ -1,4 +1,7 @@
--- scan the map for ore veins
+-- Scan the map for ore veins
+
+local argparse = require('argparse')
+
 local tile_attrs = df.tiletype.attrs
 
 local function extractKeys(target_table)
@@ -77,7 +80,7 @@ local function matchesMetalOreById(mat_indices, target_ore)
     return false
 end
 
-local function findOreVeins(target_ore)
+local function findOreVeins(target_ore, show_undiscovered)
     if target_ore then
         target_ore = string.lower(target_ore)
     end
@@ -91,6 +94,10 @@ local function findOreVeins(target_ore)
 
             local ino_raw = df.global.world.raws.inorganics[bevent.inorganic_mat]
             if not ino_raw.flags.METAL_ORE then
+                goto skipevent
+            end
+
+            if not show_undiscovered and not bevent.flags.discovered then
                 goto skipevent
             end
 
@@ -132,25 +139,36 @@ local function getOreDescription(ore)
     return str
 end
 
-local args = {...}
-local target = args[1]
+local options, args = {
+    help = false,
+    show_undiscovered = false
+}, {...}
 
-if not target or target == "help" then
+local positionals = argparse.processArgsGetopt(args, {
+    {'h', 'help', handler=function() options.help = true end},
+    {'a', 'all', handler=function() options.show_undiscovered = true end},
+})
+
+if positionals[1] == "help" or options.help then
     print(dfhack.script_help())
     return
 end
 
-if target == "list" then
-    local veins = findOreVeins(nil)
+if positionals[1] == nil or positionals[1] == "list" then
+    print(dfhack.script_help())
+    local veins = findOreVeins(nil, options.show_undiscovered)
     local sorted = sortTableBy(veins, function(a, b) return #a.positions < #b.positions end)
+
     for _, vein in ipairs(sorted) do
         print("  " .. getOreDescription(vein))
     end
+    return
 else
-    local veins = findOreVeins(target)
+    local veins = findOreVeins(positionals[1], options.show_undiscovered)
     local vein_keys = extractKeys(veins)
+
     if #vein_keys == 0 then
-        qerror("Cannot find unmined " .. target)
+        qerror("Cannot find unmined " .. positionals[1])
     end
 
     local target_vein = getRandomFromTable(veins)
@@ -178,6 +196,10 @@ else
                     goto skip_pos
                 end
 
+                if not options.show_undiscovered and not dfhack.maps.isTileVisible(pos) then
+                    goto skip_pos
+                end
+
                 local tile_type = dfhack.maps.getTileType(pos)
                 local tile_mat = tile_attrs[tile_type].material
                 local shape = tile_attrs[tile_type].shape
@@ -191,11 +213,14 @@ else
             end
         end
     end
+
     :: complete ::
 
     if target_pos ~= nil then
         dfhack.gui.pauseRecenter(target_pos)
         designateDig(target_pos)
         print(("Here is some %s at (%d, %d, %d)"):format(target_vein.inorganic_id, target_pos.x, target_pos.y, target_pos.z))
+    else
+        qerror("Cannot find unmined " .. positionals[1])
     end
 end

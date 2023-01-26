@@ -50,7 +50,8 @@ function BlueprintDetails:onRenderFrame(dc, rect)
 end
 
 function BlueprintDetails:onInput(keys)
-    if keys.KEYBOARD_CURSOR_LEFT or keys.SELECT or keys.LEAVESCREEN then
+    if keys.KEYBOARD_CURSOR_LEFT or keys.SELECT
+            or keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
         self:dismiss()
     end
 end
@@ -209,7 +210,7 @@ function BlueprintDialog:onInput(keys)
         details:show()
         -- for testing
         self._details = details
-    elseif keys.LEAVESCREEN then
+    elseif keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
         self:dismiss()
         if self.on_cancel then
             self.on_cancel()
@@ -242,8 +243,7 @@ Quickfort.ATTRS {
     frame_title='Quickfort',
     frame={w=34, h=30, r=2, t=18},
     resizable=true,
-    resize_min={h=10},
-    pinnable=false,
+    resize_min={h=26},
     autoarrange_subviews=true,
     autoarrange_gap=1,
     filter='',
@@ -253,13 +253,18 @@ function Quickfort:init()
 
     self:addviews{
         widgets.ResizingPanel{subviews={
-            widgets.WrappedLabel{view_id='summary',
-                frame={t=0, l=0, w=32},
+            widgets.Label{
+                frame={t=0, l=0, w=30},
                 text_pen=COLOR_GREY,
-                text_to_wrap=self:callback('get_summary_label')},
-            widgets.HotkeyLabel{view_id='commit_label',
-                frame={t=1, l=13}, key='SELECT', key_sep=' ', label='to apply.',
-                text_pen=COLOR_GREY, on_activate=self:callback('commit')}
+                text={
+                    {text=self:callback('get_summary_label')},
+                    NEWLINE,
+                    'Click or hit ',
+                    {key='SELECT', key_sep=' ',
+                     on_activate=self:callback('commit')},
+                    'to apply.',
+                },
+            },
         }},
         widgets.HotkeyLabel{key='CUSTOM_L', label='Load new blueprint',
             on_activate=self:callback('show_dialog')},
@@ -361,16 +366,12 @@ function Quickfort:init()
 end
 
 function Quickfort:get_summary_label()
-    local commit_label_frame = self.subviews.commit_label.frame
     if self.mode == 'config' then
-        commit_label_frame.l = 13
-        return 'Blueprint configures game, not map. Hit'
+        return 'Blueprint configures game, not map.'
     elseif self.mode == 'notes' then
-        commit_label_frame.l = 4
-        return 'Blueprint shows help text. Hit'
+        return 'Blueprint shows help text.'
     end
-    commit_label_frame.l = 13
-    return 'Reposition with the cursor keys and hit'
+    return 'Reposition with the mouse.'
 end
 
 function Quickfort:get_blueprint_name()
@@ -659,6 +660,10 @@ end
 QuickfortScreen = defclass(QuickfortScreen, gui.ZScreen)
 QuickfortScreen.ATTRS {
     focus_path='quickfort',
+    force_pause=true,
+    pass_pause=false,
+    pass_movement_keys=true,
+    pass_mouse_clicks=false,
     filter=DEFAULT_NIL,
 }
 
