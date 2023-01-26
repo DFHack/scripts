@@ -25,7 +25,7 @@ that repo.
 - `gui/launcher`: make command output scrollback separate from the help text so players can continue to see the output of the previous command as they type the next one
 - `gui/quickfort`: don't close the window when applying a blueprint so players can apply the same blueprint multiple times more easily
 - `allneeds`: list unique (fix multiple Pray needs) needs per dwarves that needs attention (is current damaging focus)
-- `allneeds [<options>]`: add a prefix name in dwarves with unmet needs (that is damaging focus) (using as options: n to rename and r to remove)
+- `allneeds`: allneeds options add a prefix name in dwarves with unmet needs (that is damaging focus) (using as options: n to rename; r to remove; u to update)
 
 ## Removed
 
