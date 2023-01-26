@@ -10,36 +10,29 @@ show most unfullfiled needs.
 show only needs that needs attention now (damaging focus) and garantee it shows on dwarf overview
 (obs: multiple Prays counts as unique Pray need)
 
-NEEDS_CODE is usually capital letters from each need
+NEEDS_CODE is usually capital letters from each need, NDS TAGS stands for NDS_ NEEDS_CODE _NDS in dwarf names
 
 Usage
 -----
+    ``allneeds``
+    ``allneeds n``
+    ``allneeds r``
+    ``allneeds u``
 
 ::
 
     allneeds
-    allneeds [<options>]
 
 Examples
 --------
+``allneeds``
+    Show the cumulative needs of all citizens.
 
 ``allneeds n``
-    it adds a TAG NDS_ NEEDS_CODE _NDS to citizens prefix names
+    it adds a TAG NDS TAGS to citizens prefix names
 
 ``allneeds r``
     it removes all NDS TAGS citizens prefix names
 
 ``allneeds u``
-    it update all NDS TAGS citizens prefix names
-
-Options
--------
-
-``n``
-    it adds a TAG NDS_ NEEDS_CODE _NDS to citizens prefix names
-
-``r``
-    it removes all NDS TAGS citizens prefix names
-
-``u``
     it update all NDS TAGS citizens prefix names
