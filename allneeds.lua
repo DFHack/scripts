@@ -78,7 +78,7 @@ local convertNeeds = {
 
 local fort_needs = {}
 for _, unit in pairs(df.global.world.units.all) do
-    if not dfhack.units.isCitizen(unit) or not dfhack.units.isAlive(unit) then
+    if not dfhack.units.isCitizen(unit) or not dfhack.units.isAlive(unit) then --bugfound not consider (petitions) people that ask to reside in
         goto skipunit
     end
 
@@ -86,21 +86,15 @@ for _, unit in pairs(df.global.world.units.all) do
     -- sum need_level and focus_level for each need
     setid = {}
     for _,need in pairs(mind) do
-        --if need.focus_level > 0 then --DEBUG show focus and nick
-        --    print(([[%8.f %20s %20s]]):format(need.focus_level, getNick(unit), df.need_type[need.id]))
-        --end
-        if setContains(setid, need.id) == false and need.focus_level < 0 then --with negative focus this need is doing bad, need attention
+        --Unfocused need.focus_level -1,000 to -9,999 When a need is satisfied, its value is refreshed to maximum (400), regardless of previous value
+        if setContains(setid, need.id) == false and need.focus_level < -999 then --with negative focus this need is doing bad, need attention
             addToSet(setid, need.id) --avoid x3 pray need duplicated
             local needs = ensure_key(fort_needs, need.id)
             needs.cumulative_need = (needs.cumulative_need or 0) + need.need_level
             needs.cumulative_focus = (needs.cumulative_focus or 0) + need.focus_level
             needs.citizen_count = (needs.citizen_count or 0) + 1
-            if needs.units == nil then
-                needs.units = {}
-                table.insert(needs.units, unit)
-            else
-                table.insert(needs.units, unit)
-            end
+            if needs.units == nil then needs.units = {} end
+            table.insert(needs.units, unit)
 
         end
     end
@@ -130,7 +124,6 @@ table.sort(sorted_fort_needs, function(a, b)
 end)
 
 -- Print sorted output
---print(([[%20s %8s %8s %10s %10s]]):format("Need", "Weight", "Focus", "# Dwarves", "DEBUG"))
 print(([[%20s %8s %8s %10s]]):format("Need", "Weight", "Focus", "# Dwarves"))
 for i, need in pairs(sorted_fort_needs) do
     local names = ""
