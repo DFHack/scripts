@@ -14,6 +14,7 @@ function spawnLiquid(position, liquid_level, liquid_type)
   map_block.flags.update_liquid = true
   map_block.flags.update_liquid_twice = true
 
+  -- TODO: Water seems to get "stuck" for multiple seconds in air.
   local z_level = df.global.world.map_extras.z_level_flags
   z_level.update = true
   z_level.update_twice = true

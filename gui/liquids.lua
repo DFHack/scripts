@@ -1,336 +1,195 @@
--- Interface front-end for liquids plugin.
---[====[
+-- Interface for spawning liquids on tiles.
 
-gui/liquids
-===========
-This script is a gui front-end to `liquids` and works similarly,
-allowing you to add or remove water & magma, and create obsidian walls & floors.
+local liquids = reqscript('modtools/spawn-liquid')
+local gui = require('gui')
+local guidm = require('gui.dwarfmode')
+local widgets = require('gui.widgets')
 
-.. image:: /docs/images/liquids.png
-
-.. warning::
-
-    There is **no undo support**.  Bugs in this plugin have been
-    known to create pathfinding problems and heat traps.
-
-The :kbd:`b` key changes how the affected area is selected. The default :guilabel:`Rectangle`
-mode works by selecting two corners like any ordinary designation. The :kbd:`p`
-key chooses between adding water, magma, obsidian walls & floors, or just
-tweaking flags.
-
-When painting liquids, it is possible to select the desired level with :kbd:`+`:kbd:`-`,
-and choose between setting it exactly, only increasing or only decreasing
-with :kbd:`s`.
-
-In addition, :kbd:`f` allows disabling or enabling the flowing water computations
-for an area, and :kbd:`r` operates on the "permanent flow" property that makes
-rivers power water wheels even when full and technically not flowing.
-
-After setting up the desired operations using the described keys, use :kbd:`Enter` to apply them.
-
-]====]
-local utils = require 'utils'
-local gui = require 'gui'
-local guidm = require 'gui.dwarfmode'
-local dlg = require 'gui.dialogs'
-
-local liquids = require('plugins.liquids')
-
-local sel_rect = df.global.selection_rect
-
-local brushes = {
-    { tag = 'range', caption = 'Rectangle', range = true },
-    { tag = 'block', caption = '16x16 block' },
-    { tag = 'column', caption = 'Column' },
-    { tag = 'flood', caption = 'Flood' },
+local SpawnLiquidMode = {
+    DRAG = 1,
+    CLICK = 2,
+    AREA = 3,
 }
 
-local paints = {
-    { tag = 'water', caption = 'Water', liquid = true, flow = true, key = 'D_LOOK_ARENA_WATER' },
-    { tag = 'magma', caption = 'Magma', liquid = true, flow = true, key = 'D_LOOK_ARENA_MAGMA' },
-    { tag = 'obsidian', caption = 'Obsidian Wall' },
-    { tag = 'obsidian_floor', caption = 'Obsidian Floor' },
-    { tag = 'riversource', caption = 'River Source' },
-    { tag = 'flowbits', caption = 'Flow Updates', flow = true },
-    { tag = 'wclean', caption = 'Clean Salt/Stagnant' },
+local SpawnLiquidCursor = {
+    [df.tile_liquid.Water] = dfhack.screen.findGraphicsTile('MINING_INDICATORS', 0, 0),
+    [df.tile_liquid.Magma] = dfhack.screen.findGraphicsTile('MINING_INDICATORS', 1, 0),
 }
 
-local flowbits = {
-    { tag = '+', caption = 'Enable Updates' },
-    { tag = '-', caption = 'Disable Updates' },
-    { tag = '.', caption = 'Keep Updates' },
+SpawnLiquid = defclass(SpawnLiquid, widgets.Window)
+SpawnLiquid.ATTRS {
+    frame_title='Spawn liquid menu',
+    frame={b = 4, r = 4, w = 50, h = 12},
 }
 
-local setmode = {
-    { tag = '.', caption = 'Set Exactly' },
-    { tag = '+', caption = 'Only Increase' },
-    { tag = '-', caption = 'Only Decrease' },
-}
+function SpawnLiquid:init()
+    self.type = df.tile_liquid.Water
+    self.level = 3
+    self.mode = SpawnLiquidMode.DRAG
+    self.tile = SpawnLiquidCursor[self.type]
 
-local permaflows = {
-    { tag = '.', caption = "Keep Permaflow" },
-    { tag = '-', caption = 'Remove Permaflow' },
-    { tag = 'N', caption = 'Set Permaflow N' },
-    { tag = 'S', caption = 'Set Permaflow S' },
-    { tag = 'E', caption = 'Set Permaflow E' },
-    { tag = 'W', caption = 'Set Permaflow W' },
-    { tag = 'NE', caption = 'Set Permaflow NE' },
-    { tag = 'NW', caption = 'Set Permaflow NW' },
-    { tag = 'SE', caption = 'Set Permaflow SE' },
-    { tag = 'SW', caption = 'Set Permaflow SW' },
-}
-
-Toggle = defclass(Toggle)
-
-Toggle.ATTRS{ items = {}, selected = 1 }
-
-function Toggle:get()
-    return self.items[self.selected]
-end
-
-function Toggle:render(dc)
-    local item = self:get()
-    if item then
-        dc:string(item.caption)
-        if item.key then
-            dc:string(" ("):key(item.key):string(")")
-        end
-    else
-        dc:string('NONE', COLOR_RED)
-    end
-end
-
-function Toggle:step(delta)
-    if #self.items > 1 then
-        delta = delta or 1
-        self.selected = 1 + (self.selected + delta - 1) % #self.items
-    end
-end
-
-LiquidsUI = defclass(LiquidsUI, guidm.MenuOverlay)
-
-LiquidsUI.ATTRS = {
-    sidebar_mode=df.ui_sidebar_mode.LookAround,
-}
-
-LiquidsUI.focus_path = 'liquids'
-
-function LiquidsUI:init()
-    self:assign{
-        brush = Toggle{ items = brushes },
-        paint = Toggle{ items = paints },
-        flow = Toggle{ items = flowbits },
-        set = Toggle{ items = setmode },
-        permaflow = Toggle{ items = permaflows },
-        amount = 7,
+    self:addviews{
+        widgets.Label{
+            frame = {l = 0, t = 0},
+            text = {{ text = self:callback('getLabel') }}
+        },
+        widgets.HotkeyLabel{
+            frame = {l = 0, b = 2},
+            label = 'Decrease level',
+            auto_width = true,
+            key = 'KEYBOARD_CURSOR_LEFT',
+            on_activate = self:callback('decreaseLiquidLevel'),
+            disabled = function() return self.level == 1 end
+        },
+        widgets.HotkeyLabel{
+            frame = { l = 18, b = 2},
+            label = 'Increase level',
+            auto_width = true,
+            key = 'KEYBOARD_CURSOR_RIGHT',
+            on_activate = self:callback('increaseLiquidLevel'),
+            disabled = function() return self.level == 7 end
+        },
+        widgets.CycleHotkeyLabel{
+            frame = {l = 0, b = 1},
+            label = 'Liquid type:',
+            auto_width = true,
+            key = 'KEYBOARD_CURSOR_UP',
+            options = {
+                { label = "Water", value = df.tile_liquid.Water, pen = COLOR_CYAN },
+                { label = "Magma", value = df.tile_liquid.Magma, pen = COLOR_RED },
+            },
+            initial_option = 0,
+            on_change = function(new, _)
+                self.type = new
+                self.tile = SpawnLiquidCursor[self.type]
+            end,
+        },
+        widgets.CycleHotkeyLabel{
+            frame = {l = 0, b = 0},
+            label = 'Mode:',
+            auto_width = true,
+            key = 'KEYBOARD_CURSOR_DOWN',
+            options = {
+                { label = "Drag ", value = SpawnLiquidMode.DRAG, pen = COLOR_WHITE },
+                { label = "Click", value = SpawnLiquidMode.CLICK, pen = COLOR_WHITE },
+                { label = "Area ", value = SpawnLiquidMode.AREA, pen = COLOR_WHITE },
+            },
+            initial_option = 1,
+            on_change = function(new, old) self.mode = new end,
+        },
     }
 end
 
-function LiquidsUI:onDestroy()
-    guidm.clearSelection()
+function SpawnLiquid:getLabel()
+    return ([[Cick on a tile to spawn a %s/7 level of %s]]):format(self.level, self.type and "Water" or "Magma")
 end
 
-function render_liquid(dc, block, x, y)
-    local dsgn = block.designation[x%16][y%16]
-
-    if dsgn.flow_size > 0 then
-        if dsgn.liquid_type == df.tile_liquid.Magma then
-            dc:pen(COLOR_RED):string("Magma")
-        else
-            dc:pen(COLOR_BLUE)
-            if dsgn.water_stagnant then dc:string("Stagnant ") end
-            if dsgn.water_salt then dc:string("Salty ") end
-            dc:string("Water")
-        end
-        dc:string(" ["..dsgn.flow_size.."/7]")
-    else
-        dc:string('No Liquid')
+function SpawnLiquid:increaseLiquidLevel()
+    if self.level < 7 then
+        self.level = self.level + 1
     end
 end
 
-local permaflow_abbr = {
-    north = 'N', south = 'S', east = 'E', west = 'W',
-    northeast = 'NE', northwest = 'NW', southeast = 'SE', southwest = 'SW'
-}
-
-function render_flow_state(dc, block, x, y)
-    local flow = block.liquid_flow[x%16][y%16]
-
-    if block.flags.update_liquid then
-        dc:string("Updating", COLOR_GREEN)
-    else
-        dc:string("Static")
-    end
-    dc:string(", ")
-    if flow.perm_flow_dir ~= 0 then
-        local tag = df.tile_liquid_flow_dir[flow.perm_flow_dir]
-        dc:string("Permaflow "..(permaflow_abbr[tag] or tag), COLOR_CYAN)
-    elseif flow.temp_flow_timer > 0 then
-        dc:string("Flowing "..flow.temp_flow_timer, COLOR_GREEN)
-    else
-        dc:string("No Flow")
+function SpawnLiquid:decreaseLiquidLevel()
+    if self.level > 1 then
+        self.level = self.level - 1
     end
 end
 
-function LiquidsUI:onRenderBody(dc)
-    dc:clear():seek(1,1):string("Paint Liquids Cheat", COLOR_WHITE)
-
-    local cursor = guidm.getCursorPos()
-    local block = dfhack.maps.getTileBlock(cursor)
-
-    if block then
-        local x, y = pos2xyz(cursor)
-        local tile = block.tiletype[x%16][y%16]
-
-        dc:seek(2,3):string(df.tiletype.attrs[tile].caption, COLOR_CYAN)
-        dc:newline(2):pen(COLOR_DARKGREY)
-        render_liquid(dc, block, x, y)
-        dc:newline(2):pen(COLOR_DARKGREY)
-        render_flow_state(dc, block, x, y)
-    else
-        dc:seek(2,3):string("No map data", COLOR_RED):advance(0,2)
+function SpawnLiquid:spawn(pos)
+    if dfhack.maps.isValidTilePos(pos) and dfhack.maps.isTileVisible(pos) then
+        liquids.spawnLiquid(pos, self.level, self.type)
     end
-
-    dc:newline():pen(COLOR_GREY)
-
-    dc:newline(1):key('CUSTOM_B'):string(', '):key('CUSTOM_SHIFT_B'):string(": ")
-    self.brush:render(dc)
-    dc:newline(1):key('CUSTOM_P'):string(', '):key('CUSTOM_SHIFT_P'):string(": ")
-    self.paint:render(dc)
-
-    local paint = self.paint:get()
-
-    dc:newline()
-    if paint.liquid then
-        dc:newline(1):string("Amount: "..self.amount)
-        dc:advance(1):string("(")
-            :key('SECONDSCROLL_UP'):key('SECONDSCROLL_DOWN')
-            :string(", ")
-            :key('STRING_A048'):string("-"):key('STRING_A055')
-            :string(")")
-        dc:newline(3):key('CUSTOM_S'):string(": ")
-        self.set:render(dc)
-    else
-        dc:advance(0,2)
-    end
-
-    dc:newline()
-    if paint.flow then
-        dc:newline(1):key('CUSTOM_F'):string(": ")
-        self.flow:render(dc)
-        dc:newline(1):key('CUSTOM_R'):string(": ")
-        self.permaflow:render(dc)
-    else
-        dc:advance(0,2)
-    end
-
-    dc:newline():newline(1):pen(COLOR_WHITE)
-    dc:key('LEAVESCREEN'):string(": Back, ")
-    dc:key('SELECT'):string(": Paint")
 end
 
-function ensure_blocks(cursor, size, cb)
-    size = size or xyz2pos(1,1,1)
-    local cx,cy,cz = pos2xyz(cursor)
-    local all = true
-    for x=1,size.x or 1,16 do
-        for y=1,size.y or 1,16 do
-            for z=1,size.z do
-                if not dfhack.maps.getTileBlock(cx+x-1, cy+y-1, cz+z-1) then
-                    all = false
-                end
-            end
+function SpawnLiquid:getPen()
+    return self.type == df.tile_liquid.Water and COLOR_BLUE or COLOR_RED, "X", self.tile
+end
+
+function SpawnLiquid:getBounds(start_position, end_position)
+    return {
+        x1=math.min(start_position.x, end_position.x),
+        x2=math.max(start_position.x, end_position.x),
+        y1=math.min(start_position.y, end_position.y),
+        y2=math.max(start_position.y, end_position.y),
+        z1=math.min(start_position.z, end_position.z),
+        z2=math.max(start_position.z, end_position.z),
+    }
+end
+
+function SpawnLiquid:onRenderFrame(dc, rect)
+    SpawnLiquid.super.onRenderFrame(self, dc, rect)
+
+    local mouse_pos = dfhack.gui.getMousePos()
+
+    if self.is_dragging then
+        if df.global.enabler.mouse_lbut == 0 then
+            self.is_dragging = false
+        elseif mouse_pos and not self:getMouseFramePos() then
+            self:spawn(mouse_pos)
         end
     end
-    if all then
-        cb()
-        return
+
+    if mouse_pos then
+        guidm.renderMapOverlay(self:callback('getPen'), self:getBounds(
+            self.is_dragging_area and self.area_first_pos or mouse_pos,
+            mouse_pos
+        ))
     end
-    dlg.showYesNoPrompt(
-        'Instantiate Blocks',
-        'Not all map blocks are allocated - instantiate?\n\nWarning: new untested feature.',
-        COLOR_YELLOW,
-        function()
-            for x=1,size.x or 1,16 do
-                for y=1,size.y or 1,16 do
-                    for z=1,size.z do
-                        dfhack.maps.ensureTileBlock(cx+x-1, cy+y-1, cz+z-1)
+end
+
+function SpawnLiquid:onInput(keys)
+    if SpawnLiquid.super.onInput(self, keys) then return true end
+
+    if keys._MOUSE_L_DOWN and not self:getMouseFramePos() then
+        local mouse_pos = dfhack.gui.getMousePos()
+
+        if self.mode == SpawnLiquidMode.CLICK and mouse_pos then
+            self:spawn(mouse_pos)
+        elseif self.mode == SpawnLiquidMode.AREA and mouse_pos then
+            if self.is_dragging_area then
+                local bounds = self:getBounds(self.area_first_pos, mouse_pos)
+                for y = bounds.y1, bounds.y2 do
+                    for x = bounds.x1, bounds.x2 do
+                        for z = bounds.z1, bounds.z2 do
+                            self:spawn(xyz2pos(x, y, z))
+                        end
                     end
                 end
+                self.is_dragging_area = false
+                return true
+            else
+                self.is_dragging_area = true
+                self.area_first_pos = mouse_pos
             end
-            cb()
-        end,
-        function()
-            cb()
+        elseif self.mode == SpawnLiquidMode.DRAG then
+            self.is_dragging = true
         end
-    )
+    end
+
+    if keys._MOUSE_L and not self:getMouseFramePos() then
+        if self.mode == SpawnLiquidMode.DRAG then
+            self.is_dragging = true
+            return true
+        end
+    end
 end
 
-function LiquidsUI:onInput(keys)
-    local paint = self.paint:get()
-    local liquid = paint.liquid
-    if keys.CUSTOM_B then
-        self.brush:step()
-    elseif keys.CUSTOM_SHIFT_B then
-        self.brush:step(-1)
-    elseif keys.CUSTOM_P then
-        self.paint:step()
-    elseif keys.CUSTOM_SHIFT_P then
-        self.paint:step(-1)
-    elseif liquid and keys.SECONDSCROLL_UP then
-        self.amount = math.max(0, self.amount-1)
-    elseif liquid and keys.SECONDSCROLL_DOWN then
-        self.amount = math.min(7, self.amount+1)
-    elseif liquid and keys.CUSTOM_S then
-        self.set:step()
-    elseif liquid and keys._STRING and keys._STRING >= string.byte('0') and keys._STRING <= string.byte('7') then
-        self.amount = keys._STRING - string.byte('0')
-    elseif paint.flow and keys.CUSTOM_F then
-        self.flow:step()
-    elseif paint.flow and keys.CUSTOM_R then
-        self.permaflow:step()
-    elseif keys.LEAVESCREEN then
-        if guidm.getSelection() then
-            guidm.clearSelection()
-            return
-        end
-        self:dismiss()
-        guidm.refreshSidebar()
-    elseif keys.SELECT then
-        local cursor = guidm.getCursorPos()
-        local sp = guidm.getSelection()
-        local size = nil
-        if self.brush:get().range then
-            if not sp then
-                guidm.setSelectionStart(cursor)
-                return
-            else
-                guidm.clearSelection()
-                cursor, size = guidm.getSelectionRange(cursor, sp)
-            end
-        else
-            guidm.clearSelection()
-        end
-        local cb = curry(
-            liquids.paint,
-            cursor,
-            self.brush:get().tag, self.paint:get().tag,
-            self.amount, size,
-            self.set:get().tag, self.flow:get().tag,
-            self.permaflow:get().tag
-        )
-        ensure_blocks(cursor, size, cb)
-    elseif self:propagateMoveKeys(keys) then
-        return
-    elseif keys.D_LOOK_ARENA_WATER then
-        self.paint.selected = 1
-    elseif keys.D_LOOK_ARENA_MAGMA then
-        self.paint.selected = 2
-    end
+SpawnLiquidScreen = defclass(SpawnLiquidScreen, gui.ZScreen)
+SpawnLiquidScreen.ATTRS {
+    focus_path='spawnliquid',
+}
+
+function SpawnLiquidScreen:init()
+    self:addviews{SpawnLiquid{}}
+end
+
+function SpawnLiquidScreen:onDismiss()
+    view = nil
 end
 
 if not dfhack.isMapLoaded() then
-    qerror("This script requires a fortress map to be loaded")
+    qerror('This script requires a fortress map to be loaded')
 end
 
-LiquidsUI{}:show()
+view = view and view:raise() or SpawnLiquidScreen{}:show()

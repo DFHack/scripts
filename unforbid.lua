@@ -1,45 +1,52 @@
 -- Unforbid all items
---[====[
-
-unforbid
-========
-
-Unforbids all items.
-
-Usage::
-
-    unforbid all [<options>]
-    unforbid help
-
-**<options>** can be zero or more of:
-
-``-q``, ``--quiet``
-    Suppress non-error console output.
-]====]
 
 local argparse = require('argparse')
 
-local function unforbid_all(quiet)
+local function unforbid_all(include_unreachable, quiet)
     if not quiet then print('Unforbidding all items...') end
+
     local count = 0
-    for _,item in ipairs(df.global.world.items.all) do
+    for _, item in ipairs(df.global.world.items.all) do
         if item.flags.forbid then
+            local block = dfhack.maps.getTileBlock(item.pos)
+
+            if block then
+                local walkable = block.walkable[item.pos.x%16][item.pos.y%16]
+
+                if walkable == 0 and not include_unreachable then
+                    if not quiet then print(('  unreachable: %s (skipping)'):format(item)) end
+                    goto skipitem
+                end
+            end
+
             if not quiet then print(('  unforbid: %s'):format(item)) end
             item.flags.forbid = false
             count = count + 1
+
+            :: skipitem ::
         end
     end
+
     if not quiet then print(('%d items unforbidden'):format(count)) end
 end
 
 -- let the common --help parameter work, even though it's undocumented
-local help, quiet = false, false
-local commands = argparse.processArgsGetopt({...},
-        {{'h', 'help', handler=function() help = true end},
-         {'q', 'quiet', handler=function() quiet = true end}})
+local options, args = {
+    help = false,
+    quiet = false,
+    include_unreachable = false
+}, {...}
 
-if not help and commands[1] == 'all' then
-    unforbid_all(quiet)
-else
+local positionals = argparse.processArgsGetopt(args, {
+    {'h', 'help', handler=function() options.help = true end},
+    {'q', 'quiet', handler=function() options.quiet = true end},
+    {'u', 'include-unreachable', handler=function() options.include_unreachable = true end},
+})
+
+if positionals[1] == nil or positionals[1] == "help" or options.help then
     print(dfhack.script_help())
+end
+
+if positionals[1] == "all" then
+    unforbid_all(options.include_unreachable, options.quiet)
 end
