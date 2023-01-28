@@ -21,6 +21,8 @@ that repo.
 ## Fixes
 - `quickfort`: allow floor bars, floor grates, and hatches to be placed over all stair types like vanilla allows
 -@ `gui/quickcmd`: can now be pinned like other windows
+-@ `gui/launcher`: no longer hangs when you attempt to launch `gui/launcher`
+-@ `gui/quickcmd`: no longer hangs when you attempt to launch `gui/quickcmd`
 
 ## Misc Improvements
 - `ban-cooking`: ban announcements are now hidden by default; use new option ``--verbose`` to show them.

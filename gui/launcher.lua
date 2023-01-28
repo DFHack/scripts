@@ -722,7 +722,8 @@ end
 
 function LauncherUI:run_command(reappear, command)
     command = command:trim()
-    if #command == 0 then return end
+    -- don't run self; otherwise our viewscreen will hang
+    if #command == 0  or command:startswith('gui/launcher') then return end
     dfhack.addCommandToHistory(HISTORY_ID, HISTORY_FILE, command)
     record_command(command)
     -- remember the previous parent screen address so we can detect changes

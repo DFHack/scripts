@@ -91,6 +91,8 @@ function QCMDDialog:init(info)
 end
 
 function QCMDDialog:submit(idx, choice)
+    -- don't run self; otherwise our viewscreen will hang
+    if choice.command:startswith('gui/quickcmd') then return end
     local screen = self.parent_view
     local parent = screen._native.parent
     dfhack.screen.hideGuard(screen, function()
