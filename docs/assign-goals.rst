@@ -3,7 +3,7 @@ assign-goals
 
 .. dfhack-tool::
     :summary: Adjust a unit's goals and dreams.
-    :tags: untested fort armok units
+    :tags: fort armok units
 
 Goals are defined with a goal token and a flag indicating whether the goal has
 been achieved. For now, this flag should always be set to false. For a list of

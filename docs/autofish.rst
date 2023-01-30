@@ -3,7 +3,7 @@ autofish
 
 .. dfhack-tool::
     :summary: Auto-manage fishing labors to control your stock of fish.
-    :tags: fort auto fps labors
+    :tags: fort auto labors
 
 This script makes managing how much fish you keep around automatic. It tries to
 maintain a configured stock level of raw and/or prepared fish, partially to keep

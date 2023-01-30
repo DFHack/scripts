@@ -3,7 +3,7 @@ hermit
 
 .. dfhack-tool::
     :summary: Go it alone in your fortress and attempt the hermit challenge.
-    :tags: untested fort auto gameplay
+    :tags: fort auto gameplay
 
 This script blocks all caravans, migrants, diplomats, and forgotten beasts (not
 wildlife) from entering your fort. Useful for attempting the

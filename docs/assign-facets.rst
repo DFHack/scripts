@@ -3,7 +3,7 @@ assign-facets
 
 .. dfhack-tool::
     :summary: Adjust a unit's facets and traits.
-    :tags: untested fort armok units
+    :tags: fort armok units
 
 Facets are defined with a token and a number from -3 to 3, which describes
 the different levels of facet strength, as explained on the

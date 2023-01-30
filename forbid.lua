@@ -2,13 +2,6 @@
 
 local argparse = require('argparse')
 
-local function isItemReachable(item)
-    local item_position = xyz2pos(dfhack.items.getPosition(item))
-    local block = dfhack.maps.getTileBlock(item_position)
-
-    return block and block.walkable[item_position.x % 16][item_position.y % 16] ~= 0
-end
-
 local function getForbiddenItems()
     local items = {}
 
@@ -77,13 +70,22 @@ end
 if positionals[1] == "unreachable" then
     print("Forbidding all unreachable items on the map...")
 
+    local citizens = dfhack.units.getCitizens()
     local count = 0
+
     for _, item in pairs(df.global.world.items.all) do
         if item.flags.construction or item.flags.in_building or item.flags.artifact then
             goto skipitem
         end
 
-        if not isItemReachable(item) then
+        local reachable = false
+        for _, unit in pairs(citizens) do
+            if dfhack.maps.canWalkBetween(item.pos, unit.pos) then
+                reachable = true
+            end
+        end
+
+        if not reachable then
             item.flags.forbid = true
             count = count + 1
         end

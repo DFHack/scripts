@@ -32,7 +32,7 @@ local positionals = argparse.processArgsGetopt(args, {
   {'l', 'level', handler=function(arg)
     options.level = argparse.positiveInt(arg, "level")
   end, hasArg = true},
-  {'p', 'pos', 'position', handler=function(arg)
+  {'p', 'position', handler=function(arg)
     options.position = argparse.coords(arg, "position")
   end, hasArg = true},
 })
@@ -50,7 +50,7 @@ local function main()
     qerror("No liquid type specified. Use `--type <type>`")
   end
 
-  if options.level > 7 then
+  if options.level and options.level > 7 then
     qerror("Invalid liquid level specified. Minimum of 1 and maximum of 7.")
   elseif not options.level then
     qerror("No liquid level specified. Use `--level <level>`")

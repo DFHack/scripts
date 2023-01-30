@@ -209,6 +209,7 @@ end
 MasspitScreen = defclass(MasspitScreen, gui.ZScreen)
 MasspitScreen.ATTRS {
     focus_path='masspit',
+    pass_movement_keys=true,
 }
 
 function MasspitScreen:init()

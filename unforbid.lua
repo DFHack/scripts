@@ -5,15 +5,20 @@ local argparse = require('argparse')
 local function unforbid_all(include_unreachable, quiet)
     if not quiet then print('Unforbidding all items...') end
 
+    local citizens = dfhack.units.getCitizens()
     local count = 0
-    for _, item in ipairs(df.global.world.items.all) do
+    for _, item in pairs(df.global.world.items.all) do
         if item.flags.forbid then
-            local block = dfhack.maps.getTileBlock(item.pos)
+            if not include_unreachable then
+                local reachable = false
 
-            if block then
-                local walkable = block.walkable[item.pos.x%16][item.pos.y%16]
+                for _, unit in pairs(citizens) do
+                    if dfhack.maps.canWalkBetween(item.pos, unit.pos) then
+                        reachable = true
+                    end
+                end
 
-                if walkable == 0 and not include_unreachable then
+                if not reachable then
                     if not quiet then print(('  unreachable: %s (skipping)'):format(item)) end
                     goto skipitem
                 end
@@ -23,7 +28,7 @@ local function unforbid_all(include_unreachable, quiet)
             item.flags.forbid = false
             count = count + 1
 
-            :: skipitem ::
+            ::skipitem::
         end
     end
 
@@ -34,19 +39,19 @@ end
 local options, args = {
     help = false,
     quiet = false,
-    include_unreachable = false
-}, {...}
+    include_unreachable = false,
+}, { ... }
 
 local positionals = argparse.processArgsGetopt(args, {
-    {'h', 'help', handler=function() options.help = true end},
-    {'q', 'quiet', handler=function() options.quiet = true end},
-    {'u', 'include-unreachable', handler=function() options.include_unreachable = true end},
+    { 'h', 'help', handler = function() options.help = true end },
+    { 'q', 'quiet', handler = function() options.quiet = true end },
+    { 'u', 'include-unreachable', handler = function() options.include_unreachable = true end },
 })
 
-if positionals[1] == nil or positionals[1] == "help" or options.help then
+if positionals[1] == nil or positionals[1] == 'help' or options.help then
     print(dfhack.script_help())
 end
 
-if positionals[1] == "all" then
+if positionals[1] == 'all' then
     unforbid_all(options.include_unreachable, options.quiet)
 end

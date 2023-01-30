@@ -304,7 +304,7 @@ function OverlayConfig:onInput(keys)
             return true
         end
     end
-    if keys.LEAVESCREEN then
+    if keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
         self:dismiss()
         return true
     end

@@ -3,7 +3,7 @@ extinguish
 
 .. dfhack-tool::
     :summary: Put out fires.
-    :tags: untested fort armok buildings items map units
+    :tags: fort armok buildings items map units
 
 With this tool, you can put out fires affecting map tiles, plants, units, items,
 and buildings.

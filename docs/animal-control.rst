@@ -3,7 +3,7 @@ animal-control
 
 .. dfhack-tool::
     :summary: Quickly view, butcher, or geld groups of animals.
-    :tags: untested fort productivity animals
+    :tags: fort productivity animals
 
 Animal control is useful for browsing through your animals and deciding which
 to butcher or geld based on their stats.

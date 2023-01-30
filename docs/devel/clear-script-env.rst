@@ -3,7 +3,7 @@ devel/clear-script-env
 
 .. dfhack-tool::
     :summary: Clear a lua script environment.
-    :tags: untested dev
+    :tags: dev
 
 This tool can clear the environment of the specified lua script(s). This is
 useful during development since if you remove a global function, an old version

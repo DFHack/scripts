@@ -17,11 +17,14 @@ that repo.
 - `autofish`: Auto-manage fishing labors to control your stock of fish.
 - `fix/restore-nicks`: Restore nicknames when DF loses them
 - `forbid`: Forbid and list forbidden items on the map
-- `allunmetneeds`: allunmetneeds options add a prefix name in dwarves with unmet needs (that is damaging focus) (using as options: n to rename; r to remove; u to update)
+- `fix/civil-war`: Removes negative relations from own government
+- `gui/control-panel`: quick access to DFHack configuration
+- `allunmetneeds`: list all unmet needs and with options add prefix with unmet needs to dwarves names
 
 ## Fixes
 - `quickfort`: allow floor bars, floor grates, and hatches to be placed over all stair types like vanilla allows
 -@ `gui/quickcmd`: can now be pinned like other windows
+- `build-now`: now correctly adjusts tile above constructions, no longer "deconstructing" them.
 
 ## Misc Improvements
 - `ban-cooking`: ban announcements are now hidden by default; use new option ``--verbose`` to show them.
@@ -30,9 +33,12 @@ that repo.
 - `gui/launcher`: clarify what is being shown in the autocomplete list (all commands, autocompletion of partially typed command, or commands related to typed command)
 - `gui/quickfort`: don't close the window when applying a blueprint so players can apply the same blueprint multiple times more easily
 - `locate-ore`: now only searches revealed tiles by default
-- `unforbid`: does not unforbid unreachable items by default anymore.
+- `build-now`: now handles dirt roads and initializes farm plots properly
+- `unforbid`: does not unforbid unreachable and underwater items by default
+- `gui/create-item`: added proper corpsepiece spawning from any creature. (under "body part")
 
 ## Removed
+- `show-unit-syndromes`: replaced by `gui/unit-syndromes`. exporting html is no longer supported.
 
 # 50.05-alpha2
 
@@ -47,6 +53,7 @@ that repo.
 
 ## New Scripts
 - `gui/autochop`: configuration frontend for the `autochop` plugin. you can pin the window and leave it up on the screen somewhere for live monitoring of your logging industry.
+- `gui/control-panel`: see what DFHack tools are enabled, toggle them, and launch their config UIs
 - `devel/tile-browser`: page through available textures and see their texture ids
 - `allneeds`: list all unmet needs sorted by how many dwarves suffer from them.
 

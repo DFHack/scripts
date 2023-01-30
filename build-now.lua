@@ -3,6 +3,7 @@
 local argparse = require('argparse')
 local dig_now = require('plugins.dig-now')
 local gui = require('gui')
+local tiletypes = require('plugins.tiletypes')
 local utils = require('utils')
 
 local ok, buildingplan = pcall(require, 'plugins.buildingplan')
@@ -397,7 +398,7 @@ local function adjust_tile_above(pos_above, item, construction_type)
     local tt_above = dfhack.maps.getTileType(pos_above)
     local shape_above = df.tiletype.attrs[tt_above].shape
     if shape_above ~= df.tiletype_shape.EMPTY
-            and shape_above == df.tiletype_shape.RAMP_TOP then
+            and shape_above ~= df.tiletype_shape.RAMP_TOP then
         return
     end
     if construction_type == df.construction_type.Wall then
@@ -463,14 +464,28 @@ local function build_building(bld)
     end
     bld:setBuildStage(bld:getMaxBuildStage())
     bld.flags.exists = true
-    -- update occupancy flags
+    -- update occupancy flags and build dirt roads (they don't build themselves)
+    local bld_type = bld:getType()
+    local is_dirt_road = bld_type == df.building_type.RoadDirt
     for x = bld.x1,bld.x2 do
         for y = bld.y1,bld.y2 do
             bld:updateOccupancy(x, y)
+            if is_dirt_road and dfhack.buildings.containsTile(bld, x, y) then
+                -- note that this does not clear shrubs. we need to figure out
+                -- how to do that
+                if not tiletypes.tiletypes_setTile(xyz2pos(x, y, bld.z),
+                        -1, df.tiletype_material.SOIL, df.tiletype_special.NORMAL, -1) then
+                    dfhack.printerr('failed to build tile of dirt road')
+                end
+            end
         end
     end
-    -- doors link to adjacent smooth walls
-    if bld:getType() == df.building_type.Door then
+    -- all buildings call this, though it only appears to have an effect for
+    -- farm plots
+    bld:initFarmSeasons()
+    -- doors and floodgates link to adjacent smooth walls
+    if bld_type == df.building_type.Door or
+            bld_type == df.building_type.Floodgate then
         dig_now.link_adjacent_smooth_walls(bld.centerx, bld.centery, bld.z)
     end
 end
