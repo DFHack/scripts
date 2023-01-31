@@ -19,7 +19,7 @@ that repo.
 - `forbid`: Forbid and list forbidden items on the map
 - `fix/civil-war`: Removes negative relations from own government
 - `gui/control-panel`: quick access to DFHack configuration
-- `allunmetneeds`: list all unmet needs and with options add prefix with unmet needs to dwarves names
+- `all-unmet-needs`: list all unmet needs and with options add prefix with unmet needs to dwarves names
 
 ## Fixes
 - `quickfort`: allow floor bars, floor grates, and hatches to be placed over all stair types like vanilla allows

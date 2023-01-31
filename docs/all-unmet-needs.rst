@@ -1,4 +1,4 @@
-allunmetneeds
+all-unmet-needs
 ========
 
 .. dfhack-tool::
@@ -14,25 +14,25 @@ needs_code is usually capital letters from each need, nds tags stands for nds ne
 
 Usage
 -----
-    ``allunmetneeds``
-    ``allunmetneeds [<options>]``
+    ``all-unmet-needs``
+    ``all-unmet-needs [<options>]``
 
 ::
 
-    allunmetneeds
+    all-unmet-needs
 
 Examples
 --------
-``allunmetneeds``
+``all-unmet-needs``
     Show the cumulative needs of all citizens.
 
-``allunmetneeds n``
+``all-unmet-needs n``
     it adds a TAG NDS TAGS to citizens prefix names
 
-``allunmetneeds r``
+``all-unmet-needs r``
     it removes all NDS TAGS citizens prefix names
 
-``allunmetneeds u``
+``all-unmet-needs u``
     it update all NDS TAGS citizens prefix names
 
 Options
