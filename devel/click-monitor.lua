@@ -1,27 +1,6 @@
 -- Displays the mouse (grid) coordinates when the mouse is clicked
 --@ enable = true
---[====[
-
-devel/click-monitor
-===================
-Displays the grid coordinates of mouse clicks in the console.
-Useful for plugin/script development.
-
-Usage: ``devel/click-monitor start|stop``
-
-]====]
-
-VERSION = '0.2'
-
 active = active or false
-
-function usage()
-    print [[
-Usage:
-    click-monitor enable|start: Begin monitoring
-    click-monitor disable|stop: End monitoring
-]]
-end
 
 function set_timeout()
     dfhack.timeout(1, 'frames', check_click)
@@ -42,8 +21,8 @@ end
 function check_click()
     local s = ''
     local color = COLOR_RESET
-    for _, attr in pairs({'mouse_lbut', 'mouse_rbut', 'mouse_lbut_down',
-        'mouse_rbut_down', 'mouse_lbut_lift', 'mouse_rbut_lift'}) do
+    for _, attr in pairs({'mouse_lbut', 'mouse_rbut', 'mouse_mbut', 'mouse_lbut_down',
+        'mouse_rbut_down', 'mouse_mbut_down', 'mouse_lbut_lift', 'mouse_rbut_lift', 'mouse_mbut_lift'}) do
         local enabler = df.global.enabler --as:number[]
         if enabler[attr] ~= 0 then
             s = s .. '[' .. attr:sub(7) .. ']  '
@@ -74,8 +53,8 @@ if #args == 1 then
     elseif args[1] == 'stop' or args[1] == 'disable' then
         active = false
     else
-        usage()
+        print(dfhack.script_help())
     end
 else
-    usage()
+    print(dfhack.script_help())
 end

@@ -13,8 +13,9 @@ Strength lost is proportional to the time until death, all units will have
 roughly 10% of each of their attributes' values when close to being removed.
 
 In any game, this can be a welcome gameplay feature, but it is especially
-useful in preventing undead cascades in the caverns, where constant combat
-can lead to hundreds of undead roaming the caverns and destroying your FPS.
+useful in preventing undead cascades in the caverns in reanimating biomes,
+where constant combat can lead to hundreds of undead roaming the caverns and
+destroying your FPS.
 
 Usage
 -----
@@ -27,6 +28,8 @@ Usage
 Examples
 --------
 
+``enable starvingdead``
+    Start starving the dead with default settings.
 ``starvingdead --decay-rate 28``
     Undead will lose strength roughly once a month.
 ``starvingdead --decay-rate 1 --death-threshold 1``

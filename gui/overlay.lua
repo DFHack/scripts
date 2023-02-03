@@ -118,7 +118,7 @@ function OverlayConfig:init()
         frame={w=DIALOG_WIDTH, h=LIST_HEIGHT+15},
         resizable=true,
         resize_min={h=20},
-        frame_title='Overlay config',
+        frame_title='Reposition overlay widgets',
     }
     main_panel:addviews{
         widgets.Label{
@@ -136,18 +136,10 @@ function OverlayConfig:init()
             view_id='list',
             frame={t=4, b=7},
             on_select=self:callback('highlight_selected'),
-            on_submit=self:callback('toggle_enabled'),
-            on_submit2=self:callback('reposition'),
         },
         widgets.HotkeyLabel{
             frame={b=5, l=0},
             key='SELECT',
-            key_sep=' or click widget name to enable/disable',
-            scroll_keys={},
-        },
-        widgets.HotkeyLabel{
-            frame={b=4, l=0},
-            key='CUSTOM_CTRL_T',
             key_sep=' or drag the on-screen widget to reposition ',
             on_activate=function() self:reposition(self.subviews.list:getSelected()) end,
             scroll_keys={},
@@ -189,6 +181,7 @@ function OverlayConfig:refresh_list(filter)
     for _,name in ipairs(state.index) do
         local db_entry = state.db[name]
         local widget = db_entry.widget
+        if widget.overlay_only then goto continue end
         if not widget.hotspot and filter ~= 'all' then
             local matched = false
             for _,scr in ipairs(overlay.normalize_list(widget.viewscreens)) do
@@ -200,35 +193,25 @@ function OverlayConfig:refresh_list(filter)
             if not matched then goto continue end
         end
         local panel = nil
-        if not widget.overlay_only then
-            panel = DraggablePanel{
-                    frame=make_highlight_frame(widget.frame),
-                    frame_style=SHADOW_FRAME,
-                    on_click=make_on_click_fn(#choices+1),
-                    name=name}
-            panel.on_drag_end = function(success)
-                if (success) then
-                    local frame = panel.frame
-                    local posx = frame.l and tostring(frame.l+2)
-                            or tostring(-(frame.r+2))
-                    local posy = frame.t and tostring(frame.t+2)
-                            or tostring(-(frame.b+2))
-                    overlay.overlay_command({'position', name, posx, posy},true)
-                end
-                self.reposition_panel = nil
+        panel = DraggablePanel{
+                frame=make_highlight_frame(widget.frame),
+                frame_style=SHADOW_FRAME,
+                on_click=make_on_click_fn(#choices+1),
+                name=name}
+        panel.on_drag_end = function(success)
+            if (success) then
+                local frame = panel.frame
+                local posx = frame.l and tostring(frame.l+2)
+                        or tostring(-(frame.r+2))
+                local posy = frame.t and tostring(frame.t+2)
+                        or tostring(-(frame.b+2))
+                overlay.overlay_command({'position', name, posx, posy},true)
             end
+            self.reposition_panel = nil
         end
         local cfg = state.config[name]
         local tokens = {}
-        table.insert(tokens, '[')
-        table.insert(tokens, {
-                pen=cfg.enabled and COLOR_LIGHTGREEN or COLOR_YELLOW,
-                text=cfg.enabled and 'enabled' or 'disabled'})
-        table.insert(tokens, (']%s '):format(cfg.enabled and ' ' or ''))
         table.insert(tokens, name)
-        if widget.overlay_only then
-            table.insert(tokens, ' (no repositionable panel)')
-        end
         table.insert(tokens, {text=function()
                 if self.reposition_panel and self.reposition_panel == panel then
                     return ' (repositioning with keyboard)'
@@ -263,12 +246,6 @@ function OverlayConfig:highlight_selected(_, obj)
     panel.is_selected = true
     panel.frame_style = make_highlight_frame_style(panel.frame)
     self.selected_panel = panel
-end
-
-function OverlayConfig:toggle_enabled(_, obj)
-    local command = obj.enabled and 'disable' or 'enable'
-    overlay.overlay_command({command, obj.name}, true)
-    self:refresh_list(self.subviews.filter:getOptionValue())
 end
 
 function OverlayConfig:reposition(_, obj)

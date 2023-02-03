@@ -74,7 +74,7 @@ function Inspect:get_mouse_pos()
             text = 'Mouse is not on the map'
         end
     end
-    cur_mouse_pos = pos
+    cur_mouse_pos = pos or cur_mouse_pos
     return text
 end
 

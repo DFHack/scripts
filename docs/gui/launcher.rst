@@ -76,8 +76,9 @@ examples. You can scroll the help text with the mouse or with :kbd:`PgUp` and
 Once you run a command, the lower panel will switch to command output mode,
 where you can see any text the command printed to the screen. If you want to
 see more help text as you run further commands, you can switch the lower panel
-back to help mode with :kbd:`Ctrl`:kbd:`T`. The command output text is cleared
-when you dismiss the launcher window.
+back to help mode with :kbd:`Ctrl`:kbd:`T`. The output text is kept for all the
+commands you run while the launcher window is open, but is cleared if you
+dismiss the launcher window and bring it back up.
 
 Command history
 ---------------

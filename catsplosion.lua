@@ -45,11 +45,15 @@ local total_created = 0
 local males = {} --as:df.unit[][]
 local females = {} --as:df.unit[][]
 
-for _, unit in pairs(world.units.all) do
+for _, unit in pairs(world.units.active) do
+    if dfhack.units.isDead(unit) then
+        goto continue
+    end
     local id = world.raws.creatures.all[unit.race].creature_id
     males[id] = males[id] or {}
     females[id] = females[id] or {}
     table.insert((dfhack.units.isFemale(unit) and females or males)[id], unit)
+    ::continue::
 end
 
 if list_only then

@@ -375,12 +375,12 @@ function hackWish(unit)
    matok,mattype,matindex=showMaterialPrompt('Wish','And what material should it be made of?',matFilter)
    if not matok then return end
   else
-   local creatureok,useless,creatureTable=script.showListPrompt('Wish','What creature should it be?',COLOR_LIGHTGREEN,getCreatureList())
+   local creatureok,useless,creatureTable=script.showListPrompt('Wish','What creature should it be?',COLOR_LIGHTGREEN,getCreatureList(),1,true)
    if not creatureok then return end
    mattype,matindex=getCreatureRaceAndCaste(creatureTable[3])
   end
   if df.item_type[itemtype]=='CORPSEPIECE' then
-    local bodpartok,bodypartLocal=script.showListPrompt('Wish','What body part should it be?',COLOR_LIGHTGREEN,getCreaturePartList(mattype,matindex))
+    local bodpartok,bodypartLocal=script.showListPrompt('Wish','What body part should it be?',COLOR_LIGHTGREEN,getCreaturePartList(mattype,matindex),1,true)
     -- createCorpsePiece() references the bodypart variable so it can't be local to here
     bodypart = bodypartLocal
     if bodypart == 1 then
@@ -388,9 +388,9 @@ function hackWish(unit)
     end
    if not bodpartok then return end
    if not corpsepieceGeneric then -- probably a better way of doing this tbh
-    partlayerok,partlayerID=script.showListPrompt('Wish','What tissue layer should it be?',COLOR_LIGHTGREEN,getCreaturePartLayerList(mattype,matindex,bodypart-2))
+    partlayerok,partlayerID=script.showListPrompt('Wish','What tissue layer should it be?',COLOR_LIGHTGREEN,getCreaturePartLayerList(mattype,matindex,bodypart-2),1,true)
    else
-    partlayerok,partlayerID=script.showListPrompt('Wish','What creature material should it be?',COLOR_LIGHTGREEN,getCreatureMaterialList(mattype,matindex))
+    partlayerok,partlayerID=script.showListPrompt('Wish','What creature material should it be?',COLOR_LIGHTGREEN,getCreatureMaterialList(mattype,matindex),1,true)
    end
     if not partlayerok then return end
   end

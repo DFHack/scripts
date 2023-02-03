@@ -131,9 +131,9 @@ function AutocompletePanel:init()
         },
         widgets.Label{
             frame={l=1, t=1},
-            text={{text='Shift+'..string.char(26), pen=COLOR_LIGHTGREEN},
+            text={{text='Shift+Left', pen=COLOR_LIGHTGREEN},
                   {text='/'},
-                  {text='Shift+'..string.char(27), pen=COLOR_LIGHTGREEN}}
+                  {text='Shift+Right', pen=COLOR_LIGHTGREEN}}
         },
         widgets.Label{
             frame={l=0, t=3},
@@ -148,7 +148,7 @@ function AutocompletePanel:init()
             view_id='autocomplete_list',
             scroll_keys={},
             on_select=self:callback('on_list_select'),
-            frame={l=0, r=0, t=5, b=1}},
+            frame={l=0, r=0, t=5, b=0}},
     }
 end
 
@@ -317,7 +317,140 @@ end
 ----------------------------------
 -- HelpPanel
 --
+
+local to_pen = dfhack.pen.parse
+local active_tab_pens = {
+    text_mode_tab_pen=to_pen{fg=COLOR_YELLOW},
+    text_mode_label_pen=to_pen{fg=COLOR_WHITE},
+    lt=to_pen{tile=1005, write_to_lower=true},
+    lt2=to_pen{tile=1006, write_to_lower=true},
+    t=to_pen{tile=1007, fg=COLOR_BLACK, write_to_lower=true, top_of_text=true},
+    rt2=to_pen{tile=1008, write_to_lower=true},
+    rt=to_pen{tile=1009, write_to_lower=true},
+    lb=to_pen{tile=1015, write_to_lower=true},
+    lb2=to_pen{tile=1016, write_to_lower=true},
+    b=to_pen{tile=1017, fg=COLOR_BLACK, write_to_lower=true, bottom_of_text=true},
+    rb2=to_pen{tile=1018, write_to_lower=true},
+    rb=to_pen{tile=1019, write_to_lower=true},
+}
+
+local inactive_tab_pens = {
+    text_mode_tab_pen=to_pen{fg=COLOR_BROWN},
+    text_mode_label_pen=to_pen{fg=COLOR_DARKGREY},
+    lt=to_pen{tile=1000, write_to_lower=true},
+    lt2=to_pen{tile=1001, write_to_lower=true},
+    t=to_pen{tile=1002, fg=COLOR_WHITE, write_to_lower=true, top_of_text=true},
+    rt2=to_pen{tile=1003, write_to_lower=true},
+    rt=to_pen{tile=1004, write_to_lower=true},
+    lb=to_pen{tile=1010, write_to_lower=true},
+    lb2=to_pen{tile=1011, write_to_lower=true},
+    b=to_pen{tile=1012, fg=COLOR_WHITE, write_to_lower=true, bottom_of_text=true},
+    rb2=to_pen{tile=1013, write_to_lower=true},
+    rb=to_pen{tile=1014, write_to_lower=true},
+}
+
+Tab = defclass(Tabs, widgets.Widget)
+Tab.ATTRS{
+    id=DEFAULT_NIL,
+    label=DEFAULT_NIL,
+    on_select=DEFAULT_NIL,
+    get_pens=DEFAULT_NIL,
+}
+
+function Tab:preinit(init_table)
+    init_table.frame = init_table.frame or {}
+    init_table.frame.w = #init_table.label + 4
+    init_table.frame.h = 2
+end
+
+function Tab:onRenderBody(dc)
+    local pens = self.get_pens()
+    dc:seek(0, 0)
+    if dfhack.screen.inGraphicsMode() then
+        dc:char(nil, pens.lt):char(nil, pens.lt2)
+        for i=1,#self.label do
+            dc:char(self.label:sub(i,i), pens.t)
+        end
+        dc:char(nil, pens.rt2):char(nil, pens.rt)
+        dc:seek(0, 1)
+        dc:char(nil, pens.lb):char(nil, pens.lb2)
+        for i=1,#self.label do
+            dc:char(self.label:sub(i,i), pens.b)
+        end
+        dc:char(nil, pens.rb2):char(nil, pens.rb)
+    else
+        local tp = pens.text_mode_tab_pen
+        dc:char(' ', tp):char('/', tp)
+        for i=1,#self.label do
+            dc:char('-', tp)
+        end
+        dc:char('\\', tp):char(' ', tp)
+        dc:seek(0, 1)
+        dc:char('/', tp):char('-', tp)
+        dc:string(self.label, pens.text_mode_label_pen)
+        dc:char('-', tp):char('\\', tp)
+    end
+end
+
+function Tab:onInput(keys)
+    if keys._MOUSE_L_DOWN and self:getMousePos() then
+        self.on_select(self.id)
+        return true
+    end
+end
+
+TabBar = defclass(TabBar, widgets.ResizingPanel)
+TabBar.ATTRS{
+    labels=DEFAULT_NIL,
+    on_select=DEFAULT_NIL,
+    get_cur_page=DEFAULT_NIL,
+}
+
+function TabBar:init()
+    for idx,label in ipairs(self.labels) do
+        self:addviews{
+            Tab{
+                frame={t=0, l=0},
+                id=idx,
+                label=label,
+                on_select=self.on_select,
+                get_pens=function()
+                    return self.get_cur_page() == idx and
+                            active_tab_pens or inactive_tab_pens
+                end,
+            }
+        }
+    end
+end
+
+function TabBar:postComputeFrame(body)
+    local t, l, width = 0, 0, body.width
+    for _,tab in ipairs(self.subviews) do
+        if l > 0 and l + tab.frame.w > width then
+            t = t + 2
+            l = 0
+        end
+        tab.frame.t = t
+        tab.frame.l = l
+        l = l + tab.frame.w
+    end
+end
+
+function TabBar:onInput(keys)
+    if keys.CUSTOM_CTRL_T then
+        local zero_idx = self.get_cur_page() - 1
+        local next_zero_idx = (zero_idx + 1) % #self.labels
+        self.on_select(next_zero_idx + 1)
+        return true
+    end
+end
+
 HelpPanel = defclass(HelpPanel, widgets.Panel)
+HelpPanel.ATTRS{
+    autoarrange_subviews=true,
+    autoarrange_gap=1,
+    frame_inset={t=0, l=1, r=1, b=0},
+}
 
 -- this text is intentionally unwrapped so the in-UI wrapping can do the job
 local DEFAULT_HELP_TEXT = [[Welcome to DFHack!
@@ -332,19 +465,18 @@ function HelpPanel:init()
     self.cur_entry = ''
 
     self:addviews{
-        widgets.CycleHotkeyLabel{
-            view_id='page_selector',
-            frame={l=1, t=0},
-            label='Showing:',
-            key='CUSTOM_CTRL_T',
-            options={{label='command help', value='help_label'},
-                     {label='command output', value='output_label'}},
-            on_change=function(val) self.subviews.pages:setSelected(val) end,
+        TabBar{
+            frame={t=0, l=0},
+            labels={
+                'Help',
+                'Output',
+            },
+            on_select=function(idx) self.subviews.pages:setSelected(idx) end,
+            get_cur_page=function() return self.subviews.pages:getSelected() end
         },
         widgets.Pages{
             view_id='pages',
-            frame={l=0, t=1, b=0},
-            frame_inset=1,
+            frame={t=2, l=0, b=0, r=0},
             subviews={
                 widgets.WrappedLabel{
                     view_id='help_label',
@@ -378,7 +510,6 @@ local function HelpPanel_update_label(label, text)
 end
 
 function HelpPanel:add_output(output)
-    self.subviews.page_selector:setOption('output_label')
     self.subviews.pages:setSelected('output_label')
     local label = self.subviews.output_label
     local text_height = label:getTextHeight()
@@ -529,6 +660,7 @@ end
 LauncherUI = defclass(LauncherUI, gui.ZScreen)
 LauncherUI.ATTRS{
     focus_path='launcher',
+    defocusable=false,
     minimal=false,
 }
 
@@ -606,12 +738,13 @@ function LauncherUI:init(args)
             prefix_visible=function() return self.minimal end},
         HelpPanel{
             view_id='help',
-            frame={t=EDIT_PANEL_HEIGHT+2, l=0, r=AUTOCOMPLETE_PANEL_WIDTH+1},
+            frame={t=EDIT_PANEL_HEIGHT+1, l=0, r=AUTOCOMPLETE_PANEL_WIDTH+1},
             visible=function() return not self.minimal end},
     }
     self:addviews{main_panel}
 
     update_frames()
+    self:on_edit_input('')
 end
 
 function LauncherUI:update_help(text, firstword)
@@ -778,16 +911,23 @@ if view then
         -- running the launcher while it is open (e.g. from hitting the launcher
         -- hotkey a second time) should close the dialog
         view:dismiss()
+        return
     end
-else
-    local args = {...}
-    local minimal
-    if args[1] == '--minimal' or args[1] == '-m' then
-        table.remove(args, 1)
-        minimal = true
-    end
+end
+
+local args = {...}
+local minimal
+if args[1] == '--minimal' or args[1] == '-m' then
+    table.remove(args, 1)
+    minimal = true
+end
+if not view then
     view = LauncherUI{minimal=minimal}:show()
-    local initial_command = table.concat(args, ' ')
+elseif minimal and not view.minimal then
+    view.subviews.edit.on_toggle_minimal()
+end
+local initial_command = table.concat(args, ' ')
+if #initial_command > 0 then
     view.subviews.edit:set_text(initial_command)
     view:on_edit_input(initial_command)
 end

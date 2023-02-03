@@ -13,35 +13,65 @@ local GLOBAL_KEY = "autofish"
 
 -- set default enabled state
 enabled = enabled or false
-set_maxFish = set_maxFish or 100
-set_minFish = set_minFish or 50
-set_useRaw = set_useRaw or true
+s_maxFish = s_maxFish or 100
+s_minFish = s_minFish or 75
+s_useRaw = s_useRaw or true
 isFishing = isFishing or true
 local timer = nil
 
+
+--- Check if the script is enabled.
+-- @return true if the script is enabled, otherwise false.
 function isEnabled()
     return enabled
 end
 
+--- Save the current state of the script
 local function persist_state()
     persist.GlobalTable[GLOBAL_KEY] = json.encode({enabled=enabled,
-        set_maxFish=set_maxFish, set_minFish=set_minFish, set_useRaw=set_useRaw,
+        s_maxFish=s_maxFish, s_minFish=s_minFish, s_useRaw=s_useRaw,
         isFishing=isFishing
     })
 end
 
+--- Load the saved state of the script
 local function load_state()
     -- load persistent data
     local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or "")
     enabled = (persisted_data or {enabled=false})["enabled"]
-    set_maxFish = (persisted_data or {set_maxFish=100})["set_maxFish"]
-    set_minFish = (persisted_data or {set_minFish=50})["set_minFish"]
-    set_useRaw = (persisted_data or {set_useRaw=true})["set_useRaw"]
+    s_maxFish = (persisted_data or {s_maxFish=100})["s_maxFish"]
+    s_minFish = (persisted_data or {s_minFish=75})["s_minFish"]
+    s_useRaw = (persisted_data or {s_useRaw=true})["s_useRaw"]
     isFishing = (persisted_data or {isFishing=true})["isFishing"]
 end
 
+--- Set the maximum fish threshold.
+-- @param val The value to set s_maxFish to. (number)
+function set_minFish(val)
+    s_minFish = val
+    -- min fish cannot exceed max fish
+    if s_minFish >= s_maxFish then s_minFish = s_maxFish end
+    persist_state()
+end
 
--- toggle the fishing labour on all dwarves/work detail if enabled
+--- Set the minimum fish threshold.
+-- @param val The value to set s_minFish to. (number)
+function set_maxFish(val)
+    s_maxFish = val
+    -- max fish cannot be lower than min fish
+    if s_maxFish <= s_minFish then s_minFish = s_maxFish end
+    persist_state()
+end
+
+--- Set the raw fish toggle
+-- @param val The value to set s_useRaw to. (boolean)
+function set_useRaw(val)
+    s_useRaw = val
+    persist_state()
+end
+
+--- Toggle all work details (and fishing labours)
+-- @param state What state to toggle the labours to.
 function toggle_fishing_labour(state)
     -- pass true to state to turn on, otherwise disable
     -- find all work details that have fishing enabled:
@@ -71,7 +101,8 @@ function toggle_fishing_labour(state)
     end
 end
 
--- check if an item isn't forbidden/rotten/on fire/etc..
+--- Checks several item flags to see if a given item should be considered good
+-- @param item: a valid dwarf fortress item.
 function isValidItem(item)
     local flags = item.flags
     if flags.rotten or flags.trader or flags.hostile or flags.forbid
@@ -82,8 +113,11 @@ function isValidItem(item)
     return true
 end
 
-function event_loop()
-    if not enabled then return end
+
+--- Counts the number of available fish in a fortress
+-- @return prepared (number): count of prepared fish available.
+-- @return raw (number): count of raw fish available.
+function count_fish()
     local world = df.global.world
 
     -- count the number of valid fish we have. (not rotten, forbidden, on fire, dumping...)
@@ -92,16 +126,24 @@ function event_loop()
         if v:getType() == df.item_type.FISH and isValidItem(v) then
             prepared = prepared + v:getStackSize()
         end
-        if (v:getType() == df.item_type.FISH_RAW and isValidItem(v)) and set_useRaw then
+        if (v:getType() == df.item_type.FISH_RAW and isValidItem(v)) and s_useRaw then
             raw = raw + v:getStackSize()
         end
     end
+    return prepared, raw
+end
 
-    -- hande pausing/resuming labour
-    local numFish = set_useRaw and (prepared+raw) or prepared
-    if isFishing and (numFish >= set_maxFish) then
+--- The main event loop of the script.
+function event_loop()
+    if not enabled then return end
+
+    local prepared, raw = count_fish()
+
+    -- handle pausing/resuming labour
+    local numFish = s_useRaw and (prepared+raw) or prepared
+    if isFishing and (numFish >= s_maxFish) then
         toggle_fishing_labour(false)
-    elseif not isFishing and (numFish < set_minFish) then
+    elseif not isFishing and (numFish < s_minFish) then
         toggle_fishing_labour(true)
     end
 
@@ -112,15 +154,15 @@ function event_loop()
 end
 
 
-
+--- Print a status output, showing the current state of the script and options.
 local function print_status()
     print(string.format("autofish is currently %s.\n", (enabled and "enabled" or "disabled")))
     if enabled then
         local rfs
-        rfs = set_useRaw and "raw & prepared" or "prepared"
+        rfs = s_useRaw and "raw & prepared" or "prepared"
 
-        print(string.format("Stopping at %s %s fish.", set_maxFish, rfs))
-        print(string.format("Restarting at %s %s fish.", set_minFish, rfs))
+        print(string.format("Stopping at %s %s fish.", s_maxFish, rfs))
+        print(string.format("Restarting at %s %s fish.", s_minFish, rfs))
         if isFishing then
             print("\nCurrently allowing fishing.")
         else
@@ -129,7 +171,7 @@ local function print_status()
     end
 end
 
--- handle loading
+--- Handles automatic loading
 dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     -- unload with game
     if sc == SC_MAP_UNLOADED then
@@ -167,7 +209,7 @@ end
 -- find flags in args:
 local positionals = argparse.processArgsGetopt(args,
     {{"r", "toggle-raw",
-    handler=function() set_useRaw = not set_useRaw end}
+    handler=function() s_useRaw = not s_useRaw end}
 })
 
 load_state()
@@ -188,14 +230,18 @@ elseif positionals ~= nil then
     -- positionals is a number?
     if positionals[1] and tonumber(positionals[1]) then
         -- assume we're changing setting:
-        set_maxFish = tonumber(positionals[1])
+        local newval = tonumber(positionals[1])
+        set_maxFish(newval)
+        if not positionals[2] then
+            set_minFish(math.floor(newval * 0.75))
+        end
     else
         -- invalid or no argument
         return
     end
 
     if positionals[2] and tonumber(positionals[2]) then
-        set_minFish = tonumber(positionals[2])
+        set_minFish(tonumber(positionals[2]))
     end
 
     -- a setting probably changed, save & show the updated settings.

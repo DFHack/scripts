@@ -22,10 +22,15 @@ local function parse_commandline(args)
     local positionals = argparse.processArgsGetopt(args, {
             {'h', 'help', handler=function() opts.help = true end},
             {'q', 'quiet', handler=function() opts.quiet = true end},
+            {nil, 'really', handler=function() opts.really = true end},
         })
 
     if positionals[1] == 'help' then opts.help = true end
     if opts.help then return opts end
+
+    if not opts.really then
+        qerror('This script is known to cause corruption and crashes with some building types, and the DFHack team is still looking into solutions. To bypass this message, pass the "--really" option to the script.')
+    end
 
     if #positionals >= 1 then
         opts.start = argparse.coords(positionals[1])

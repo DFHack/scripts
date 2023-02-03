@@ -6,7 +6,7 @@
 local json = require('json')
 local persist = require('persist-table')
 
-local GLOBAL_KEY = 'fix-restore-nicks'
+local GLOBAL_KEY = 'fix-protect-nicks'
 
 enabled = enabled or false
 
@@ -37,7 +37,7 @@ local function restore_nicks()
 
         local unit = df.unit.find(hfid)
         if nil_or_empty(unit.name.nickname) then
-            print("fix/restore-nicks: Restoring removed nickname for " .. nickname)
+            print("fix/protect-nicks: Restoring removed nickname for " .. nickname)
             unit.name.nickname = nickname
         end
     end
@@ -89,7 +89,7 @@ end
 
 if df.global.gamemode ~= df.game_mode.DWARF or not dfhack.isMapLoaded() then
     -- Possibly to review with adventure mode
-    dfhack.printerr('fix/restore-nicks only works in fortress mode')
+    dfhack.printerr('fix/protect-nicks only works in fortress mode')
     return
 end
 
@@ -112,7 +112,7 @@ elseif args[1] == "forget" then
     return
 else
     local enabled_str = enabled and "enabled" or "disabled"
-    print("fix/restore-nicks is currently " .. enabled_str)
+    print("fix/protect-nicks is currently " .. enabled_str)
     print("There is " .. count_stored_nicks() .. " saved nickname(s).")
     return
 end
