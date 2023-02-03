@@ -36,7 +36,7 @@ Examples
     it update all NDS TAGS citizens prefix names
 
 Options
---------
+-------
 ``n``, ``add-nicknames``
     it adds a TAG NDS TAGS to citizens prefix names
 
