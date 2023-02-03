@@ -1,5 +1,5 @@
 all-unmet-needs
-========
+===============
 
 .. dfhack-tool::
     :summary: Show the cumulative needs of all citizens.
