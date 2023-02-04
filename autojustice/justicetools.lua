@@ -48,13 +48,21 @@ function scheduleduleInterviewUnits (crime, units)
     end
 end
 
-function skipConviction (unit)
+function getConvictionFlags (unit, mode)
     --TODO: Not sure how to check long term resident or others that asked to join
     if dfhack.units.isCitizen(unit, true) then
-        return true -- Always skip citizen crimes
+        return mode.citizen
     end
 
-    return false
+    return mode.visitor
+end
+
+function skipConviction (crime, unit, mode)
+    local flags = getConvictionFlags(unit, mode)
+
+    return crime.punishment.hammerstrikes > 0 ~= flags.hammer
+        and crime.punishment.give_beating > 0 ~= flags.beat
+        and crime.punishment.prison_time > 0 ~= flags.jail
 end
 
 function isScheduled (crime, hist_figure_id)
@@ -146,19 +154,19 @@ function findRelatedCrimes (crimes, unit)
     return r
 end
 
-function tryConvictUnit (crime, unit)
+function tryConvictUnit (crime, unit, mode)
     if crime.flags.sentenced or unit == nil then
         return false
     end
 
-    if skipConviction(unit) then
+    if skipConviction(crime, unit, mode) then
         return true
     end
 
     return convictUnit(crime, unit)
 end
 
-function trySolveCrime (crime)
+function trySolveCrime (crime, mode)
     if crime.flags.sentenced or #crime.witnesses == 0 then
         return false
     end
@@ -168,7 +176,7 @@ function trySolveCrime (crime)
         return false
     end
 
-    if skipConviction(unit) then
+    if skipConviction(crime, unit, mode) then
         return true
     end
 

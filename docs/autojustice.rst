@@ -13,9 +13,38 @@ Usage
     Enable the script
 ``disable autojustice``
     Disable the script
+``autojustice [<options>]``
+    Set conviction options
+
+Options
+-------
+
+``-j``, ``--jailcitizen``
+    Convict citizen when there is at least a jail punishment (default: true).
+
+``-b``, ``--beatcitizen``
+    Convict citizen when there is at least a beating punishment (default: false).
+
+``-h``, ``--hammercitizen``
+    Convict citizen when there is at least a hammerstrike punishment (default: false).
+
+``-J``, ``--jailvisitor``
+    Convict visitor when there is at least a jail punishment (default: true).
+
+``-B``, ``--beatvisitor``
+    Convict visitor when there is at least a beating punishment (default: true).
+
+``-H``, ``--hammervisitor``
+    Convict visitor when there is at least a hammerstrike punishment (default: true).
 
 Examples
 --------
 
 ``enable autojustice``
     Enables the script.
+
+``autojustice -beatcitizen true``
+    Citizens will be convicted from crimes that have a beating punishment.
+
+``autojustice -J true``
+    Visitors will be convicted when their punishment has a jail time.
