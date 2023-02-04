@@ -1,12 +1,11 @@
 autojustice
-========
+===========
 
 .. dfhack-tool::
     :summary: Auto-manage justice interviews and convictions.
     :tags: fort auto
 
-This script automate most of the tedious parts of the justice system. It schedules 
-visitors interviews, convict confessed crimes and interview accused units.
+This script automate most of the tedious parts of the justice system. It schedules visitors interviews, convict confessed crimes and interview accused units.
 
 Usage
 -----
