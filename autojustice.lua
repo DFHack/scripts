@@ -1,4 +1,5 @@
--- Auto Justice
+-- handles automatic justice interviews and convictions
+-- autojustice [enable | disable]
 
 --@enable = true
 --@module = true
