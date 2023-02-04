@@ -9,7 +9,7 @@ local UNIT_NEW_ACTIVE_DELAY = 100
 local CRIME_REFRESH_DELAY = 120
 
 local json = require('json')
-local argparse = require("argparse")
+local argparse = require('argparse')
 local persist = require('persist-table')
 local repeatUtil = require('repeat-util')
 local eventful = require('plugins.eventful')
@@ -101,13 +101,13 @@ function runScript ()
     loadState()
 
     argparse.processArgsGetopt(args, {
-        {'j', 'jailcitizen', hasArg=true, handler=function(arg) convictMode.citizen.jail = arg end},
-        {'b', 'beatcitizen', hasArg=true, handler=function(arg) convictMode.citizen.beat = arg end},
+        {'j', 'jailcitizen', hasArg=true, handler=function(arg) convictMode.citizen.jail = arg == 'true' end},
+        {'b', 'beatcitizen', hasArg=true, handler=function(arg) convictMode.citizen.beat = arg == 'true' end},
         {'h', 'hammercitizen', hasArg=true, handler=function(arg) convictMode.citizen.hammer = arg end},
 
-        {'J', 'jailvisitor', hasArg=true, handler=function(arg) convictMode.visitor.jail = arg end},
-        {'B', 'beatvisitor', hasArg=true, handler=function(arg) convictMode.visitor.beat = arg end},
-        {'H', 'hammervisitor', hasArg=true, handler=function(arg) convictMode.visitor.hammer = arg end}
+        {'J', 'jailvisitor', hasArg=true, handler=function(arg) convictMode.visitor.jail = arg == 'true' end},
+        {'B', 'beatvisitor', hasArg=true, handler=function(arg) convictMode.visitor.beat = arg == 'true' end},
+        {'H', 'hammervisitor', hasArg=true, handler=function(arg) convictMode.visitor.hammer = arg == 'true' end}
     })
 
     if enabled then
