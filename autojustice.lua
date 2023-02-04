@@ -1,5 +1,7 @@
 -- Auto Justice
+
 --@enable = true
+--@module = true
 
 local usage = [[
 Usage
