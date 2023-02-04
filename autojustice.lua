@@ -78,11 +78,11 @@ function serviceToggle ()
 end
 
 function serviceEnable ()
+    enabled = true
+
     saveState()
     initValues()
     registerEvents()
-
-    enabled = true
 end
 
 function serviceDisable ()
