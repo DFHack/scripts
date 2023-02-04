@@ -43,20 +43,6 @@ function loadState ()
     enabled = data.enabled or false
 end
 
-function onStateChange (sc)
-    if sc == SC_MAP_UNLOADED then
-        enabled = false
-        return
-    end
-
-    if sc ~= SC_MAP_LOADED or df.global.gamemode ~= df.game_mode.DWARF then
-        return
-    end
-
-    loadState()
-    --TODO: make it run here
-end
-
 function serviceToggle ()
     if dfhack_flags.enable_state then
         serviceEnable()
@@ -90,8 +76,6 @@ function runScript ()
 end
 
 function registerEvents ()
-    dfhack.onStateChange[GLOBAL_KEY] = onStateChange
-
     eventful.enableEvent(eventful.eventType.UNIT_NEW_ACTIVE, UNIT_NEW_ACTIVE_DELAY)
     eventful.onUnitNewActive[GLOBAL_KEY] = onUnitNewActive
 
@@ -294,6 +278,20 @@ function main ()
     else
         runScript()
     end
+end
+
+dfhack.onStateChange[GLOBAL_KEY] = function(sc)
+    if sc == SC_MAP_UNLOADED then
+        enabled = false
+        return
+    end
+
+    if sc ~= SC_MAP_LOADED or df.global.gamemode ~= df.game_mode.DWARF then
+        return
+    end
+
+    loadState()
+    --TODO: make it run here
 end
 
 main()
