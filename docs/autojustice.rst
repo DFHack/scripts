@@ -19,22 +19,22 @@ Usage
 Options
 -------
 
-``-j true|false``, ``--jailcitizen true|false``
+``-j``, ``--jailcitizen true|false``
     Convict citizen when there is at least a jail punishment (default: true).
 
-``-b true|false``, ``--beatcitizen true|false``
+``-b``, ``--beatcitizen true|false``
     Convict citizen when there is at least a beating punishment (default: false).
 
-``-h true|false``, ``--hammercitizen true|false``
+``-h``, ``--hammercitizen true|false``
     Convict citizen when there is at least a hammerstrike punishment (default: false).
 
-``-J true|false``, ``--jailvisitor true|false``
+``-J``, ``--jailvisitor true|false``
     Convict visitor when there is at least a jail punishment (default: true).
 
-``-B true|false``, ``--beatvisitor true|false``
+``-B``, ``--beatvisitor true|false``
     Convict visitor when there is at least a beating punishment (default: true).
 
-``-H true|false``, ``--hammervisitor true|false``
+``-H``, ``--hammervisitor true|false``
     Convict visitor when there is at least a hammerstrike punishment (default: true).
 
 Examples
