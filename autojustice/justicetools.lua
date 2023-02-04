@@ -7,6 +7,13 @@ claimType = {
     implicates = 6
 }
 
+punishmentType = {
+    none = 0,
+    jail = 1,
+    beat = 2,
+    hammer = 3
+}
+
 function convictUnit (crime, unit)
     if crime.flags.sentenced then
         return false
@@ -48,7 +55,7 @@ function scheduleduleInterviewUnits (crime, units)
     end
 end
 
-function getConvictionFlags (unit, mode)
+function getUnitPunishmentType (unit, mode)
     --TODO: Not sure how to check long term resident or others that asked to join
     if dfhack.units.isCitizen(unit, true) then
         return mode.citizen
@@ -57,12 +64,24 @@ function getConvictionFlags (unit, mode)
     return mode.visitor
 end
 
-function skipConviction (crime, unit, mode)
-    local flags = getConvictionFlags(unit, mode)
+function getCrimePunishmentType (crime)
+    if crime.punishment.hammerstrikes > 0 then
+        return punishmentType.hammer
+    end
 
-    return crime.punishment.hammerstrikes > 0 ~= flags.hammer
-        and crime.punishment.give_beating > 0 ~= flags.beat
-        and crime.punishment.prison_time > 0 ~= flags.jail
+    if crime.punishment.give_beating > 0 then
+        return punishmentType.beat
+    end
+
+    if crime.punishment.prison_time > 0 then
+        return punishmentType.jail
+    end
+
+    return punishmentType.none
+end
+
+function skipConviction (crime, unit, mode)
+    return getCrimePunishmentType(crime) > getUnitPunishmentType(unit, mode)
 end
 
 function isScheduled (crime, hist_figure_id)

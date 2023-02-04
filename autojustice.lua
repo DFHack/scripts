@@ -19,18 +19,9 @@ local args = {...}
 
 enabled = enabled or false
 
-convictMode = {
-    citizen = {
-        jail = false,
-        beat = false,
-        hammer = false
-    },
-
-    visitor = {
-        jail = true,
-        beat = true,
-        hammer = true
-    }
+punishmentMode = {
+    citizen = justice.punishmentType.jail,
+    visitor = justice.punishmentType.hammer
 }
 
 local lastCrimeCount = 0
@@ -46,12 +37,8 @@ end
 function saveState()
     persist.GlobalTable[GLOBAL_KEY] = json.encode({
         enabled = enabled or false,
-        citizenJail = convictMode.citizen.jail,
-        citizenBeat = convictMode.citizen.beat,
-        citizenHammer = convictMode.citizen.hammer,
-        visitorJail = convictMode.visitor.jail,
-        visitorBeat = convictMode.visitor.beat,
-        visitorHammer = convictMode.visitor.hammer
+        citizenPunishment = punishmentMode.citizen,
+        visitorPunishment = punishmentMode.visitor
     })
 end
 
@@ -59,12 +46,8 @@ function loadState ()
     local data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '{}')
 
     enabled = data.enabled or false
-    convictMode.citizen.jail = data.citizenJail or true
-    convictMode.citizen.beat = data.citizenBeat or false
-    convictMode.citizen.hammer = data.citizenHammer or false
-    convictMode.visitor.jail = data.visitorJail or true
-    convictMode.visitor.beat = data.visitorBeat or true
-    convictMode.visitor.hammer = data.visitorHammer or true
+    punishmentMode.citizen = data.citizenPunishment or justice.punishmentType.jail
+    punishmentMode.visitor = data.visitorPunishment or justice.punishmentType.hammer
 end
 
 function serviceToggle ()
@@ -100,19 +83,42 @@ function runScript ()
 
     loadState()
 
-    argparse.processArgsGetopt(args, {
-        {'j', 'jailcitizen', hasArg=true, handler=function(arg) convictMode.citizen.jail = arg == 'true' end},
-        {'b', 'beatcitizen', hasArg=true, handler=function(arg) convictMode.citizen.beat = arg == 'true' end},
-        {'h', 'hammercitizen', hasArg=true, handler=function(arg) convictMode.citizen.hammer = arg end},
+    if (#args > 0) then
+        loadArgs()
+        saveState()
+    end
 
-        {'J', 'jailvisitor', hasArg=true, handler=function(arg) convictMode.visitor.jail = arg == 'true' end},
-        {'B', 'beatvisitor', hasArg=true, handler=function(arg) convictMode.visitor.beat = arg == 'true' end},
-        {'H', 'hammervisitor', hasArg=true, handler=function(arg) convictMode.visitor.hammer = arg == 'true' end}
-    })
 
     if enabled then
         serviceEnable()
     end
+end
+
+function loadArgs ()
+    argparse.processArgsGetopt(args, {
+        {'c', 'citizen', hasArg=true, handler=function(arg) punishmentMode.citizen = parsePunishmentArg(punishmentMode.citizen, arg) end},
+        {'v', 'visitor', hasArg=true, handler=function(arg) punishmentMode.visitor = parsePunishmentArg(punishmentMode.visitor, arg) end},
+    })
+end
+
+function parsePunishmentArg (default, arg)
+    if arg == 'none' then
+        return justice.punishmentType.none
+    end
+
+    if arg == 'jail' then
+        return justice.punishmentType.jail
+    end
+
+    if arg == 'beat' then
+        return justice.punishmentType.beat
+    end
+
+    if arg == 'hammer' then
+        return justice.punishmentType.hammer
+    end
+
+    return default
 end
 
 function registerEvents ()
@@ -186,7 +192,7 @@ end
 function addOpenCrime (crime)
     local confessed = justice.getConfessedUnit(crime)
     if confessed ~= nil then
-        if not justice.tryConvictUnit(crime, confessed, convictMode) then
+        if not justice.tryConvictUnit(crime, confessed, punishmentMode) then
             table.insert(confessedCrimes, crime)
         end
     else
@@ -208,7 +214,7 @@ function updateUndiscoveredCrimes ()
         if justice.isOpenCrime(crime, siteId) then
             local confessed = justice.getConfessedUnit(crime)
             if confessed ~= nil then
-                if not justice.tryConvictUnit(crime, confessed, convictMode) then
+                if not justice.tryConvictUnit(crime, confessed, punishmentMode) then
                     table.insert(confessedCrimes, crime)
                 end
             else
@@ -246,7 +252,7 @@ function updateOpenCrime (crime, index)
     -- Try to convict confessed or interview accused
     local confessed = justice.getConfessedUnit(crime)
     if confessed ~= nil then
-        if not justice.tryConvictUnit(crime, confessed, convictMode) then
+        if not justice.tryConvictUnit(crime, confessed, punishmentMode) then
             table.insert(confessedCrimes, crime)
         end
 
@@ -265,7 +271,7 @@ function updateConfessedCrimes ()
     for i = #confessedCrimes, 1, -1 do
         local crime = confessedCrimes[i]
         local confessed = justice.getConfessedUnit(crime)
-        if confessed ~= nil and justice.tryConvictUnit(crime, confessed, convictMode) then
+        if confessed ~= nil and justice.tryConvictUnit(crime, confessed, punishmentMode) then
             table.remove(confessedCrimes, i)
         end
     end
@@ -274,7 +280,7 @@ end
 function convictConfessed (unit)
     for i = #confessedCrimes, 1, -1 do
         local crime = confessedCrimes[i]
-        if justice.hasConfessed(crime, unit) and justice.tryConvictUnit(crime, unit, convictMode) then
+        if justice.hasConfessed(crime, unit) and justice.tryConvictUnit(crime, unit, punishmentMode) then
             table.remove(confessedCrimes, i)
         end
     end

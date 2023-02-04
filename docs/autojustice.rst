@@ -19,23 +19,11 @@ Usage
 Options
 -------
 
-``-j``, ``--jailcitizen true|false``
-    Convict citizen when there is at least a jail punishment (default: true).
+``-c``, ``--citizen none|jail|beat|hammer``
+    Set the maximum punishment allowed for citizens when auto-convicting (default: jail).
 
-``-b``, ``--beatcitizen true|false``
-    Convict citizen when there is at least a beating punishment (default: false).
-
-``-h``, ``--hammercitizen true|false``
-    Convict citizen when there is at least a hammerstrike punishment (default: false).
-
-``-J``, ``--jailvisitor true|false``
-    Convict visitor when there is at least a jail punishment (default: true).
-
-``-B``, ``--beatvisitor true|false``
-    Convict visitor when there is at least a beating punishment (default: true).
-
-``-H``, ``--hammervisitor true|false``
-    Convict visitor when there is at least a hammerstrike punishment (default: true).
+``-v``, ``--visitor none|jail|beat|hammer``
+    Set the maximum punishment allowed for visitors when auto-convicting (default: hammer).
 
 Examples
 --------
@@ -43,8 +31,8 @@ Examples
 ``enable autojustice``
     Enables the script.
 
-``autojustice -beatcitizen true``
-    Citizens will be convicted from crimes that have a beating punishment.
+``autojustice -citizen beat``
+    Citizens will be convicted from crimes up to beating punishment.
 
-``autojustice -J true``
-    Visitors will be convicted when their punishment has a jail time.
+``autojustice -v jail``
+    Visitors will be convicted from crimes up to jail punishment.
