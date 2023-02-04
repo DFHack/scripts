@@ -190,7 +190,7 @@ function updateOpenCrimes ()
 end
 
 function updateOpenCrime (crime, index)
-    -- Check if the is still open
+    -- Check if the crime is still open
     if crime.flags.sentenced then
         table.remove(openCrimes, index)
         table.remove(openCrimesWitnessCount, index)
