@@ -331,7 +331,10 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     end
 
     loadState()
-    --TODO: make it run here
+
+    if enabled then
+        serviceEnable()
+    end
 end
 
 if not dfhack_flags.module then
