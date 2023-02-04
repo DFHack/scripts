@@ -62,8 +62,8 @@ end
 
 function serviceEnable ()
     enabled = true
-
     saveState()
+
     initValues()
     registerEvents()
 end
@@ -73,6 +73,7 @@ function serviceDisable ()
     clearValues()
 
     enabled = false
+    saveState()
 end
 
 function runScript ()
