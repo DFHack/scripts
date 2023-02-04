@@ -37,7 +37,7 @@ function saveState()
 end
 
 function loadState ()
-    local data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '{}') 
+    local data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '{}')
     enabled = data.enabled or false
 end
 
@@ -46,11 +46,11 @@ function onStateChange (sc)
         enabled = false
         return
     end
-  
+
     if sc ~= SC_MAP_LOADED or df.global.gamemode ~= df.game_mode.DWARF then
         return
     end
-  
+
     loadState()
     --TODO: make it run here
 end
@@ -115,9 +115,9 @@ function initValues ()
     end
 end
 
-function clearValues () 
-    lastCrimeCount = 0 
-    
+function clearValues ()
+    lastCrimeCount = 0
+
     openCrimes = nil
     openCrimesWitnessCount = nil
     undiscoveredCrimes = nil
@@ -140,7 +140,7 @@ function addNewCrimes ()
 
     for i = lastCrimeCount, newCount - 1 do
         addNewCrime(df.global.world.crimes.all[i])
-    end 
+    end
 
     lastCrimeCount = newCount
 end
@@ -154,7 +154,7 @@ function addNewCrime (crime)
     if justice.isUndiscoveredCrime(crime, getSiteId()) then
         addUndiscoveredCrime(crime)
         return
-    end 
+    end
 end
 
 function addOpenCrime (crime)
@@ -178,7 +178,7 @@ function updateUndiscoveredCrimes ()
 
     for i = #undiscoveredCrimes, 1, -1 do
         local crime = undiscoveredCrimes[i]
-        
+
         if justice.isOpenCrime(crime, siteId) then
             local confessed = justice.getConfessedUnit(crime)
             if confessed ~= nil then
@@ -223,7 +223,7 @@ function updateOpenCrime (crime, index)
         if not justice.tryConvictUnit(crime, confessed) then
             table.insert(confessedCrimes, crime)
         end
-        
+
         -- Someone confessed, this is not an open crime anymore
         table.remove(openCrimes, index)
         table.remove(openCrimesWitnessCount, index)

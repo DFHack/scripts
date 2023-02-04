@@ -101,7 +101,7 @@ function getOpenCrimes (crimes, siteId)
             table.insert(r, crime)
         end
     end
-    
+
     return r
 end
 
@@ -142,7 +142,7 @@ function findRelatedCrimes (crimes, unit)
             table.insert(r, crime)
         end
     end
-    
+
     return r
 end
 
