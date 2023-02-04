@@ -3,13 +3,6 @@
 --@enable = true
 --@module = true
 
-local usage = [[
-Usage
------
-enable autojustice
-disable autojustice
-]]
-
 local GLOBAL_KEY = 'autojustice'
 local UNIT_NEW_ACTIVE_DELAY = 100
 local CRIME_REFRESH_DELAY = 120
