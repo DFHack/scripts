@@ -288,4 +288,6 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     --TODO: make it run here
 end
 
-main()
+if not dfhack_flags.module then
+    main()
+end
