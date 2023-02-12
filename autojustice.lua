@@ -4,24 +4,46 @@
 --@enable = true
 --@module = true
 
+--================
+-- Constants
+--================
 local GLOBAL_KEY = 'autojustice'
 local UNIT_NEW_ACTIVE_DELAY = 100
 local CRIME_REFRESH_DELAY = 120
 
+--TODO: map other claim types
+local claimType = {
+    accuses = 0,
+    confessed = 5,
+    implicates = 6
+}
+
+local punishmentType = {
+    none = 0,
+    jail = 1,
+    beat = 2,
+    hammer = 3
+}
+
+--================
+-- Imports
+--================
 local json = require('json')
 local argparse = require('argparse')
 local persist = require('persist-table')
 local repeatUtil = require('repeat-util')
 local eventful = require('plugins.eventful')
-local justice = reqscript('autojustice/justicetools')
 
+--================
+-- Globals
+--================
 local args = {...}
 
 enabled = enabled or false
 
 punishmentMode = {
-    citizen = justice.punishmentType.jail,
-    visitor = justice.punishmentType.hammer
+    citizen = punishmentType.jail,
+    visitor = punishmentType.hammer
 }
 
 local lastCrimeCount = 0
@@ -30,10 +52,16 @@ local openCrimesWitnessCount = nil
 local undiscoveredCrimes = nil
 local confessedCrimes = nil
 
+--================
+-- Module
+--================
 function isEnabled()
     return enabled
 end
 
+--================
+-- Persistence
+--================
 function saveState()
     persist.GlobalTable[GLOBAL_KEY] = json.encode({
         enabled = enabled or false,
@@ -46,10 +74,13 @@ function loadState ()
     local data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '{}')
 
     enabled = data.enabled or false
-    punishmentMode.citizen = data.citizenPunishment or justice.punishmentType.jail
-    punishmentMode.visitor = data.visitorPunishment or justice.punishmentType.hammer
+    punishmentMode.citizen = data.citizenPunishment or punishmentType.jail
+    punishmentMode.visitor = data.visitorPunishment or punishmentType.hammer
 end
 
+--================
+-- Service / Initialization
+--================
 function serviceToggle ()
     if dfhack_flags.enable_state then
         serviceEnable()
@@ -104,19 +135,19 @@ end
 
 function parsePunishmentArg (default, arg)
     if arg == 'none' then
-        return justice.punishmentType.none
+        return punishmentType.none
     end
 
     if arg == 'jail' then
-        return justice.punishmentType.jail
+        return punishmentType.jail
     end
 
     if arg == 'beat' then
-        return justice.punishmentType.beat
+        return punishmentType.beat
     end
 
     if arg == 'hammer' then
-        return justice.punishmentType.hammer
+        return punishmentType.hammer
     end
 
     return default
@@ -157,6 +188,199 @@ function clearValues ()
     confessedCrimes = nil
 end
 
+--================
+-- DF Crime Data Query
+--================
+function convictUnit (crime, unit)
+    if crime.flags.sentenced then
+        return false
+    end
+
+    crime.convicted_hf = unit.hist_figure_id
+    crime.convicted_hf_2 = unit.hist_figure_id
+    --crime.convicted_hf_3 = unit.hist_figure_id -- this value is not set by the game
+
+    -- TODO: Not sure why the game fill this vector. Need to investigate if the convict and victim is always equal and if it has only one entry
+    if #crime.convict_data.unk_v47_vector_1 > 0 then
+        local convict = crime.convict_data.unk_v47_vector_1[0]
+        crime.victim_data.unk_v47_vector_2:insert(#crime.victim_data.unk_v47_vector_2, convict)
+    end
+
+    crime.convict_data.convicted = unit.id
+    crime.flags.sentenced = false
+
+    return true
+end
+
+function scheduleInterview (crime, unit)
+    if isScheduled(crime, unit.hist_figure_id) or not canInterview(unit) then
+        return false
+    end
+
+    local report = df.crime.T_reports:new()
+    report.accused_id = unit.hist_figure_id
+    report.accused_id_2 = unit.hist_figure_id
+
+    crime.reports:insert(#crime.reports, report)
+
+    return true
+end
+
+function scheduleduleInterviewUnits (crime, units)
+    for i, unit in ipairs (units) do
+        scheduleInterview(crime, unit)
+    end
+end
+
+function getUnitPunishmentType (unit, mode)
+    --TODO: Not sure how to check long term resident or others that asked to join
+    if dfhack.units.isCitizen(unit, true) then
+        return mode.citizen
+    end
+
+    return mode.visitor
+end
+
+function getCrimePunishmentType (crime)
+    if crime.punishment.hammerstrikes > 0 then
+        return punishmentType.hammer
+    end
+
+    if crime.punishment.give_beating > 0 then
+        return punishmentType.beat
+    end
+
+    if crime.punishment.prison_time > 0 then
+        return punishmentType.jail
+    end
+
+    return punishmentType.none
+end
+
+function skipConviction (crime, unit, mode)
+    return getCrimePunishmentType(crime) > getUnitPunishmentType(unit, mode)
+end
+
+function isScheduled (crime, hist_figure_id)
+    for i, report in ipairs (crime.reports) do
+        if report.accused_id == hist_figure_id then
+            return true
+        end
+    end
+    return false
+end
+
+function didInterview (crime, hist_figure_id)
+    for i, report in ipairs (crime.counterintelligence) do
+        if report.identified_hf == hist_figure_id then
+            return true
+        end
+    end
+    return false
+end
+
+function canInterview(unit)
+    return dfhack.units.isActive(unit) and
+        unit.status.current_soul and
+        not dfhack.units.isAnimal(unit)
+end
+
+function isOpenCrime (crime, siteId)
+    return crime.site == siteId and
+        crime.flags.discovered and
+        not crime.flags.sentenced
+end
+
+function isUndiscoveredCrime (crime, siteId)
+    return crime.site == siteId and
+        not crime.flags.discovered
+end
+
+function getOpenCrimes (crimes, siteId)
+    local r = {}
+
+    for i, crime in ipairs (crimes) do
+        if isOpenCrime(crime, siteId) then
+            table.insert(r, crime)
+        end
+    end
+
+    return r
+end
+
+function getConfessedUnit (crime)
+    for i, witness in ipairs (crime.witnesses) do
+        if witness.witness_claim == claimType.confessed then
+            return df.unit.find(witness.witness_id)
+        end
+    end
+    return nil
+end
+
+function getAccusedUnit (crime)
+    for i, witness in ipairs (crime.witnesses) do
+        if witness.witness_claim == claimType.accuses or
+            witness.witness_claim == claimType.implicates then
+            return df.unit.find(witness.accused_id)
+        end
+    end
+    return nil
+end
+
+function hasConfessed (crime, unit)
+    local confessed = getConfessedUnit(crime)
+    return confessed ~= nil and confessed.hist_figure_id == unit.hist_figure_id
+end
+
+function isAccused (crime, unit)
+    local accused = getAccusedUnit(crime)
+    return accused ~= nil and accused.hist_figure_id == unit.hist_figure_id
+end
+
+function findRelatedCrimes (crimes, unit)
+    local r = {}
+
+    for i, crime in ipairs (crimes) do
+        if didInterview(crime, unit.hist_figure_id) then
+            table.insert(r, crime)
+        end
+    end
+
+    return r
+end
+
+function tryConvictUnit (crime, unit, mode)
+    if crime.flags.sentenced or unit == nil then
+        return false
+    end
+
+    if skipConviction(crime, unit, mode) then
+        return true
+    end
+
+    return convictUnit(crime, unit)
+end
+
+function trySolveCrime (crime, mode)
+    if crime.flags.sentenced or #crime.witnesses == 0 then
+        return false
+    end
+
+    local unit = getConfessedUnit(crime)
+    if (unit == nil) then
+        return false
+    end
+
+    if skipConviction(crime, unit, mode) then
+        return true
+    end
+
+    return convictUnit(crime, unit)
+end
+
+--================
+-- Crime Handling
+--================
 function getSiteId ()
     return df.global.world.world_data.active_site[0].id
 end
@@ -179,21 +403,21 @@ function addNewCrimes ()
 end
 
 function addNewCrime (crime)
-    if justice.isOpenCrime(crime, getSiteId()) then
+    if isOpenCrime(crime, getSiteId()) then
         addOpenCrime(crime)
         return
     end
 
-    if justice.isUndiscoveredCrime(crime, getSiteId()) then
+    if isUndiscoveredCrime(crime, getSiteId()) then
         addUndiscoveredCrime(crime)
         return
     end
 end
 
 function addOpenCrime (crime)
-    local confessed = justice.getConfessedUnit(crime)
+    local confessed = getConfessedUnit(crime)
     if confessed ~= nil then
-        if not justice.tryConvictUnit(crime, confessed, punishmentMode) then
+        if not tryConvictUnit(crime, confessed, punishmentMode) then
             table.insert(confessedCrimes, crime)
         end
     else
@@ -212,10 +436,10 @@ function updateUndiscoveredCrimes ()
     for i = #undiscoveredCrimes, 1, -1 do
         local crime = undiscoveredCrimes[i]
 
-        if justice.isOpenCrime(crime, siteId) then
-            local confessed = justice.getConfessedUnit(crime)
+        if isOpenCrime(crime, siteId) then
+            local confessed = getConfessedUnit(crime)
             if confessed ~= nil then
-                if not justice.tryConvictUnit(crime, confessed, punishmentMode) then
+                if not tryConvictUnit(crime, confessed, punishmentMode) then
                     table.insert(confessedCrimes, crime)
                 end
             else
@@ -251,9 +475,9 @@ function updateOpenCrime (crime, index)
     openCrimesWitnessCount[index] = #crime.witnesses
 
     -- Try to convict confessed or interview accused
-    local confessed = justice.getConfessedUnit(crime)
+    local confessed = getConfessedUnit(crime)
     if confessed ~= nil then
-        if not justice.tryConvictUnit(crime, confessed, punishmentMode) then
+        if not tryConvictUnit(crime, confessed, punishmentMode) then
             table.insert(confessedCrimes, crime)
         end
 
@@ -261,9 +485,9 @@ function updateOpenCrime (crime, index)
         table.remove(openCrimes, index)
         table.remove(openCrimesWitnessCount, index)
     else
-        local accused = justice.getAccusedUnit(crime)
+        local accused = getAccusedUnit(crime)
         if accused ~= nil then
-            justice.scheduleInterview(crime, accused)
+            scheduleInterview(crime, accused)
         end
     end
 end
@@ -271,8 +495,8 @@ end
 function updateConfessedCrimes ()
     for i = #confessedCrimes, 1, -1 do
         local crime = confessedCrimes[i]
-        local confessed = justice.getConfessedUnit(crime)
-        if confessed ~= nil and justice.tryConvictUnit(crime, confessed, punishmentMode) then
+        local confessed = getConfessedUnit(crime)
+        if confessed ~= nil and tryConvictUnit(crime, confessed, punishmentMode) then
             table.remove(confessedCrimes, i)
         end
     end
@@ -281,7 +505,7 @@ end
 function convictConfessed (unit)
     for i = #confessedCrimes, 1, -1 do
         local crime = confessedCrimes[i]
-        if justice.hasConfessed(crime, unit) and justice.tryConvictUnit(crime, unit, punishmentMode) then
+        if hasConfessed(crime, unit) and tryConvictUnit(crime, unit, punishmentMode) then
             table.remove(confessedCrimes, i)
         end
     end
@@ -290,8 +514,8 @@ end
 function scheduleAccused (unit)
     for i = #openCrimes, 1, -1 do
         local crime = openCrimes[i]
-        if justice.isAccused(crime, unit) then
-            justice.scheduleInterview(crime, unit)
+        if isAccused(crime, unit) then
+            scheduleInterview(crime, unit)
         end
     end
 end
@@ -304,7 +528,7 @@ function onUnitNewActive (unitId)
 
     local crime = getInterviewCrime()
     if crime ~= nil then
-        if justice.scheduleInterview(crime, unit) then
+        if scheduleInterview(crime, unit) then
         end
     end
 
