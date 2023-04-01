@@ -216,10 +216,16 @@ function EditPanel:init()
             -- to the commandline
             ignore_keys={'STRING_A096'},
             on_char=function(ch, text)
-                if ch == ' ' then return text:match('%S$') end
+                if ch == ' ' and not text:match('%S$') then
+                    self:update_pause_label(true)
+                    return false
+                end
                 return true
             end,
-            on_change=self.on_change,
+            on_change=function(new,old)
+                self:update_pause_label(false, not new:match('%S$'))
+                self.on_change(new,old)
+            end,
             on_submit=self.on_submit,
             on_submit2=self.on_submit2},
         widgets.HotkeyLabel{
@@ -238,9 +244,13 @@ function EditPanel:init()
             key='CUSTOM_ALT_M',
             label=string.char(31)..string.char(30),
             on_activate=self.on_toggle_minimal},
+        widgets.Label{
+            view_id='pauselabel',
+            frame={l=13, t=3, w=15},
+            text={{key='D_PAUSE', key_sep=': ', text='unpause'}}},
         widgets.EditField{
             view_id='search',
-            frame={l=13, t=3, r=1},
+            frame={l=29, t=3, r=1},
             key='CUSTOM_ALT_S',
             label_text='history search: ',
             on_change=function(text) self:on_search_text(text) end,
@@ -258,6 +268,11 @@ function EditPanel:init()
             on_submit2=function()
                 self.on_submit2(self.subviews.editfield.text) end},
     }
+end
+
+function EditPanel:update_pause_label(changing, canchange)
+    self.subviews.pauselabel.enabled = canchange or false
+    self.subviews.pauselabel:setText({{key='D_PAUSE', key_sep=': ', text=(df.global.pause_state ~= changing) and 'unpause' or 'pause'}})
 end
 
 function EditPanel:reset_history_idx()
