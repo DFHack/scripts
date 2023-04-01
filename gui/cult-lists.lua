@@ -15,8 +15,7 @@
 	-- force-opening DF screens, such as unit screen, on unit selection so i don't have to open unit screen separately (doesn't help the code tho)
 
 --TO-DO
-	-- draw pen lines to act as separators
-	-- zoom on unit -- HOW??
+	-- zoom on unit -- can't be done yet
 	-- never touch LUA script again
 
 ------------------------------------------------------------------------------------------
@@ -1084,36 +1083,6 @@ end
 function EnableguiScreen:onDismiss()
     view = nil
 end
-
-
-
---[[ -- want to draw panel divisors, but this is chinese to me.
-
-local function paint_horizontal_border(rect)
-
-	local pen = dfhack.pen.parse{ch=196, fg=COLOR_ORANGE, bg=COLOR_BLACK}
-	
-    local panel_height = 6
-    local x1, x2 = rect.x1, rect.x2
-    local v_border_x = x2 - (10 + 2)
-    local y = rect.y1 + panel_height
-	--dfhack.screen.paintTile(LEFT_SPLIT_PEN, x1, y)
-    --dfhack.screen.paintTile(RIGHT_SPLIT_PEN, v_border_x, y)
-    for x=x1+1,v_border_x-1 do
-        dfhack.screen.paintTile(pen, 50, 50)
-    end
-end
-
-function Enablegui:onRenderFrame()
-
-	
-	paint_horizontal_border(rect)
-	--dfhack.screen.paintTile(pen, 50, 50)
-    --dfhack.screen.paintTile(LEFT_SPLIT_PEN, x1, y)
-    --dfhack.screen.paintTile(RIGHT_SPLIT_PEN, v_border_x, y)
-end
---]]
-
 
 -- execution
 
