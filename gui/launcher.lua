@@ -217,7 +217,7 @@ function EditPanel:init()
             ignore_keys={'STRING_A096'},
             on_char=function(ch, text)
                 if ch == ' ' and not text:match('%S$') then
-                    self:update_pause_label(true)
+                    self:update_pause_label(true, true)
                     return false
                 end
                 return true
@@ -246,7 +246,7 @@ function EditPanel:init()
             on_activate=self.on_toggle_minimal},
         widgets.Label{
             view_id='pauselabel',
-            frame={l=13, t=3, w=15},
+            frame={l=13, t=3, w=14},
             text={{key='D_PAUSE', key_sep=': ', text='unpause'}}},
         widgets.EditField{
             view_id='search',
@@ -271,7 +271,7 @@ function EditPanel:init()
 end
 
 function EditPanel:update_pause_label(changing, canchange)
-    self.subviews.pauselabel.enabled = canchange or false
+    self.subviews.pauselabel.enabled = canchange
     self.subviews.pauselabel:setText({{key='D_PAUSE', key_sep=': ', text=(df.global.pause_state ~= changing) and 'unpause' or 'pause'}})
 end
 
