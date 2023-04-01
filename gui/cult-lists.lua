@@ -139,44 +139,44 @@ end
 -- main body
 
 local globalCivList = {};  -- necessary, there's no way to link to a civ from a god's hist figure.
-						--[[ structure: { [index]={ [civ_race],
-													[civ_id],
-													[civ_deities]={ [index]={ [deity_name] } } 
-													} } --]]
+        --[[ structure: { [index]={ [civ_race],
+                                    [civ_id],
+                                    [civ_deities]={ [index]={ [deity_name] } } 
+                                    } } --]]
 local filteredUnitList = {}; -- we pull in-game gods and religions here
-						--[[ structure: { [index]={ [unit_data]={df.historical_figure},						-- table
-													[unit_id] 
-													} } --]]
+        --[[ structure: { [index]={ [unit_data]={df.historical_figure},						-- table
+                                    [unit_id] 
+                                    } } --]]
 
 
 local religionList = {}; -- pulled from unit list, rest of info pulled from entity links
-						--[[ structure: { [index]={ [religion_id],
-													[religion_name],                                        -- translated 
-													[religion_deity],                                       -- translated
-													[religion_civ],											-- translated 
-													[religion_civ_race_name],								-- written, singular noun
-													[member_list]={ [index] = { [member_game_id],
-																				[member_id], 
-																				[member_name],              -- untranslated
-																				[member_race], } }			-- written, singular noun
-													} } --]]
-													
+        --[[ structure: { [index]={ [religion_id],
+                                    [religion_name],                                        -- translated 
+                                    [religion_deity],                                       -- translated
+                                    [religion_civ],											-- translated 
+                                    [religion_civ_race_name],								-- written, singular noun
+                                    [member_list]={ [index] = { [member_game_id],
+                                                                [member_id], 
+                                                                [member_name],              -- untranslated
+                                                                [member_race], } }			-- written, singular noun
+                                    } } --]]
+                                    
 local deityList = {}; -- pulled from unit list and civ list, rest of info pulled from entity links
-						--[[ structure: { [index]={ [deity_id],	
-													[deity_name],											-- untranslated
-													[deity_race],											-- ID, for procedural races
-													[deity_race_name],                                      -- written, singular noun
-													[deity_civ_id],
-													[deity_civ_name],										-- translated
-													[deity_civ_race_name],                                  -- written, singular noun
-													[deity_spheres]={ [index]={ [deity_sphere] } }			-- written
-													[worshipper_list]={ [index] = { [worshipper_game_id], 
-																					[worshipper_id]
-																					[worshipper_name], 		 -- untranslated
-																					[worshipper_race],		 -- written, singular noun
-																					[worshipper_faith] } },  -- turned to text
-													} } --]]
-													
+        --[[ structure: { [index]={ [deity_id],	
+                                    [deity_name],											-- untranslated
+                                    [deity_race],											-- ID, for procedural races
+                                    [deity_race_name],                                      -- written, singular noun
+                                    [deity_civ_id],
+                                    [deity_civ_name],										-- translated
+                                    [deity_civ_race_name],                                  -- written, singular noun
+                                    [deity_spheres]={ [index]={ [deity_sphere] } }			-- written
+                                    [worshipper_list]={ [index] = { [worshipper_game_id], 
+                                                                    [worshipper_id]
+                                                                    [worshipper_name], 		 -- untranslated
+                                                                    [worshipper_race],		 -- written, singular noun
+                                                                    [worshipper_faith] } },  -- turned to text
+                                    } } --]]
+                                    
 local faithStrengthTable = { "ardent", "faithful", "regular", "casual", "dubious" };
 
 local function faithStrengthSort(strength)
