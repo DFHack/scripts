@@ -58,7 +58,7 @@ local helpText = [===[
 	==============
 	Organizes fort deities in a list. Default opens a GUI with deities and religions.
 	Alternative format lets results be printed to console, with some extra additions.
-	NOTE: DFHack API is currently unable to filter for permanent residents
+    Currently limited to citizens.
 
 	arguments:
 		-help
@@ -68,7 +68,7 @@ local helpText = [===[
 			disables the GUI
 			
 		-console 
-			prints reults to console plus a number of options
+			prints results to console plus a number of options
 			default state prints all deities and their followers
 			
 		-printreligions
