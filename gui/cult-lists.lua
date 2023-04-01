@@ -898,7 +898,7 @@ function Enablegui:label_sorter(arg) -- writes text snippets
 
     if arg == "line_4_subject" then -- spheres and deity
         if self.subviews.pages:getSelected() == 1 then
-            return table.concat(self.deity_spheres_table, ", ")..'.'
+            return table.concat(self.deity_spheres_table, ", ")
         else
             return self.religion_table[self.cult_index_state].religion_deity
         end
