@@ -51,8 +51,8 @@ Options
 Examples
 --------
 
-``gui/create-item``
+``gui/cult-lists``
 Loads GUI with deity and religions tabs
 
-``cult-lists -console -printunits -showids``
-All gods per unit with game id:
+``gui/cult-lists -nogui -console -printunits -showids``
+Prints all gods per unit, with game id:
