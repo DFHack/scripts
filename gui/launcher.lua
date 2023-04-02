@@ -305,6 +305,7 @@ end
 
 function EditPanel:set_text(text)
     self.subviews.editfield:setText(text)
+    self:update_pause_label(false, not text:match('%S$'))
     self:reset_history_idx()
 end
 
