@@ -328,6 +328,7 @@ function EditPanel:move_history(delta)
         text = history[history_idx]
     end
     editfield:setText(text)
+    self:update_pause_label(false, not text:match('%S$'))
     self.on_change(text)
 end
 
