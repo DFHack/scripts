@@ -9,7 +9,7 @@ local utils = require('utils')
 local widgets = require('gui.widgets')
 
 local AUTOCOMPLETE_PANEL_WIDTH = 25
-local EDIT_PANEL_HEIGHT = 4
+local EDIT_PANEL_HEIGHT = 5
 
 local HISTORY_SIZE = 5000
 local HISTORY_ID = 'gui/launcher'
@@ -246,11 +246,12 @@ function EditPanel:init()
             on_activate=self.on_toggle_minimal},
         widgets.Label{
             view_id='pauselabel',
-            frame={l=13, t=3, w=14},
-            text={{key='D_PAUSE', key_sep=': ', text='unpause'}}},
+            frame={l=13, t=3, w=21},
+            text={{key='D_PAUSE',key_sep=': ',text='no fort loaded',pen=COLOR_DARKGREY,key_pen=COLOR_GREEN}},
+            on_click=function() self:pause_fort() end},
         widgets.EditField{
             view_id='search',
-            frame={l=29, t=3, r=1},
+            frame={l=1, t=4, r=1},
             key='CUSTOM_ALT_S',
             label_text='history search: ',
             on_change=function(text) self:on_search_text(text) end,
@@ -268,11 +269,34 @@ function EditPanel:init()
             on_submit2=function()
                 self.on_submit2(self.subviews.editfield.text) end},
     }
+    self:update_pause_label(false,true)
 end
 
-function EditPanel:update_pause_label(changing, canchange)
-    self.subviews.pauselabel.enabled = canchange
-    self.subviews.pauselabel:setText({{key='D_PAUSE', key_sep=': ', text=(df.global.pause_state ~= changing) and 'unpause' or 'pause'}})
+function EditPanel:pause_fort()
+    if dfhack.isMapLoaded() then
+        df.global.pause_state = not df.global.pause_state
+    end
+    self:update_pause_label(false)
+end
+function EditPanel:enable_pause_label()
+    self.subviews.pauselabel.text[1].pen = COLOR_WHITE
+    self.subviews.pauselabel.text[1].key_pen = COLOR_LIGHTGREEN
+end
+function EditPanel:disable_pause_label()
+    self.subviews.pauselabel.text[1].pen = COLOR_DARKGREY
+    self.subviews.pauselabel.text[1].key_pen = COLOR_GREEN
+end
+function EditPanel:update_pause_label(willchange, canchange)
+    if dfhack.isMapLoaded() then
+        if canchange ~= nil then
+            if canchange then self:enable_pause_label()
+            else self:disable_pause_label() end
+        end
+        self.subviews.pauselabel.text[1].text = (df.global.pause_state ~= willchange) and 'unpause' or 'pause'
+    else
+        self:disable_pause_label()
+        self.subviews.pauselabel.text[1].text = 'no fort loaded'
+    end
 end
 
 function EditPanel:reset_history_idx()
@@ -480,7 +504,7 @@ HelpPanel.ATTRS{
 -- this text is intentionally unwrapped so the in-UI wrapping can do the job
 local DEFAULT_HELP_TEXT = [[Welcome to DFHack!
 
-Type a command to see its help text here. Hit ENTER to run the command, or tap backtick (`) or hit ESC to close this dialog. This dialog also closes automatically if you run a command that shows a new GUI screen.
+Type a command to see its help text here. Hit ENTER to run the command, or tap backtick (`) or hit ESC to close this dialog. This dialog also closes automatically if you run a command that shows a new GUI screen. You can press Space to unpause or pause a loaded fort (press Space twice while typing a command).
 
 Not sure what to do? First, try running "quickstart-guide" to get oriented with DFHack and its capabilities. Then maybe try the "tags" command to see the different categories of tools DFHack has to offer! Run "tags <tagname>" (e.g. "tags design") to see the tools in that category.
 
