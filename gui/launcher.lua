@@ -246,8 +246,8 @@ function EditPanel:init()
             on_activate=self.on_toggle_minimal},
         widgets.Label{
             view_id='pauselabel',
-            frame={r=12, t=0, w=14},
-            text={{key='D_PAUSE',key_sep=': ',text='no fort loaded',pen=COLOR_DARKGREY,key_pen=COLOR_GREEN}},
+            frame={r=12, t=0, w=7},
+            text={{text='no fort loaded',pen=COLOR_DARKGREY}},
             on_click=function() self:pause_fort() end},
         widgets.EditField{
             view_id='search',
@@ -280,11 +280,9 @@ function EditPanel:pause_fort()
 end
 function EditPanel:enable_pause_label()
     self.subviews.pauselabel.text[1].pen = COLOR_WHITE
-    self.subviews.pauselabel.text[1].key_pen = COLOR_LIGHTGREEN
 end
 function EditPanel:disable_pause_label()
     self.subviews.pauselabel.text[1].pen = COLOR_DARKGREY
-    self.subviews.pauselabel.text[1].key_pen = COLOR_GREEN
 end
 function EditPanel:update_pause_label(willchange, canchange)
     if dfhack.isMapLoaded() then
@@ -292,7 +290,7 @@ function EditPanel:update_pause_label(willchange, canchange)
             if canchange then self:enable_pause_label()
             else self:disable_pause_label() end
         end
-        self.subviews.pauselabel.text[1].text = (df.global.pause_state ~= willchange) and 'unpause' or 'pause'
+        self.subviews.pauselabel.text[1].text = (df.global.pause_state ~= willchange) and 'Paused' or 'Running'
         self.subviews.pauselabel.visible = true
     else
         self.subviews.pauselabel.text[1].text = 'no fort loaded'
