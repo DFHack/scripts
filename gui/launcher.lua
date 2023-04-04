@@ -9,7 +9,7 @@ local utils = require('utils')
 local widgets = require('gui.widgets')
 
 local AUTOCOMPLETE_PANEL_WIDTH = 25
-local EDIT_PANEL_HEIGHT = 5
+local EDIT_PANEL_HEIGHT = 4
 
 local HISTORY_SIZE = 5000
 local HISTORY_ID = 'gui/launcher'
@@ -246,12 +246,12 @@ function EditPanel:init()
             on_activate=self.on_toggle_minimal},
         widgets.Label{
             view_id='pauselabel',
-            frame={l=13, t=3, w=21},
+            frame={r=12, t=0, w=14},
             text={{key='D_PAUSE',key_sep=': ',text='no fort loaded',pen=COLOR_DARKGREY,key_pen=COLOR_GREEN}},
             on_click=function() self:pause_fort() end},
         widgets.EditField{
             view_id='search',
-            frame={l=1, t=4, r=1},
+            frame={l=13, t=3, r=1},
             key='CUSTOM_ALT_S',
             label_text='history search: ',
             on_change=function(text) self:on_search_text(text) end,
