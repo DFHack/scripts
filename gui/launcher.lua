@@ -293,9 +293,10 @@ function EditPanel:update_pause_label(willchange, canchange)
             else self:disable_pause_label() end
         end
         self.subviews.pauselabel.text[1].text = (df.global.pause_state ~= willchange) and 'unpause' or 'pause'
+        self.subviews.pauselabel.visible = true
     else
-        self:disable_pause_label()
         self.subviews.pauselabel.text[1].text = 'no fort loaded'
+        self.subviews.pauselabel.visible = false
     end
 end
 
