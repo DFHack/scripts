@@ -35,6 +35,19 @@ local GOODFLAG = {
 
 local trade = df.global.game.main_interface.trade
 
+local MARGIN_HEIGHT = 26 -- screen height *other* than the list
+
+function set_height(list_index, delta)
+    trade.i_height[list_index] = trade.i_height[list_index] + delta
+    if delta >= 0 then return end
+    _,screen_height = dfhack.screen.getWindowSize()
+    -- list only increments in three tiles at a time
+    local page_height = ((screen_height - 26) // 3) * 3
+    trade.scroll_position_item[list_index] = math.max(0,
+            math.min(trade.scroll_position_item[list_index],
+                     trade.i_height[list_index] - page_height))
+end
+
 function select_shift_clicked_container_items(new_state, old_state, list_index)
     -- if ctrl is also held, collapse the container too
     local also_collapse = dfhack.internal.getModifiers().ctrl
@@ -42,7 +55,7 @@ function select_shift_clicked_container_items(new_state, old_state, list_index)
     for k, goodflag in ipairs(new_state) do
         if in_container then
             if goodflag <= GOODFLAG.UNCONTAINED_SELECTED
-                    or goodflag >= GOODFLAG.CONTAINER_COLLAPSED_SELECTED then
+                    or goodflag >= GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED then
                 break
             end
 
@@ -59,7 +72,9 @@ function select_shift_clicked_container_items(new_state, old_state, list_index)
         if not is_container then goto continue end
 
         -- deselect the container itself
-        if also_collapse then
+        if also_collapse or
+                old_state[k] == GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED or
+                old_state[k] == GOODFLAG.CONTAINER_COLLAPSED_SELECTED then
             collapsing_container = goodflag == GOODFLAG.UNCONTAINED_SELECTED
             new_state[k] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED
         else
@@ -71,7 +86,7 @@ function select_shift_clicked_container_items(new_state, old_state, list_index)
     end
 
     if collapsed_item_count > 0 then
-        trade.i_height[list_index] = trade.i_height[list_index] - collapsed_item_count * 3
+        set_height(list_index, collapsed_item_count * -3)
     end
 end
 
@@ -89,7 +104,7 @@ function toggle_ctrl_clicked_containers(new_state, old_state, list_index)
     for k, goodflag in ipairs(new_state) do
         if in_container then
             if goodflag <= GOODFLAG.UNCONTAINED_SELECTED
-                    or goodflag >= GOODFLAG.CONTAINER_COLLAPSED_SELECTED then
+                    or goodflag >= GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED then
                 break
             end
             toggled_item_count = toggled_item_count + 1
@@ -111,7 +126,7 @@ function toggle_ctrl_clicked_containers(new_state, old_state, list_index)
     end
 
     if toggled_item_count > 0 then
-        trade.i_height[list_index] = trade.i_height[list_index] - toggled_item_count * 3 * (is_collapsing and 1 or -1)
+        set_height(list_index, toggled_item_count * 3 * (is_collapsing and -1 or 1))
     end
 end
 
@@ -127,14 +142,12 @@ function collapseTypes(types_list, list_index)
     end
 
     trade.i_height[list_index] = type_on_count * 3
+    trade.scroll_position_item[list_index] = 0
 end
 
 function collapseAllTypes()
    collapseTypes(trade.current_type_a_expanded[0], 0)
    collapseTypes(trade.current_type_a_expanded[1], 1)
-   -- reset scroll to top when collapsing types
-   trade.scroll_position_item[0] = 0
-   trade.scroll_position_item[1] = 0
 end
 
 function collapseContainers(item_list, list_index)
@@ -165,7 +178,7 @@ function collapseContainers(item_list, list_index)
     end
 
     if num_items_collapsed > 0 then
-        trade.i_height[list_index] = trade.i_height[list_index] - num_items_collapsed * 3
+        set_height(list_index, num_items_collapsed * -3)
     end
 end
 

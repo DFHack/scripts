@@ -6,11 +6,13 @@ local repeatUtil = require('repeat-util')
 local utils = require('utils')
 local widgets = require('gui.widgets')
 
+-- init files
+local SYSTEM_INIT_FILE = 'dfhack-config/init/dfhack.control-panel-system.init'
 local PREFERENCES_INIT_FILE = 'dfhack-config/init/dfhack.control-panel-preferences.init'
 local AUTOSTART_FILE = 'dfhack-config/init/onMapLoad.control-panel-new-fort.init'
 local REPEATS_FILE = 'dfhack-config/init/onMapLoad.control-panel-repeats.init'
 
--- eventually this should be queryable from Core/script-manager
+-- service and command lists
 local FORT_SERVICES = {
     'autobutcher',
     'autochop',
@@ -35,21 +37,27 @@ local FORT_SERVICES = {
 
 local FORT_AUTOSTART = {
     'ban-cooking all',
-    --'buildingplan set boulders false',
-    --'buildingplan set logs false',
+    'buildingplan set boulders false',
+    'buildingplan set logs false',
 }
 for _,v in ipairs(FORT_SERVICES) do
     table.insert(FORT_AUTOSTART, v)
 end
 table.sort(FORT_AUTOSTART)
 
--- eventually this should be queryable from Core/script-manager
 local SYSTEM_SERVICES = {
     'automelt', -- TODO needs dynamic detection of configurability
     'buildingplan',
     'confirm',
     'overlay',
 }
+local SYSTEM_USER_SERVICES = {
+    'faststart',
+}
+for _,v in ipairs(SYSTEM_USER_SERVICES) do
+    table.insert(SYSTEM_SERVICES, v)
+end
+table.sort(SYSTEM_SERVICES)
 
 local PREFERENCES = {
     ['gui']={
@@ -109,32 +117,35 @@ local function save_file(path, save_fn)
     f:close()
 end
 
-
 local function get_icon_pens()
     local start = dfhack.textures.getControlPanelTexposStart()
     local valid = start > 0
     start = start + 10
 
+    local function tp(offset)
+        return valid and start + offset or nil
+    end
+
     local enabled_pen_left = dfhack.pen.parse{fg=COLOR_CYAN,
-            tile=valid and (start+0) or nil, ch=string.byte('[')}
+            tile=tp(0), ch=string.byte('[')}
     local enabled_pen_center = dfhack.pen.parse{fg=COLOR_LIGHTGREEN,
-            tile=valid and (start+1) or nil, ch=251} -- check
+            tile=tp(1) or nil, ch=251} -- check
     local enabled_pen_right = dfhack.pen.parse{fg=COLOR_CYAN,
-            tile=valid and (start+2) or nil, ch=string.byte(']')}
+            tile=tp(2) or nil, ch=string.byte(']')}
     local disabled_pen_left = dfhack.pen.parse{fg=COLOR_CYAN,
-            tile=valid and (start+3) or nil, ch=string.byte('[')}
+            tile=tp(3) or nil, ch=string.byte('[')}
     local disabled_pen_center = dfhack.pen.parse{fg=COLOR_RED,
-            tile=valid and (start+4) or nil, ch=string.byte('x')}
+            tile=tp(4) or nil, ch=string.byte('x')}
     local disabled_pen_right = dfhack.pen.parse{fg=COLOR_CYAN,
-            tile=valid and (start+5) or nil, ch=string.byte(']')}
+            tile=tp(5) or nil, ch=string.byte(']')}
     local button_pen_left = dfhack.pen.parse{fg=COLOR_CYAN,
-            tile=valid and (start+6) or nil, ch=string.byte('[')}
+            tile=tp(6) or nil, ch=string.byte('[')}
     local button_pen_right = dfhack.pen.parse{fg=COLOR_CYAN,
-            tile=valid and (start+7) or nil, ch=string.byte(']')}
+            tile=tp(7) or nil, ch=string.byte(']')}
     local help_pen_center = dfhack.pen.parse{
-            tile=valid and (start+8) or nil, ch=string.byte('?')}
+            tile=tp(8) or nil, ch=string.byte('?')}
     local configure_pen_center = dfhack.pen.parse{
-            tile=valid and (start+9) or nil, ch=15} -- gear/masterwork symbol
+            tile=tp(9) or nil, ch=15} -- gear/masterwork symbol
     return enabled_pen_left, enabled_pen_center, enabled_pen_right,
             disabled_pen_left, disabled_pen_center, disabled_pen_right,
             button_pen_left, button_pen_right,
@@ -376,12 +387,13 @@ function FortServicesAutostart:init()
     local enabled_map = {}
     local ok, f = pcall(io.open, AUTOSTART_FILE)
     if ok and f then
+        local services_set = utils.invert(FORT_AUTOSTART)
         for line in f:lines() do
             line = line:trim()
             if #line == 0 or line:startswith('#') then goto continue end
             local service = line:match('^on%-new%-fortress enable ([%S]+)$')
                     or line:match('^on%-new%-fortress (.+)')
-            if service then
+            if service and services_set[service] then
                 enabled_map[service] = true
             end
             ::continue::
@@ -423,11 +435,26 @@ SystemServices.ATTRS{
     title='System',
     is_enableable=true,
     is_configurable=true,
-    intro_text='These are DFHack system services that should generally not'..
-                ' be turned off. If you do turn them off, they may'..
-                ' automatically re-enable themselves when you restart DF.',
+    intro_text='These are DFHack system services that are not bound to' ..
+            ' a specific fort. Some of these are critical DFHack services' ..
+            ' that can be manually disabled, but will re-enable themselves' ..
+            ' when DF restarts.',
     services_list=SYSTEM_SERVICES,
 }
+
+function SystemServices:on_submit()
+    SystemServices.super.on_submit(self)
+
+    local enabled_map = self:get_enabled_map()
+    local save_fn = function(f)
+        for _,service in ipairs(SYSTEM_USER_SERVICES) do
+            if enabled_map[service] then
+                f:write(('enable %s\n'):format(service))
+            end
+        end
+    end
+    save_file(SYSTEM_INIT_FILE, save_fn)
+end
 
 --
 -- Overlays

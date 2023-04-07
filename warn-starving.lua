@@ -98,7 +98,7 @@ function doCheck()
     for i=#units-1, 0, -1 do
         local unit = units[i]
         local rraw = findRaceCaste(unit)
-        if not rraw or not dfhack.units.isFortControlled(unit) then goto continue end
+        if not rraw or not dfhack.units.isFortControlled(unit) or dfhack.units.isDead(unit) then goto continue end
         if checkOnlySane and not dfhack.units.isSane(unit) then goto continue end
         table.insert(messages, checkVariable(unit.counters2.hunger_timer, 75000, 'starving', starvingUnits, unit))
         table.insert(messages, checkVariable(unit.counters2.thirst_timer, 50000, 'dehydrated', dehydratedUnits, unit))
