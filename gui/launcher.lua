@@ -216,10 +216,16 @@ function EditPanel:init()
             -- to the commandline
             ignore_keys={'STRING_A096'},
             on_char=function(ch, text)
-                if ch == ' ' then return text:match('%S$') end
+                if ch == ' ' and not text:match('%S$') then
+                    self:update_pause_label(true, true)
+                    return false
+                end
                 return true
             end,
-            on_change=self.on_change,
+            on_change=function(new,old)
+                self:update_pause_label(false, not new:match('%S$'))
+                self.on_change(new,old)
+            end,
             on_submit=self.on_submit,
             on_submit2=self.on_submit2},
         widgets.HotkeyLabel{
@@ -238,6 +244,11 @@ function EditPanel:init()
             key='CUSTOM_ALT_M',
             label=string.char(31)..string.char(30),
             on_activate=self.on_toggle_minimal},
+        widgets.Label{
+            view_id='pauselabel',
+            frame={r=12, t=0, w=7},
+            text={{text='no fort loaded',pen=COLOR_DARKGREY}},
+            on_click=function() self:pause_fort() end},
         widgets.EditField{
             view_id='search',
             frame={l=13, t=3, r=1},
@@ -258,6 +269,33 @@ function EditPanel:init()
             on_submit2=function()
                 self.on_submit2(self.subviews.editfield.text) end},
     }
+    self:update_pause_label(false,true)
+end
+
+function EditPanel:pause_fort()
+    if dfhack.isMapLoaded() then
+        df.global.pause_state = not df.global.pause_state
+    end
+    self:update_pause_label(false)
+end
+function EditPanel:enable_pause_label()
+    self.subviews.pauselabel.text[1].pen = COLOR_WHITE
+end
+function EditPanel:disable_pause_label()
+    self.subviews.pauselabel.text[1].pen = COLOR_DARKGREY
+end
+function EditPanel:update_pause_label(willchange, canchange)
+    if dfhack.isMapLoaded() then
+        if canchange ~= nil then
+            if canchange then self:enable_pause_label()
+            else self:disable_pause_label() end
+        end
+        self.subviews.pauselabel.text[1].text = (df.global.pause_state ~= willchange) and 'Paused' or 'Running'
+        self.subviews.pauselabel.visible = true
+    else
+        self.subviews.pauselabel.text[1].text = 'no fort loaded'
+        self.subviews.pauselabel.visible = false
+    end
 end
 
 function EditPanel:reset_history_idx()
@@ -266,6 +304,7 @@ end
 
 function EditPanel:set_text(text)
     self.subviews.editfield:setText(text)
+    self:update_pause_label(false, not text:match('%S$'))
     self:reset_history_idx()
 end
 
@@ -288,6 +327,7 @@ function EditPanel:move_history(delta)
         text = history[history_idx]
     end
     editfield:setText(text)
+    self:update_pause_label(false, not text:match('%S$'))
     self.on_change(text)
 end
 
@@ -465,7 +505,7 @@ HelpPanel.ATTRS{
 -- this text is intentionally unwrapped so the in-UI wrapping can do the job
 local DEFAULT_HELP_TEXT = [[Welcome to DFHack!
 
-Type a command to see its help text here. Hit ENTER to run the command, or tap backtick (`) or hit ESC to close this dialog. This dialog also closes automatically if you run a command that shows a new GUI screen.
+Type a command to see its help text here. Hit ENTER to run the command, or tap backtick (`) or hit ESC to close this dialog. This dialog also closes automatically if you run a command that shows a new GUI screen. You can press Space to unpause or pause a loaded fort (press Space twice while typing a command).
 
 Not sure what to do? First, try running "quickstart-guide" to get oriented with DFHack and its capabilities. Then maybe try the "tags" command to see the different categories of tools DFHack has to offer! Run "tags <tagname>" (e.g. "tags design") to see the tools in that category.
 

@@ -22,7 +22,8 @@ that repo.
 
 ## Misc Improvements
 - `gui/gm-editor`: can now jump to material info objects from a mat_type reference with a mat_index using ``i``
-- `gui/gm-editor`: they key column now auto-fits to the widest key
+- `gui/gm-editor`: the key column now auto-fits to the widest key
+- `gui/launcher`: add a label to show the game pause state and when it can change by pressing space
 - `prioritize`: revise and simplify the default list of prioritized jobs -- be sure to tell us if your forts are running noticeably better (or worse!)
 - `gui/control-panel`: add `faststart` to the system services
 
