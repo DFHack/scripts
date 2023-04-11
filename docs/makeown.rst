@@ -2,11 +2,11 @@ makeown
 =======
 
 .. dfhack-tool::
-    :summary: Converts the selected unit to be a member of your fortress. Adds them as a citizen.
+    :summary: Converts the selected unit to be a fortress citizen and removes their foreign affliation.
     :tags: fort armok units
 
 Usage
 -----
 
 ``makeown``
-    Converts the selected unit to be a member of your fortress. Adds them as a citizen
+    Converts the selected unit to be a fortress citizen and removes their foreign affliation
