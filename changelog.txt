@@ -26,6 +26,7 @@ that repo.
 - `gui/gm-editor`: they key column now auto-fits to the widest key
 - `prioritize`: revise and simplify the default list of prioritized jobs -- be sure to tell us if your forts are running noticeably better (or worse!)
 - `gui/control-panel`: add `faststart` to the system services
+- `makeown`: minor adjustment made to documentation, description, and usage.  
 
 ## Removed
 
