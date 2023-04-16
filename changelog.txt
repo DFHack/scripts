@@ -16,17 +16,27 @@ that repo.
 ## New Scripts
 
 ## Fixes
-- `caravan`: fix trade good list sometimes disappearing when you collapse a bin
-- `gui/gm-editor`: no longer nudges last open window when opening a new one
+
+## Misc Improvements
+- `gui/gm-editor`: press ``g`` to move the map to the currently selected item/unit/building
+
+## Removed
+
+# 50.07-r1
+
+## New Scripts
+
+## Fixes
+-@ `caravan`: fix trade good list sometimes disappearing when you collapse a bin
+-@ `gui/gm-editor`: no longer nudges last open window when opening a new one
 - `warn-starving`: no longer warns for dead units
-- `gui/control-panel`: the config UI for `automelt` is no longer offered when not in fortress mode
+-@ `gui/control-panel`: the config UI for `automelt` is no longer offered when not in fortress mode
 
 ## Misc Improvements
 - `gui/gm-editor`: can now jump to material info objects from a mat_type reference with a mat_index using ``i``
-- `gui/gm-editor`: they key column now auto-fits to the widest key
+- `gui/gm-editor`: the key column now auto-fits to the widest key
 - `prioritize`: revise and simplify the default list of prioritized jobs -- be sure to tell us if your forts are running noticeably better (or worse!)
-- `gui/control-panel`: add `faststart` to the system services
-- `makeown`: minor adjustment made to documentation, description, and usage.
+-@ `gui/control-panel`: add `faststart` to the system services
 
 ## Removed
 
@@ -38,28 +48,28 @@ that repo.
 - `gui/civ-alert`: configure and trigger civilian alerts
 
 ## Fixes
-- `caravan`: item list length now correct when expanding and collapsing containers
-- `prioritize`: fixed all watched job type names showing as ``nil`` after a game load
-- `suspendmanager`: does not suspend non-blocking jobs such as floor bars or bridges anymore
-- `suspendmanager`: fix occasional bad identification of buildingplan jobs
+-@ `caravan`: item list length now correct when expanding and collapsing containers
+-@ `prioritize`: fixed all watched job type names showing as ``nil`` after a game load
+-@ `suspendmanager`: does not suspend non-blocking jobs such as floor bars or bridges anymore
+-@ `suspendmanager`: fix occasional bad identification of buildingplan jobs
 - `warn-starving`: no longer warns for enemy and neutral units
 
 ## Misc Improvements
 - `gui/control-panel`: Now detects overlays from scripts named with capital letters
 - `gui/cp437-table`: now has larger key buttons and clickable backspace/submit/cancel buttons, making it fully usable on the Steam Deck and other systems that don't have an accessible keyboard
-- `gui/design`: Now supports placing constructions using 'Building' mode. Inner and Outer tile constructions are configurable. Uses buildingplan filters set up with the regular buildingplan interface.
+-@ `gui/design`: Now supports placing constructions using 'Building' mode. Inner and Outer tile constructions are configurable. Uses buildingplan filters set up with the regular buildingplan interface.
 - `exterminate`: add support for ``vaporize`` kill method for when you don't want to leave a corpse
 - `combine`: you can select a target stockpile in the UI instead of having to use the keyboard cursor
 - `combine`: added ``--quiet`` option for no output when there are no changes
 - `stripcaged`: added ``--skip-forbidden`` option for greater control over which items are marked for dumping
 - `stripcaged`: items that are marked for dumping are now automatically unforbidden (unless ``--skip-forbidden`` is set)
-- `gui/control-panel`: added ``combine all`` maintenance option for automatic combining of partial stacks in stockpiles
-- `gui/control-panel`: added ``general-strike`` maintenance option for automatic fixing of (at least one cause of) the general strike bug
+-@ `gui/control-panel`: added ``combine all`` maintenance option for automatic combining of partial stacks in stockpiles
+-@ `gui/control-panel`: added ``general-strike`` maintenance option for automatic fixing of (at least one cause of) the general strike bug
 - `gui/cp437-table`: dialog is now fully controllable with the mouse, including highlighting which key you are hovering over and adding a clickable backspace button
 
 ## Removed
 - `autounsuspend`: replaced by `suspendmanager`
-- `gui/dig`: renamed to `gui/design`
+-@ `gui/dig`: renamed to `gui/design`
 
 # 50.07-beta1
 
@@ -69,7 +79,7 @@ that repo.
 - `suspend`: suspends building construction jobs
 
 ## Fixes
-- `quicksave`: now reliably triggers an autosave, even if one has been performed recently
+-@ `quicksave`: now reliably triggers an autosave, even if one has been performed recently
 - `gui/launcher`: tab characters in command output now appear as a space instead of a code page 437 "blob"
 
 ## Misc Improvements
@@ -93,8 +103,8 @@ that repo.
 - `combine`: combines stacks of food and plant items.
 
 ## Fixes
-- `troubleshoot-item`: fix printing of job details for chosen item
-- `makeown`: fixes errors caused by using makeown on an invader
+-@ `troubleshoot-item`: fix printing of job details for chosen item
+-@ `makeown`: fixes errors caused by using makeown on an invader
 -@ `gui/blueprint`: correctly use setting presets passed on the commandline
 -@ `gui/quickfort`: correctly use settings presets passed on the commandline
 - `devel/query`: can now properly index vectors in the --table argument
@@ -108,7 +118,7 @@ that repo.
 - `devel/visualize-structure`: now automatically inspects the contents of most pointer fields, rather than inspecting the pointers themselves
 - `devel/query`: will now search for jobs at the map coordinate highlighted, if no explicit job is highlighted and there is a map tile highlighted
 - `caravan`: add trade screen overlay that assists with seleting groups of items and collapsing groups in the UI
-- `gui/gm-editor` will now inspect a selected building itself if the building has no current jobs
+- `gui/gm-editor`: will now inspect a selected building itself if the building has no current jobs
 
 ## Removed
 - `combine-drinks`: replaced by `combine`
@@ -117,8 +127,8 @@ that repo.
 # 50.07-alpha1
 
 ## New Scripts
-- `gui/dig`: digging designation tool for shapes and patterns
-- `makeown`: adds the selected unit as a member of your fortress
+- `gui/design`: digging and construction designation tool with shapes and patterns
+- `makeown`: makes the selected unit a citizen of your fortress
 
 ## Fixes
 -@ `gui/unit-syndromes`: allow the window widgets to be interacted with
@@ -130,7 +140,7 @@ that repo.
 - `gui/gm-editor`: now supports multiple independent data inspection windows
 - `gui/gm-editor`: now prints out contents of coordinate vars instead of just the type
 - `rejuvenate`: now takes an --age parameter to choose a desired age.
-- `gui/dig` : Added 'Line' shape that also can draw curves, added draggable center handle
+-@ `gui/dig` : Added 'Line' shape that also can draw curves, added draggable center handle
 
 # 50.05-alpha3.1
 
@@ -173,7 +183,7 @@ that repo.
 - `gui/quickfort`: don't close the window when applying a blueprint so players can apply the same blueprint multiple times more easily
 - `locate-ore`: now only searches revealed tiles by default
 - `modtools/spawn-liquid`: sets tile temperature to stable levels when spawning water or magma
-- `prioritize`: pushing minecarts is now included in the default priortization list
+-@ `prioritize`: pushing minecarts is now included in the default priortization list
 - `prioritize`: now automatically starts boosting the default list of job types when enabled
 - `unforbid`: avoids unforbidding unreachable and underwater items by default
 - `gui/create-item`: added whole corpse spawning alongside corpsepieces. (under "corpse")
@@ -193,7 +203,7 @@ that repo.
 # 50.05-alpha1
 
 ## New Scripts
-- `gui/autochop`: configuration frontend for the `autochop` plugin. you can pin the window and leave it up on the screen somewhere for live monitoring of your logging industry.
+- `gui/autochop`: configuration frontend and status monitor for the `autochop` plugin
 - `devel/tile-browser`: page through available textures and see their texture ids
 - `allneeds`: list all unmet needs sorted by how many dwarves suffer from them.
 

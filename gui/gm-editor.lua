@@ -29,6 +29,7 @@ local keybindings_raw = {
     {name='delete', key="CUSTOM_ALT_D",desc="Delete selected entry"},
     {name='reinterpret', key="CUSTOM_ALT_R",desc="Open selected entry as something else"},
     {name='start_filter', key="CUSTOM_S",desc="Start typing filter, Enter to finish"},
+    {name='gotopos', key="CUSTOM_G",desc="Move map view to location of target"},
     {name='help', key="STRING_A063",desc="Show this help"},
     {name='displace', key="STRING_A093",desc="Open reference offseted by index"},
     --{name='NOT_USED', key="SEC_SELECT",desc="Edit selected entry as a number (for enums)"}, --not a binding...
@@ -345,6 +346,46 @@ function GmEditorUi:openOffseted(index,choice)
             self:pushTarget(trg.target[trg_key]:_displace(tonumber(choice)))
         end)
 end
+function GmEditorUi:locate(t)
+    if getmetatable(t) == 'coord' then return t end
+    if df.unit:is_instance(t) then return xyz2pos(dfhack.units.getPosition(t)) end
+    if df.item:is_instance(t) then return xyz2pos(dfhack.items.getPosition(t)) end
+    if df.building:is_instance(t) then return xyz2pos(t.centerx, t.centery, t.z) end
+    -- anything else - look for pos or x/y/z fields
+    local ok, pos = pcall(function() return t.pos end)
+    if getmetatable(pos) == 'coord' then return pos end
+    local x,y,z
+    ok, x = pcall(function() return t.x end)
+    if type(x)~='number' then ok, x = pcall(function() return t.centerx end) end
+    if type(x)~='number' then ok, x = pcall(function() return t.x1 end) end
+    ok, y = pcall(function() return t.y end)
+    if type(y)~='number' then ok, y = pcall(function() return t.centery end) end
+    if type(y)~='number' then ok, y = pcall(function() return t.y1 end) end
+    ok, z = pcall(function() return t.z end)
+    if type(x)=='number' and type(y)=='number' and type(z)=='number' then
+        return xyz2pos(x,y,z)
+    end
+    return nil
+end
+function GmEditorUi:gotoPos()
+    if not dfhack.isMapLoaded() then return end
+    -- if the selected value is a coord then use it
+    local pos = self:getSelectedValue()
+    if getmetatable(pos) ~= 'coord' then
+        -- otherwise locate the current target
+        pos = GmEditorUi:locate(self:currentTarget().target)
+        if not pos then
+            -- otherwise locate the current selected value
+            pos = GmEditorUi:locate(self:getSelectedValue())
+        end
+    end
+    if pos then
+        dfhack.gui.revealInDwarfmodeMap(pos,true)
+        df.global.game.main_interface.recenter_indicator_m.x = pos.x
+        df.global.game.main_interface.recenter_indicator_m.y = pos.y
+        df.global.game.main_interface.recenter_indicator_m.z = pos.z
+    end
+end
 function GmEditorUi:editSelectedRaw(index,choice)
     self:editSelected(index, choice, {raw=true})
 end
@@ -453,6 +494,9 @@ function GmEditorUi:onInput(keys)
     elseif keys[keybindings.reinterpret.key] then
         self:openReinterpret(self:getSelectedKey())
         return true
+    elseif keys[keybindings.gotopos.key] then
+        self:gotoPos()
+        return true
     elseif keys[keybindings.help.key] then
         self.subviews.pages:setSelected(2)
         return true
@@ -506,7 +550,7 @@ function GmEditorUi:updateTarget(preserve_pos,reindex)
     self.subviews.lbl_current_item:itemById('name').text=tostring(trg.target)
     local t={}
     for k,v in pairs(trg.keys) do
-        table.insert(t,{text={{text=string.format("%-"..trg.kw.."s",tostring(v))},{gap=1,text=getStringValue(trg,v)}}})
+        table.insert(t,{text={{text=string.format("%-"..trg.kw.."s",tostring(v))},{gap=2,text=getStringValue(trg,v)}}})
     end
     local last_pos
     if preserve_pos then
