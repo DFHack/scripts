@@ -6,7 +6,7 @@ makeown
     :tags: fort armok units
 
 Select a unit in the UI and run this tool to converts that unit to be a fortress
-citizen. It also removes their foreign affliation, if any.
+citizen. It also removes their foreign affiliation, if any.
 
 Usage
 -----
