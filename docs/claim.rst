@@ -1,7 +1,6 @@
-.. _unforbid:
-
 claim
 =====
+.. _unforbid:
 
 .. dfhack-tool::
     :summary: Claim all items.
