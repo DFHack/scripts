@@ -64,7 +64,7 @@ if positionals[1] == "all" then
         count = count + 1
     end
 
-    print(("Forbade %s items, you can unforbid them by running `unforbid all`"):format(count))
+    print(("Forbade %s items, you can claim them by running `claim all`"):format(count))
 end
 
 if positionals[1] == "unreachable" then
@@ -93,5 +93,5 @@ if positionals[1] == "unreachable" then
         :: skipitem ::
     end
 
-    print(("Forbade %s items, you can unforbid them by running `unforbid all`"):format(count))
+    print(("Forbade %s items, you can claim them by running `claim all`"):format(count))
 end

@@ -1,9 +1,9 @@
--- Unforbid all items
+-- Claim all items
 
 local argparse = require('argparse')
 
-local function unforbid_all(include_unreachable, quiet)
-    if not quiet then print('Unforbidding all items...') end
+local function claim_all(include_unreachable, quiet)
+    if not quiet then print('Claiming all items...') end
 
     local citizens = dfhack.units.getCitizens()
     local count = 0
@@ -24,7 +24,7 @@ local function unforbid_all(include_unreachable, quiet)
                 end
             end
 
-            if not quiet then print(('  unforbid: %s'):format(item)) end
+            if not quiet then print(('  claim: %s'):format(item)) end
             item.flags.forbid = false
             count = count + 1
 
@@ -32,7 +32,7 @@ local function unforbid_all(include_unreachable, quiet)
         end
     end
 
-    if not quiet then print(('%d items unforbidden'):format(count)) end
+    if not quiet then print(('%d items claimed'):format(count)) end
 end
 
 -- let the common --help parameter work, even though it's undocumented
@@ -53,5 +53,5 @@ if positionals[1] == nil or positionals[1] == 'help' or options.help then
 end
 
 if positionals[1] == 'all' then
-    unforbid_all(options.include_unreachable, options.quiet)
+    claim_all(options.include_unreachable, options.quiet)
 end
