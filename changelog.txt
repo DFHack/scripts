@@ -16,6 +16,14 @@ that repo.
 ## New Scripts
 
 ## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 50.08-r1
+
+## Fixes
 - `deteriorate`: ensure remains of enemy dwarves are properly deteriorated
 - `suspendmanager`: Fix over-aggressive suspension of jobs that could still possibly be done (e.g. jobs that are partially submerged in water)
 
@@ -28,8 +36,6 @@ that repo.
 - `gui/launcher`: DFHack version now shown in the default help text
 - `gui/prerelease-warning`: widgets are now clickable
 - `unforbid`: renamed to `claim`; alias for 'unforbid' -> 'claim' added to default init script
-
-## Removed
 
 # 50.07-r1
 
