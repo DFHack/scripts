@@ -185,11 +185,15 @@ argparse.processArgsGetopt({...}, {
 
 local skipped_counts = {}
 local unsuspended_count = 0
+local manager = suspendmanager.SuspendManager.new()
+if skipblocking then
+    manager:computeBlockingJobs()
+end
 
 suspendmanager.foreach_construction_job(function(job)
     if not job.flags.suspend then return end
 
-    local skip,reason=suspendmanager.shouldStaySuspended(job, skipblocking)
+    local skip,reason=manager:shouldStaySuspended(job)
     if skip then
         skipped_counts[reason] = (skipped_counts[reason] or 0) + 1
         return

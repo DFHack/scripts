@@ -22,6 +22,7 @@ that repo.
 
 ## Misc Improvements
 - `gui/create-item`: ask for number of items to spawn by default
+- `suspendmanager`: improve detection of potentially blocking jobs
 
 ## Removed
 

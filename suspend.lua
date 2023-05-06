@@ -16,8 +16,14 @@ if help then
     return
 end
 
+local manager = suspendmanager.SuspendManager.new()
+
+if onlyblocking then
+    manager:computeBlockingJobs()
+end
+
 suspendmanager.foreach_construction_job(function (job)
-    if not onlyblocking or suspendmanager.isBlocking(job) then
+    if not onlyblocking or manager:shouldBeSuspended(job) then
         suspendmanager.suspend(job)
     end
 end)

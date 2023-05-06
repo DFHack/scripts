@@ -21,6 +21,24 @@ preventblocking = preventblocking == nil and true or preventblocking
 eventful.enableEvent(eventful.eventType.JOB_INITIATED, 10)
 eventful.enableEvent(eventful.eventType.JOB_COMPLETED, 10)
 
+SuspendManager = defclass(SuspendManager)
+SuspendManager.ATTRS {
+    --- List of jobs that are blocking others
+    blockingJobs = {},
+    --- List of already computed jobs
+    visited = {},
+    --- Time of the last update, used to avoid recomputing the same
+    --- thing when the many job events are fired on the same tick
+    lastTick = -1,
+}
+
+function SuspendManager.new()
+    return SuspendManager {}
+end
+
+-- SuspendManager instance kept between frames
+Instance = SuspendManager.new()
+
 function isEnabled()
     return enabled
 end
@@ -104,18 +122,22 @@ local function isImpassable(building)
     end
 end
 
---- True if there is a construction plan to build an unwalkable tile
+--- Return the job at a given position if it will be impassable
 ---@param pos coord
----@return boolean
-local function plansToConstructImpassableAt(pos)
+---@return job?
+local function getPlansToConstructImpassableAt(pos)
     --- @type building_constructionst|building
     local building = dfhack.buildings.findAtTile(pos)
-    if not building then return false end
+    if not building then return nil end
     if building.flags.exists then
         -- The building is already created
-        return false
+        return nil
     end
-    return isImpassable(building)
+    if not isImpassable(building) then
+        return nil
+    end
+
+    return building.jobs[0]
 end
 
 --- Check if the tile can be walked on
@@ -142,64 +164,149 @@ local function neighbours(pos)
     }
 end
 
---- Get the amount of risk a tile is to be blocked
---- -1: There is a nearby walkable area with no plan to build a wall
---- >=0: Surrounded by either unwalkable tiles, or tiles that will be constructed
---- with unwalkable buildings. The value is the number of already unwalkable tiles.
----@param pos coord
-local function riskOfStuckConstructionAt(pos)
-    local risk = 0
-    for _,neighbourPos in pairs(neighbours(pos)) do
-        if not walkable(neighbourPos) then
-            -- blocked neighbour, increase danger
-            risk = risk + 1
-        elseif not plansToConstructImpassableAt(neighbourPos) then
-            -- walkable neighbour with no plan to build a wall, no danger
-            return -1
-        end
+--- Reset the list of visited and blocking jobs if its outdated
+function SuspendManager:resetIfNewTick()
+    local tick = dfhack.getTickCount()
+    if self.lastTick ~= tick then
+        self.visited = {}
+        self.blockingJobs = {}
+        self.lastTick = tick
     end
-    return risk
 end
 
---- Return true if this job is at risk of blocking another one
-function isBlocking(job)
-    -- Not a construction job, no risk
-    if job.job_type ~= df.job_type.ConstructBuilding then return false end
-
-    local building = dfhack.job.getHolder(job)
-    --- Not building a blocking construction, no risk
-    if not building or not isImpassable(building) then return false end
-
-    --- job.pos is sometimes off by one, get the building pos
-    local pos = {x=building.centerx,y=building.centery,z=building.z}
-
-    --- Get self risk of being blocked
-    local risk = riskOfStuckConstructionAt(pos)
-
+--- Read the neighbourhood status of a position
+--- Return the list of neighbours, number of passables neighbours and number of impassables neighbours
+--- @param pos coord Position to analyze
+--- @param exclude table<integer, boolean> Set of jobs to to consider as blocked
+local function readNeighbourhood(pos, exclude)
+    local impassables = 0
+    local passables = 0
+    local connectedJobs = {}
     for _,neighbourPos in pairs(neighbours(pos)) do
-        if plansToConstructImpassableAt(neighbourPos) and riskOfStuckConstructionAt(neighbourPos) > risk then
-            --- This neighbour job is at greater risk of getting stuck
-            return true
+        local neighbourJob = getPlansToConstructImpassableAt(neighbourPos)
+        if not walkable(neighbourPos) then
+            impassables = impassables + 1
+        elseif neighbourJob ~= nil then
+            if exclude[neighbourJob.id] then
+                impassables = impassables + 1
+            else
+                table.insert(connectedJobs, table.pack(neighbourJob.id, neighbourPos))
+            end
+        else
+            passables = passables + 1
         end
     end
+    return passables, impassables, connectedJobs
+end
 
-    return false
+--- Explore a job and all the connected jobs to it
+--- All the jobs considered as potentially blocking are stored in self.blockingJobs
+--- All the visited jobs are stored in self.visited, which can be used to prevent analyzing
+--- twice the same cluster
+---@param job job A job from the cluster to analyze
+function SuspendManager:computeClusterBlockingJobs(job)
+    -- Not a construction job, no risk
+    if job.job_type ~= df.job_type.ConstructBuilding then return end
+    local building = dfhack.job.getHolder(job)
+
+    --- Not building a blocking construction, no risk
+    if not building or not isImpassable(building) then return end
+
+    --- job.pos is sometimes off by one, get the building pos
+    local jobPos = {x=building.centerx,y=building.centery,z=building.z}
+
+    -- list of jobs leading to a walkable area, assumed to be an exit
+    local clusterExits = {}
+
+    -- list of jobs part of a dead end corridor
+    -- When exploring other dead end corridors, these are excluded
+    local leadsToDeadend = {}
+
+    -- remainder (job,position) to visit for this cluster of jobs
+    -- It is populated as the cluster is visited
+    local toVisit = {table.pack(job.id, jobPos)}
+
+    local clusterSize = 0
+
+    repeat
+        clusterSize = clusterSize + 1
+        local jobId, pos = table.unpack(table.remove(toVisit))
+        if not self.visited[jobId] then
+            self.visited[jobId] = true
+
+            local passables, impassables, connectedJobs = readNeighbourhood(pos, {})
+            for _, connectedJob in ipairs(connectedJobs) do
+                -- store the connected jobs for a future loop
+                table.insert(toVisit, connectedJob)
+            end
+
+            -- One walkable neighbour without any plan,
+            -- Register as an exit of the cluster
+            if passables > 0 then
+                table.insert(clusterExits, table.pack(jobId, pos))
+            end
+
+            -- If there is a single connected job and 3 impassable neighbours, we are at a dead-end
+            -- protect it by marking as blocking the corridor leading to it
+            while #connectedJobs == 1 and impassables == 3 do
+                local next, nextPos = table.unpack(connectedJobs[1])
+                -- Mark the next block in the corridor to be suspended
+                self.blockingJobs[next] = true
+                -- Mark the currently analyzed job as a dead-end, not to be explored
+                -- when looking for escapes in corridors
+                leadsToDeadend[jobId] = true
+                -- Explore the next job in the corridor
+                _, impassables, connectedJobs = readNeighbourhood(nextPos, leadsToDeadend)
+                jobId = next
+                pos = nextPos
+            end
+        end
+    until #toVisit == 0
+
+    -- Once the cluster has been fully visited, if there is a single exit to this cluster
+    -- protect it too from being closed
+    if #clusterExits == 1 and clusterSize > 1 then
+        local jobId, pos = table.unpack(clusterExits[1])
+        self.blockingJobs[jobId] = true
+        local _, _, connectedJobs = readNeighbourhood(pos, leadsToDeadend)
+        while #connectedJobs == 1 do
+            -- There is a single escape, mark it and continue the exploration
+            local next, nextPos = table.unpack(connectedJobs[1])
+            -- Mark the escape to be suspended
+            self.blockingJobs[next] = true
+            -- Mark the currently analyzed job as a dead-end, not to be explored
+            -- when looking for escapes
+            leadsToDeadend[jobId] = true
+            -- Explore the escape
+            _, _, connectedJobs = readNeighbourhood(nextPos, leadsToDeadend)
+            jobId = next
+            pos = nextPos
+        end
+    end
+end
+
+--- Compute all the blocking jobs
+function SuspendManager:computeBlockingJobs()
+    foreach_construction_job(function (job)
+        if not self.visited[job.id] then
+            self:computeClusterBlockingJobs(job)
+        end
+    end)
 end
 
 --- Return true with a reason if a job should be suspended.
 --- It optionally takes in account the risk of creating stuck
 --- construction buildings
 --- @param job job
---- @param accountblocking boolean
-function shouldBeSuspended(job, accountblocking)
-    if accountblocking and isBlocking(job) then
+function SuspendManager:shouldBeSuspended(job)
+    if self.visited[job.id] and self.blockingJobs[job.id] then
         return true, 'blocking'
     end
     return false, nil
 end
 
 --- Return true with a reason if a job should not be unsuspended.
-function shouldStaySuspended(job, accountblocking)
+function SuspendManager:shouldStaySuspended(job)
     -- External reasons to be suspended
 
     if dfhack.maps.getTileFlags(job.pos).flow_size > 1 then
@@ -212,17 +319,23 @@ function shouldStaySuspended(job, accountblocking)
     end
 
     -- Internal reasons to be suspended, determined by suspendmanager
-    return shouldBeSuspended(job, accountblocking)
+    return self:shouldBeSuspended(job)
 end
 
 local function run_now()
+    Instance:resetIfNewTick()
+    if preventblocking then
+        Instance:computeBlockingJobs()
+    else
+        Instance.blockingJobs = {}
+    end
     foreach_construction_job(function(job)
         if job.flags.suspend then
-            if not shouldStaySuspended(job, preventblocking) then
+            if not Instance:shouldStaySuspended(job) then
                 unsuspend(job)
             end
         else
-            if shouldBeSuspended(job, preventblocking) then
+            if Instance:shouldBeSuspended(job) then
                 suspend(job)
             end
         end
@@ -286,12 +399,25 @@ local function main(args)
         print(dfhack.script_help())
         return
     elseif command == "enable" then
-        run_now()
         enabled = true
     elseif command == "disable" then
         enabled = false
     elseif command == "set" then
         update_setting(positionals[2], positionals[3])
+    elseif command == "deadend" then
+        local manager = SuspendManager.new()
+        local job = dfhack.gui.getSelectedJob(true)
+        if job ~= nil then
+            manager:analyzeCorridor(job)
+            foreach_construction_job(function(job)
+                if manager.blockingJobs[job.id] then
+                    suspend(job)
+                else
+                    unsuspend(job)
+                end
+            end)
+        end
+        return
     elseif command == nil then
         print(string.format("suspendmanager is currently %s", (enabled and "enabled" or "disabled")))
         if preventblocking then
