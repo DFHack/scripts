@@ -45,6 +45,7 @@ that repo.
 - `gui/gm-editor`: new ``--freeze`` option for ensuring the game doesn't change while you're inspecting it
 - `gui/launcher`: DFHack version now shown in the default help text
 - `gui/prerelease-warning`: widgets are now clickable
+- `unforbid`: renamed to `claim`; alias for 'unforbid' -> 'claim' added to default init script
 
 # 50.07-r1
 
