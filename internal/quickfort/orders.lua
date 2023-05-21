@@ -158,11 +158,11 @@ function enqueue_additional_order(ctx, label)
     inc_order_spec(order_specs, 1, get_reactions(), label)
 end
 
-function enqueue_building_orders(buildings, building_db, ctx)
+function enqueue_building_orders(buildings, ctx)
     local order_specs = ensure_order_specs(ctx)
     local reactions = get_reactions()
     for _, b in ipairs(buildings) do
-        local db_entry = building_db[b.type]
+        local db_entry = b.db_entry
         log('processing %s, defined from spreadsheet cell(s): %s',
             db_entry.label, table.concat(b.cells, ', '))
         local filters = dfhack.buildings.getFiltersByType(
@@ -182,8 +182,8 @@ function enqueue_building_orders(buildings, building_db, ctx)
             if filter.quantity == -1 then filter.quantity = get_num_items(b) end
             if filter.flags2 and filter.flags2.building_material then
                 -- rock blocks get produced at a ratio of 4:1
-                filter.quantity = filter.quantity or 1
-                filter.quantity = filter.quantity / 4
+                -- note that this can be a fraction; math.ceil() is used in create_orders to compensate
+                filter.quantity = (filter.quantity or 1) / 4
             end
             process_filter(order_specs, filter, reactions)
         end

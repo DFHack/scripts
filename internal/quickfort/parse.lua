@@ -5,6 +5,7 @@ if not dfhack_flags.module then
     qerror('this script cannot be called directly')
 end
 
+local argparse = require('argparse')
 local utils = require('utils')
 local quickfort_reader = reqscript('internal/quickfort/reader')
 local quickfort_transform = reqscript('internal/quickfort/transform')
@@ -13,9 +14,7 @@ valid_modes = utils.invert({
     'dig',
     'build',
     'place',
---    'zone',
---    'query',
---    'config',
+    'zone',
     'meta',
     'notes',
     'ignore',
@@ -289,8 +288,8 @@ returns nil if the modeline is invalid.
 local function parse_modeline(modeline, filename, modeline_id)
     if not modeline then return nil end
     local _, mode_end, mode = string.find(modeline, '^#([%l]+)')
-    -- remove this as these modes become supported
-    if mode == 'zone' or mode == 'query' or mode == 'config' then
+    -- ignore no-longer-supported blueprint modes
+    if mode == 'query' or mode == 'config' then
         mode = 'ignore'
     end
     if not mode or not valid_modes[mode] then return nil end
@@ -722,6 +721,63 @@ function parse_extended_token(text, startpos)
     return token, params, repetitions, next_token_pos
 end
 
+-- parses a blueprint key sequence optionally followed by a label. returns a map of {keys=string, label=string}
+-- and the start position of the next token. label is either a string of at least length 1 or nil
+function parse_token_and_label(text, startpos, token_pattern)
+    token_pattern = token_pattern or alias_pattern
+    local _, endpos, token, label = text:find('^%s*('..token_pattern..')/('..alias_pattern..')%s*', startpos)
+    if not endpos then
+        _, endpos, token = text:find('^%s*('..token_pattern..')%s*', startpos)
+    end
+    if not endpos then
+        return nil, startpos
+    end
+    return {token=token, label=label}, endpos+1
+end
+
+-- parses a sequence starting with '{' and ending with the matching '}' that
+-- delimit properties that modify a blueprint element. Properties are in the same
+-- format as parse_extended_token above.
+-- returns params as map, start position of the next token as int
+function parse_properties(text, startpos)
+    local _, endpos, properties = text:find('^%s*(%b{})%s*', startpos)
+    if not properties then return {}, startpos end
+    return get_params(properties, 2), endpos+1
+end
+
+local stockpile_config_spec_pattern = '[%w_]+'
+
+local function get_next_stockpile_transformation(text, startpos)
+    local _, e, op, name = text:find('^%s*([%+%-=])%s*('..stockpile_config_spec_pattern..')%s*', startpos)
+    if not e then return nil, startpos end
+    local mode = 'set'
+    if op == '+' then mode = 'enable'
+    elseif op == '-' then mode = 'disable'
+    end
+    local filters
+    if text:sub(e+1, e+1) == '/' then
+        local _, filter_end_pos, filter_str = text:find('^([^%+%-=]+)', e+2)
+        if filter_end_pos then
+            e = filter_end_pos
+            filters = argparse.stringList(filter_str)
+        end
+    end
+    return {mode=mode, name=name, filters=filters}, e+1
+end
+
+-- returns a list of stockpile transformations and the start position of the next token as int
+function parse_stockpile_transformations(text, startpos)
+    local transformations = {}
+    local _, e = text:find('^%s*:%s*', startpos)
+    if not e then return transformations, startpos end
+    local transformation, next_token_start_pos = get_next_stockpile_transformation(text, e+1)
+    while transformation do
+        table.insert(transformations, transformation)
+        transformation, next_token_start_pos = get_next_stockpile_transformation(text, next_token_start_pos)
+    end
+    return transformations, next_token_start_pos
+end
+
 if dfhack.internal.IN_TEST then
     unit_test_hooks = {
         parse_cell=parse_cell,
@@ -757,7 +813,6 @@ if dfhack.internal.IN_TEST then
         parse_alias_separate=parse_alias_separate,
         parse_alias_combined=parse_alias_combined,
         get_sheet_metadata=get_sheet_metadata,
-        make_transform_fn=make_transform_fn,
         get_extended_token=get_extended_token,
         get_token=get_token,
         get_next_param=get_next_param,

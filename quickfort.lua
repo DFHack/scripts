@@ -3,31 +3,38 @@
 
 local argparse = require('argparse')
 
--- reqscript all internal files here, even if they're not directly used by this
--- top-level file. this ensures modified transitive dependencies are properly
--- reloaded when this script is run.
-local quickfort_aliases = reqscript('internal/quickfort/aliases')
 local quickfort_api = reqscript('internal/quickfort/api')
-local quickfort_build = reqscript('internal/quickfort/build')
-local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_command = reqscript('internal/quickfort/command')
 local quickfort_common = reqscript('internal/quickfort/common')
-local quickfort_config = reqscript('internal/quickfort/config')
-local quickfort_dig = reqscript('internal/quickfort/dig')
-local quickfort_keycodes = reqscript('internal/quickfort/keycodes')
 local quickfort_list = reqscript('internal/quickfort/list')
-local quickfort_map = reqscript('internal/quickfort/map')
-local quickfort_meta = reqscript('internal/quickfort/meta')
-local quickfort_notes = reqscript('internal/quickfort/notes')
-local quickfort_orders = reqscript('internal/quickfort/orders')
-local quickfort_parse = reqscript('internal/quickfort/parse')
-local quickfort_place = reqscript('internal/quickfort/place')
-local quickfort_preview = reqscript('internal/quickfort/preview')
-local quickfort_query = reqscript('internal/quickfort/query')
-local quickfort_reader = reqscript('internal/quickfort/reader')
 local quickfort_set = reqscript('internal/quickfort/set')
-local quickfort_transform = reqscript('internal/quickfort/transform')
-local quickfort_zone = reqscript('internal/quickfort/zone')
+
+function refresh_scripts()
+    -- reqscript all internal files here, even if they're not directly used by this
+    -- top-level file. this ensures modified transitive dependencies are properly
+    -- reloaded when this script is run.
+    reqscript('internal/quickfort/aliases')
+    reqscript('internal/quickfort/api')
+    reqscript('internal/quickfort/build')
+    reqscript('internal/quickfort/building')
+    reqscript('internal/quickfort/command')
+    reqscript('internal/quickfort/common')
+    reqscript('internal/quickfort/dig')
+    reqscript('internal/quickfort/keycodes')
+    reqscript('internal/quickfort/list')
+    reqscript('internal/quickfort/map')
+    reqscript('internal/quickfort/meta')
+    reqscript('internal/quickfort/notes')
+    reqscript('internal/quickfort/orders')
+    reqscript('internal/quickfort/parse')
+    reqscript('internal/quickfort/place')
+    reqscript('internal/quickfort/preview')
+    reqscript('internal/quickfort/reader')
+    reqscript('internal/quickfort/set')
+    reqscript('internal/quickfort/transform')
+    reqscript('internal/quickfort/zone')
+end
+refresh_scripts()
 
 -- public API
 function apply_blueprint(params)

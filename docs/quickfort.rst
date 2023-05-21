@@ -2,7 +2,7 @@ quickfort
 =========
 
 .. dfhack-tool::
-    :summary: Apply pre-designed blueprints to your fort.
+    :summary: Apply layout blueprints to your fort.
     :tags: fort design productivity buildings map stockpiles
 
 Quickfort reads stored blueprint files and applies them to the game map.
@@ -23,13 +23,6 @@ There are many ready-to-use blueprints in the
 `blueprint library <blueprint-library-guide>` that is distributed with DFHack,
 so you can use this tool productively even if you haven't created any blueprints
 yourself.
-
-.. admonition:: Note
-
-    quickfort is still in the process of being updated for the new version of
-    DF. Stockpiles (the "place" mode), zones (the "zone" mode), building
-    configuration (the "query" mode), and game configuration (the "config" mode)
-    are not yet supported.
 
 Usage
 -----
@@ -74,10 +67,9 @@ Usage
 :orders:  Uses the manager interface to queue up workorders to manufacture items
           needed by the specified blueprint(s).
 :undo:    Applies the inverse of the specified blueprint. Dig tiles are
-          undesignated, buildings are canceled or removed (depending on their
-          construction status), and stockpiles/zones are removed. There is no
-          effect for query and config blueprints since they can contain
-          arbitrary key sequences that are not reversible.
+          undesignated, buildings are canceled or scheduled for destruction
+          (depending on their construction status), and stockpiles/zones are
+          removed.
 
 Examples
 --------
@@ -93,7 +85,7 @@ Examples
     List all the blueprints that have both "dreamfort" and "help" as keywords.
 ``quickfort run library/dreamfort.csv``
     Run the first blueprint in the ``library/dreamfort.csv`` file (which happens
-    to be the blueprint that displays the help).
+    to be the "notes" blueprint that displays the help).
 ``quickfort run library/pump_stack.csv -n /dig --repeat up,80 --transform ccw,flipv``
     Dig a pump stack through 160 z-levels up from the current cursor location
     (each repetition of the ``library/pump_stack.csv -n /dig`` blueprint is 2
@@ -117,15 +109,15 @@ Command options
 ``<options>`` can be zero or more of:
 
 ``-c``, ``--cursor <x>,<y>,<z>``
-    Use the specified map coordinates instead of the current map cursor for the
-    the blueprint start position. If this option is specified, then an active
-    game map cursor is not necessary.
+    Use the specified map coordinates instead of the current keyboard map
+    cursor for the the blueprint start position. If this option is specified,
+    then an active keyboard map cursor is not necessary.
 ``-d``, ``--dry-run``
     Go through all the motions and print statistics on what would be done, but
     don't actually change any game state.
 ``--preserve-engravings <quality>``
-    Don't designate tiles for digging if they have an engraving with at least
-    the specified quality. Valid values for ``quality`` are: ``None``,
+    Don't designate tiles for digging/carving if they have an engraving with at
+    least the specified quality. Valid values for ``quality`` are: ``None``,
     ``Ordinary``, ``WellCrafted``, ``FinelyCrafted``, ``Superior``,
     ``Exceptional``, and ``Masterful``. Specify ``None`` to ignore engravings
     when designating tiles. Note that if ``Masterful`` tiles are dug out, the
@@ -154,8 +146,8 @@ Transformations
 
 All transformations are anchored at the blueprint start cursor position. This is
 the upper left corner by default, but it can be modified if the blueprint has a
-`start() modeline marker <quickfort-start>`. This just means that the blueprint
-tile that would normally appear under your cursor will still appear under your
+`start() modeline marker <quickfort-start>`. This means that the blueprint tile
+that would normally appear under your cursor will still appear under your
 cursor, regardless of how the blueprint is rotated or flipped.
 
 ``<transformation>`` is one of:
@@ -213,8 +205,8 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
 ``data`` (required)
     A sparse map populated such that ``data[z][y][x]`` yields the blueprint text
     that should be applied to the tile at map coordinate ``(x, y, z)``. You can
-    also just pass a string and it will be interpreted as the value of
-    ``data[0][0][0]``.
+    also just pass a string instead of a table and it will be interpreted as
+    the value of ``data[0][0][0]``.
 ``command``
     The quickfort command to execute, e.g. ``run``, ``orders``, etc. Defaults to
     ``run``.
@@ -225,12 +217,12 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
     specified, defaults to ``{x=0, y=0, z=0}``, which means that the coordinates
     in the ``data`` map are used without shifting.
 ``aliases``
-    A map of query blueprint aliases names to their expansions. If not
-    specified, defaults to ``{}``.
+    A map of blueprint alias names to their expansions. If not specified,
+    defaults to ``{}``.
 ``preserve_engravings``
-    Don't designate tiles for digging if they have an engraving with at least
-    the specified quality. Value is a ``df.item_quality`` enum name or value, or
-    the string ``None`` (or, equivalently, ``-1``) to indicate that no
+    Don't designate tiles for digging or carving if they have an engraving with
+    at least the specified quality. Value is a ``df.item_quality`` enum name or
+    value, or the string ``None`` (or, equivalently, ``-1``) to indicate that no
     engravings should be preserved. Defaults to ``df.item_quality.Masterful``.
 ``dry_run``
     Just calculate statistics, such as how many tiles are outside the boundaries
@@ -240,12 +232,11 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
 
 API usage example::
 
-    local guidm = require('gui.dwarfmode')
     local quickfort = reqscript('quickfort')
 
-    -- dig a 10x10 block at the cursor position
+    -- dig a 10x10 block at the mouse cursor position
     quickfort.apply_blueprint{mode='dig', data='d(10x10)',
-                              pos=guidm.getCursorPos()}
+                              pos=dfhack.gui.getMousePos()}
 
     -- dig a 10x10 block starting at coordinate x=30, y=40, z=50
     quickfort.apply_blueprint{mode='dig', data={[50]={[40]={[30]='d(10x10)'}}}}

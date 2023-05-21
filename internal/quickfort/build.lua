@@ -15,11 +15,15 @@ if not dfhack_flags.module then
     qerror('this script cannot be called directly')
 end
 
+local argparse = require('argparse')
 local utils = require('utils')
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_orders = reqscript('internal/quickfort/orders')
+local quickfort_parse = reqscript('internal/quickfort/parse')
+local quickfort_place = reqscript('internal/quickfort/place')
 local quickfort_transform = reqscript('internal/quickfort/transform')
+local stockpiles = require('plugins.stockpiles')
 
 local ok, buildingplan = pcall(require, 'plugins.buildingplan')
 if not ok then
@@ -199,14 +203,121 @@ end
 -- ************ the database ************ --
 --
 
+local function do_hive_props(db_entry, props)
+    if props.do_install == 'true' then
+        ensure_key(db_entry.props, 'hive_flags').do_install = true
+        props.do_install = nil
+    end
+    if props.do_gather == 'true' then
+        ensure_key(db_entry.props, 'hive_flags').do_gather = true
+        props.do_gather = nil
+    end
+end
+
+local function do_farm_props(db_entry, props)
+    if props.seasonal_fertilize == 'true' then
+        ensure_key(db_entry.props, 'farm_flags').seasonal_fertilize = true
+        props.seasonal_fertilize = nil
+    end
+end
+
+local function do_workshop_furnace_props(db_entry, props)
+    if props.take_from then
+        db_entry.links.take_from = argparse.stringList(props.take_from)
+        props.take_from = nil
+    end
+    if props.give_to then
+        db_entry.links.give_to = argparse.stringList(props.give_to)
+        props.give_to = nil
+    end
+end
+
+local function do_trackstop_props(db_entry, props)
+    if props.take_from then
+        ensure_key(db_entry, 'route').from_names = argparse.stringList(props.take_from)
+        props.take_from = nil
+    end
+    if props.route then
+        ensure_key(db_entry, 'route').name = props.route
+        props.route = nil
+    end
+end
+
+local hauling = df.global.plotinfo.hauling
+
+-- adds a new stop to the named route, or creates a new stop in a new route
+-- if name is not given or a route with that name is not found
+-- returns the stop
+local function add_stop(name, pos, adjustments)
+    local route
+    if name then
+        for _,r in ipairs(hauling.routes) do
+            if string.lower(r.name) == name:lower() then
+                route = r
+                break
+            end
+        end
+    end
+    if not route then
+        hauling.routes:insert('#', {
+            new=df.hauling_route,
+            id=hauling.next_id,
+            name=name,
+        })
+        hauling.next_id = hauling.next_id + 1
+        route = hauling.routes[#hauling.routes-1]
+    end
+    local stop_id = 1
+    if #route.stops > 0 then
+        stop_id = route.stops[#route.stops-1].id + 1
+    end
+    route.stops:insert('#', {
+        new=df.hauling_stop,
+        id=stop_id,
+        pos=pos,
+    })
+    stockpiles.import_route('library/everything', route.id, stop_id, 'set')
+    for _, adj in ipairs(adjustments) do
+        log('applying stockpile preset: %s %s', adj.mode, adj.name)
+        stockpiles.import_route(adj.name, route.id, stop_id, adj.mode, adj.filters)
+    end
+    return route.stops[#route.stops-1]
+end
+
+local function do_trackstop_adjust(db_entry, bld)
+    if not db_entry.route then return end
+    local stop = add_stop(db_entry.route.name,
+            xyz2pos(bld.centerx, bld.centery, bld.z), db_entry.adjustments)
+    if db_entry.route.from_names then
+        local from_names = {}
+        for _,from_name in ipairs(db_entry.route.from_names) do
+            from_names[from_name:lower()] = true
+        end
+        for _, pile in ipairs(df.global.world.buildings.other.STOCKPILE) do
+            local name = string.lower(pile.name)
+            if from_names[name] then
+                stop.stockpiles:insert('#', {
+                    new=df.route_stockpile_link,
+                    building_id=pile.id,
+                    mode={take=true},
+                })
+                pile.linked_stops:insert('#', stop)
+            end
+        end
+    end
+end
+
 local unit_vectors = quickfort_transform.unit_vectors
 local unit_vectors_revmap = quickfort_transform.unit_vectors_revmap
 
 local function make_transform_building_fn(vector, revmap, post_fn)
-    return function(ctx)
+    return function(db_entry, ctx)
         local keys = quickfort_transform.resolve_transformed_vector(
                                                         ctx, vector, revmap)
         if post_fn then keys = post_fn(keys) end
+        if db_entry.transform_suffix then
+            keys = keys .. db_entry.transform_suffix
+        end
         return keys
     end
 end
@@ -239,9 +350,9 @@ local function make_bridge_entry(direction)
             type=df.building_type.Bridge,
             direction=direction,
             min_width=1,
-            max_width=10,
+            max_width=31,
             min_height=1,
-            max_height=10,
+            max_height=31,
             is_valid_tile_fn=is_valid_tile_bridge,
             transform=transform}
 end
@@ -323,7 +434,7 @@ local function make_water_wheel_entry(vertical)
 end
 local function make_horizontal_axle_entry(vertical)
     return make_ns_ew_entry('Horizontal Axle', df.building_type.AxleHorizontal,
-                            1, 10, horizontal_axle_revmap, vertical)
+                            1, 31, horizontal_axle_revmap, vertical)
 end
 
 local roller_data = {
@@ -359,8 +470,8 @@ local function make_roller_entry(direction, speed)
     return {
         label=('Rollers (%s)'):format(roller_data_entry.label),
         type=df.building_type.Rollers,
-        min_width=1, max_width=roller_data_entry.vertical and 1 or 10,
-        min_height=1, max_height=roller_data_entry.vertical and 10 or 1,
+        min_width=1, max_width=roller_data_entry.vertical and 1 or 31,
+        min_height=1, max_height=roller_data_entry.vertical and 31 or 1,
         direction=direction,
         fields={speed=speed},
         is_valid_tile_fn=is_valid_tile_machine,
@@ -411,7 +522,9 @@ local function make_trackstop_entry(direction, friction)
         subtype=df.trap_type.TrackStop,
         fields=fields,
         transform=transform,
-        additional_orders={'wooden minecart'}
+        additional_orders={'wooden minecart'},
+        props_fn=do_trackstop_props,
+        adjust_fn=do_trackstop_adjust,
     }
 end
 
@@ -573,7 +686,7 @@ local building_db = {
     R={label='Traction Bench', type=df.building_type.TractionBench,
        additional_orders={'table', 'mechanisms', 'cloth rope'}},
     N={label='Nest Box', type=df.building_type.NestBox},
-    ['{Alt}h']={label='Hive', type=df.building_type.Hive},
+    ['{Alt}h']={label='Hive', type=df.building_type.Hive, props_fn=do_hive_props},
     ['{Alt}a']={label='Offering Place', type=df.building_type.OfferingPlace},
     ['{Alt}c']={label='Bookcase', type=df.building_type.Bookcase},
     F={label='Display Furniture', type=df.building_type.DisplayFurniture},
@@ -589,7 +702,8 @@ local building_db = {
        type=df.building_type.FarmPlot, has_extents=true,
        no_extents_if_solid=true,
        is_valid_tile_fn=is_valid_tile_dirt,
-       is_valid_extent_fn=is_extent_nonempty},
+       is_valid_extent_fn=is_extent_nonempty,
+       props_fn=do_farm_props},
     o={label='Paved Road',
        type=df.building_type.RoadPaved, has_extents=true,
        no_extents_if_solid=true, is_valid_extent_fn=is_extent_nonempty},
@@ -723,23 +837,18 @@ local building_db = {
     CSddddaaaa=make_trackstop_entry({dump_x_shift=-1}, 10),
     Ts={label='Stone-Fall Trap',
         type=df.building_type.Trap, subtype=df.trap_type.StoneFallTrap},
-    -- TODO: by default a weapon trap is configured with a single weapon.
-    -- maybe add Tw1 through Tw10 for choosing how many weapons?
-    -- material preferences can help here for choosing weapon types.
-    Tw={label='Weapon Trap',
+    Tw={label='Weapon Trap', props_fn=do_weapon_trap_props,
         type=df.building_type.Trap, subtype=df.trap_type.WeaponTrap},
     Tl={label='Lever',
         type=df.building_type.Trap, subtype=df.trap_type.Lever,
         additional_orders={'mechanisms', 'mechanisms'}},
-    -- TODO: lots of configuration here with no natural order. may need
-    -- special-case logic when we read the keys.
-    Tp={label='Pressure Plate',
+    Tp={label='Pressure Plate', props_fn=do_pressure_plate_props,
         type=df.building_type.Trap, subtype=df.trap_type.PressurePlate},
     Tc={label='Cage Trap',
         type=df.building_type.Trap, subtype=df.trap_type.CageTrap,
         additional_orders={'wooden cage'}},
-    -- TODO: Same as weapon trap above
-    TS={label='Upright Spear/Spike', type=df.building_type.Weapon},
+    TS={label='Upright Spear/Spike', type=df.building_type.Weapon,
+        props_fn=do_weapon_trap_props},
     -- tracks (CT...). there aren't any shortcut keys in the UI so we use the
     -- aliases from python quickfort
     trackN=make_track_entry('N', track_end_data, track_end_revmap, false),
@@ -790,15 +899,43 @@ local building_db = {
     trackrampNSEW=make_track_entry('NSEW', nil, nil, true)
 }
 
+local function ensure_data(db_entry)
+    if not db_entry.props then
+        db_entry.props = {}
+    end
+    if not db_entry.links then
+        db_entry.links = {give_to={}, take_from={}}
+    end
+    if not db_entry.adjustments then
+        db_entry.adjustments = {}
+    end
+end
+
+local function merge_db_entries(self, other)
+    if self.label ~= other.label then
+        error(('cannot merge db entries of different types: %s != %s'):format(self.label, other.label))
+    end
+    ensure_data(self)
+    ensure_data(other)
+    utils.assign(self.props, other.props)
+    for _,adj in ipairs(other.adjustments) do
+        table.insert(self.adjustments, adj)
+    end
+end
+
 -- fill in default values if they're not already specified
 for _, v in pairs(building_db) do
+    v.merge_fn = merge_db_entries
     if v.has_extents then
         if not v.min_width then
-            v.min_width, v.max_width, v.min_height, v.max_height = 1, 10, 1, 10
+            v.min_width, v.max_width, v.min_height, v.max_height = 1, 31, 1, 31
         end
     elseif v.type == df.building_type.Workshop or
             v.type == df.building_type.Furnace or
             v.type == df.building_type.SiegeEngine then
+        if not v.props_fn and v.type ~= df.building_type.SiegeEngine then
+            v.props_fn = do_workshop_furnace_props
+        end
         if not v.min_width then
             v.min_width, v.max_width, v.min_height, v.max_height = 3, 3, 3, 3
         end
@@ -917,12 +1054,49 @@ local building_aliases = {
     ['~s']='{Alt}s',
 }
 
+local build_key_pattern = '~?%w+'
+
+local function custom_building(_, keys)
+    local token_and_label, props_start_pos = quickfort_parse.parse_token_and_label(keys, 1, build_key_pattern)
+    -- properties and adjustments may hide the alias from the building.init_buildings algorithm
+    -- so we might have to do our own mapping here
+    local resolved_alias = building_aliases[token_and_label.token:lower()]
+    local db_entry = rawget(building_db, resolved_alias or token_and_label.token)
+    if not db_entry then
+        return nil
+    end
+    db_entry = copyall(db_entry)
+    db_entry.transform_suffix = keys:sub(props_start_pos)
+    if token_and_label.label then
+        db_entry.label = ('%s/%s'):format(db_entry.label, token_and_label.label)
+        db_entry.transform_suffix = ('/%s%s'):format(token_and_label.label, db_entry.transform_suffix)
+    end
+    ensure_data(db_entry)
+    local props, next_token_pos = quickfort_parse.parse_properties(keys, props_start_pos)
+    if props.name then
+        db_entry.props.name = props.name
+        props.name = nil
+    end
+    if db_entry.props_fn then db_entry:props_fn(props) end
+    for k,v in pairs(props) do
+        dfhack.printerr(('unhandled property: "%s"="%s"'):format(k, v))
+    end
+
+    local adjustments = quickfort_parse.parse_stockpile_transformations(keys, next_token_pos)
+    if adjustments then
+        db_entry.adjustments = adjustments
+    end
+    return db_entry
+end
+
+setmetatable(building_db, {__index=custom_building})
+
 --
 -- ************ command logic functions ************ --
 --
 
-local function create_building(b, dry_run)
-    local db_entry = building_db[b.type]
+local function create_building(b, cache, dry_run)
+    local db_entry = b.db_entry
     log('creating %dx%d %s at map coordinates (%d, %d, %d), defined from ' ..
         'spreadsheet cells: %s',
         b.width, b.height, db_entry.label, b.pos.x, b.pos.y, b.pos.z,
@@ -944,6 +1118,33 @@ local function create_building(b, dry_run)
         -- this is an error instead of a qerror since our validity checking
         -- is supposed to prevent this from ever happening
         error(string.format('unable to place %s: %s', db_entry.label, err))
+    end
+    ensure_data(db_entry)
+    utils.assign(bld, db_entry.props)
+    if db_entry.adjust_fn then
+        db_entry:adjust_fn(bld)
+    end
+    for _,recipient in ipairs(db_entry.links.give_to) do
+        cache.piles = cache.piles or quickfort_place.get_stockpiles_by_name()
+        if cache.piles[recipient] then
+            for _,to in ipairs(cache.piles[recipient]) do
+                utils.insert_sorted(bld.profile.links.give_to_pile, to, 'id')
+                utils.insert_sorted(to.links.take_from_workshop, bld, 'id')
+            end
+        else
+            dfhack.printerr(('cannot find stockpile named "%s" to give to'):format(recipient))
+        end
+    end
+    for _,supplier in ipairs(db_entry.links.take_from) do
+        cache.piles = cache.piles or quickfort_place.get_stockpiles_by_name()
+        if cache.piles[supplier] then
+            for _,from in ipairs(cache.piles[supplier]) do
+                utils.insert_sorted(bld.profile.links.take_from_pile, from, 'id')
+                utils.insert_sorted(from.links.give_to_workshop, bld, 'id')
+            end
+        else
+            dfhack.printerr(('cannot find stockpile named "%s" to take from'):format(supplier))
+        end
     end
     if buildingplan and buildingplan.isEnabled() and
             buildingplan.isPlannableBuilding(
@@ -982,9 +1183,10 @@ function do_run(zlevel, grid, ctx)
             quickfort_building.check_tiles_and_extents(
                 ctx, buildings, building_db)
 
+    local cache = {}
     for _, b in ipairs(buildings) do
         if b.pos then
-            create_building(b, ctx.dry_run)
+            create_building(b, cache, ctx.dry_run)
             stats.build_designated.value = stats.build_designated.value + 1
         end
     end
@@ -999,7 +1201,7 @@ function do_orders(zlevel, grid, ctx)
     stats.invalid_keys.value =
             stats.invalid_keys.value + quickfort_building.init_buildings(
                 ctx, zlevel, grid, buildings, building_db, building_aliases)
-    quickfort_orders.enqueue_building_orders(buildings, building_db, ctx)
+    quickfort_orders.enqueue_building_orders(buildings, ctx)
 end
 
 local function is_queued_for_destruction(bld)
@@ -1023,6 +1225,9 @@ function do_undo(zlevel, grid, ctx)
             stats.invalid_keys.value + quickfort_building.init_buildings(
                 ctx, zlevel, grid, buildings, building_db, building_aliases)
 
+    -- ensure we don't delete the currently selected building, which causes crashes.
+    local selected_bld = dfhack.gui.getSelectedBuilding(true)
+
     for _, s in ipairs(buildings) do
         for extent_x, col in ipairs(s.extent_grid) do
             for extent_y, in_extent in ipairs(col) do
@@ -1040,11 +1245,16 @@ function do_undo(zlevel, grid, ctx)
                             stats.build_marked.value =
                                     stats.build_marked.value + 1
                         end
-                    elseif dfhack.buildings.deconstruct(bld) then
-                        stats.build_undesignated.value =
-                                stats.build_undesignated.value + 1
                     else
-                        stats.build_marked.value = stats.build_marked.value + 1
+                        if bld == selected_bld then
+                            dfhack.printerr('cannot remove actively selected building.')
+                            dfhack.printerr('please deselect the building and try again.')
+                        elseif dfhack.buildings.deconstruct(bld) then
+                                stats.build_undesignated.value =
+                                        stats.build_undesignated.value + 1
+                        else
+                            stats.build_marked.value = stats.build_marked.value + 1
+                        end
                     end
                 end
                 ::continue::

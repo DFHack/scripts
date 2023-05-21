@@ -1,6 +1,9 @@
 -- A GUI front-end for quickfort
 --@ module = true
 
+-- reload changed transitive dependencies
+reqscript('quickfort').refresh_scripts()
+
 local quickfort_command = reqscript('internal/quickfort/command')
 local quickfort_list = reqscript('internal/quickfort/list')
 local quickfort_map = reqscript('internal/quickfort/map')
@@ -8,7 +11,6 @@ local quickfort_parse = reqscript('internal/quickfort/parse')
 local quickfort_preview = reqscript('internal/quickfort/preview')
 local quickfort_transform = reqscript('internal/quickfort/transform')
 
-local argparse = require('argparse')
 local dialogs = require('gui.dialogs')
 local gui = require('gui')
 local guidm = require('gui.dwarfmode')
@@ -35,7 +37,7 @@ transformations = transformations or {}
 
 -- displays blueprint details, such as the full modeline and comment, that
 -- otherwise might be truncated for length in the blueprint selection list
-local BlueprintDetails = defclass(BlueprintDetails, dialogs.MessageBox)
+BlueprintDetails = defclass(BlueprintDetails, dialogs.MessageBox)
 BlueprintDetails.ATTRS{
     focus_path='quickfort/dialog/details',
     frame_title='Details',
@@ -62,7 +64,7 @@ end
 
 -- blueprint selection dialog, shown when the script starts or when a user wants
 -- to load a new blueprint into the ui
-local BlueprintDialog = defclass(BlueprintDialog, dialogs.ListBox)
+BlueprintDialog = defclass(BlueprintDialog, dialogs.ListBox)
 BlueprintDialog.ATTRS{
     focus_path='quickfort/dialog',
     frame_title='Load quickfort blueprint',
@@ -616,9 +618,10 @@ end
 
 function Quickfort:do_command(command, dry_run, post_fn)
     self.dirty = true
-    print(('executing via gui/quickfort: quickfort %s'):format(
+    print(('executing via gui/quickfort: quickfort %s --cursor=%d,%d,%d'):format(
                 quickfort_parse.format_command(
-                    command, self.blueprint_name, self.section_name, dry_run)))
+                    command, self.blueprint_name, self.section_name, dry_run),
+                self.saved_cursor.x, self.saved_cursor.y, self.saved_cursor.z))
     local ctx = self:run_quickfort_command(command, dry_run, false)
     quickfort_command.finish_command(ctx, self.section_name)
     if command == 'run' then

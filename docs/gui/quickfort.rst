@@ -2,14 +2,16 @@ gui/quickfort
 =============
 
 .. dfhack-tool::
-    :summary: Apply pre-designed blueprints to your fort.
+    :summary: Apply layout blueprints to your fort.
     :tags: fort design productivity buildings map stockpiles
 
 This is the graphical interface for the `quickfort` script. Once you load a
 blueprint, you will see a highlight over the tiles that will be modified. You
 can use the mouse cursor to reposition the blueprint and the hotkeys to
 rotate and repeat the blueprint up or down z-levels. Once you are satisfied,
-click the mouse or hit :kbd:`Enter` to apply the blueprint to the map.
+click the mouse or hit :kbd:`Enter` to apply the blueprint to the map. You can
+apply the blueprint as many times as you wish to different spots on the map.
+Right click or hit :kbd:`Esc` to stop.
 
 Usage
 -----
@@ -26,7 +28,7 @@ dialog is shown where you can select a blueprint to load.
 
 You can also type search terms in the dialog and the list of matching blueprints
 will be filtered as you type. You can search for directory names, file names,
-blueprint labels, modes, or comments. Note that, depending on the active list
+blueprint labels, modes, or comments. Note that, depending on the active
 filters, the id numbers in the list may not be contiguous.
 
 To rotate or flip the blueprint around, enable transformations with :kbd:`t` and

@@ -186,11 +186,11 @@ function PhasesPanel:init()
                         frame={t=0, l=0, w=19},
                         key='CUSTOM_P', label='place',
                         initial_option=self:get_default('place')},
---                     widgets.ToggleHotkeyLabel{view_id='zone_phase',
---                         frame={t=0, l=15, w=19},
---                         key='CUSTOM_Z', label='zone',
---                         initial_option=self:get_default('zone'),
---                         label_width=5}
+                      widgets.ToggleHotkeyLabel{view_id='zone_phase',
+                        frame={t=0, l=15, w=19},
+                        key='CUSTOM_Z', label='zone',
+                        initial_option=self:get_default('zone'),
+                        label_width=5}
                     }},
 --         widgets.Panel{frame={h=1},
 --             subviews={widgets.ToggleHotkeyLabel{view_id='query_phase',
