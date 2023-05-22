@@ -16,8 +16,14 @@ if help then
     return
 end
 
+-- Only initialize suspendmanager if we want to suspend blocking jobs
+manager = onlyblocking and suspendmanager.SuspendManager.new(true) or nil
+if manager then
+    manager:refresh()
+end
+
 suspendmanager.foreach_construction_job(function (job)
-    if not onlyblocking or suspendmanager.isBlocking(job) then
+    if not manager or manager:shouldBeSuspended(job) then
         suspendmanager.suspend(job)
     end
 end)

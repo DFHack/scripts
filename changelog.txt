@@ -40,6 +40,7 @@ that repo.
 - `light-aquifers-only`: now available as a fort Autostart option in `gui/control-panel`. note that it will only appear if "armok" tools are configured to be shown on the Preferences tab.
 - `gui/gm-editor`: when passing the ``--freeze`` option, further ensure that the game is frozen by halting all rendering (other than for the gm-editor window itself)
 - `gui/gm-editor`: Alt-A now enables auto-update mode, where you can watch values change live when the game is unpaused
+- `suspendmanager`: now suspends construction jobs on top of floor designations, to protect the designations from being erased
 
 ## Removed
 

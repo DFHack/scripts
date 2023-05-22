@@ -16,23 +16,41 @@ end
 local GLOBAL_KEY = 'suspendmanager' -- used for state change hooks and persistence
 
 enabled = enabled or false
-preventblocking = preventblocking == nil and true or preventblocking
 
 eventful.enableEvent(eventful.eventType.JOB_INITIATED, 10)
 eventful.enableEvent(eventful.eventType.JOB_COMPLETED, 10)
+
+SuspendManager = defclass(SuspendManager)
+SuspendManager.ATTRS {
+    --- When enabled, suspendmanager also tries to suspend blocking jobs,
+    --- when not enabled, it only cares about avoiding unsuspending jobs suspended externally
+    preventBlocking = false,
+    --- Jobs that are on a tile with a designation (smooth, carve track, engrave)
+    jobsOnDesignation = {},
+}
+
+function SuspendManager.new(preventBlocking)
+    local manager = SuspendManager {
+        preventBlocking = preventBlocking
+    }
+    return manager
+end
+
+-- SuspendManager instance kept between frames
+Instance = Instance or SuspendManager.new(true)
 
 function isEnabled()
     return enabled
 end
 
 function preventBlockingEnabled()
-    return preventblocking
+    return Instance.preventBlocking
 end
 
 local function persist_state()
     persist.GlobalTable[GLOBAL_KEY] = json.encode({
         enabled=enabled,
-        prevent_blocking=preventblocking,
+        prevent_blocking=Instance.preventBlocking,
     })
 end
 
@@ -41,9 +59,9 @@ end
 function update_setting(setting, value)
     if setting == "preventblocking" then
         if (value == "true" or value == true) then
-            preventblocking = true
+            Instance.preventBlocking = true
         elseif (value == "false" or value == false) then
-            preventblocking = false
+            Instance.preventBlocking = false
         else
             qerror(tostring(value) .. " is not a valid value for preventblocking, it must be true or false")
         end
@@ -90,6 +108,13 @@ local BUILDING_IMPASSABLE = {
     [df.building_type.WindowGem]=true,
     [df.building_type.GrateWall]=true,
     [df.building_type.BarsVertical]=true,
+}
+
+--- Designation job type that are erased if a building is built on top of it
+local ERASABLE_DESIGNATION = {
+    [df.job_type.CarveTrack]=true,
+    [df.job_type.SmoothFloor]=true,
+    [df.job_type.DetailFloor]=true,
 }
 
 --- Check if a building is blocking once constructed
@@ -187,19 +212,25 @@ function isBlocking(job)
 end
 
 --- Return true with a reason if a job should be suspended.
---- It optionally takes in account the risk of creating stuck
---- construction buildings
+--- It takes in account the risk of creating stuck
+--- construction buildings, and jobs that will cancel designations
+--- `refresh()` should be called before
 --- @param job job
---- @param accountblocking boolean
-function shouldBeSuspended(job, accountblocking)
-    if accountblocking and isBlocking(job) then
+function SuspendManager:shouldBeSuspended(job)
+    if not self.preventBlocking then
+        return false, nil
+    end
+    if isBlocking(job) then
         return true, 'blocking'
+    end
+    if self.jobsOnDesignation[job.id] then
+        return true, 'on designation'
     end
     return false, nil
 end
 
 --- Return true with a reason if a job should not be unsuspended.
-function shouldStaySuspended(job, accountblocking)
+function SuspendManager:shouldStaySuspended(job)
     -- External reasons to be suspended
 
     if dfhack.maps.getTileFlags(job.pos).flow_size > 1 then
@@ -212,17 +243,40 @@ function shouldStaySuspended(job, accountblocking)
     end
 
     -- Internal reasons to be suspended, determined by suspendmanager
-    return shouldBeSuspended(job, accountblocking)
+    return self:shouldBeSuspended(job)
+end
+
+function SuspendManager:refresh()
+    self.jobsOnDesignation = {}
+    if not self.preventBlocking then
+        return
+    end
+
+    for _,job in utils.listpairs(df.global.world.jobs.list) do
+        if job and ERASABLE_DESIGNATION[job.job_type] then
+            ---@type building
+            local building = dfhack.buildings.findAtTile(job.pos)
+            if building ~= nil then
+                for _,building_job in ipairs(building.jobs) do
+                    if building_job.job_type == df.job_type.ConstructBuilding then
+                        --- Constructing a building on a designation work
+                        self.jobsOnDesignation[building_job.id] = true
+                    end
+                end
+            end
+        end
+    end
 end
 
 local function run_now()
+    Instance:refresh()
     foreach_construction_job(function(job)
         if job.flags.suspend then
-            if not shouldStaySuspended(job, preventblocking) then
+            if not Instance:shouldStaySuspended(job) then
                 unsuspend(job)
             end
         else
-            if shouldBeSuspended(job, preventblocking) then
+            if Instance:shouldBeSuspended(job) then
                 suspend(job)
             end
         end
@@ -231,7 +285,7 @@ end
 
 --- @param job job
 local function on_job_change(job)
-    if preventblocking then
+    if Instance.preventBlocking then
         -- Note: This method could be made incremental by taking in account the
         -- changed job
         run_now()
@@ -262,7 +316,7 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
 
     local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '')
     enabled = (persisted_data or {enabled=false})['enabled']
-    preventblocking = (persisted_data or {prevent_blocking=true})['prevent_blocking']
+    Instance.preventBlocking = (persisted_data or {prevent_blocking=true})['prevent_blocking']
     update_triggers()
 end
 
@@ -294,7 +348,7 @@ local function main(args)
         update_setting(positionals[2], positionals[3])
     elseif command == nil then
         print(string.format("suspendmanager is currently %s", (enabled and "enabled" or "disabled")))
-        if preventblocking then
+        if Instance.preventBlocking then
             print("It is configured to prevent construction jobs from blocking each others")
         else
             print("It is configured to unsuspend all jobs")
