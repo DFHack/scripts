@@ -186,7 +186,7 @@ argparse.processArgsGetopt({...}, {
 local skipped_counts = {}
 local unsuspended_count = 0
 
-local manager = suspendmanager.SuspendManager.new(skipblocking)
+local manager = suspendmanager.SuspendManager{preventBlocking=skipblocking}
 manager:refresh()
 suspendmanager.foreach_construction_job(function(job)
     if not job.flags.suspend then return end

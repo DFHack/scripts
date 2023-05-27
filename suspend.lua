@@ -17,7 +17,7 @@ if help then
 end
 
 -- Only initialize suspendmanager if we want to suspend blocking jobs
-manager = onlyblocking and suspendmanager.SuspendManager.new(true) or nil
+manager = onlyblocking and suspendmanager.SuspendManager{preventBlocking=true} or nil
 if manager then
     manager:refresh()
 end

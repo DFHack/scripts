@@ -29,15 +29,8 @@ SuspendManager.ATTRS {
     jobsOnDesignation = {},
 }
 
-function SuspendManager.new(preventBlocking)
-    local manager = SuspendManager {
-        preventBlocking = preventBlocking
-    }
-    return manager
-end
-
 -- SuspendManager instance kept between frames
-Instance = Instance or SuspendManager.new(true)
+Instance = Instance or SuspendManager{preventBlocking=true}
 
 function isEnabled()
     return enabled
@@ -211,6 +204,26 @@ function isBlocking(job)
     return false
 end
 
+--- Return true if the building overlaps with a tile with a designation flag
+---@param building building
+local function buildingOnDesignation(building)
+    local z = building.z
+    for x=building.x1,building.x2 do
+        for y=building.y1,building.y2 do
+            local flags, occupancy = dfhack.maps.getTileFlags(x,y,z)
+            if flags.dig ~= df.tile_dig_designation.No or
+                flags.smooth > 0 or
+                occupancy.carve_track_north or
+                occupancy.carve_track_east or
+                occupancy.carve_track_south or
+                occupancy.carve_track_west
+            then
+                return true
+            end
+        end
+    end
+end
+
 --- Return true with a reason if a job should be suspended.
 --- It takes in account the risk of creating stuck
 --- construction buildings, and jobs that will cancel designations
@@ -253,8 +266,8 @@ function SuspendManager:refresh()
     end
 
     for _,job in utils.listpairs(df.global.world.jobs.list) do
-        if job and ERASABLE_DESIGNATION[job.job_type] then
-            ---@type building
+        if ERASABLE_DESIGNATION[job.job_type] then
+            -- Designation job: store the building jobs on the same tile
             local building = dfhack.buildings.findAtTile(job.pos)
             if building ~= nil then
                 for _,building_job in ipairs(building.jobs) do
@@ -262,6 +275,16 @@ function SuspendManager:refresh()
                         --- Constructing a building on a designation work
                         self.jobsOnDesignation[building_job.id] = true
                     end
+                end
+            end
+        end
+
+        if job.job_type == df.job_type.ConstructBuilding then
+            ---@type building
+            local building = dfhack.job.getHolder(job)
+            if building then
+                if buildingOnDesignation(building) then
+                    self.jobsOnDesignation[job.id] = true
                 end
             end
         end
