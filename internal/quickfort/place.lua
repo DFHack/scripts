@@ -72,6 +72,12 @@ local function merge_db_entries(self, other)
     for adj in pairs(other.adjustments or {}) do
         self.adjustments[adj] = true
     end
+    for _, to in ipairs(other.links and other.links.give_to or {}) do
+        table.insert(self.links.give_to, to)
+    end
+    for _, from in ipairs(other.links and other.links.take_from or {}) do
+        table.insert(self.links.take_from, from)
+    end
 end
 
 local stockpile_template = {
@@ -297,9 +303,11 @@ local function create_stockpile(s, link_data, dry_run)
         table.insert(ensure_key(link_data.piles, db_entry.props.name), bld)
     end
     for _,recipient in ipairs(db_entry.links.give_to) do
+        log('giving to: "%s"', recipient)
         table.insert(link_data.nodes, {from=bld, to=recipient})
     end
     for _,supplier in ipairs(db_entry.links.take_from) do
+        log('taking from: "%s"', supplier)
         table.insert(link_data.nodes, {from=supplier, to=bld})
     end
     return ntiles
