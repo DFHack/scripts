@@ -22,13 +22,13 @@ local DEFAULT_JOB_TYPES = {
     'SeekInfant', 'SetBone', 'Surgery', 'Suture',
     -- ensure prisoners and animals are tended to quickly
     -- (Animal/prisoner storage already covered by 'StoreItemInStockpile' above)
-    'SlaughterAnimal',
+    'SlaughterAnimal', 'PenLargeAnimal', 'LoadCageTrap',
     -- ensure noble tasks never get starved
     'InterrogateSubject', 'ManageWorkOrders', 'ReportCrime', 'TradeAtDepot',
     -- get tasks done quickly that might block the player from getting on to
     -- the next thing they want to do
     'BringItemToDepot', 'DestroyBuilding', 'DumpItem', 'FellTree',
-    'RemoveConstruction',
+    'RemoveConstruction', 'PullLever'
 }
 
 -- set of job types that we are watching. maps job_type (as a number) to
