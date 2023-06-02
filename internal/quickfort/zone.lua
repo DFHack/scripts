@@ -398,6 +398,16 @@ local function set_location(zone, location, ctx)
         end
         site.buildings:insert('#', data)
         site.next_building_id = site.next_building_id + 1
+        -- fix up BitArray flags (which don't seem to get set by the insert above)
+        local bld = site.buildings[#site.buildings-1]
+        for flag, val in pairs(data.assign.flags) do
+            bld.flags[flag] = val
+        end
+        if data.flags then
+            for flag, val in pairs(data.flags) do
+                bld.flags[flag] = val
+            end
+        end
     end
     zone.site_id = site.id
     zone.location_id = loc_id
