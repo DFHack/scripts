@@ -128,14 +128,28 @@ local function get_num_items(b)
     return math.floor(num_tiles/4) + 1
 end
 
+local function create_order(ctx, label, order_spec)
+    local quantity = math.ceil(order_spec.quantity)
+    log('ordering %d %s', quantity, label)
+    if not ctx.dry_run and stockflow then
+        stockflow.create_orders(order_spec.order, quantity)
+        table.insert(ctx.stats, {label=('Ordered '..label), value=quantity, is_order=true})
+    else
+        table.insert(ctx.stats, {label=('Would order '..label), value=quantity, is_order=true})
+    end
+end
+
+-- sort by quantity so workshops that have smaller numbers of allowed general orders
+-- can contribute to the larger item orders
 function create_orders(ctx)
-    for k,order_spec in pairs(ctx.order_specs or {}) do
-        local quantity = math.ceil(order_spec.quantity)
-        log('ordering %d %s', quantity, k)
-        if not ctx.dry_run and stockflow then
-            stockflow.create_orders(order_spec.order, quantity)
-        end
-        table.insert(ctx.stats, {label=k, value=quantity, is_order=true})
+    if not ctx.order_specs then return end
+    local orders = {}
+    for label,spec in pairs(ctx.order_specs) do
+        table.insert(orders, {label=label, spec=spec})
+    end
+    table.sort(orders, function(a,b) return a.spec.quantity > b.spec.quantity end)
+    for _,order in ipairs(orders) do
+        create_order(ctx, order.label, order.spec)
     end
 end
 

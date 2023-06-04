@@ -623,7 +623,7 @@ function Quickfort:do_command(command, dry_run, post_fn)
                     command, self.blueprint_name, self.section_name, dry_run),
                 self.saved_cursor.x, self.saved_cursor.y, self.saved_cursor.z))
     local ctx = self:run_quickfort_command(command, dry_run, false)
-    quickfort_command.finish_command(ctx, self.section_name)
+    quickfort_command.finish_commands(ctx)
     if command == 'run' then
         if #ctx.messages > 0 then
             self._dialog = dialogs.showMessage(

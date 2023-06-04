@@ -29,20 +29,26 @@ local command_switch = {
 local default_transform_fn = function(pos) return pos end
 
 -- returns map of values that start the same for all contexts
-local function make_ctx_base()
+local function make_ctx_base(prev_ctx)
+    prev_ctx = prev_ctx or {
+        order_specs={},
+        stats={out_of_bounds={label='Tiles outside map boundary', value=0},
+               invalid_keys={label='Invalid key sequences', value=0}},
+               messages={},
+    }
     return {
         zmin=30000,
         zmax=0,
         transform_fn=default_transform_fn,
-        stats={out_of_bounds={label='Tiles outside map boundary', value=0},
-               invalid_keys={label='Invalid key sequences', value=0}},
-        messages={},
+        order_specs=prev_ctx.order_specs,
+        stats=prev_ctx.stats,
+        messages=prev_ctx.messages,
     }
 end
 
-local function make_ctx(command, blueprint_name, cursor, aliases, quiet,
+local function make_ctx(prev_ctx, command, blueprint_name, cursor, aliases, quiet,
                         dry_run, preview, preserve_engravings)
-    local ctx = make_ctx_base()
+    local ctx = make_ctx_base(prev_ctx)
     local params = {
         command=command,
         blueprint_name=blueprint_name,
@@ -58,7 +64,7 @@ local function make_ctx(command, blueprint_name, cursor, aliases, quiet,
 end
 
 -- see make_ctx() above for which params can be specified
-function init_ctx(params)
+function init_ctx(params, prev_ctx)
     if not params.command or not command_switch[params.command] then
         error(('invalid command: "%s"'):format(params.command))
     end
@@ -70,6 +76,7 @@ function init_ctx(params)
     end
 
     return make_ctx(
+        prev_ctx,
         params.command,
         params.blueprint_name,
         copyall(params.cursor),  -- copy since we modify this during processing
@@ -159,17 +166,18 @@ function do_command_section(ctx, section_name, modifiers)
     local filepath = quickfort_list.get_blueprint_filepath(ctx.blueprint_name)
     local first_modeline =
             do_apply_modifiers(filepath, sheet_name, label, ctx, modifiers)
-    if first_modeline and first_modeline.message then
+    if first_modeline and first_modeline.message and ctx.command == 'run' then
         table.insert(ctx.messages, first_modeline.message)
     end
 end
 
-function finish_command(ctx, section_name)
-    if ctx.command == 'orders' then quickfort_orders.create_orders(ctx) end
+function finish_commands(ctx)
+    quickfort_orders.create_orders(ctx)
+    for _,message in ipairs(ctx.messages) do
+        print('* '..message)
+    end
     if not ctx.quiet then
-        print(('%s successfully completed'):format(
-                quickfort_parse.format_command(ctx.command, ctx.blueprint_name,
-                                               section_name, ctx.dry_run)))
+        print('Blueprint statistics:')
         for _,stat in pairs(ctx.stats) do
             if stat.always or stat.value > 0 then
                 print(('  %s: %d'):format(stat.label, stat.value))
@@ -178,11 +186,11 @@ function finish_command(ctx, section_name)
     end
 end
 
-local function do_one_command(command, cursor, blueprint_name, section_name,
+local function do_one_command(prev_ctx, command, cursor, blueprint_name, section_name,
                               mode, quiet, dry_run, preserve_engravings,
                               modifiers)
     if not cursor then
-        if command == 'orders' or mode == 'notes' or mode == 'config' then
+        if command == 'orders' or mode == 'notes' then
             cursor = {x=0, y=0, z=0}
         else
             qerror('please position the keyboard cursor at the blueprint start ' ..
@@ -190,45 +198,49 @@ local function do_one_command(command, cursor, blueprint_name, section_name,
         end
     end
 
-    local ctx = init_ctx{
+    local ctx = init_ctx({
         command=command,
         blueprint_name=blueprint_name,
         cursor=cursor,
         aliases=quickfort_list.get_aliases(blueprint_name),
         quiet=quiet,
         dry_run=dry_run,
-        preserve_engravings=preserve_engravings}
+        preserve_engravings=preserve_engravings}, prev_ctx)
 
     do_command_section(ctx, section_name, modifiers)
-    finish_command(ctx, section_name)
-    if command == 'run' then
-        for _,message in ipairs(ctx.messages) do
-            print('* '..message)
-        end
+    if not ctx.quiet then
+        print(('%s successfully completed'):format(
+        quickfort_parse.format_command(ctx.command, ctx.blueprint_name,
+                                       section_name, ctx.dry_run)))
     end
+    return ctx
 end
 
 local function do_bp_name(commands, cursor, bp_name, sec_names, quiet, dry_run,
                           preserve_engravings, modifiers)
+    local ctx
     for _,sec_name in ipairs(sec_names) do
         local mode = quickfort_list.get_blueprint_mode(bp_name, sec_name)
         for _,command in ipairs(commands) do
-            do_one_command(command, cursor, bp_name, sec_name, mode, quiet,
+            ctx = do_one_command(ctx, command, cursor, bp_name, sec_name, mode, quiet,
                            dry_run, preserve_engravings, modifiers)
         end
     end
+    return ctx
 end
 
 local function do_list_num(commands, cursor, list_nums, quiet, dry_run,
                            preserve_engravings, modifiers)
+    local ctx
     for _,list_num in ipairs(list_nums) do
         local bp_name, sec_name, mode =
                 quickfort_list.get_blueprint_by_number(list_num)
         for _,command in ipairs(commands) do
-            do_one_command(command, cursor, bp_name, sec_name, mode, quiet,
+            ctx = do_one_command(ctx,  command, cursor, bp_name, sec_name, mode, quiet,
                            dry_run, preserve_engravings, modifiers)
         end
     end
+    return ctx
 end
 
 function do_command(args)
@@ -279,14 +291,15 @@ function do_command(args)
         function() quickfort_common.verbose = false end,
         function()
             local ok, list_nums = pcall(argparse.numberList, blueprint_name)
+            local ctx
             if not ok then
-                do_bp_name(args.commands, cursor, blueprint_name, section_names,
-                           quiet, dry_run, preserve_engravings,
-                           modifiers)
+                ctx = do_bp_name(args.commands, cursor, blueprint_name, section_names,
+                        quiet, dry_run, preserve_engravings, modifiers)
             else
-                do_list_num(args.commands, cursor, list_nums, quiet, dry_run,
-                            preserve_engravings, modifiers)
+                ctx = do_list_num(args.commands, cursor, list_nums, quiet, dry_run,
+                        preserve_engravings, modifiers)
             end
+            finish_commands(ctx)
         end)
 end
 
