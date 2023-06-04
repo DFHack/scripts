@@ -36,9 +36,14 @@ local FORT_SERVICES = {
 }
 
 local FORT_AUTOSTART = {
+    'autobutcher target 50 50 14 2 BIRD_GOOSE',
+    'autobutcher target 50 50 14 2 BIRD_TURKEY',
+    'autobutcher target 50 50 14 2 BIRD_CHICKEN',
+    'autofarm threshold 150 grass_tail_pig',
     'ban-cooking all',
     'buildingplan set boulders false',
     'buildingplan set logs false',
+    'fix/blood-del fort',
     'light-aquifers-only fort',
 }
 for _,v in ipairs(FORT_SERVICES) do
@@ -814,7 +819,7 @@ end
 ControlPanel = defclass(ControlPanel, widgets.Window)
 ControlPanel.ATTRS {
     frame_title='DFHack Control Panel',
-    frame={w=55, h=36},
+    frame={w=61, h=36},
     resizable=true,
     resize_min={h=28},
     autoarrange_subviews=true,
