@@ -422,7 +422,13 @@ function HelpPanel:add_output(output)
     end
 end
 
-function HelpPanel:set_entry(entry_name, show_help)
+local function HelpPanel_parse_alias_entry(text)
+    local firstword = get_first_word(text)
+    local aliased_command = "[alias] " .. firstword .. ": " .. dfhack.internal.getAliasCommand(firstword)
+    return aliased_command .. NEWLINE .. string.rep("-", #aliased_command) .. NEWLINE .. NEWLINE
+end
+
+function HelpPanel:set_entry(entry_name, show_help, is_alias, text)
     if show_help then
         self.subviews.pages:setSelected('help_label')
     end
@@ -437,6 +443,9 @@ function HelpPanel:set_entry(entry_name, show_help)
     end
     local wrapped_help = helpdb.get_entry_long_help(entry_name,
                                                     self.frame_body.width - 5)
+    if is_alias then
+        wrapped_help = HelpPanel_parse_alias_entry(text) .. wrapped_help
+    end
     HelpPanel_update_label(label, wrapped_help)
     self.cur_entry = entry_name
 end
@@ -628,13 +637,13 @@ function LauncherUI:init(args)
     self:on_edit_input('')
 end
 
-function LauncherUI:update_help(text, firstword, show_help)
+function LauncherUI:update_help(text, firstword, show_help, is_alias)
     local firstword = firstword or get_first_word(text)
     if firstword == self.firstword then
         return
     end
     self.firstword = firstword
-    self.subviews.help:set_entry(firstword, show_help)
+    self.subviews.help:set_entry(firstword, show_help, is_alias, text)
 end
 
 local function extract_entry(entries, firstword)
@@ -726,7 +735,12 @@ end
 
 function LauncherUI:on_edit_input(text, show_help)
     local firstword = get_first_word(text)
-    self:update_help(text, firstword, show_help)
+    -- If the first word in the entry is an alias, show the appropriate autocomplete entry and help
+    local is_alias = dfhack.internal.isAlias(firstword)
+    if is_alias then
+        firstword = get_first_word(dfhack.internal.getAliasCommand(firstword))
+    end
+    self:update_help(text, firstword, show_help, is_alias)
     self:update_autocomplete(firstword)
 end
 
