@@ -14,6 +14,7 @@ that repo.
 # Future
 
 ## New Scripts
+- `gui/autofarm`: interactively configure the `autofarm` plugin and see important related information (like whether the seeds you have can be planted in your biomes)
 
 ## Fixes
 - `suspendmanager`: Fix the overlay enabling/disabling `suspendmanager` unexpectedly
