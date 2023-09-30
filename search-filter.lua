@@ -95,7 +95,6 @@ function SearchEngine:onSelect(index, citizen)
     df.global.enabler.mouse_lbut = 0
     df.global.enabler.mouse_lbut_down = 0
 
-
 end
 
 -- Screen creation
