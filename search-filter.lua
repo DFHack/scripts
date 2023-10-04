@@ -59,41 +59,35 @@ function SearchEngine:updateList()
 end
 
 function SearchEngine:onSelect(index, unit)
-    local gui = require 'gui'
-    local scr = dfhack.gui.getDFViewscreen()
+-- Assign the unit to a specific id
+local unit = df.unit.find(unit.id)
 
-    df.global.plotinfo.follow_unit = unit.id
-    df.global.game.main_interface.view_sheets.open = true  -- Changes the character sheet to true
-    df.global.game.main_interface.view_sheets.active_id = unit.id -- changes the id of the character 
-    df.global.game.main_interface.view_sheets.active_sheet = 0 -- changes the active sheet to be a unit
+    print(unit.id)
+-- Get the position of the unit and center the camera on the unit
+local x, y, z = dfhack.units.getPosition(unit)
+dfhack.gui.revealInDwarfmodeMap(xyz2pos(x, y, z), true)
 
-    df.global.gps.mouse_x = 130
-    df.global.gps.precise_mouse_x = df.global.gps.mouse_x * df.global.gps.tile_pixel_x
+-- Get the dimensions of the Dwarf Fortress map
+local dims = dfhack.gui.getDwarfmodeViewDims()
+-- Calculate zoom factor based on current viewport zoom level
+local gpsZoom = df.global.gps.viewport_zoom_factor
+-- Set the mouse x and y positions to click on the unit
+df.global.gps.precise_mouse_x = (x - df.global.window_x) * gpsZoom // 4 + gpsZoom // 8
+df.global.gps.precise_mouse_y = (y - df.global.window_y) * gpsZoom // 4 + gpsZoom // 8
 
-    df.global.gps.mouse_y = 20
-    df.global.gps.precise_mouse_y = df.global.gps.mouse_y * df.global.gps.tile_pixel_y
+-- Enable mouse tracking and set the left mouse button as pressed
+df.global.enabler.tracking_on = 1
+df.global.enabler.mouse_lbut = 1
+df.global.enabler.mouse_lbut_down = 1
 
-    df.global.enabler.mouse_lbut = 0
-    df.global.enabler.mouse_lbut_down = 0
+-- Simulate a left mouse click at the current mouse position
+gui.simulateInput(dfhack.gui.getDFViewscreen(), '_MOUSE_L')
 
-    -- Left click simulation
-    simulateClick(scr, '_MOUSE_L')
+-- Disable mouse tracking and set the left mouse button as not pressed
+df.global.enabler.tracking_on = 0
+df.global.enabler.mouse_lbut = 0
+df.global.enabler.mouse_lbut_down = 0
 
-    -- Right click simulation
-    simulateClick(scr, '_MOUSE_R')
-end
-
-function simulateClick(scr, button)
-    local gui = require 'gui'
-
-    df.global.enabler.tracking_on = 1
-    df.global.enabler.mouse_lbut = 1
-    df.global.enabler.mouse_lbut_down = 1
-
-    gui.simulateInput(scr, button)
-
-    df.global.enabler.mouse_lbut = 0
-    df.global.enabler.mouse_lbut_down = 0
 end
 
 -- Screen creation
