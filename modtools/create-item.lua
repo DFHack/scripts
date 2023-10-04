@@ -274,7 +274,7 @@ local function createItem(mat, itemType, quality, creator, description, amount)
 end
 
 local function get_first_citizen()
-    local citizens = dfhack.units.getCitizens()
+    local citizens = dfhack.units.getCitizens(true)
     if not citizens or not citizens[1] then
         qerror('Could not choose a creator unit. Please select one in the UI')
     end

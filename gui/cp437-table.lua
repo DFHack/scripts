@@ -118,10 +118,6 @@ function CPDialog:submit()
         keys[i] = k
     end
 
-    -- ensure clicks on "submit" don't bleed through
-    df.global.enabler.mouse_lbut = 0
-    df.global.enabler.mouse_lbut_down = 0
-
     local screen = self.parent_view
     local parent = screen._native.parent
     dfhack.screen.hideGuard(screen, function()

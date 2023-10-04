@@ -308,13 +308,20 @@ end
 --- Check if the tile can be walked on
 ---@param pos coord
 local function walkable(pos)
-    return dfhack.maps.getTileBlock(pos).walkable[pos.x % 16][pos.y % 16] > 0
+    local tileblock = dfhack.maps.getTileBlock(pos)
+    return tileblock and tileblock.walkable[pos.x % 16][pos.y % 16] > 0
 end
 
 --- Check if the tile is suitable tile to stand on for construction (walkable & not a tree branch)
 ---@param pos coord
 local function isSuitableAccess(pos)
     local tt = dfhack.maps.getTileType(pos)
+
+    if not tt then
+        -- no tiletype, likely out of bound
+        return false
+    end
+
     local attrs = df.tiletype.attrs[tt]
     if attrs.shape == df.tiletype_shape.BRANCH or attrs.shape == df.tiletype_shape.TRUNK_BRANCH then
         -- Branches can be walked on, but most of the time we can assume that it's not a suitable access.
@@ -425,6 +432,7 @@ local function tileHasSupportFloor(pos)
         local attrs = df.tiletype.attrs[tt]
         if TILETYPE_SHAPE_FLOOR_SUPPORT[attrs.shape] then return true end
     end
+    return false
 end
 
 local function tileHasSupportBuilding(pos)

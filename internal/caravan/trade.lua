@@ -534,7 +534,7 @@ end
 
 function TradeScreen:onRenderFrame()
     if not df.global.game.main_interface.trade.open then
-        view:dismiss()
+        if view then view:dismiss() end
     elseif self.reset_pending then
         self.reset_pending = nil
         self.trade_window:reset_cache()

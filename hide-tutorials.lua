@@ -23,12 +23,17 @@ local function close_help()
 end
 
 function skip_tutorial_prompt(scr)
-    if help.open and help.context == df.help_context_type.EMBARK_TUTORIAL_CHOICE then
+    if not help.open then return end
+    local mouse_y = 23
+    if help.context == df.help_context_type.EMBARK_TUTORIAL_CHOICE then
         help.context = df.help_context_type.EMBARK_MESSAGE
+        -- dialog behavior changes for the button click, but the button is still
+        -- in the "tutorial choice" button position
+        mouse_y = 18
+    end
+    if help.context == df.help_context_type.EMBARK_MESSAGE then
         df.global.gps.mouse_x = df.global.gps.dimx // 2
-        df.global.gps.mouse_y = 18
-        df.global.enabler.mouse_lbut = 1
-        df.global.enabler.mouse_lbut_down = 1
+        df.global.gps.mouse_y = mouse_y
         gui.simulateInput(scr, '_MOUSE_L')
     end
 end

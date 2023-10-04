@@ -27,6 +27,19 @@ Template for new versions:
 # Future
 
 ## New Tools
+
+## New Features
+
+## Fixes
+- `suspendmanager`: fix errors when constructing near the map edge
+
+## Misc Improvements
+
+## Removed
+
+# 50.11-r1
+
+## New Tools
 - `startdwarf`: (reinstated) set number of starting dwarves
 
 ## New Features
@@ -39,8 +52,6 @@ Template for new versions:
 ## Misc Improvements
 - `devel/inspect-screen`: display total grid size for UI and map layers
 - `suspendmanager`: now suspends constructions that would cave-in immediately on completion
-
-## Removed
 
 # 50.10-r1
 

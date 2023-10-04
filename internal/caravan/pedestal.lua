@@ -26,7 +26,7 @@ end
 AssignItems = defclass(AssignItems, widgets.Window)
 AssignItems.ATTRS {
     frame_title='Assign items for display',
-    frame={w=74, h=46},
+    frame={w=76, h=46},
     resizable=true,
     resize_min={h=25},
     frame_inset={l=1, t=1, b=1, r=0},
@@ -192,7 +192,7 @@ function AssignItems:init()
             on_char=function(ch) return ch:match('[%l -]') end,
         },
         widgets.Panel{
-            frame={t=2, l=0, w=70, h=6},
+            frame={t=2, l=0, w=72, h=6},
             frame_style=gui.FRAME_INTERIOR,
             subviews={
                 widgets.Panel{
@@ -261,8 +261,20 @@ function AssignItems:init()
                     },
                 },
                 widgets.ToggleHotkeyLabel{
+                    view_id='hide_unreachable',
+                    frame={t=0, l=40, w=30},
+                    label='Hide unreachable items:',
+                    key='CUSTOM_SHIFT_U',
+                    options={
+                        {label='Yes', value=true, pen=COLOR_GREEN},
+                        {label='No', value=false}
+                    },
+                    initial_option=true,
+                    on_change=function() self:refresh_list() end,
+                },
+                widgets.ToggleHotkeyLabel{
                     view_id='hide_forbidden',
-                    frame={t=0, l=40, w=28},
+                    frame={t=2, l=40, w=28},
                     label='Hide forbidden items:',
                     key='CUSTOM_SHIFT_F',
                     options={
@@ -324,7 +336,7 @@ function AssignItems:init()
             frame={l=0, b=5, h=1, r=0},
             text={
                 'Total value of assigned items:',
-                {gap=1,
+                {gap=1, pen=COLOR_GREEN,
                  text=function() return common.obfuscate_value(get_assigned_value(self.bld)) end},
             },
         },
@@ -333,7 +345,7 @@ function AssignItems:init()
             text={
                 {gap=7,
                  text='Expected location tier:'},
-                {gap=1,
+                {gap=1, pen=COLOR_GREEN,
                  text=function() return get_expected_location_tier(self.bld) end},
             },
             visible=function() return get_containing_temple_or_guildhall(self.bld) end,
@@ -396,7 +408,7 @@ local function is_container(item)
     )
 end
 
-local function is_displayable_item(item, display_bld)
+local function is_displayable_item(item)
     if not item or
         item.flags.hostile or
         item.flags.removed or
@@ -425,6 +437,9 @@ local function is_displayable_item(item, display_bld)
             return false
         end
     end
+    if not dfhack.maps.isTileVisible(xyz2pos(dfhack.items.getPosition(item))) then
+        return false
+    end
     if item.flags.in_building then
         local bld = dfhack.items.getHolderBuilding(item)
         if not bld then return false end
@@ -434,8 +449,7 @@ local function is_displayable_item(item, display_bld)
             if item == contained_item.item then return false end
         end
     end
-    return dfhack.maps.canWalkBetween(xyz2pos(dfhack.items.getPosition(item)),
-        xyz2pos(display_bld.centerx, display_bld.centery, display_bld.z))
+    return true
 end
 
 local function get_display_bld_id(item)
@@ -477,12 +491,12 @@ local function contains_non_liquid_powder(container)
     return false
 end
 
-function AssignItems:cache_choices(inside_containers)
+function AssignItems:cache_choices(inside_containers, display_bld)
     if self.choices_cache[inside_containers] then return self.choices_cache[inside_containers] end
 
     local choices = {}
     for _, item in ipairs(df.global.world.items.all) do
-        if not is_displayable_item(item, self.bld) then goto continue end
+        if not is_displayable_item(item) then goto continue end
         if inside_containers and is_container(item) and contains_non_liquid_powder(item) then
             goto continue
         elseif not inside_containers and item.flags.in_inventory then
@@ -491,12 +505,15 @@ function AssignItems:cache_choices(inside_containers)
         local value = common.get_perceived_value(item)
         local desc = common.get_item_description(item)
         local status = get_status(item, self.bld)
+        local reachable = dfhack.maps.canWalkBetween(xyz2pos(dfhack.items.getPosition(item)),
+                xyz2pos(display_bld.centerx, display_bld.centery, display_bld.z))
         local data = {
             item=item,
             desc=desc,
             value=value,
             status=status,
             quality=item.flags.artifact and 6 or item:getQuality(),
+            reachable=reachable,
         }
         local search_key
         if not inside_containers and is_container(item) then
@@ -518,18 +535,16 @@ function AssignItems:cache_choices(inside_containers)
 end
 
 function AssignItems:get_choices()
-    local raw_choices = self:cache_choices(self.subviews.inside_containers:getOptionValue())
+    local raw_choices = self:cache_choices(self.subviews.inside_containers:getOptionValue(), self.bld)
     local choices = {}
+    local include_unreachable = not self.subviews.hide_unreachable:getOptionValue()
     local include_forbidden = not self.subviews.hide_forbidden:getOptionValue()
     local min_quality = self.subviews.min_quality:getOptionValue()
     local max_quality = self.subviews.max_quality:getOptionValue()
     for _,choice in ipairs(raw_choices) do
         local data = choice.data
-        if not include_forbidden then
-            if data.item.flags.forbid then
-                goto continue
-            end
-        end
+        if not include_unreachable and not data.reachable then goto continue end
+        if not include_forbidden and data.item.flags.forbid then goto continue end
         if min_quality > data.quality then goto continue end
         if max_quality < data.quality then goto continue end
         table.insert(choices, choice)

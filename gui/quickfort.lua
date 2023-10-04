@@ -211,13 +211,7 @@ function BlueprintDialog:onInput(keys)
         details:show()
         -- for testing
         self._details = details
-    elseif keys.LEAVESCREEN or keys._MOUSE_R then
-        self:dismiss()
-        if self.on_cancel then
-            self.on_cancel()
-        end
-    else
-        self:inputToSubviews(keys)
+    elseif BlueprintDialog.super.onInput(self, keys) then
         local prev_filter_text = filter_text
         -- save the filter if it was updated so we always have the most recent
         -- text for the next invocation of the dialog
@@ -229,6 +223,7 @@ function BlueprintDialog:onInput(keys)
             -- otherwise, save the new selected item
             save_selection(self.subviews.list)
         end
+        return true
     end
 end
 
