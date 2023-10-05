@@ -36,7 +36,7 @@ function SearchEngine:getFortControlledUnits()
             -- Use the race name if the unit's name field is empty
             unitName = dfhack.units.getRaceName(unit)
         end
-        if dfhack.units.isFortControlled(unit) then
+        if dfhack.units.isVisible(unit) and dfhack.units.isActive(unit) then
             table.insert(fortControlledUnits, {text=unitName, search_normalized=dfhack.toSearchNormalized(unitName), id=unit.id})
         end
     end
@@ -62,7 +62,6 @@ function SearchEngine:onSelect(index, unit)
 -- Assign the unit to a specific id
 local unit = df.unit.find(unit.id)
 
-    print(unit.id)
 -- Get the position of the unit and center the camera on the unit
 local x, y, z = dfhack.units.getPosition(unit)
 dfhack.gui.revealInDwarfmodeMap(xyz2pos(x, y, z), true)
@@ -81,6 +80,8 @@ df.global.enabler.mouse_lbut = 1
 df.global.enabler.mouse_lbut_down = 1
 
 -- Simulate a left mouse click at the current mouse position
+gui.simulateInput(dfhack.gui.getDFViewscreen(), '_MOUSE_R')
+
 gui.simulateInput(dfhack.gui.getDFViewscreen(), '_MOUSE_L')
 
 -- Disable mouse tracking and set the left mouse button as not pressed
