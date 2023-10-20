@@ -30,6 +30,9 @@ Options:
 :help:  shows this help screen
 
 ]====]
+
+local time = require 'time'
+
 local playerfortid = df.global.plotinfo.site_id -- Player fortress id
 local templeagreements = {} -- Table of agreements for temples in player fort
 local guildhallagreements = {} -- Table of agreements for guildhalls in player fort
@@ -54,32 +57,14 @@ function get_location_type(agr)
 end
 
 function get_petition_date(agr)
-    local agr_year = agr.details[0].year
-    local agr_year_tick = agr.details[0].year_tick
-    local julian_day = math.floor(agr_year_tick / 1200) + 1
-    local agr_month = math.floor(julian_day / 28) + 1
-    local agr_day = julian_day % 28
-    return string.format("%03d-%02d-%02d",agr_year, agr_month, agr_day)
+    local agr_time = time.Time{year = agr.details[0].year, ticks = agr.details[0].year_tick}
+    return string.format("%03d-%02d-%02d",agr_time:getYears(), agr_time:getMonths(), agr_time:getDayInMonth())
 end
 
 function get_petition_age(agr)
-    local agr_year_tick = agr.details[0].year_tick
-    local agr_year = agr.details[0].year
-    local cur_year_tick = df.global.cur_year_tick
-    local cur_year = df.global.cur_year
-    local del_year, del_year_tick
-    --delta, check to prevent off by 1 error, not validated
-    if cur_year_tick > agr_year_tick then
-        del_year = cur_year - agr_year
-        del_year_tick = cur_year_tick - agr_year_tick
-    else
-        del_year = cur_year - agr_year - 1
-        del_year_tick = agr_year_tick - cur_year_tick
-    end
-    local julian_day = math.floor(del_year_tick / 1200) + 1
-    local del_month = math.floor(julian_day / 28)
-    local del_day = julian_day % 28
-    return {del_year,del_month,del_day}
+    local agr_time = time.Time{year = agr.details[0].year, ticks = agr.details[0].year_tick}
+    local cur_time = time.Time{year = df.global.cur_year, ticks = df.global.cur_year_tick}
+    return cur_time - agr_time
 end
 
 function get_guildhall_profession(agr)
@@ -123,7 +108,7 @@ function is_resolved(agr)
     elseif agr.flags.petition_not_accepted then
         res = true
         res_str = 'denied'
-    elseif get_petition_age(agr)[1] ~= 0 then
+    elseif get_petition_age(agr):getYears() >= 1 then
         res = true
         res_str = 'expired'
     end
@@ -146,7 +131,7 @@ function generate_output(agr,loctype)
         return
     end
 
-    output_str = output_str..'\n\tas agreed on '..get_petition_date(agr)..'. \t'..agr_age[1]..'y, '..agr_age[2]..'m, '..agr_age[3]..'d ago'
+    output_str = output_str..'\n\tas agreed on '..get_petition_date(agr)..'. \t'..agr_age:getYears()..'y, '..agr_age:getMonths()..'m, '..agr_age:getDayInMonth()..'d ago'
 
     -- can print '(outstanding)' status here, but imho none is cleaner
     if not resolved then
