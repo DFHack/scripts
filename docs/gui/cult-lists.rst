@@ -1,4 +1,4 @@
-cult-lists.lua
+gui/cult-lists.lua
 ==============
 
 .. dfhack-tool::
