@@ -7,7 +7,6 @@
 --
 ------------------------------------------------------------------------------------------
 -- Noticed that this was an open fork, but hadn't been touched in months, so decided to have a shot at getting it finished
--- my (S3nti3ntP0tat0) comments will be in (brackets) to differentiate between mine and gero-pardo's
 -- I am not super familiar with lua or C/C++ but will see how thinbgs go.
 -- Doesn't seem like there are many problems with the script itself just needed to be formatted
 -----------------------------------------------------------------------------------------
