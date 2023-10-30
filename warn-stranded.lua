@@ -4,7 +4,6 @@
 --@module = true
 
 local gui = require 'gui'
-local utils = require 'utils'
 local widgets = require 'gui.widgets'
 local argparse = require 'argparse'
 local args = {...}
@@ -180,7 +179,7 @@ function WarningWindow:init(info)
         },
         widgets.WrappedLabel{
             frame={b=3, l=0},
-            text_to_wrap='Double click to toggle unit ignore. Shift double click to toggle a group.',
+            text_to_wrap='Select to zoom to unit. Double click to toggle unit ignore. Shift double click to toggle a group.',
         },
         widgets.HotkeyLabel{
             frame={b=1, l=0},
@@ -266,11 +265,11 @@ function WarningWindow:onClear()
 end
 
 function WarningWindow:onZoom()
-    local index, choice = self.subviews.list:getSelected()
+    local _, choice = self.subviews.list:getSelected()
     local unit = choice.data['unit']
 
     local target = xyz2pos(dfhack.units.getPosition(unit))
-    dfhack.gui.revealInDwarfmodeMap(target, true)
+    dfhack.gui.revealInDwarfmodeMap(target, false, true)
 end
 
 function WarningWindow:onToggleGroup()
@@ -299,6 +298,13 @@ local function compareGroups(group_one, group_two)
     return #group_one['units'] < #group_two['units']
 end
 
+local function getWalkGroup(pos)
+    local block = dfhack.maps.getTileBlock(pos)
+    if not block then return end
+    local walkGroup = block.walkable[pos.x % 16][pos.y % 16]
+    return walkGroup ~= 0 and walkGroup or nil
+end
+
 local function getStrandedUnits()
     local groupCount = 0
     local grouped = {}
@@ -310,9 +316,23 @@ local function getStrandedUnits()
 
     -- Pathability group calculation is from gui/pathable
     for _, unit in ipairs(citizens) do
-        local target = xyz2pos(dfhack.units.getPosition(unit))
-        local block = dfhack.maps.getTileBlock(target)
-        local walkGroup = block and block.walkable[target.x % 16][target.y % 16] or 0
+        local unitPos = xyz2pos(dfhack.units.getPosition(unit))
+        local walkGroup = getWalkGroup(unitPos) or 0
+
+        -- if on an unpathable tile, use the walkGroup of an adjacent tile. this prevents
+        -- warnings for units that are walking under falling water, which sometimes makes
+        -- a tile unwalkable while the unit is standing on it
+        if walkGroup == 0 then
+            walkGroup = getWalkGroup(xyz2pos(unitPos.x-1, unitPos.y-1, unitPos.z))
+                or getWalkGroup(xyz2pos(unitPos.x, unitPos.y-1, unitPos.z))
+                or getWalkGroup(xyz2pos(unitPos.x+1, unitPos.y-1, unitPos.z))
+                or getWalkGroup(xyz2pos(unitPos.x-1, unitPos.y, unitPos.z))
+                or getWalkGroup(xyz2pos(unitPos.x+1, unitPos.y, unitPos.z))
+                or getWalkGroup(xyz2pos(unitPos.x-1, unitPos.y+1, unitPos.z))
+                or getWalkGroup(xyz2pos(unitPos.x, unitPos.y+1, unitPos.z))
+                or getWalkGroup(xyz2pos(unitPos.x+1, unitPos.y+1, unitPos.z))
+                or 0
+        end
 
         if unitIgnored(unit) then
             table.insert(ensure_key(ignoredGroup, walkGroup), unit)

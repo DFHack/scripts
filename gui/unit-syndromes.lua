@@ -245,7 +245,7 @@ local function getSyndromeName(syndrome_raw)
     end
 
     if syndrome_raw.syn_name ~= "" then
-        syndrome_raw.syn_name:gsub("^%l", string.upper)
+        return syndrome_raw.syn_name:gsub("^%l", string.upper)
     elseif is_transformation then
         return "Body transformation"
     end

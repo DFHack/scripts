@@ -31,8 +31,10 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `gui/unit-syndromes`: show the syndrome names properly in the UI
 
 ## Misc Improvements
+- `warn-stranded`: don't warn for units that are temporarily on unwalkable tiles (e.g. as they pass under a waterfall)
 
 ## Removed
 
