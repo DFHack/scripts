@@ -58,7 +58,7 @@ local function swapElements(tbl, index1, index2)
 end
 
 local function reset_guide_paths(conditions)
-  for _i, condition in ipairs(conditions) do
+  for _, condition in ipairs(conditions) do
     local gpath = condition.guide_path
 
     if gpath then
@@ -260,19 +260,18 @@ function RollerOverlay:init()
   }
 end
 
-selected_stop = selected_stop or nil
-
 ReorderStopsWindow = defclass(ReorderStopsWindow, widgets.Window)
 ReorderStopsWindow.ATTRS {
   frame={t=4,l=60,w=45, h=28},
   frame_title='Reorder Stops',
-  view_id='main',
+  resizable=true,
 }
 
 local SELECT_STOP_HINT = 'Select a stop to move'
 local SELECT_ANOTHER_STOP_HINT = 'Select another stop on the same route'
 
 function ReorderStopsWindow:init()
+  self.selected_stop = nil
   self:addviews{
     widgets.Label{
       frame={t=0,l=0},
@@ -283,18 +282,15 @@ function ReorderStopsWindow:init()
       view_id='routes',
       frame={t=1,l=1},
       choices={},
-      on_select=function(index, item)
+      on_select=function(_, item)
         if not item then return end
         if item.type == 'stop' then
           local item_pos = df.global.plotinfo.hauling.routes[item.route_index].stops[item.stop_index].pos
-          df.global.game.main_interface.recenter_indicator_m.x = item_pos.x
-          df.global.game.main_interface.recenter_indicator_m.y = item_pos.y
-          df.global.game.main_interface.recenter_indicator_m.z = item_pos.z
-          dfhack.gui.revealInDwarfmodeMap(item_pos, true)
+          dfhack.gui.revealInDwarfmodeMap(item_pos, true, true)
         end
       end,
       on_submit=function(index, item)
-        if selected_stop then
+        if self.selected_stop then
           local hauling = df.global.plotinfo.hauling
           local routes = hauling.routes
           local view_stops = hauling.view_stops
@@ -304,26 +300,26 @@ function ReorderStopsWindow:init()
           if item.type == 'stop' then
             local stop_index = item.stop_index
 
-            -- don't allow moving stops to a different route
-            if selected_stop.route_index ~= item.route_index then
+            -- don't allow moving stops to a different route for now. TODO: investigate this
+            if self.selected_stop.route_index ~= item.route_index then
               return
             end
 
-            swapElements(route.stops, stop_index, selected_stop.stop_index)
-            swapElements(view_stops, selected_stop.list_position, index - 1)
+            swapElements(route.stops, stop_index, self.selected_stop.stop_index)
+            swapElements(view_stops, self.selected_stop.list_position, index - 1)
 
             -- loop over each stop in the route, make the ids sequental and reset guide paths
-            -- TODO: what else does this break?
+            -- TODO: figure out if changing the ids here breaks anything else
             for i, stop in ipairs(route.stops) do
               stop.id = i + 1
               reset_guide_paths(stop.conditions)
             end
 
-            selected_stop = nil
+            self.selected_stop = nil
           end
         else
           if item.stop_index then
-            selected_stop = item
+            self.selected_stop = item
           end
         end
 
@@ -340,7 +336,7 @@ function ReorderStopsWindow:updateList()
   local choices = {}
   local list_position = 0
 
-  if selected_stop then
+  if self.selected_stop then
     self.subviews.hint:setText(SELECT_ANOTHER_STOP_HINT)
   else
     self.subviews.hint:setText(SELECT_STOP_HINT)
@@ -364,7 +360,7 @@ function ReorderStopsWindow:updateList()
         stop_name = 'Stop ' .. stop.id
       end
 
-      if selected_stop and selected_stop.list_position == list_position then
+      if self.selected_stop and self.selected_stop.list_position == list_position then
         stop_name = '=> ' .. stop_name
       end
 
@@ -389,8 +385,6 @@ function ReorderStopsModal:init()
 end
 
 function ReorderStopsModal:onDismiss()
-  reorder_stops_modal = nil
-  selected_stop = nil
   df.global.game.main_interface.recenter_indicator_m.x = -30000
   df.global.game.main_interface.recenter_indicator_m.y = -30000
   df.global.game.main_interface.recenter_indicator_m.z = -30000
@@ -407,17 +401,11 @@ ReorderStopsOverlay.ATTRS{
 
 function ReorderStopsOverlay:init()
   self:addviews{
-    widgets.BannerPanel{
-      subviews = {
-        widgets.HotkeyLabel{
-          frame={t=0, l=1, r=1},
-          label='DFHack reorder stops',
-          key='CUSTOM_CTRL_E',
-          on_activate=function()
-            reorder_stops_modal = reorder_stops_modal and reorder_stops_modal:raise() or ReorderStopsModal{}:show()
-          end,
-        },
-      },
+    widgets.TextButton{
+      frame={t=0, l=0},
+      label='DFHack reorder stops',
+      key='CUSTOM_CTRL_E',
+      on_activate=function() ReorderStopsModal{}:show() end,
     },
   }
 end
