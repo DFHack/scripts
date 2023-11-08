@@ -270,13 +270,13 @@ end
 
 ReorderStopsWindow = defclass(ReorderStopsWindow, widgets.Window)
 ReorderStopsWindow.ATTRS {
-  frame={t=4,l=60,w=45, h=28},
+  frame={t=4,l=60,w=49, h=26},
   frame_title='Reorder Stops',
   resizable=true,
 }
 
 local SELECT_STOP_HINT = 'Select a stop to move'
-local SELECT_ANOTHER_STOP_HINT = 'Select another stop on the same route'
+local SELECT_ANOTHER_STOP_HINT = 'Select another stop to swap or same to cancel'
 
 
 function ReorderStopsWindow:handleStopSelection(index, item)
@@ -360,7 +360,7 @@ function ReorderStopsWindow:init()
     },
     widgets.List{
       view_id='routes',
-      frame={t=1,l=1},
+      frame={t=2,l=1},
       choices={},
       on_select=function(_, item)
         if not item then return end
