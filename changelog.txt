@@ -28,7 +28,10 @@ Template for new versions:
 
 ## New Tools
 - `sync-windmills`: synchronize or randomize movement of active windmills
-- `trackstop`: new overlay to allow changing track stop dump direction and friction and roller direction and speed after construction
+- `trackstop`: provides 3 new overlays:
+    - trackstop: allow changing track stop dump direction and friction
+    - rollers: allow changing roller direction and speed
+    - reorderstops: reorder stops in hauling routes
 
 ## New Features
 - `gui/design`: show selected dimensions next to the mouse cursor when designating with vanilla tools, for example when painting a burrow or designating digging

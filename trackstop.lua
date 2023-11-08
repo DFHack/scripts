@@ -52,6 +52,23 @@ local DIRECTION_MAP = {
 
 local DIRECTION_MAP_REVERSE = utils.invert(DIRECTION_MAP)
 
+local function swapElements(tbl, index1, index2)
+  tbl[index1], tbl[index2] = tbl[index2], tbl[index1]
+  return tbl
+end
+
+local function reset_guide_paths(conditions)
+  for _i, condition in ipairs(conditions) do
+    local gpath = condition.guide_path
+
+    if gpath then
+      gpath.x:resize(0)
+      gpath.y:resize(0)
+      gpath.z:resize(0)
+    end
+  end
+end
+
 TrackStopOverlay = defclass(TrackStopOverlay, overlay.OverlayWidget)
 TrackStopOverlay.ATTRS{
   default_pos={x=-73, y=29},
@@ -120,7 +137,11 @@ function TrackStopOverlay:setDumpDirection(direction)
 end
 
 function TrackStopOverlay:render(dc)
-  local building = dfhack.gui.getSelectedBuilding()
+  local building = dfhack.gui.getSelectedBuilding(true)
+  if not building then
+    return
+  end
+
   local friction = building.friction
   local friction_cycle = self.subviews.friction
 
@@ -201,7 +222,10 @@ function RollerOverlay:setSpeed(speed)
 end
 
 function RollerOverlay:render(dc)
-  local building = dfhack.gui.getSelectedBuilding()
+  local building = dfhack.gui.getSelectedBuilding(true)
+  if not building then
+    return
+  end
 
   self.subviews.direction:setOption(DIRECTION_MAP_REVERSE[building.direction])
   self.subviews.speed:setOption(SPEED_MAP_REVERSE[building.speed])
@@ -236,7 +260,170 @@ function RollerOverlay:init()
   }
 end
 
+selected_stop = selected_stop or nil
+
+ReorderStopsWindow = defclass(ReorderStopsWindow, widgets.Window)
+ReorderStopsWindow.ATTRS {
+  frame={t=4,l=60,w=45, h=28},
+  frame_title='Reorder Stops',
+  view_id='main',
+}
+
+local SELECT_STOP_HINT = 'Select a stop to move'
+local SELECT_ANOTHER_STOP_HINT = 'Select another stop on the same route'
+
+function ReorderStopsWindow:init()
+  self:addviews{
+    widgets.Label{
+      frame={t=0,l=0},
+      view_id='hint',
+      text=SELECT_STOP_HINT,
+    },
+    widgets.List{
+      view_id='routes',
+      frame={t=1,l=1},
+      choices={},
+      on_select=function(index, item)
+        if not item then return end
+        if item.type == 'stop' then
+          local item_pos = df.global.plotinfo.hauling.routes[item.route_index].stops[item.stop_index].pos
+          df.global.game.main_interface.recenter_indicator_m.x = item_pos.x
+          df.global.game.main_interface.recenter_indicator_m.y = item_pos.y
+          df.global.game.main_interface.recenter_indicator_m.z = item_pos.z
+          dfhack.gui.revealInDwarfmodeMap(item_pos, true)
+        end
+      end,
+      on_submit=function(index, item)
+        if selected_stop then
+          local hauling = df.global.plotinfo.hauling
+          local routes = hauling.routes
+          local view_stops = hauling.view_stops
+          local route = routes[item.route_index]
+
+          -- rearrange stops
+          if item.type == 'stop' then
+            local stop_index = item.stop_index
+
+            -- don't allow moving stops to a different route
+            if selected_stop.route_index ~= item.route_index then
+              return
+            end
+
+            swapElements(route.stops, stop_index, selected_stop.stop_index)
+            swapElements(view_stops, selected_stop.list_position, index - 1)
+
+            -- loop over each stop in the route, make the ids sequental and reset guide paths
+            -- TODO: what else does this break?
+            for i, stop in ipairs(route.stops) do
+              stop.id = i + 1
+              reset_guide_paths(stop.conditions)
+            end
+
+            selected_stop = nil
+          end
+        else
+          if item.stop_index then
+            selected_stop = item
+          end
+        end
+
+        self:updateList()
+      end,
+    },
+  }
+
+  self:updateList()
+end
+
+function ReorderStopsWindow:updateList()
+  local routes = df.global.plotinfo.hauling.routes
+  local choices = {}
+  local list_position = 0
+
+  if selected_stop then
+    self.subviews.hint:setText(SELECT_ANOTHER_STOP_HINT)
+  else
+    self.subviews.hint:setText(SELECT_STOP_HINT)
+  end
+
+  for i, route in ipairs(routes) do
+    local stops = route.stops
+    local route_name = route.name
+
+    if route_name == '' then
+      route_name = 'Route ' .. route.id
+    end
+
+    table.insert(choices, {text=route_name, type='route', route_index=i, list_position=list_position})
+    list_position = list_position + 1
+
+    for j, stop in ipairs(stops) do
+      local stop_name = stop.name
+
+      if stop_name == '' then
+        stop_name = 'Stop ' .. stop.id
+      end
+
+      if selected_stop and selected_stop.list_position == list_position then
+        stop_name = '=> ' .. stop_name
+      end
+
+      stop_name = '  ' .. stop_name
+
+      table.insert(choices, {text=stop_name, type='stop', stop_index=j, route_index=i, list_position=list_position})
+      list_position = list_position + 1
+    end
+  end
+
+  self.subviews.routes:setChoices(choices)
+end
+
+ReorderStopsModal = defclass(ReorderStopsModal, gui.ZScreenModal)
+
+ReorderStopsModal.ATTRS = {
+  focus_path = 'ReorderStops',
+}
+
+function ReorderStopsModal:init()
+  self:addviews{ReorderStopsWindow{}}
+end
+
+function ReorderStopsModal:onDismiss()
+  reorder_stops_modal = nil
+  selected_stop = nil
+  df.global.game.main_interface.recenter_indicator_m.x = -30000
+  df.global.game.main_interface.recenter_indicator_m.y = -30000
+  df.global.game.main_interface.recenter_indicator_m.z = -30000
+end
+
+ReorderStopsOverlay = defclass(ReorderStopsOverlay, overlay.OverlayWidget)
+ReorderStopsOverlay.ATTRS{
+  default_pos={x=6, y=6},
+  default_enabled=true,
+  viewscreens='dwarfmode/Hauling',
+  frame={w=30, h=1},
+  frame_background=gui.CLEAR_PEN,
+}
+
+function ReorderStopsOverlay:init()
+  self:addviews{
+    widgets.BannerPanel{
+      subviews = {
+        widgets.HotkeyLabel{
+          frame={t=0, l=1, r=1},
+          label='DFHack reorder stops',
+          key='CUSTOM_CTRL_E',
+          on_activate=function()
+            reorder_stops_modal = reorder_stops_modal and reorder_stops_modal:raise() or ReorderStopsModal{}:show()
+          end,
+        },
+      },
+    },
+  }
+end
+
 OVERLAY_WIDGETS = {
   trackstop=TrackStopOverlay,
   rollers=RollerOverlay,
+  reorderstops=ReorderStopsOverlay,
 }
