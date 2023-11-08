@@ -52,9 +52,17 @@ local DIRECTION_MAP = {
 
 local DIRECTION_MAP_REVERSE = utils.invert(DIRECTION_MAP)
 
-local function swapElements(tbl, index1, index2)
-  tbl[index1], tbl[index2] = tbl[index2], tbl[index1]
-  return tbl
+--[[
+  - swap 2 elements between different indexes in the same table like:
+    swap_elements({1, 2, 3}, 1, nil, 3) => {3, 2, 1}
+  - swap 2 elements at the specified indexes between 2 tables like:
+    swap_elements({1, 2, 3}, 1, {4, 5, 6}, 3) => {6, 2, 3} {4, 5, 1}
+]]--
+local function swap_elements(tbl1, index1, tbl2, index2)
+  tbl2 = tbl2 or tbl1
+  index2 = index2 or index1
+  tbl1[index1], tbl2[index2] = tbl2[index2], tbl1[index1]
+  return tbl1, tbl2
 end
 
 local function reset_guide_paths(conditions)
@@ -270,6 +278,78 @@ ReorderStopsWindow.ATTRS {
 local SELECT_STOP_HINT = 'Select a stop to move'
 local SELECT_ANOTHER_STOP_HINT = 'Select another stop on the same route'
 
+
+function ReorderStopsWindow:handleStopSelection(index, item)
+  -- Skip routes
+  if item.type == 'route' then return end
+
+  -- Select stop if none selected
+  if not self.selected_stop then
+    self:toggleStopSelection(item)
+    return
+  end
+
+  -- Swap stops
+  self:swapStops(index, item)
+
+  -- Reset stop properties
+  self:resetStopProperties(item)
+
+  self.selected_stop = nil
+  self:updateList()
+end
+
+function ReorderStopsWindow:toggleStopSelection(item)
+  if not self.selected_stop then
+    self.selected_stop = item
+  else
+    self.selected_stop = nil
+  end
+
+  self:updateList()
+end
+
+function ReorderStopsWindow:swapStops(index, item)
+  local hauling = df.global.plotinfo.hauling
+  local routes = hauling.routes
+  local view_stops = hauling.view_stops
+  local item_route = routes[item.route_index]
+  local item_stop_index = item.stop_index
+  local same_route = self.selected_stop.route_index == item.route_index
+
+  if same_route then
+    swap_elements(item_route.stops, item_stop_index, nil, self.selected_stop.stop_index)
+  else
+    swap_elements(
+      routes[self.selected_stop.route_index].stops,
+      self.selected_stop.stop_index,
+      item_route.stops,
+      item_stop_index
+    )
+  end
+
+  swap_elements(view_stops, self.selected_stop.list_position, nil, index - 1)
+end
+
+function ReorderStopsWindow:resetStopProperties(item)
+  local hauling = df.global.plotinfo.hauling
+  local routes = hauling.routes
+  local item_route = routes[item.route_index]
+  local same_route = self.selected_stop.route_index == item.route_index
+
+  for i, stop in ipairs(item_route.stops) do
+    stop.id = i + 1
+    reset_guide_paths(stop.conditions)
+  end
+
+  if not same_route and self.selected_stop then
+    for i, stop in ipairs(routes[self.selected_stop.route_index].stops) do
+      stop.id = i + 1
+      reset_guide_paths(stop.conditions)
+    end
+  end
+end
+
 function ReorderStopsWindow:init()
   self.selected_stop = nil
   self:addviews{
@@ -290,40 +370,7 @@ function ReorderStopsWindow:init()
         end
       end,
       on_submit=function(index, item)
-        if self.selected_stop then
-          local hauling = df.global.plotinfo.hauling
-          local routes = hauling.routes
-          local view_stops = hauling.view_stops
-          local route = routes[item.route_index]
-
-          -- rearrange stops
-          if item.type == 'stop' then
-            local stop_index = item.stop_index
-
-            -- don't allow moving stops to a different route for now. TODO: investigate this
-            if self.selected_stop.route_index ~= item.route_index then
-              return
-            end
-
-            swapElements(route.stops, stop_index, self.selected_stop.stop_index)
-            swapElements(view_stops, self.selected_stop.list_position, index - 1)
-
-            -- loop over each stop in the route, make the ids sequental and reset guide paths
-            -- TODO: figure out if changing the ids here breaks anything else
-            for i, stop in ipairs(route.stops) do
-              stop.id = i + 1
-              reset_guide_paths(stop.conditions)
-            end
-
-            self.selected_stop = nil
-          end
-        else
-          if item.stop_index then
-            self.selected_stop = item
-          end
-        end
-
-        self:updateList()
+        self:handleStopSelection(index, item)
       end,
     },
   }
