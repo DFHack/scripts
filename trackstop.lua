@@ -284,7 +284,7 @@ function ReorderStopsWindow:handleStopSelection(index, item)
   if item.type == 'route' then return end
 
   -- Select stop if none selected
-  if not self.selected_stop then
+  if not self.first_selected_stop then
     self:toggleStopSelection(item)
     return
   end
@@ -295,55 +295,71 @@ function ReorderStopsWindow:handleStopSelection(index, item)
   -- Reset stop properties
   self:resetStopProperties(item)
 
-  self.selected_stop = nil
+  self.first_selected_stop = nil
   self:updateList()
 end
 
 function ReorderStopsWindow:toggleStopSelection(item)
-  if not self.selected_stop then
-    self.selected_stop = item
+  if not self.first_selected_stop then
+    self.first_selected_stop = item
   else
-    self.selected_stop = nil
+    self.first_selected_stop = nil
   end
 
   self:updateList()
 end
 
-function ReorderStopsWindow:swapStops(index, item)
+function ReorderStopsWindow:swapStops(index, second_selected_stop)
   local hauling = df.global.plotinfo.hauling
   local routes = hauling.routes
   local view_stops = hauling.view_stops
-  local item_route = routes[item.route_index]
-  local item_stop_index = item.stop_index
-  local same_route = self.selected_stop.route_index == item.route_index
+  local second_selected_stop_route = routes[second_selected_stop.route_index]
+  local second_selected_stop_index = second_selected_stop.stop_index
+  local same_route = self.first_selected_stop.route_index == second_selected_stop.route_index
 
   if same_route then
-    swap_elements(item_route.stops, item_stop_index, nil, self.selected_stop.stop_index)
+    swap_elements(second_selected_stop_route.stops, second_selected_stop_index, nil, self.first_selected_stop.stop_index)
+
+    -- find out what index the vehicle is currently at for this route, if there is one
+    local vehicle_index = nil
+    local hauling_route = df.hauling_route.get_vector()[second_selected_stop.route_index]
+
+    -- this vector will have 0 elements if there is no vehicle or 1 element if there is a vehicle
+    -- the element will be the index of the vehicle stop
+    for _, v in ipairs(hauling_route.vehicle_stops) do
+      vehicle_index = v
+    end
+
+    if vehicle_index == self.first_selected_stop.stop_index then
+      hauling_route.vehicle_stops[0] = second_selected_stop_index
+    elseif vehicle_index == second_selected_stop_index then
+      hauling_route.vehicle_stops[0] = self.first_selected_stop.stop_index
+    end
   else
     swap_elements(
-      routes[self.selected_stop.route_index].stops,
-      self.selected_stop.stop_index,
-      item_route.stops,
-      item_stop_index
+      routes[self.first_selected_stop.route_index].stops,
+      self.first_selected_stop.stop_index,
+      second_selected_stop_route.stops,
+      second_selected_stop_index
     )
   end
 
-  swap_elements(view_stops, self.selected_stop.list_position, nil, index - 1)
+  swap_elements(view_stops, self.first_selected_stop.list_position, nil, index - 1)
 end
 
 function ReorderStopsWindow:resetStopProperties(item)
   local hauling = df.global.plotinfo.hauling
   local routes = hauling.routes
   local item_route = routes[item.route_index]
-  local same_route = self.selected_stop.route_index == item.route_index
+  local same_route = self.first_selected_stop.route_index == item.route_index
 
   for i, stop in ipairs(item_route.stops) do
     stop.id = i + 1
     reset_guide_paths(stop.conditions)
   end
 
-  if not same_route and self.selected_stop then
-    for i, stop in ipairs(routes[self.selected_stop.route_index].stops) do
+  if not same_route and self.first_selected_stop then
+    for i, stop in ipairs(routes[self.first_selected_stop.route_index].stops) do
       stop.id = i + 1
       reset_guide_paths(stop.conditions)
     end
@@ -351,7 +367,7 @@ function ReorderStopsWindow:resetStopProperties(item)
 end
 
 function ReorderStopsWindow:init()
-  self.selected_stop = nil
+  self.first_selected_stop = nil
   self:addviews{
     widgets.Label{
       frame={t=0,l=0},
@@ -383,7 +399,7 @@ function ReorderStopsWindow:updateList()
   local choices = {}
   local list_position = 0
 
-  if self.selected_stop then
+  if self.first_selected_stop then
     self.subviews.hint:setText(SELECT_ANOTHER_STOP_HINT)
   else
     self.subviews.hint:setText(SELECT_STOP_HINT)
@@ -407,7 +423,7 @@ function ReorderStopsWindow:updateList()
         stop_name = 'Stop ' .. stop.id
       end
 
-      if self.selected_stop and self.selected_stop.list_position == list_position then
+      if self.first_selected_stop and self.first_selected_stop.list_position == list_position then
         stop_name = '=> ' .. stop_name
       end
 
@@ -419,6 +435,18 @@ function ReorderStopsWindow:updateList()
   end
 
   self.subviews.routes:setChoices(choices)
+end
+
+function ReorderStopsWindow:onInput(keys)
+  if keys.LEAVESCREEN or keys._MOUSE_R then
+    if self.first_selected_stop then
+      self.first_selected_stop = nil
+      self:updateList()
+      return true
+    end
+  end
+
+  return ReorderStopsWindow.super.onInput(self, keys)
 end
 
 ReorderStopsModal = defclass(ReorderStopsModal, gui.ZScreenModal)
