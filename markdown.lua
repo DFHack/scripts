@@ -25,7 +25,9 @@ if args[1] == '-o' or args[1] == '/n' then
 end
 
 if args[1] ~= nil then
-    filename = 'markdown_' .. table.remove(args, 1) .. '.md'
+    local userProvidedName = table.remove(args, 1)
+    userProvidedName = string.gsub(userProvidedName, " ", "_")
+    filename = 'markdown_' .. userProvidedName .. '.md'
 else
     filename = 'markdown_' .. worldName .. '_export.md'
 end
@@ -105,16 +107,9 @@ elseif unit then
     local unit_description_raw = df.global.game.main_interface.view_sheets.unit_health_raw_str[0].value
     local unit_personality_raw = df.global.game.main_interface.view_sheets.personality_raw_str
 
-    if unit_description_raw or unit_personality_raw then
         log:write('### ' .. dfhack.df2utf(getNameRaceAgeProf(unit)) .. '\n\n#### Description: \n' .. reformat(dfhack.df2utf(unit_description_raw)) .. '\n\n#### Personality: \n')
         for _, unit_personality in ipairs(unit_personality_raw) do
             log:write(reformat(dfhack.df2utf(unit_personality.value)) .. '\n')
-        end
         print('Exporting Health/Description & Personality/Traits data for: \n' .. dfhack.df2console(getNameRaceAgeProf(unit)))
-    else
-        print("Unit has no data in Description & Personality tabs")
-    end
-else 
-end
-
+else end
 closeFileHandle(log)
