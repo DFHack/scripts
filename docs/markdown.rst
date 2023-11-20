@@ -80,7 +80,7 @@ appended to the default ``markdown_Orid_Tamun_export.md`` file:
     ---
 ::
 
-    ``markdown -n descriptions``
+    ``markdown -o descriptions``
         Writes the description of the selected unit/item 
         to the ``markdown_descriptions.md`` file instead of the default. 
 
