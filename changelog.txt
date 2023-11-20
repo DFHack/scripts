@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `build-now`: (reinstated) instantly complete unsuspended buildings that are ready to be built
 
 ## New Features
 

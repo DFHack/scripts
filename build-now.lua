@@ -1,9 +1,7 @@
 -- instantly completes unsuspended building construction jobs
 
 local argparse = require('argparse')
-local dig_now = require('plugins.dig-now')
 local gui = require('gui')
-local tiletypes = require('plugins.tiletypes')
 local utils = require('utils')
 
 local ok, buildingplan = pcall(require, 'plugins.buildingplan')
@@ -22,15 +20,11 @@ local function parse_commandline(args)
     local positionals = argparse.processArgsGetopt(args, {
             {'h', 'help', handler=function() opts.help = true end},
             {'q', 'quiet', handler=function() opts.quiet = true end},
-            {nil, 'really', handler=function() opts.really = true end},
+            {'z', 'zlevel', handler=function() opts.zlevel = true end},
         })
 
     if positionals[1] == 'help' then opts.help = true end
     if opts.help then return opts end
-
-    if not opts.really then
-        qerror('This script is known to cause corruption and crashes with some building types, and the DFHack team is still looking into solutions. To bypass this message, pass the "--really" option to the script.')
-    end
 
     if #positionals >= 1 then
         opts.start = argparse.coords(positionals[1])
@@ -47,6 +41,10 @@ local function parse_commandline(args)
         opts.start = xyz2pos(0, 0, 0)
         local x, y, z = dfhack.maps.getTileSize()
         opts['end'] = xyz2pos(x-1, y-1, z-1)
+    end
+    if opts.zlevel then
+        opts.start.z = df.global.window_z
+        opts['end'].z = df.global.window_z
     end
     return opts
 end
@@ -84,7 +82,7 @@ local function get_jobs(opts)
             goto continue
         end
 
-        -- accept building if if any part is within the processing area
+        -- accept building if any part is within the processing area
         if bld.z < opts.start.z or bld.z > opts['end'].z
                 or bld.x2 < opts.start.x or bld.x1 > opts['end'].x
                 or bld.y2 < opts.start.y or bld.y1 > opts['end'].y then
@@ -101,7 +99,7 @@ local function get_jobs(opts)
                   :format(num_suspended, num_suspended ~= 1 and 's' or ''))
         end
         if num_incomplete > 0 then
-            print(('Skipped %d building%s with missing items')
+            print(('Skipped %d building%s with pending items')
                   :format(num_incomplete, num_incomplete ~= 1 and 's' or ''))
         end
         if num_clipped > 0 then
@@ -318,139 +316,6 @@ local function attach_items(bld, items)
     return true
 end
 
--- from observation of vectors sorted by the DF, pos sorting seems to be by x,
--- then by y, then by z
-local function pos_cmp(a, b)
-    local xcmp = utils.compare(a.x, b.x)
-    if xcmp ~= 0 then return xcmp end
-    local ycmp = utils.compare(a.y, b.y)
-    if ycmp ~= 0 then return ycmp end
-    return utils.compare(a.z, b.z)
-end
-
-local function get_original_tiletype(pos)
-    -- TODO: this is not always exactly the existing tile type. for example,
-    -- tracks are ignored
-    return dfhack.maps.getTileType(pos)
-end
-
-local function reuse_construction(construction, item)
-    construction.item_type = item:getType()
-    construction.item_subtype = item:getSubtype()
-    construction.mat_type = item:getMaterial()
-    construction.mat_index = item:getMaterialIndex()
-    construction.flags.top_of_wall = false
-    construction.flags.no_build_item = true
-end
-
-local function create_and_link_construction(pos, item, top_of_wall)
-    local construction = df.construction:new()
-    utils.assign(construction.pos, pos)
-    construction.item_type = item:getType()
-    construction.item_subtype = item:getSubtype()
-    construction.mat_type = item:getMaterial()
-    construction.mat_index = item:getMaterialIndex()
-    construction.flags.top_of_wall = top_of_wall
-    construction.flags.no_build_item = not top_of_wall
-    construction.original_tile = get_original_tiletype(pos)
-    utils.insert_sorted(df.global.world.constructions, construction,
-                        'pos', pos_cmp)
-end
-
--- maps construction_type to the resulting tiletype
-local const_to_tile = {
-    [df.construction_type.Fortification] = df.tiletype.ConstructedFortification,
-    [df.construction_type.Wall] = df.tiletype.ConstructedPillar,
-    [df.construction_type.Floor] = df.tiletype.ConstructedFloor,
-    [df.construction_type.UpStair] = df.tiletype.ConstructedStairU,
-    [df.construction_type.DownStair] = df.tiletype.ConstructedStairD,
-    [df.construction_type.UpDownStair] = df.tiletype.ConstructedStairUD,
-    [df.construction_type.Ramp] = df.tiletype.ConstructedRamp,
-}
--- fill in all the track mappings, which have nice consistent naming conventions
-for i,v in ipairs(df.construction_type) do
-    if type(v) ~= 'string' then goto continue end
-    local _, _, base, dir = v:find('^(TrackR?a?m?p?)([NSEW]+)')
-    if base == 'Track' then
-        const_to_tile[i] = df.tiletype['ConstructedFloorTrack'..dir]
-    elseif base == 'TrackRamp' then
-        const_to_tile[i] = df.tiletype['ConstructedRampTrack'..dir]
-    end
-    ::continue::
-end
-
-local function set_tiletype(pos, tt)
-    local block = dfhack.maps.ensureTileBlock(pos)
-    block.tiletype[pos.x%16][pos.y%16] = tt
-    if tt == df.tiletype.ConstructedPillar then
-        block.designation[pos.x%16][pos.y%16].outside = 0
-    end
-    -- all tiles below this one are now "inside"
-    for z = pos.z-1,0,-1 do
-        block = dfhack.maps.ensureTileBlock(pos.x, pos.y, z)
-        if not block or block.designation[pos.x%16][pos.y%16].outside == 0 then
-            return
-        end
-        block.designation[pos.x%16][pos.y%16].outside = 0
-    end
-end
-
-local function adjust_tile_above(pos_above, item, construction_type)
-    if not dfhack.maps.ensureTileBlock(pos_above) then return end
-    local tt_above = dfhack.maps.getTileType(pos_above)
-    local shape_above = df.tiletype.attrs[tt_above].shape
-    if shape_above ~= df.tiletype_shape.EMPTY
-            and shape_above ~= df.tiletype_shape.RAMP_TOP then
-        return
-    end
-    if construction_type == df.construction_type.Wall then
-        create_and_link_construction(pos_above, item, true)
-        set_tiletype(pos_above, df.tiletype.ConstructedFloor)
-    elseif df.construction_type[construction_type]:find('Ramp') then
-        set_tiletype(pos_above, df.tiletype.RampTop)
-    end
-end
-
--- add new construction to the world list and manage tiletype conversion
-local function build_construction(bld)
-    -- remember required metadata and get rid of building used for designation
-    local item = bld.contained_items[0].item
-    local pos = copyall(item.pos)
-    local construction_type = bld.type
-    dfhack.buildings.deconstruct(bld)
-
-    -- check if we're building on a construction (i.e. building a construction on top of a wall)
-    local tiletype = dfhack.maps.getTileType(pos)
-    local tileattrs = df.tiletype.attrs[tiletype]
-    if tileattrs.material == df.tiletype_material.CONSTRUCTION then
-        -- modify the construction to the new type
-        local construction, found = utils.binsearch(df.global.world.constructions, pos, 'pos', pos_cmp)
-        if not found then
-            error('Could not find construction entry for construction tile at ' .. pos.x .. ', ' .. pos.y .. ', ' .. pos.z)
-        end
-        reuse_construction(construction, item)
-    else
-        -- add entry to df.global.world.constructions
-        create_and_link_construction(pos, item, false)
-    end
-    -- adjust tiletypes for the construction itself
-    set_tiletype(pos, const_to_tile[construction_type])
-    if construction_type == df.construction_type.Wall then
-        dig_now.link_adjacent_smooth_walls(pos)
-    end
-
-    -- for walls and ramps with empty space above, adjust the tile above
-    if construction_type == df.construction_type.Wall
-            or df.construction_type[construction_type]:find('Ramp') then
-        adjust_tile_above(xyz2pos(pos.x, pos.y, pos.z+1), item,
-                          construction_type)
-    end
-
-    -- a duplicate item will get created on deconstruction due to the
-    -- no_build_item flag set in create_and_link_construction; destroy this item
-    dfhack.items.remove(item)
-end
-
 -- complete architecture, if required, and perform the adjustments the game
 -- normally does when a building is built. this logic is reverse engineered from
 -- observing game behavior and may be incomplete.
@@ -465,31 +330,7 @@ local function build_building(bld)
         design.max_hitpoints = 80640
     end
     bld:setBuildStage(bld:getMaxBuildStage())
-    bld.flags.exists = true
-    -- update occupancy flags and build dirt roads (they don't build themselves)
-    local bld_type = bld:getType()
-    local is_dirt_road = bld_type == df.building_type.RoadDirt
-    for x = bld.x1,bld.x2 do
-        for y = bld.y1,bld.y2 do
-            bld:updateOccupancy(x, y)
-            if is_dirt_road and dfhack.buildings.containsTile(bld, x, y) then
-                -- note that this does not clear shrubs. we need to figure out
-                -- how to do that
-                if not tiletypes.tiletypes_setTile(xyz2pos(x, y, bld.z),
-                        -1, df.tiletype_material.SOIL, df.tiletype_special.NORMAL, -1) then
-                    dfhack.printerr('failed to build tile of dirt road')
-                end
-            end
-        end
-    end
-    -- all buildings call this, though it only appears to have an effect for
-    -- farm plots
-    bld:initFarmSeasons()
-    -- doors and floodgates link to adjacent smooth walls
-    if bld_type == df.building_type.Door or
-            bld_type == df.building_type.Floodgate then
-        dig_now.link_adjacent_smooth_walls(bld.centerx, bld.centery, bld.z)
-    end
+    dfhack.buildings.completeBuild(bld)
 end
 
 local function throw(bld, msg)
@@ -559,11 +400,7 @@ for _,job in ipairs(get_jobs(opts)) do
               'failed to attach items to building; state may be inconsistent')
     end
 
-    if bld_type == df.building_type.Construction then
-        build_construction(bld)
-    else
-        build_building(bld)
-    end
+    build_building(bld)
 
     num_jobs = num_jobs + 1
     ::continue::
