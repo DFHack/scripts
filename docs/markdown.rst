@@ -60,8 +60,7 @@ Examples
 
     markdown
 
-#### Example output for a selected chalk statue in the world "Orid Tamun", 
-appended to the default ``markdown_Orid_Tamun_export.md`` file:
+Example output for a selected chalk statue in the world "Orid Tamun", appended to the default ``markdown_Orid_Tamun_export.md`` file:
 
     [...previous entries...]
 
@@ -79,7 +78,7 @@ appended to the default ``markdown_Orid_Tamun_export.md`` file:
 
     ``markdown -o descriptions``
     
-#### Example output for a selected unit Lokum Alnisendok, appended to the ``markdown_descriptions.md`` file
+Example output for a selected unit Lokum Alnisendok, written to the newly overwritten ``markdown_descriptions.md`` file:
 ::
 
     ### Lokum Alnisendok, dwarf, 27 years old Presser.
@@ -89,12 +88,19 @@ appended to the default ``markdown_Orid_Tamun_export.md`` file:
 
     He is very quick to tire.  
 
-    His very long beard is neatly combed.  His very long sideburns are braided.  His very long moustache is neatly combed.  His hair is clean-shaven.  He is average in size.  His nose is sharply hooked.  His nose bridge is convex.  His gold eyes are slightly wide-set.  His somewhat tall ears are somewhat narrow.  His hair is copper.  His skin is copper.  
+    His very long beard is neatly combed.  His very long sideburns are braided.  
+    His very long moustache is neatly combed.  His hair is clean-shaven.  He is average in size.  
+    His nose is sharply hooked.  His nose bridge is convex.  His gold eyes are slightly wide-set.  
+    His somewhat tall ears are somewhat narrow.  His hair is copper.  His skin is copper.  
 
     #### Personality: 
     He has an amazing memory, but he has a questionable spatial sense and poor focus.  
 
-    He doesn't generally think before acting.  He feels a strong need to reciprocate any favor done for him.  He enjoys the company of others.  He does not easily hate or develop negative feelings.  He generally finds himself quite hopeful about the future.  He tends to be swayed by the emotions of others.  He finds obligations confining, though he is conflicted by this for more than one reason.  He doesn't tend to hold on to grievances.  He has an active imagination.  
+    He doesn't generally think before acting.  He feels a strong need to reciprocate any favor done for him.  
+    He enjoys the company of others.  He does not easily hate or develop negative feelings.  He generally 
+    finds himself quite hopeful about the future.  He tends to be swayed by the emotions of others.  
+    He finds obligations confining, though he is conflicted by this for more than one reason.  He doesn't 
+    tend to hold on to grievances.  He has an active imagination.  
 
     He needs alcohol to get through the working day.  
 

@@ -6,6 +6,7 @@
 
 local utils = require('utils')
 local gui = require('gui')
+local worldName = dfhack.df2utf(dfhack.TranslateName(df.global.world.world_data.name)):gsub(" ", "_")
 
 -- Argument processing
 local args = {...}
@@ -20,7 +21,6 @@ end
 -- Determine file write mode and filename
 local writemode = 'a' -- append (default)
 local filename
-local worldname = dfhack.df2utf(dfhack.TranslateName(df.global.world.world_data.name)):gsub(" ", "_")
 
 if args[1] == '-o' or args[1] == '/n' then
     writemode = 'w' -- overwrite
@@ -30,7 +30,7 @@ end
 if args[1] ~= nil then
     filename = 'markdown_' .. table.remove(args, 1) .. '.md'
 else
-    filename = 'markdown_' .. worldname .. '_export.md'
+    filename = 'markdown_' .. worldName .. '_export.md'
 end
 
 -- Utility functions
