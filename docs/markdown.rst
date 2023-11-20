@@ -2,56 +2,105 @@ markdown
 ========
 
 .. dfhack-tool::
-    :summary: Exports the text you see on the screen for posting online.
-    :tags: unavailable
+    :summary: Save descriptions of selected units/items in markdown format (e.g., for Reddit).
+    :tags: fort | inspection | units
 
-This tool saves a copy of a text screen, formatted in markdown, for posting to
-Reddit (among other places). See `forum-dwarves` if you want to export BBCode
-for posting to the Bay 12 forums.
+Saves descriptions of selected units or items to a markdown file.
 
-This script will attempt to read the current screen, and if it is a text
-viewscreen (such as the dwarf 'thoughts' screen or an item 'description') then
-append a marked-down version of this text to the output file. Previous entries
-in the file are not overwritten, so you may use the ``markdown`` command
-multiple times to create a single document containing the text from multiple
-screens, like thoughts from several dwarves or descriptions from multiple
-artifacts.
 
-The screens which have been tested and known to function properly with this
-script are:
+For units, the script retrieves:
+- Name, race, age, profession
+- Description from the Unit/Health/Description screen
+- Traits from the Unit/Personality/Traits screen
+It works for all units with text in the Description &/or Personality/Traits tabs, 
+such as dwarves, dogs, elves, goblins, and beasts.
 
-#. dwarf/unit 'thoughts' screen
-#. item/art 'description' screen
-#. individual 'historical item/figure' screens
-#. manual pages
-#. announcements screen
-#. combat reports screen
-#. latest news (when meeting with liaison)
+For items, it retrieves:
+- Decorated name (e.g., "☼«☼Chalk Statue of Dakas☼»☼")
+- Full description from the item's view sheet
+It works for most items with in-game descriptions and names, including those in storage,
+on the ground, installed as a building, or worn/carried by units.
 
-There may be other screens to which the script applies. It should be safe to
-attempt running the script with any screen active. An error message will inform
-you when the selected screen is not appropriate for this script.
+The script appends a markdown-formatted version of the text to a target file 
+for easy sharing, e.g., on Reddit.
+
+By default, entries are appended, not overwritten, allowing the ``markdown`` command 
+to compile descriptions of multiple items & units in a single document.
+
+By default, data is stored in markdown_{YourWorldName}_export.md.
+
+See `forum-dwarves` for BBCode export (e.g., for the Bay12 Forums).
+
 
 Usage
 -----
 
 ::
 
-    markdown [-n] [<name>]
+    markdown [-o] [<filename>]
 
-The output is appended to the ``md_export.md`` file by default. If an alternate
-name is specified, then a file named like ``md_{name}.md`` is used instead.
-
-Examples
---------
-
-``markdown``
-    Appends the contents of the current screen to the ``md_export.md`` file.
-``markdown artifacts``
-    Appends the contents of the current screen to the ``md_artifacts.md`` file.
+Appends the description of the selected unit/item 
+to ``markdown_{world_name}_export.md`` file by default. 
+Specifying a filename will append to ``markdown_{filename}.md`` instead,
+which is useful for organizing data by category or topic.
+The [-o] argument tells the script to overwrite the output file.
 
 Options
 -------
 
-``-n``
-    Overwrite the contents of output file instead of appending.
+``-o``
+    Overwrite the output file, deleting previous entries.
+``help`` 
+    Show help.
+
+Examples
+--------
+
+::
+
+    ``markdown``
+        Appends the description of the selected unit/item 
+        to the default ``markdown_{world_name}_export.md``. 
+        The script trims in-game world names, replacing spaces with underscores.
+
+Example output for a selected chalk statue in the world "Orid Tamun", 
+appended to the default ``markdown_Orid_Tamun_export.md`` file:
+
+    [...previous entries...]
+
+    ### ☼Chalk Statue of Bìlalo Bandbeach☼
+
+    #### Description: 
+    This is a well-crafted chalk statue of Bìlalo Bandbeach. The item is an image of 
+    Bìlalo Bandbeach the elf and Lani Lyricmonks the Learned the ettin in chalk by 
+    Domas Uthmiklikot. Lani Lyricmonks the Learned is striking down Bìlalo Bandbeach. 
+    The artwork relates to the killing of the elf Bìlalo Bandbeach by the 
+    ettin Lani Lyricmonks the Learned with Hailbite in The Forest of Indignation in 147.  
+
+    ---
+::
+
+    ``markdown -n descriptions``
+        Writes the description of the selected unit/item 
+        to the ``markdown_descriptions.md`` file instead of the default. 
+
+Example output for a selected unit Lokum Alnisendok, appended to the 
+ ``markdown_descriptions.md`` file::
+
+    ### Lokum Alnisendok, dwarf, 27 years old Presser.
+
+    #### Description: 
+    A short, sturdy creature fond of drink and industry.
+
+    He is very quick to tire.  
+
+    His very long beard is neatly combed.  His very long sideburns are braided.  His very long moustache is neatly combed.  His hair is clean-shaven.  He is average in size.  His nose is sharply hooked.  His nose bridge is convex.  His gold eyes are slightly wide-set.  His somewhat tall ears are somewhat narrow.  His hair is copper.  His skin is copper.  
+
+    #### Personality: 
+    He has an amazing memory, but he has a questionable spatial sense and poor focus.  
+
+    He doesn't generally think before acting.  He feels a strong need to reciprocate any favor done for him.  He enjoys the company of others.  He does not easily hate or develop negative feelings.  He generally finds himself quite hopeful about the future.  He tends to be swayed by the emotions of others.  He finds obligations confining, though he is conflicted by this for more than one reason.  He doesn't tend to hold on to grievances.  He has an active imagination.  
+
+    He needs alcohol to get through the working day.  
+
+    ---

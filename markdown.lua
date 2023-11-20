@@ -4,84 +4,13 @@
 -- Adapted for markdown by Mchl https://github.com/Mchl
 -- Updated to work with Steam version by Glotov4 https://github.com/glotov4 
 
-local helpstr = [====[
-
-markdown
-===========
-Tags: fort | inspection | units
-
-Save a description of selected unit or item to a markdown file.
-
-This script will attempt to get description of selected unit or item.
-For units, script will collect:
-- Name, race, age, profession
-- Description, as seen at the Unit/Health/Description screen
-- Traits, as seen at the Unit/Personality/Traits
-
-For items:
-- Decorated name ("☼«☼Chalk Statue of Dakas☼»☼")
-- Full description, as seen when clicking "View this item's sheet"
-
-Then the script will append marked-down version of this data 
-to the target file (for easy pasting on reddit for example).
-
-This script doesn't work with the data from other screens.
-
-Previous entries in the file are not overwritten, so you
-may use the ``markdown`` command multiple times to create a single
-document containing the description of multiple items & units.
-
-By default, data is stored in markdown_/YourWorldName/_export.md
-
-See `forum-dwarves` for BBCode export (for e.g. the Bay12 Forums).
-
-Usage
------
-
-    markdown [-n] [filename]
-
-:-n:    overwrites contents of output file
-:filename:
-        if provided, save to :file:`markdown_{filename}.md` instead
-        of the default :file:`markdown_/worldName/_export.md`
-:help: show help 
-
-Examples
------
-
-### -chalk statue of Bìlalo Bandbeach-
-
-#### Description: 
-This is a well-crafted chalk statue of Bìlalo Bandbeach.  The item is a well-designed image of Bìlalo Bandbeach the elf and Lani Lyricmonks the Learned the ettin in chalk by Domas Uthmiklikot.  Lani Lyricmonks the Learned is striking down Bìlalo Bandbeach.  The artwork relates to the killing of the elf Bìlalo Bandbeach by the ettin Lani Lyricmonks the Learned with Hailbite in The Forest of Indignation in 147.  
-
----
-
-### Lokum Alnisendok, dwarf, 27 years old Presser.
-
-#### Description: 
-A short, sturdy creature fond of drink and industry.
-
-He is very quick to tire.  
-
-His very long beard is neatly combed.  His very long sideburns are braided.  His very long moustache is neatly combed.  His hair is clean-shaven.  He is average in size.  His nose is sharply hooked.  His nose bridge is convex.  His gold eyes are slightly wide-set.  His somewhat tall ears are somewhat narrow.  His hair is copper.  His skin is copper.  
-
-#### Personality: 
-He has an amazing memory, but he has a questionable spatial sense and poor focus.  
-
-He doesn't generally think before acting.  He feels a strong need to reciprocate any favor done for him.  He enjoys the company of others.  He does not easily hate or develop negative feelings.  He generally finds himself quite hopeful about the future.  He tends to be swayed by the emotions of others.  He finds obligations confining, though he is conflicted by this for more than one reason.  He doesn't tend to hold on to grievances.  He has an active imagination.  
-
-He needs alcohol to get through the working day.  
-
----
-]====]
-
 local utils = require('utils')
 local gui = require('gui')
 
 -- Argument processing
 local args = {...}
 if args[1] == 'help' then
-    print(helpstr)
+    print(dfhack.script_help())  
     return
 end
 
@@ -90,7 +19,7 @@ local writemode = 'a' -- append (default)
 local filename
 local worldName = dfhack.df2utf(dfhack.TranslateName(df.global.world.world_data.name)):gsub(" ", "_")
 
-if args[1] == '-n' or args[1] == '/n' then
+if args[1] == '-o' or args[1] == '/n' then
     writemode = 'w' -- overwrite
     table.remove(args, 1)
 end
