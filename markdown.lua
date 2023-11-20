@@ -40,7 +40,15 @@ end
 local function closeFileHandle(handle)
     handle:write('\n---\n\n')
     handle:close()
-    print ('\nData exported to "' .. filename .. '"')
+    local function closeFileHandle(handle)
+        handle:write('\n---\n\n')
+        handle:close()
+        if writemode == 'a' then
+            print('\nData appended to "' .. filename .. '"')
+        elseif writemode == 'w' then
+            print('\nData overwritten in "' .. filename .. '"')
+        end
+    end
 end
 
 local function reformat(str)
