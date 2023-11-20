@@ -10,25 +10,24 @@ local worldName = dfhack.df2utf(dfhack.TranslateName(df.global.world.world_data.
 
 -- Argument processing
 local args = {...}
-if args[1] ~= nil then
-    local userProvidedName = table.remove(args, 1)
-    userProvidedName = string.gsub(userProvidedName, " ", "_")
-    filename = 'markdown_' .. userProvidedName .. '.md'
-else
-    filename = 'markdown_' .. worldName .. '_export.md'
-end
-
--- Determine file write mode and filename
-local writemode = 'a' -- append (default)
+local writemode = 'a' -- default to append mode
+local overwriteFlag = '-o'
 local filename
+local userProvidedNameParts = {}
 
-if args[1] == '-o' or args[1] == '/n' then
-    writemode = 'w' -- overwrite
-    table.remove(args, 1)
+-- Check for the overwrite flag and remove it from the arguments if found
+for i = #args, 1, -1 do
+    if args[i] == overwriteFlag then
+        writemode = 'w' -- set to overwrite mode
+        table.remove(args, i) -- remove the overwrite flag from the arguments
+        break -- remove only the first occurrence of the overwrite flag
+    end
 end
 
-if args[1] ~= nil then
-    filename = 'markdown_' .. table.remove(args, 1) .. '.md'
+-- Join remaining arguments with underscores to create the user-provided filename
+if #args > 0 then
+    local userProvidedName = table.concat(args, "_")
+    filename = 'markdown_' .. userProvidedName .. '.md'
 else
     filename = 'markdown_' .. worldName .. '_export.md'
 end

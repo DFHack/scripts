@@ -9,16 +9,16 @@ Saves descriptions of selected units or items to a markdown file.
 
 
 For units, the script retrieves:
-- Name, race, age, profession
-- Description from the Unit/Health/Description screen
-- Traits from the Unit/Personality/Traits screen
-It works for all units with text in the Description &/or Personality/Traits tabs, 
+#. Name, race, age, profession
+#. Description from the Unit/Health/Description screen
+#. Traits from the Unit/Personality/Traits screen
+The script works for all units with text in the Description &/or Personality/Traits tabs, 
 such as dwarves, dogs, elves, goblins, and beasts.
 
 For items, it retrieves:
-- Decorated name (e.g., "☼«☼Chalk Statue of Dakas☼»☼")
-- Full description from the item's view sheet
-It works for most items with in-game descriptions and names, including those in storage,
+#. Decorated name (e.g., "☼«☼Chalk Statue of Dakas☼»☼")
+#. Full description from the item's view sheet
+The script works for most items with in-game descriptions and names, including those in storage,
 on the ground, installed as a building, or worn/carried by units.
 
 The script appends a markdown-formatted version of the text to a target file 
