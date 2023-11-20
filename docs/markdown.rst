@@ -58,12 +58,9 @@ Examples
 
 ::
 
-    ``markdown``
-        Appends the description of the selected unit/item 
-        to the default ``markdown_{world_name}_export.md``. 
-        The script trims in-game world names, replacing spaces with underscores.
+    markdown
 
-Example output for a selected chalk statue in the world "Orid Tamun", 
+#### Example output for a selected chalk statue in the world "Orid Tamun", 
 appended to the default ``markdown_Orid_Tamun_export.md`` file:
 
     [...previous entries...]
@@ -81,11 +78,9 @@ appended to the default ``markdown_Orid_Tamun_export.md`` file:
 ::
 
     ``markdown -o descriptions``
-        Writes the description of the selected unit/item 
-        to the ``markdown_descriptions.md`` file instead of the default. 
-
-Example output for a selected unit Lokum Alnisendok, appended to the 
- ``markdown_descriptions.md`` file::
+    
+#### Example output for a selected unit Lokum Alnisendok, appended to the ``markdown_descriptions.md`` file
+::
 
     ### Lokum Alnisendok, dwarf, 27 years old Presser.
 
