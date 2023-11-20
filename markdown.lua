@@ -70,9 +70,9 @@ if not item and not unit then
 Error: No unit or item is currently selected.
 - To select a unit, click on it.
 - For items that are installed as buildings (like statues or beds), 
-open the building's interface in the game and click the magnifying glass icon.
+open the building's interface and click the magnifying glass icon.
 
-Please select a valid target in the game and try running the script again.]])
+Please select a valid target and try running the script again.]])
     -- Early return to avoid proceeding further if no unit or item is selected
     return
 end
