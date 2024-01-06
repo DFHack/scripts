@@ -1,6 +1,6 @@
 local script_name = "workorder-detail-fix"
 local eventful = require 'plugins.eventful'
-if not handler_ref then local handler_ref = nil end 
+if not handler_ref then local handler_ref = nil end
 
 -- all jobs with the "any" (-1) type in its default job_items may be a problem
 local offending_jobs = {
@@ -17,35 +17,35 @@ local offending_jobs = {
 -- only the essentials: stuff that is editable via gui/job-details
 local function correct_item_details(job_item, order_item)
     local fields = {'item_type', 'item_subtype', 'mat_type', 'mat_index'}
-    for _, field in pairs(fields) do 
-        job_item[field] = order_item[field] 
+    for _, field in pairs(fields) do
+        job_item[field] = order_item[field]
     end
 
     local flags_names = {'flags1', 'flags2', 'flags3', 'flags4', 'flags5'}
-    for _, flags in pairs(flags_names) do 
+    for _, flags in pairs(flags_names) do
         local order_flags = order_item[flags]
-        if type(order_flags) == "number" then 
+        if type(order_flags) == "number" then
             job_item[flags] = order_flags
         else -- copy over the flags one by one
-            for o_flag, val in pairs(order_flags) do 
+            for o_flag, val in pairs(order_flags) do
                 job_item[flags][o_flag] = val
             end
         end
     end
 end
 
--- correct each job as it's initialized 
+-- correct each job as it's initialized
 -- this is the handler, running after the job is dispatched
 local function enforce_order_details(job)
     if not job.job_items then return end -- never happens (error here?)
-    local order_id = job.order_id -- only jobs with an ORDER ID 
+    local order_id = job.order_id -- only jobs with an ORDER ID
     if (order_id == -1) or (order_id == nil) then return end
 
     -- only jobs with the item type issue. encrusting, sewing, cooking, etc.
     if not offending_jobs[job.job_type] then return end
 
     local order = nil -- get the order ref from order id
-    for _, ord in ipairs(df.global.world.manager_orders) do 
+    for _, ord in ipairs(df.global.world.manager_orders) do
         if ord.id == order_id then order = ord; break end
     end
 
@@ -61,17 +61,17 @@ local function enforce_order_details(job)
             -- but disallow insane combinations like meals made of shoes
             local suitable = dfhack.job.isSuitableItem(
                 job_item, order_item.item_type, order_item.item_subtype )
-            if suitable then 
+            if suitable then
                 correct_item_details(job_item, order_item)
             else --[[ error on unsuitable item?]] end
         end
     end
 end
 
-local function enable() 
+local function enable()
     print(script_name.." ENABLED")
     -- set eventful onJobInitiated handler to run every tick (frequency 0)
-    eventful.enableEvent(eventful.eventType.JOB_INITIATED, 0) 
+    eventful.enableEvent(eventful.eventType.JOB_INITIATED, 0)
     eventful.onJobInitiated.workorder_detail_fix = enforce_order_details
     handler_ref = eventful.onJobInitiated.workorder_detail_fix
 end
@@ -87,7 +87,7 @@ local function status()
     local handler = eventful.onJobInitiated.workorder_detail_fix
     if handler ~= nil then
         -- ensure the handler still matches the one copied back from eventful
-        if handler == handler_ref then 
+        if handler == handler_ref then
             status = "ENABLED"
         else
             status = "ERROR: Handler overwritten!"
@@ -100,7 +100,7 @@ end
 
 local args={...}
 
-if not args[1] then 
+if not args[1] then
     print(script_name.." valid cmds: enable, disable, status")
     return
 end

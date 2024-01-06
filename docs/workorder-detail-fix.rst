@@ -1,5 +1,5 @@
 workorder-detail-fix
-=========
+====================
 
 .. dfhack-tool::
     :summary: Fixes a bug with modified work orders creating incorrect jobs.
