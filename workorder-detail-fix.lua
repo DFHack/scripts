@@ -3,7 +3,7 @@ local eventful = require 'plugins.eventful'
 if not handler_ref then local handler_ref = nil end 
 
 -- all jobs with the "any" (-1) type in its default job_items may be a problem
-offending_jobs = {
+local offending_jobs = {
     [df.job_type.EncrustWithGems] = true,
     [df.job_type.EncrustWithGlass] = true,
     [df.job_type.StudWith] = true,
@@ -98,16 +98,16 @@ local function status()
     print(script_name.." status: "..status)
 end
 
-args={...}
+local args={...}
 
 if not args[1] then 
     print(script_name.." valid cmds: enable, disable, status")
     return
 end
 
-cmd_table = { ["enable"]=enable, ["disable"]=disable, ["status"]=status }
+local cmd_table = { ["enable"]=enable, ["disable"]=disable, ["status"]=status }
 
-cmd = cmd_table[args[1]:lower()]
+local cmd = cmd_table[args[1]:lower()]
 if cmd then cmd() else
     print(script_name.." valid cmds: enable, disable, status")
 end
