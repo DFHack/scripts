@@ -106,8 +106,8 @@ local function status()
 end
 
 -- check if script was called by enable API
-if dfhack_flags.enable then 
-    if dfhack_flags.enable_state then 
+if dfhack_flags.enable then
+    if dfhack_flags.enable_state then
         enable(); enabled = true
     else
         disable(); enabled = false
