@@ -115,6 +115,8 @@ if dfhack_flags.enable then
     return
 end
 
+if dfhack_flags.module then return end
+
 -- check the arguments
 local args={...}
 
