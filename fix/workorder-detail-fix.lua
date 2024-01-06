@@ -108,9 +108,9 @@ end
 -- check if script was called by enable API
 if dfhack_flags.enable then 
     if dfhack_flags.enable_state then 
-        enable()
+        enable(); enabled = true
     else
-        disable()
+        disable(); enabled = false
     end
     return
 end
