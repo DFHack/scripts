@@ -106,6 +106,11 @@ end
 
 args={...}
 
+if not args[1] then 
+    print(script_name.." valid cmds: enable, disable, status")
+    return
+end
+
 cmd_table = { ["enable"]=enable, ["disable"]=disable, ["status"]=status }
 
 cmd = cmd_table[args[1]:lower()]
