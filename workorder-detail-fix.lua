@@ -9,13 +9,13 @@ local function get_job_id(match)
 end
 
 -- all jobs with the "any" (-1) type in its default job_items may be a problem
-local offending_jobs = {
-    [get_job_id("EncrustWithGems")] = true,
-    [get_job_id("EncrustWithGlass")] = true,
-    [get_job_id("StudWith")] = true,
-    [get_job_id("PrepareMeal")] = true,
-    [get_job_id("DecorateWith")] = true,
-    [get_job_id("SewImage")] = true,
+offending_jobs = {
+    [df.job_type.EncrustWithGems] = true,
+    [df.job_type.EncrustWithGlass] = true,
+    [df.job_type.StudWith] = true,
+    [df.job_type.PrepareMeal] = true,
+    [df.job_type.DecorateWith] = true,
+    [df.job_type.SewImage] = true,
     -- list may be incomplete
 }
 
