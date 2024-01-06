@@ -76,17 +76,24 @@ local function enforce_order_details(job)
 end
 
 local function enable()
-    print(script_name.." ENABLED")
+    -- only print when called manually
+    if not dfhack_flags.enable then
+        print(script_name.." ENABLED")
+    end
     -- set eventful onJobInitiated handler to run every tick (frequency 0)
     eventful.enableEvent(eventful.eventType.JOB_INITIATED, 0)
     eventful.onJobInitiated.workorder_detail_fix = enforce_order_details
     handler_ref = eventful.onJobInitiated.workorder_detail_fix
+    enabled = true
 end
 
 local function disable()
-    print(script_name.." DISABLED")
+    if not dfhack_flags.enable then
+        print(script_name.." DISABLED")
+    end
     eventful.onJobInitiated.workorder_detail_fix = nil
     handler_ref = nil
+    enabled = false
 end
 
 local function status()
@@ -108,9 +115,9 @@ end
 -- check if script was called by enable API
 if dfhack_flags.enable then
     if dfhack_flags.enable_state then
-        enable(); enabled = true
+        enable()
     else
-        disable(); enabled = false
+        disable()
     end
     return
 end
