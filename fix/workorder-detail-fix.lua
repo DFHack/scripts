@@ -1,6 +1,13 @@
+--@enable = true
+--@module = true
 local script_name = "workorder-detail-fix"
 local eventful = require 'plugins.eventful'
 if not handler_ref then local handler_ref = nil end
+
+enabled = enabled or false
+function isEnabled()
+    return enabled
+end
 
 -- all jobs with the "any" (-1) type in its default job_items may be a problem
 local offending_jobs = {
@@ -98,6 +105,17 @@ local function status()
     print(script_name.." status: "..status)
 end
 
+-- check if script was called by enable API
+if dfhack_flags.enable then 
+    if dfhack_flags.enable_state then 
+        enable()
+    else
+        disable()
+    end
+    return
+end
+
+-- check the arguments
 local args={...}
 
 if not args[1] then
