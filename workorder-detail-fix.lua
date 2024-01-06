@@ -2,12 +2,6 @@ local script_name = "workorder-detail-fix"
 local eventful = require 'plugins.eventful'
 if not handler_ref then local handler_ref = nil end 
 
-local function get_job_id(match)
-    for val, name in ipairs(df.job_type) do 
-        if name == match then return val end
-    end
-end
-
 -- all jobs with the "any" (-1) type in its default job_items may be a problem
 offending_jobs = {
     [df.job_type.EncrustWithGems] = true,
