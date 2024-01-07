@@ -36,9 +36,17 @@ local function apply_autostart_config()
 end
 
 local function apply_fort_loaded_config()
-    if not safe_index(json.decode(persist.GlobalTable[GLOBAL_KEY] or ''), 'autostart_done') then
+    local fort_id = df.global.world.world_data.active_site[0].id
+    local saved_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '') or {autostart_done={}}
+    -- migrate from old format
+    if saved_data.autostart_done == true then
+        saved_data.autostart_done = {fort_id}
+        persist.GlobalTable[GLOBAL_KEY] = json.encode(saved_data)
+    end
+    if not utils.binsearch(saved_data.autostart_done, fort_id) then
         apply_autostart_config()
-        persist.GlobalTable[GLOBAL_KEY] = json.encode({autostart_done=true})
+        utils.insert_sorted(saved_data.autostart_done, fort_id)
+        persist.GlobalTable[GLOBAL_KEY] = json.encode(saved_data)
     end
     local enabled_repeats = json.decode(persist.GlobalTable[common.REPEATS_GLOBAL_KEY] or '') or {}
     for _, data in ipairs(registry.COMMANDS_BY_IDX) do
