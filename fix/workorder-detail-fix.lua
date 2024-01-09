@@ -2,7 +2,12 @@
 --@module = true
 local script_name = "workorder-detail-fix"
 local eventful = require 'plugins.eventful'
+local repeatutil = require 'repeat-util'
 if not handler_ref then local handler_ref = nil end
+
+-- must be frequent enough to catch new orders before any jobs get dispatched
+order_check_period = order_check_period or 300
+job_check_period = job_check_period or 0 -- might be overkill
 
 enabled = enabled or false
 function isEnabled()
@@ -75,6 +80,25 @@ local function enforce_order_details(job)
     end
 end
 
+local function arm_job_handler()
+    -- set eventful onJobInitiated handler to run every tick (frequency 0)
+    -- NOTE: this affects every other script using this eventful handler.
+    eventful.enableEvent(eventful.eventType.JOB_INITIATED, job_check_period)
+    eventful.onJobInitiated.workorder_detail_fix = enforce_order_details
+    handler_ref = eventful.onJobInitiated.workorder_detail_fix
+    handler_armed = true
+end
+
+local function disarm_job_handler()
+    --[[ would undo the onJobInitiated frequency here, but eventful has no way
+    to set a less frequent check- only a more frequent one.
+    having a PERMANENT side effect is not ideal but perhaps it should be taken
+    up with eventful.cpp ]]
+    eventful.onJobInitiated.workorder_detail_fix = nil
+    handler_ref = nil
+    handler_armed = false
+end
+
 local PrepareMeal = df.job_type.PrepareMeal
 local SewImage = df.job_type.SewImage
 local NONE = df.job_type.NONE
@@ -115,25 +139,34 @@ local function detail_fix_is_needed()
     return false
 end
 
-local function enable()
-    -- only print when called manually
-    if not dfhack_flags.enable then
-        print(script_name.." ENABLED")
-    end
-    -- set eventful onJobInitiated handler to run every tick (frequency 0)
-    eventful.enableEvent(eventful.eventType.JOB_INITIATED, 0)
-    eventful.onJobInitiated.workorder_detail_fix = enforce_order_details
-    handler_ref = eventful.onJobInitiated.workorder_detail_fix
-    enabled = true
+local schedule_key = "workorder_detail_fix_order_check"
+local function disable_order_checking()
+    repeatutil.cancel(schedule_key)
+    checking_orders = false
 end
 
-local function disable()
-    if not dfhack_flags.enable then
-        print(script_name.." DISABLED")
-    end
-    eventful.onJobInitiated.workorder_detail_fix = nil
-    handler_ref = nil
+-- checks orders for bug periodically & enables the main fix when applicable,
+-- mainly to avoid setting unnecessary handlers
+local function enable(yell)
+    -- embedded func could be factored out if we want to allow other
+    -- scripts to check. eg after importing orders, or modifying an order
+    checking_orders = true
+    repeatutil.scheduleEvery( schedule_key, order_check_period, "ticks",
+        function()
+            if detail_fix_is_needed() then
+                arm_job_handler()
+                disable_order_checking()
+            end
+        end )
+    enabled = true
+    if yell then print(script_name.." ENABLED") end
+end
+
+local function disable(yell)
+    disable_order_checking()
+    disarm_job_handler()
     enabled = false
+    if yell then print(script_name.." DISABLED") end
 end
 
 local function status()
