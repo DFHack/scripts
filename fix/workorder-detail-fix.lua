@@ -3,18 +3,20 @@
 local script_name = "workorder-detail-fix"
 local eventful = require 'plugins.eventful'
 local repeatutil = require 'repeat-util'
-if not handler_ref then local handler_ref = nil end
 
 -- must be frequent enough to catch new orders before any jobs get dispatched
 order_check_period = order_check_period or 300
 job_check_period = job_check_period or 0 -- might be overkill
 
-enabled = enabled or false
-function isEnabled()
-    return enabled
-end
+-- these are only for debug/printing status
+handler_ref = handler_ref or nil
+handler_armed = handler_armed or false
+checking_orders = checking_orders or false
 
--- all jobs with the "any" (-1) type in its default job_items may be a problem
+enabled = enabled or false -- "enabled API" stuff
+function isEnabled() return enabled end
+
+-- all jobs with the NONE (-1) type in its default job_items may be a problem
 local offending_jobs = {
     [df.job_type.EncrustWithGems] = true,
     [df.job_type.EncrustWithGlass] = true,
@@ -169,28 +171,44 @@ local function disable(yell)
     if yell then print(script_name.." DISABLED") end
 end
 
+-- mostly for debugging. maybe could print the # of jobs corrected
 local function status()
     local status = "DISABLED"
+    if checking_orders then status = "ENABLED (Checking orders)" end
+    if handler_armed then status = "ENABLED (Handling jobs)" end
+    local extralines = {}; local num_err = 0
+    local function err(msg, ...)
+        num_err = num_err + 1; status = ("ERROR (%d)"):format(num_err)
+        table.insert(extralines, msg:format(...))
+    end
+    -- may become non-error if we want to get more dynamic with toggling
+    if checking_orders and handler_armed then
+        err("checking orders and handling jobs at the same time?")
+    end
+    local order_check_scheduled = repeatutil.repeating[schedule_key] ~= nil
+    if checking_orders ~= order_check_scheduled then
+        err( "%s we are checking orders but %s that a check is scheduled",
+            checking_orders, order_check_scheduled )
+    end
     local handler = eventful.onJobInitiated.workorder_detail_fix
-    if handler ~= nil then
-        -- ensure the handler still matches the one copied back from eventful
-        if handler == handler_ref then
-            status = "ENABLED"
-        else
-            status = "ERROR: Handler overwritten!"
-            print("why is this here:", handler)
-            print("should be", handler_ref)
-        end
+    if handler_armed ~= (handler ~= nil) then
+        err( "%s that job handler should be armed but %s that one exists",
+            handler_armed, handler ~= nil )
+    end
+    if not handler == handler_ref then
+        err( "job handler: %s\ndoesn't match stored handler: %s",
+            handler, handler_ref )
     end
     print(script_name.." status: "..status)
+    for idx, message in pairs(extralines) do print(idx, message) end
 end
 
 -- check if script was called by enable API
 if dfhack_flags.enable then
     if dfhack_flags.enable_state then
-        enable()
+        enable(false)
     else
-        disable()
+        disable(false)
     end
     return
 end
@@ -208,6 +226,6 @@ end
 local cmd_table = { ["enable"]=enable, ["disable"]=disable, ["status"]=status }
 
 local cmd = cmd_table[args[1]:lower()]
-if cmd then cmd() else
+if cmd then cmd(true) else
     print(script_name.." valid cmds: enable, disable, status")
 end
