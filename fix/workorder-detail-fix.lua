@@ -75,6 +75,46 @@ local function enforce_order_details(job)
     end
 end
 
+local PrepareMeal = df.job_type.PrepareMeal
+local SewImage = df.job_type.SewImage
+local NONE = df.job_type.NONE
+
+--[[ return true if order list contains an order that would trigger the bug.
+it only happens when item types clash with an expected default of "any"/NONE,
+so this is the only case it checks for. ]]
+local function detail_fix_is_needed()
+    for _, order in ipairs(df.global.world.manager_orders) do
+        if not order.items then goto nextorder end
+
+        local order_job_type = order.job_type
+        if not offending_jobs[order_job_type] then goto nextorder end
+        if #order.items == 0 then goto nextorder end -- doesn't happen
+
+        -- for PrepareMeal jobs, any one of the items could be an issue.
+        if order_job_type == PrepareMeal then
+            for _, item in ipairs(order.items) do
+                if item.item_type ~= NONE then return true end
+            end
+            goto nextorder
+        end
+
+        -- All other types are improve jobs. only the improved item is checked
+        local job_item_index = 1
+         -- Only SewImage has the item-to-improve at items[0]
+        if order_job_type == SewImage then job_item_index = 0 end
+
+        local item = order.items[job_item_index]
+
+        -- only happens if someone has really mangled an order. deleted items,
+        -- switch positions, etc. gui/job-details doesn't let this happen.
+        if not item then goto nextorder end
+
+        if item.item_type ~= NONE then return true end
+        :: nextorder ::
+    end
+    return false
+end
+
 local function enable()
     -- only print when called manually
     if not dfhack_flags.enable then
