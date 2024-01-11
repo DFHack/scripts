@@ -13,6 +13,7 @@ For best experience add following to your ``dfhack*.init``::
 
 local gui = require 'gui'
 local widgets = require 'gui.widgets'
+local time = require 'time'
 local utils = require 'utils'
 
 -- local args = utils.invert({...})
@@ -39,83 +40,6 @@ local utils = require 'utils'
 ]]
 
 if not dfhack.world.isFortressMode() then return end
-
--- from gui/unit-info-viewer.lua
-do -- for code folding
---------------------------------------------------
----------------------- Time ----------------------
---------------------------------------------------
-local TU_PER_DAY = 1200
---[[
-if advmode then TU_PER_DAY = 86400 ? or only for cur_year_tick?
-advmod_TU / 72 = ticks
---]]
-local TU_PER_MONTH = TU_PER_DAY * 28
-local TU_PER_YEAR = TU_PER_MONTH * 12
-
-local MONTHS = {
- 'Granite',
- 'Slate',
- 'Felsite',
- 'Hematite',
- 'Malachite',
- 'Galena',
- 'Limestone',
- 'Sandstone',
- 'Timber',
- 'Moonstone',
- 'Opal',
- 'Obsidian',
-}
-Time = defclass(Time)
-function Time:init(args)
- self.year = args.year or 0
- self.ticks = args.ticks or 0
-end
-function Time:getDays() -- >>float<< Days as age (including years)
- return self.year * 336 + (self.ticks / TU_PER_DAY)
-end
-function Time:getDayInMonth()
- return math.floor ( (self.ticks % TU_PER_MONTH) / TU_PER_DAY ) + 1
-end
-function Time:getMonths() -- >>int<< Months as age (not including years)
- return math.floor (self.ticks / TU_PER_MONTH)
-end
-function Time:getYears() -- >>int<<
- return self.year
-end
-function Time:getMonthStr() -- Month as date
- return MONTHS[self:getMonths()+1] or 'error'
-end
-function Time:getDayStr() -- Day as date
- local d = math.floor ( (self.ticks % TU_PER_MONTH) / TU_PER_DAY ) + 1
- if d == 11 or d == 12 or d == 13 then
-  d = tostring(d)..'th'
- elseif d % 10 == 1 then
-  d = tostring(d)..'st'
- elseif d % 10 == 2 then
-  d = tostring(d)..'nd'
- elseif d % 10 == 3 then
-  d = tostring(d)..'rd'
- else
-  d = tostring(d)..'th'
- end
- return d
-end
---function Time:__add()
---end
-function Time:__sub(other)
- if DEBUG then print(self.year,self.ticks) end
- if DEBUG then print(other.year,other.ticks) end
- if self.ticks < other.ticks then
-  return Time{ year = (self.year - other.year - 1) , ticks = (TU_PER_YEAR + self.ticks - other.ticks) }
- else
-  return Time{ year = (self.year - other.year) , ticks = (self.ticks - other.ticks) }
- end
-end
---------------------------------------------------
---------------------------------------------------
-end
 
 local we = df.global.plotinfo.group_id
 
@@ -162,9 +86,9 @@ local function getAgreementDetails(a)
     sb[#sb+1] = NEWLINE
     local expired = false
     for _, d in ipairs (a.details) do
-        local petition_date = Time{year = d.year, ticks = d.year_tick}
+        local petition_date = time.Time{year = d.year, ticks = d.year_tick}
         local petition_date_str = petition_date:getDayStr()..' of '..petition_date:getMonthStr()..' in the year '..tostring(petition_date.year)
-        local cur_date = Time{year = df.global.cur_year, ticks = df.global.cur_year_tick}
+        local cur_date = time.Time{year = df.global.cur_year, ticks = df.global.cur_year_tick}
         sb[#sb+1] = ("On " .. petition_date_str)
         sb[#sb+1] = NEWLINE
         local diff = (cur_date - petition_date)
