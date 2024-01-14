@@ -3,7 +3,7 @@ embark-skills
 
 .. dfhack-tool::
     :summary: Adjust dwarves' skills when embarking.
-    :tags: unavailable
+    :tags: embark armok units
 
 When selecting starting skills for your dwarves on the embark screen, this tool
 can manipulate the skill values or adjust the number of points you have

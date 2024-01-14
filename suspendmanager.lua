@@ -2,8 +2,6 @@
 --@module = true
 --@enable = true
 
-local json = require('json')
-local persist = require('persist-table')
 local argparse = require('argparse')
 local eventful = require('plugins.eventful')
 local utils = require('utils')
@@ -112,7 +110,7 @@ function isKeptSuspended(job)
 end
 
 local function persist_state()
-    persist.GlobalTable[GLOBAL_KEY] = json.encode({
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, {
         enabled=enabled,
         prevent_blocking=Instance.preventBlocking,
     })
@@ -745,9 +743,9 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
         return
     end
 
-    local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '')
-    enabled = (persisted_data or {enabled=false})['enabled']
-    Instance.preventBlocking = (persisted_data or {prevent_blocking=true})['prevent_blocking']
+    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {enabled=false, prevent_blocking=true})
+    enabled = persisted_data.enabled
+    Instance.preventBlocking = persisted_data.prevent_blocking
     update_triggers()
 end
 

@@ -3,8 +3,6 @@
 --@ module=true
 
 local argparse = require('argparse')
-local json = require('json')
-local persist = require('persist-table')
 local repeatutil = require('repeat-util')
 
 local GLOBAL_KEY = 'hermit'
@@ -22,12 +20,12 @@ function isEnabled()
 end
 
 local function persist_state()
-    persist.GlobalTable[GLOBAL_KEY] = json.encode{enabled=enabled}
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, {enabled=enabled})
 end
 
 local function load_state()
-    local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '') or {}
-    enabled = persisted_data.enabled or false
+    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {enabled=false})
+    enabled = persisted_data.enabled
 end
 
 function event_loop()

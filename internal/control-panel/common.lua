@@ -3,7 +3,6 @@
 local helpdb = require('helpdb')
 local json = require('json')
 local migration = reqscript('internal/control-panel/migration')
-local persist = require('persist-table')
 local registry = reqscript('internal/control-panel/registry')
 local repeatUtil = require('repeat-util')
 local utils = require('utils')
@@ -117,7 +116,7 @@ local function persist_enabled_repeats()
             cp_repeats[name] = true
         end
     end
-    persist.GlobalTable[REPEATS_GLOBAL_KEY] = json.encode(cp_repeats)
+    dfhack.persistent.saveSiteData(REPEATS_GLOBAL_KEY, cp_repeats)
 end
 
 function apply_command(data, enabled_map, enabled)

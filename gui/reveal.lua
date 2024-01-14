@@ -1,8 +1,7 @@
 --@ module = true
 
+local dialogs = require('gui.dialogs')
 local gui = require('gui')
-local guidm = require('gui.dwarfmode')
-local utils = require('utils')
 local widgets = require('gui.widgets')
 
 --
@@ -12,24 +11,40 @@ local widgets = require('gui.widgets')
 Reveal = defclass(Reveal, widgets.Window)
 Reveal.ATTRS {
     frame_title='Reveal',
-    frame={w=29, h=10, r=2, t=18},
+    frame={w=32, h=14, r=2, t=18},
     autoarrange_subviews=true,
     autoarrange_gap=1,
+    hell=DEFAULT_NIL,
 }
 
 function Reveal:init()
+    if self.hell then
+        self.frame.h = 15
+    end
+
     self:addviews{
         widgets.WrappedLabel{
             text_to_wrap='The map is revealed. The game will be force paused until you close this window.',
         },
+        widgets.WrappedLabel{
+            text_to_wrap='Areas with event triggers are kept hidden to avoid spoilers.',
+            text_pen=COLOR_YELLOW,
+            visible=not self.hell,
+        },
+        widgets.WrappedLabel{
+            text_to_wrap='Areas with event triggers have been revealed. The map must be hidden again before unpausing.',
+            text_pen=COLOR_RED,
+            visible=self.hell,
+        },
         widgets.ToggleHotkeyLabel{
             view_id='unreveal',
             key='CUSTOM_SHIFT_R',
-            label='Unreveal on close',
+            label='Restore map on close:',
             options={
                 {label='Yes', value=true, pen=COLOR_GREEN},
                 {label='No', value=false, pen=COLOR_RED},
             },
+            enabled=not self.hell,
        },
     }
 end
@@ -53,7 +68,7 @@ function RevealScreen:init()
     end
     dfhack.run_command(command)
 
-    self:addviews{Reveal{}}
+    self:addviews{Reveal{hell=self.hell}}
 end
 
 function RevealScreen:onDismiss()

@@ -1,19 +1,4 @@
 -- Prepare the current save for devel/find-offsets
---[====[
-
-devel/prepare-save
-==================
-
-.. warning::
-
-    THIS SCRIPT IS STRICTLY FOR DFHACK DEVELOPERS.
-
-This script prepares the current savegame to be used
-with `devel/find-offsets`. It CHANGES THE GAME STATE
-to predefined values, and initiates an immediate
-`quicksave`, thus PERMANENTLY MODIFYING the save.
-
-]====]
 
 local utils = require 'utils'
 
@@ -89,11 +74,7 @@ local yearstr = df.global.cur_year..','..df.global.cur_year_tick
 
 print('Cur year and tick: '..yearstr)
 
-dfhack.persistent.save{
-    key='prepare-save/cur_year',
-    value=yearstr,
-    ints={df.global.cur_year, df.global.cur_year_tick}
-}
+dfhack.persistent.saveSiteDataString('prepare-save/cur_year', yearstr)
 
 -- Save
 

@@ -42,13 +42,13 @@ function adjust(dwarves, callback)
 end
 
 local scr = dfhack.gui.getCurViewscreen() --as:df.viewscreen_setupdwarfgamest
-if dfhack.gui.getCurFocus() ~= 'setupdwarfgame' or scr.show_play_now == 1 then
-    qerror('Must be called on the "Prepare carefully" screen')
+if not dfhack.gui.matchFocusString('setupdwarfgame/Dwarves', scr) then
+    qerror('Must be called on the "Prepare carefully" screen, "Dwarves" tab')
 end
 
 local dwarf_info = scr.dwarf_info
 local dwarves = dwarf_info
-local selected_dwarf = {[0] = scr.dwarf_info[scr.dwarf_cursor]} --as:df.setup_character_info[]
+local selected_dwarf = {[0] = scr.dwarf_info[scr.selected_u]} --as:df.setup_character_info[]
 
 local args = {...}
 if args[1] == 'points' then
@@ -58,20 +58,20 @@ if args[1] == 'points' then
     end
     if args[3] ~= 'all' then dwarves = selected_dwarf end
     adjust(dwarves, function(dwf)
-        dwf.skill_points_remaining = points
+        dwf.skill_picks_left = points
     end)
 elseif args[1] == 'max' then
     if args[2] ~= 'all' then dwarves = selected_dwarf end
     adjust(dwarves, function(dwf)
-        for skill, level in pairs(dwf.skills) do
-            dwf.skills[skill] = df.skill_rating.Proficient
+        for skill, level in pairs(dwf.skilllevel) do
+            dwf.skilllevel[skill] = df.skill_rating.Proficient
         end
     end)
 elseif args[1] == 'legendary' then
     if args[2] ~= 'all' then dwarves = selected_dwarf end
     adjust(dwarves, function(dwf)
-        for skill, level in pairs(dwf.skills) do
-            dwf.skills[skill] = df.skill_rating.Legendary5
+        for skill, level in pairs(dwf.skilllevel) do
+            dwf.skilllevel[skill] = df.skill_rating.Legendary5
         end
     end)
 else

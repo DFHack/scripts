@@ -4,9 +4,6 @@
 --@module = true
 --@enable = true
 
-local json = require('json')
-local persist = require('persist-table')
-
 local GLOBAL_KEY = 'emigration' -- used for state change hooks and persistence
 
 enabled = enabled or false
@@ -16,7 +13,7 @@ function isEnabled()
 end
 
 local function persist_state()
-    persist.GlobalTable[GLOBAL_KEY] = json.encode({enabled=enabled})
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, {enabled=enabled})
 end
 
 function desireToStay(unit,method,civ_id)
@@ -215,8 +212,8 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
         return
     end
 
-    local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '')
-    enabled = (persisted_data or {enabled=false})['enabled']
+    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {enabled=false})
+    enabled = persisted_data.enabled
     event_loop()
 end
 

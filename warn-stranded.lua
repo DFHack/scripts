@@ -7,7 +7,9 @@ local gui = require 'gui'
 local widgets = require 'gui.widgets'
 local argparse = require 'argparse'
 local args = {...}
-local scriptPrefix = 'warn-stranded'
+
+local GLOBAL_KEY = 'warn-stranded_v2'
+
 ignoresCache = ignoresCache or {}
 
 -- ===============================================
@@ -72,16 +74,7 @@ end
 --   will return an empty array if needed. Clears and adds entries to our cache.
 -- Returns the new global ignoresCache value
 local function loadIgnoredUnits()
-    local ignores = dfhack.persistent.get_all(scriptPrefix)
-    ignoresCache = {}
-
-    if ignores == nil then return ignoresCache end
-
-    for _, entry in ipairs(ignores) do
-        unit_id = entry.ints[1]
-        ignoresCache[unit_id] = entry
-    end
-
+    ignoresCache = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
     return ignoresCache
 end
 
@@ -107,17 +100,10 @@ end
 --   and from the ignoresCache table.
 -- Returns true if the unit was already ignored, false if it wasn't.
 local function toggleUnitIgnore(unit, refresh)
-    local entry = unitIgnored(unit, refresh)
-
-    if entry then
-        entry:delete()
-        ignoresCache[unit.id] = nil
-        return true
-    else
-        entry = dfhack.persistent.save({key = scriptPrefix, ints = {unit.id}}, true)
-        ignoresCache[unit.id] = entry
-        return false
-    end
+    local was_ignored = unitIgnored(unit, refresh)
+    ignoresCache[unit.id] = not was_ignored or nil
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, ignoresCache)
+    return was_ignored
 end
 
 -- Does the usual GUI pattern when groups can be in a partial state
@@ -469,7 +455,7 @@ end
 
 -- Load ignores list on save game load
 -- WARNING: This has to be above `dfhack_flags.module` or it will not work as intended on first game load
-dfhack.onStateChange[scriptPrefix] = function(state_change)
+dfhack.onStateChange[GLOBAL_KEY] = function(state_change)
     if state_change ~= SC_MAP_LOADED or df.global.gamemode ~= df.game_mode.DWARF then
         return
     end

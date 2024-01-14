@@ -388,7 +388,7 @@ end
 
 local function get_mandate_noble_roles()
     local roles = {}
-    for _, link in ipairs(df.global.world.world_data.active_site[0].entity_links) do
+    for _, link in ipairs(dfhack.world.getCurrentSite().entity_links) do
         local he = df.historical_entity.find(link.entity_id);
         if not he or
             (he.type ~= df.historical_entity_type.SiteGovernment and

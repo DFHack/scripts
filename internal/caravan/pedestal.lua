@@ -105,7 +105,7 @@ local function get_containing_temple_or_guildhall(display_bld)
         end
     end
     if not loc_id then return end
-    local site = df.global.world.world_data.active_site[0]
+    local site = dfhack.world.getCurrentSite()
     local location = utils.binsearch(site.buildings, loc_id, 'id')
     if not location then return end
     local loc_type = location:getType()

@@ -30,9 +30,17 @@ local function get_item_pos(item)
     end
 end
 
-local function get_squad_position(unit)
+local function get_squad_position(unit, unit_name)
     local squad = df.squad.find(unit.military.squad_id)
-    if not squad then return end
+    if squad then
+        if squad.entity_id ~= df.global.plotinfo.group_id then
+            print("WARNING: Unit " .. unit_name .. " is a member of a squad in another site!" ..
+                " You can fix this by assigning them to a local squad and then unassigning them.")
+            return
+        end
+    else
+        return
+    end
     if #squad.positions > unit.military.squad_position then
         return squad.positions[unit.military.squad_position]
     end
@@ -97,7 +105,7 @@ local function process(unit, args)
     local to_drop = {} -- item id to item object
 
     -- First get squad position for an early-out for non-military dwarves
-    local squad_position = get_squad_position(unit)
+    local squad_position = get_squad_position(unit, unit_name)
     if not squad_position then
         if not silent then
             print("Unit " .. unit_name .. " does not have a military uniform.")

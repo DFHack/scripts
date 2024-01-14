@@ -2,8 +2,6 @@
 
 local argparse = require('argparse')
 local common = reqscript('internal/control-panel/common')
-local json = require('json')
-local persist = require('persist-table')
 local registry = reqscript('internal/control-panel/registry')
 local utils = require('utils')
 
@@ -12,7 +10,7 @@ local GLOBAL_KEY = 'control-panel'
 -- state change hooks
 
 local function apply_system_config()
-    local enabled_map =common.get_enabled_map()
+    local enabled_map = common.get_enabled_map()
     for _, data in ipairs(registry.COMMANDS_BY_IDX) do
         if data.mode == 'system_enable' then
             common.apply_command(data, enabled_map)
@@ -29,18 +27,19 @@ end
 local function apply_autostart_config()
     local enabled_map =common.get_enabled_map()
     for _, data in ipairs(registry.COMMANDS_BY_IDX) do
-        if data.mode == 'enable' or data.mode == 'run' then
+        if data.mode == 'enable' or data.mode == 'run' or data.mode == 'repeat' then
             common.apply_command(data, enabled_map)
         end
     end
 end
 
 local function apply_fort_loaded_config()
-    if not safe_index(json.decode(persist.GlobalTable[GLOBAL_KEY] or ''), 'autostart_done') then
+    local state = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
+    if not state.autostart_done then
         apply_autostart_config()
-        persist.GlobalTable[GLOBAL_KEY] = json.encode({autostart_done=true})
+        dfhack.persistent.saveSiteData(GLOBAL_KEY, {autostart_done=true})
     end
-    local enabled_repeats = json.decode(persist.GlobalTable[common.REPEATS_GLOBAL_KEY] or '') or {}
+    local enabled_repeats = dfhack.persistent.getSiteData(common.REPEATS_GLOBAL_KEY, {})
     for _, data in ipairs(registry.COMMANDS_BY_IDX) do
         if data.mode == 'repeat' and enabled_repeats[data.command] then
             common.apply_command(data)

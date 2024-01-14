@@ -8,19 +8,39 @@ local widgets = require('gui.widgets')
 local function noop()
 end
 
-local function remove_building(built, planned, bld)
+local function get_first_job(bld)
+    if not bld then return end
+    if #bld.jobs ~= 1 then return end
+    return bld.jobs[0]
+end
+
+local function process_building(built, planned, remove, bld)
     if (built and bld:getBuildStage() == bld:getMaxBuildStage()) or
         (planned and bld:getBuildStage() ~= bld:getMaxBuildStage())
     then
-        dfhack.buildings.deconstruct(bld)
+        if remove then
+            dfhack.buildings.deconstruct(bld)
+        else
+            local job = get_first_job(bld)
+            if not job or job.job_type ~= df.job_type.DestroyBuilding then return end
+            dfhack.job.removeJob(job)
+        end
     end
 end
 
-local function remove_construction(built, planned, pos, bld)
+local function process_construction(built, planned, remove, grid, pos, bld)
     if planned and bld then
-        remove_building(false, true, bld)
+        process_building(false, true, remove, bld)
     elseif built and not bld then
-        dfhack.constructions.designateRemove(pos)
+        if remove then
+            dfhack.constructions.designateRemove(pos)
+        else
+            local tileFlags = dfhack.maps.getTileFlags(pos)
+            tileFlags.dig = df.tile_dig_designation.No
+            dfhack.maps.getTileBlock(pos).flags.designated = true
+            local job = safe_index(grid, pos.z, pos.y, pos.x)
+            if job then dfhack.job.removeJob(job) end
+        end
     end
 end
 
@@ -56,10 +76,9 @@ function DimsPanel:init()
         widgets.WrappedLabel{
             text_to_wrap=self:callback('get_action_text')
         },
-        widgets.TooltipLabel{
-            indent=1,
-            text={{text=self:callback('get_area_text')}},
-            show_tooltip=self.get_mark_fn
+        widgets.Label{
+            text={{gap=1, text=self:callback('get_area_text')}},
+            text_pen=COLOR_GRAY,
         },
     }
 end
@@ -86,6 +105,10 @@ local function is_something_selected()
         dfhack.gui.getSelectedCivZone(true)
 end
 
+local function not_is_something_selected()
+    return not is_something_selected()
+end
+
 --
 -- MassRemove
 --
@@ -93,7 +116,7 @@ end
 MassRemove = defclass(MassRemove, widgets.Window)
 MassRemove.ATTRS{
     frame_title='Mass Remove',
-    frame={w=47, h=18, r=2, t=18},
+    frame={w=47, h=19, r=2, t=18},
     resizable=true,
     resize_min={h=9},
     autoarrange_subviews=true,
@@ -110,11 +133,15 @@ function MassRemove:init()
         },
         widgets.WrappedLabel{
             text_to_wrap='Designate buildings, constructions, stockpiles, and/or zones for removal.',
-            visible=function() return not is_something_selected() end,
+            visible=function() return not_is_something_selected() and self.subviews.remove:getOptionValue() end,
+        },
+        widgets.WrappedLabel{
+            text_to_wrap='Designate buildings or constructions to cancel removal.',
+            visible=function() return not_is_something_selected() and not self.subviews.remove:getOptionValue() end,
         },
         DimsPanel{
             get_mark_fn=function() return self.mark end,
-            visible=function() return not is_something_selected() end,
+            visible=not_is_something_selected,
         },
         widgets.CycleHotkeyLabel{
             view_id='buildings',
@@ -124,11 +151,12 @@ function MassRemove:init()
             option_gap=5,
             options={
                 {label='Leave alone', value=noop, pen=COLOR_BLUE},
-                {label='Remove built and planned', value=curry(remove_building, true, true), pen=COLOR_RED},
-                {label='Remove built', value=curry(remove_building, true, false), pen=COLOR_LIGHTRED},
-                {label='Remove planned', value=curry(remove_building, false, true), pen=COLOR_YELLOW},
+                {label='Affect built and planned', value=curry(process_building, true, true), pen=COLOR_RED},
+                {label='Affect built', value=curry(process_building, true, false), pen=COLOR_LIGHTRED},
+                {label='Affect planned', value=curry(process_building, false, true), pen=COLOR_YELLOW},
             },
             initial_option=2,
+            enabled=not_is_something_selected,
         },
         widgets.CycleHotkeyLabel{
             view_id='constructions',
@@ -138,10 +166,11 @@ function MassRemove:init()
             option_gap=1,
             options={
                 {label='Leave alone', value=noop, pen=COLOR_BLUE},
-                {label='Remove built and planned', value=curry(remove_construction, true, true), pen=COLOR_RED},
-                {label='Remove built', value=curry(remove_construction, true, false), pen=COLOR_LIGHTRED},
-                {label='Remove planned', value=curry(remove_construction, false, true), pen=COLOR_YELLOW},
+                {label='Affect built and planned', value=curry(process_construction, true, true), pen=COLOR_RED},
+                {label='Affect built', value=curry(process_construction, true, false), pen=COLOR_LIGHTRED},
+                {label='Affect planned', value=curry(process_construction, false, true), pen=COLOR_YELLOW},
             },
+            enabled=not_is_something_selected,
         },
         widgets.CycleHotkeyLabel{
             view_id='stockpiles',
@@ -153,6 +182,17 @@ function MassRemove:init()
                 {label='Leave alone', value=noop, pen=COLOR_BLUE},
                 {label='Remove', value=remove_stockpile, pen=COLOR_RED},
             },
+            enabled=not_is_something_selected,
+            visible=function() return self.subviews.remove:getOptionValue() end,
+        },
+        widgets.CycleHotkeyLabel{
+            label='Stockpiles:',
+            key='CUSTOM_S',
+            key_sep=':  ',
+            option_gap=4,
+            options={{label='Leave alone', value=noop}},
+            enabled=false,
+            visible=function() return not self.subviews.remove:getOptionValue() end,
         },
         widgets.CycleHotkeyLabel{
             view_id='zones',
@@ -164,6 +204,28 @@ function MassRemove:init()
                 {label='Leave alone', value=noop, pen=COLOR_BLUE},
                 {label='Remove', value=remove_zone, pen=COLOR_RED},
             },
+            enabled=not_is_something_selected,
+            visible=function() return self.subviews.remove:getOptionValue() end,
+        },
+        widgets.CycleHotkeyLabel{
+            label='Zones:',
+            key='CUSTOM_Z',
+            key_sep=':  ',
+            option_gap=9,
+            options={{label='Leave alone', value=noop}},
+            enabled=false,
+            visible=function() return not self.subviews.remove:getOptionValue() end,
+        },
+        widgets.CycleHotkeyLabel{
+            view_id='remove',
+            label='Mode:',
+            key='CUSTOM_E',
+            options={
+                {label='Remove or schedule for removal', value=true, pen=COLOR_RED},
+                {label='Cancel removal', value=false, pen=COLOR_GREEN},
+            },
+            on_change=function() self:updateLayout() end,
+            enabled=not_is_something_selected,
         },
     }
 
@@ -250,12 +312,6 @@ local function is_destroying_construction(pos, grid)
         dfhack.maps.getTileFlags(pos).dig == df.tile_dig_designation.Default
 end
 
-local function get_first_job(bld)
-    if not bld then return end
-    if #bld.jobs ~= 1 then return end
-    return bld.jobs[0]
-end
-
 local function get_job_pen(pos, grid)
     if is_destroying_construction(pos) then
         return DESTROYING_PEN
@@ -297,6 +353,9 @@ function MassRemove:commit(bounds)
     local constr_fn = self.subviews.constructions:getOptionValue()
     local stockpile_fn = self.subviews.stockpiles:getOptionValue()
     local zones_fn = self.subviews.zones:getOptionValue()
+    local remove = self.subviews.remove:getOptionValue()
+
+    self:refresh_grid()
 
     for z=bounds.z1,bounds.z2 do
         for y=bounds.y1,bounds.y2 do
@@ -307,13 +366,13 @@ function MassRemove:commit(bounds)
                     if bld:getType() == df.building_type.Stockpile then
                         stockpile_fn(bld)
                     elseif bld:getType() == df.building_type.Construction then
-                        constr_fn(pos, bld)
+                        constr_fn(remove, self.grid, pos, bld)
                     else
-                        bld_fn(bld)
+                        bld_fn(remove, bld)
                     end
                 end
                 if not dfhack.buildings.findAtTile(pos) and is_construction(pos) then
-                    constr_fn(pos)
+                    constr_fn(remove, self.grid, pos)
                 end
                 zones_fn(pos)
             end

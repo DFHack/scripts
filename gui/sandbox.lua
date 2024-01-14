@@ -258,7 +258,6 @@ SandboxScreen = defclass(SandboxScreen, gui.ZScreen)
 SandboxScreen.ATTRS {
     focus_path='sandbox',
     force_pause=true,
-    pass_pause=false,
     defocusable=false,
 }
 

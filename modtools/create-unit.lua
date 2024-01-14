@@ -915,13 +915,14 @@ end
 
 function wildUnit(unit)
   local casteFlags = unit.enemy.caste_flags
-  -- x = df.global.world.world_data.active_site[0].pos.x
-  -- y = df.global.world.world_data.active_site[0].pos.y
+  -- x = dfhack.world.getCurrentSite().pos.x
+  -- y = dfhack.world.getCurrentSite().pos.y
   -- region = df.global.map.map_blocks[df.global.map.x_count_block*x+y]
   if not(casteFlags.CAN_SPEAK or casteFlags.CAN_LEARN) then
-    if #df.global.world.world_data.active_site > 0 then -- empty in adventure mode
-      unit.animal.population.region_x = df.global.world.world_data.active_site[0].pos.x
-      unit.animal.population.region_y = df.global.world.world_data.active_site[0].pos.y
+    if dfhack.isSiteLoaded() then
+      local site = dfhack.world.getCurrentSite()
+      unit.animal.population.region_x = site.pos.x
+      unit.animal.population.region_y = site.pos.y
     end
     unit.animal.population.unk_28 = -1
     unit.animal.population.population_idx = -1  -- Eventually want to make a real population

@@ -22,11 +22,11 @@ COMMANDS_BY_IDX = {
         desc='Enable if you usually farm pig tails for the clothing industry.'},
     {command='autofish', group='automation', mode='enable'},
     --{command='autolabor', group='automation', mode='enable'}, -- hide until it works better
-    {command='automilk', group='automation', mode='repeat',
+    {command='automilk', help_command='workorder', group='automation', mode='repeat',
         desc='Automatically milk creatures that are ready for milking.',
         params={'--time', '14', '--timeUnits', 'days', '--command', '[', 'workorder', '"{\\"job\\":\\"MilkCreature\\",\\"item_conditions\\":[{\\"condition\\":\\"AtLeast\\",\\"value\\":2,\\"flags\\":[\\"empty\\"],\\"item_type\\":\\"BUCKET\\"}]}"', ']'}},
     {command='autonestbox', group='automation', mode='enable'},
-    {command='autoshear', group='automation', mode='repeat',
+    {command='autoshear', help_command='workorder', group='automation', mode='repeat',
         desc='Automatically shear creatures that are ready for shearing.',
         params={'--time', '14', '--timeUnits', 'days', '--command', '[', 'workorder', 'ShearCreature', ']'}},
     {command='autoslab', group='automation', mode='enable'},
@@ -39,14 +39,13 @@ COMMANDS_BY_IDX = {
         desc='Encourage dwarves to drop tattered clothing and grab new ones.',
         params={'--time', '1', '--timeUnits', 'months', '--command', '[', 'cleanowned', 'X', ']'}},
     {command='nestboxes', group='automation', mode='enable'},
-    {command='orders-sort', group='automation', mode='repeat',
+    {command='orders-sort', help_command='orders', group='automation', mode='repeat',
         desc='Sort manager orders by repeat frequency so one-time orders can be completed.',
         params={'--time', '1', '--timeUnits', 'days', '--command', '[', 'orders', 'sort', ']'}},
     {command='prioritize', group='automation', mode='enable'},
     {command='seedwatch', group='automation', mode='enable'},
     {command='suspendmanager', group='automation', mode='enable'},
     {command='tailor', group='automation', mode='enable'},
-    {command='work-now', group='automation', mode='enable'},
 
     -- bugfix tools
     {command='fix/blood-del', group='bugfix', mode='run', default=true},
@@ -79,7 +78,7 @@ COMMANDS_BY_IDX = {
     {command='hide-tutorials', group='gameplay', mode='system_enable'},
     {command='light-aquifers-only', group='gameplay', mode='run'},
     {command='misery', group='gameplay', mode='enable'},
-    {command='orders-reevaluate', group='gameplay', mode='repeat',
+    {command='orders-reevaluate', help_command='orders', group='gameplay', mode='repeat',
         desc='Invalidates all work orders once a month, allowing conditions to be rechecked.',
         params={'--time', '1', '--timeUnits', 'months', '--command', '[', 'orders', 'recheck', ']'}},
     {command='starvingdead', group='gameplay', mode='enable'},
@@ -89,6 +88,7 @@ COMMANDS_BY_IDX = {
     {command='warn-stranded', group='gameplay', mode='repeat',
         desc='Show a warning dialog when units are stranded from all others.',
         params={'--time', '2', '--timeUnits', 'days', '--command', '[', 'warn-stranded', ']'}},
+    {command='work-now', group='gameplay', mode='enable'},
 }
 
 COMMANDS_BY_NAME = {}

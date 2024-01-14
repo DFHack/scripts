@@ -87,8 +87,8 @@ local function has_caravans()
 end
 
 local function get_num_uniforms()
-    local site = df.global.world.world_data.active_site[0]
-    for _, entity_site_link in ipairs(site.entity_links) do
+    local site = dfhack.world.getCurrentSite() or {}
+    for _, entity_site_link in ipairs(site.entity_links or {}) do
         local he = df.historical_entity.find(entity_site_link.entity_id)
         if he and he.type == df.historical_entity_type.SiteGovernment then
             return #he.uniforms
@@ -432,7 +432,8 @@ ConfirmSpec{
     title='Remove zone',
     message='Are you sure you want to remove this zone?',
     intercept_keys='_MOUSE_L',
-    context='dwarfmode/Zone',
+    context='dwarfmode/Zone', -- this is just Zone and not Zone/Some so we can pause across zones
+    predicate=function() return dfhack.gui.matchFocusString('dwarfmode/Zone/Some') end,
     intercept_frame={l=40, t=8, w=4, h=3},
     pausable=true,
 }

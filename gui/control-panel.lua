@@ -5,7 +5,6 @@ local helpdb = require('helpdb')
 local textures = require('gui.textures')
 local overlay = require('plugins.overlay')
 local registry = reqscript('internal/control-panel/registry')
-local utils = require('utils')
 local widgets = require('gui.widgets')
 
 local function get_icon_pens()
@@ -119,134 +118,21 @@ function ConfigPanel:on_select(_, choice)
 end
 
 
---
--- CommandTab
---
 
-CommandTab = defclass(CommandTab, ConfigPanel)
 
-local Subtabs = {
-    automation=1,
-    bugfix=2,
-    gameplay=3,
-}
-local Subtabs_revmap = utils.invert(Subtabs)
 
-function CommandTab:init()
-    self.subpage = Subtabs.automation
 
-    self.blurbs = {
-        [Subtabs.automation]='These run in the background and help you manage your'..
-            ' fort. They are always safe to enable, and allow you to concentrate on'..
-            ' other aspects of gameplay that you find more enjoyable.',
-        [Subtabs.bugfix]='These automatically fix dangerous or annoying vanilla'..
-            ' bugs. You should generally have all of these enabled.',
-        [Subtabs.gameplay]='These change or extend gameplay. Read their help docs to'..
-            ' see what they do and enable the ones that appeal to you.',
-    }
-end
 
-function CommandTab:init_main_panel(panel)
-    panel:addviews{
-        widgets.TabBar{
-            frame={t=5},
-            key='CUSTOM_CTRL_N',
-            key_back='CUSTOM_CTRL_M',
-            labels={
-                'Automation',
-                'Bug Fixes',
-                'Gameplay',
-            },
-            on_select=function(val)
-                self.subpage = val
-                self:updateLayout()
-                self:refresh()
-            end,
-            get_cur_page=function() return self.subpage end,
-        },
-        widgets.WrappedLabel{
-            frame={t=7},
-            text_to_wrap=function() return self.blurbs[self.subpage] end,
-        },
-        widgets.FilteredList{
-            frame={t=9},
-            view_id='list',
-            on_select=self:callback('on_select'),
-            on_double_click=self:callback('on_submit'),
-            row_height=2,
-        },
-    }
-end
 
-function CommandTab:init_footer(panel)
-    panel:addviews{
-        widgets.HotkeyLabel{
-            frame={t=0, l=0},
-            label='Toggle enabled',
-            key='SELECT',
-            auto_width=true,
-            on_activate=self:callback('on_submit')
-        },
-        widgets.HotkeyLabel{
-            frame={t=1, l=0},
-            label='Show full tool help or run custom command',
-            auto_width=true,
-            key='CUSTOM_CTRL_H',
-            on_activate=self:callback('show_help'),
-        },
-    }
-end
 
-local function launch_help(command)
-    dfhack.run_command('gui/launcher', command .. ' ')
-end
 
-function CommandTab:show_help()
-    _,choice = self.subviews.list:getSelected()
-    if not choice then return end
-    launch_help(choice.data.command)
-end
 
-function CommandTab:has_config()
-    _,choice = self.subviews.list:getSelected()
-    return choice and choice.gui_config
-end
+
 
 
 --
--- EnabledTab
+-- Enabled subtab functions
 --
-
-EnabledTab = defclass(EnabledTab, CommandTab)
-EnabledTab.ATTRS{
-    intro_text='These are the tools that can be enabled right now. Most tools can'..
-                ' only be enabled when you have a fort loaded. Once enabled, tools'..
-                ' will stay enabled when you save and reload your fort. If you want'..
-                ' them to be auto-enabled for new forts, please see the "Autostart"'..
-                ' tab.',
-}
-
-function EnabledTab:init()
-    if not dfhack.world.isFortressMode() then
-        self.subpage = Subtabs.gameplay
-    end
-
-    self.subviews.list.list.on_double_click2=self:callback('launch_config')
-end
-
-function EnabledTab:init_footer(panel)
-    EnabledTab.super.init_footer(self, panel)
-    panel:addviews{
-        widgets.HotkeyLabel{
-            frame={t=2, l=26},
-            label='Launch tool-specific config UI',
-            key='CUSTOM_CTRL_G',
-            auto_width=true,
-            enabled=self:callback('has_config'),
-            on_activate=self:callback('launch_config'),
-        },
-    }
-end
 
 local function get_gui_config(command)
     command = common.get_first_word(command)
@@ -256,14 +142,15 @@ local function get_gui_config(command)
     end
 end
 
-local function make_enabled_text(self, label, mode, gui_config)
+local function make_enabled_text(self, command, mode, gui_config)
+    local label = command
     if mode == 'system_enable' then
         label = label .. ' (global)'
     end
 
     local function get_enabled_button_token(enabled_tile, disabled_tile)
         return {
-            tile=function() return self.enabled_map[label] and enabled_tile or disabled_tile end,
+            tile=function() return self.enabled_map[command] and enabled_tile or disabled_tile end,
         }
     end
 
@@ -291,16 +178,15 @@ local function make_enabled_text(self, label, mode, gui_config)
     }
 end
 
-function EnabledTab:refresh()
+local function get_enabled_choices(self)
     local choices = {}
     self.enabled_map = common.get_enabled_map()
-    local group = Subtabs_revmap[self.subpage]
     for _,data in ipairs(registry.COMMANDS_BY_IDX) do
         if data.mode == 'run' then goto continue end
         if data.mode ~= 'system_enable' and not dfhack.world.isFortressMode() then
             goto continue
         end
-        if not common.command_passes_filters(data, group) then goto continue end
+        if not common.command_passes_filters(data, self.group) then goto continue end
         local gui_config = get_gui_config(data.command)
         table.insert(choices, {
             text=make_enabled_text(self, data.command, data.mode, gui_config),
@@ -310,49 +196,30 @@ function EnabledTab:refresh()
         })
         ::continue::
     end
-    local list = self.subviews.list
-    local filter = list:getFilter()
-    local selected = list:getSelected()
-    list:setChoices(choices)
-    list:setFilter(filter, selected)
-    list.edit:setFocus(true)
+    return choices
 end
 
-function EnabledTab:onInput(keys)
-    local handled = EnabledTab.super.onInput(self, keys)
-    if keys._MOUSE_L then
-        local list = self.subviews.list.list
-        local idx = list:getIdxUnderMouse()
-        if idx then
-            local x = list:getMousePos()
-            if x <= 2 then
-                self:on_submit()
-            elseif x >= 4 and x <= 6 then
-                self:show_help()
-            elseif x >= 8 and x <= 10 then
-                self:launch_config()
-            end
+local function enabled_onInput(self, keys)
+    if not keys._MOUSE_L then return end
+    local list = self.subviews.list.list
+    local idx = list:getIdxUnderMouse()
+    if idx then
+        local x = list:getMousePos()
+        if x <= 2 then
+            self:on_submit()
+        elseif x >= 4 and x <= 6 then
+            self:show_help()
+        elseif x >= 8 and x <= 10 then
+            self:launch_config()
         end
     end
-    return handled
 end
 
-function EnabledTab:launch_config()
-    _,choice = self.subviews.list:getSelected()
-    if not choice or not choice.gui_config then return end
-    dfhack.run_command(choice.gui_config)
+local function enabled_on_submit(self, data)
+    common.apply_command(data, self.enabled_map, not self.enabled_map[data.command])
 end
 
-function EnabledTab:on_submit()
-    _,choice = self.subviews.list:getSelected()
-    if not choice then return end
-    local data = choice.data
-    common.apply_command(data, self.enabled_map, not self.enabled_map[choice.data.command])
-    self:refresh()
-end
-
-function EnabledTab:restore_defaults()
-    local group = Subtabs_revmap[self.subpage]
+local function enabled_restore_defaults(self)
     for _,data in ipairs(registry.COMMANDS_BY_IDX) do
         if data.mode == 'run' then goto continue end
         if (data.mode == 'enable' or data.mode == 'repeat')
@@ -360,32 +227,16 @@ function EnabledTab:restore_defaults()
         then
             goto continue
         end
-        if not common.command_passes_filters(data, group) then goto continue end
-        common.apply_command(data, self.enabled_map, data.default)
+        if not common.command_passes_filters(data, self.group) then goto continue end
+        common.apply_command(data, self.enabled_map, not not data.default)
         ::continue::
     end
-    self:refresh()
-    dialogs.showMessage('Success',
-        ('Enabled defaults restored for %s tools.'):format(group))
-end
-
--- pick up enablement changes made from other sources (e.g. gui config tools)
-function EnabledTab:onRenderFrame(dc, rect)
-    self.enabled_map = common.get_enabled_map()
-    EnabledTab.super.onRenderFrame(self, dc, rect)
 end
 
 
 --
--- AutostartTab
+-- Autostart subtab functions
 --
-
-AutostartTab = defclass(AutostartTab, CommandTab)
-AutostartTab.ATTRS{
-    intro_text='Tools that are enabled on this page will be auto-run or auto-enabled'..
-                ' for you when you start a new fort (or, for "global" tools, when you start the game). To see tools that are enabled'..
-                ' right now, please click on the "Enabled" tab.',
-}
 
 local function make_autostart_text(label, mode, enabled)
     if mode == 'system_enable' then
@@ -404,11 +255,10 @@ local function make_autostart_text(label, mode, enabled)
     }
 end
 
-function AutostartTab:refresh()
+local function get_autostart_choices(self)
     local choices = {}
-    local group = Subtabs_revmap[self.subpage]
     for _,data in ipairs(registry.COMMANDS_BY_IDX) do
-        if not common.command_passes_filters(data, group) then goto continue end
+        if not common.command_passes_filters(data, self.group) then goto continue end
         local enabled = safe_index(common.config.data.commands, data.command, 'autostart')
         if enabled == nil then
             enabled = data.default
@@ -421,16 +271,10 @@ function AutostartTab:refresh()
         })
         ::continue::
     end
-    local list = self.subviews.list
-    local filter = list:getFilter()
-    local selected = list:getSelected()
-    list:setChoices(choices)
-    list:setFilter(filter, selected)
-    list.edit:setFocus(true)
+    return choices
 end
 
-function AutostartTab:onInput(keys)
-    local handled = EnabledTab.super.onInput(self, keys)
+local function autostart_onInput(self, keys)
     if keys._MOUSE_L then
         local list = self.subviews.list.list
         local idx = list:getIdxUnderMouse()
@@ -443,31 +287,241 @@ function AutostartTab:onInput(keys)
             end
         end
     end
-    return handled
 end
 
-function AutostartTab:on_submit()
-    _,choice = self.subviews.list:getSelected()
-    if not choice then return end
-    local data = choice.data
+local function autostart_on_submit(self, data)
     common.set_autostart(data, not choice.enabled)
     common.config:write()
-    self:refresh()
 end
 
-function AutostartTab:restore_defaults()
-    local group = Subtabs_revmap[self.subpage]
+local function autostart_restore_defaults(self)
     for _,data in ipairs(registry.COMMANDS_BY_IDX) do
-        if not common.command_passes_filters(data, group) then goto continue end
+        if not common.command_passes_filters(data, self.group) then goto continue end
         print(data.command, data.default)
         common.set_autostart(data, data.default)
         ::continue::
     end
     common.config:write()
-    self:refresh()
-    dialogs.showMessage('Success',
-        ('Autostart defaults restored for %s tools.'):format(group))
 end
+
+
+--
+-- CommandTab
+--
+
+CommandTab = defclass(CommandTab, ConfigPanel)
+CommandTab.ATTRS {
+    group=DEFAULT_NIL,
+}
+
+local Subtabs = {
+    enabled=1,
+    autostart=2,
+}
+
+local subtab = Subtabs.enabled
+
+function CommandTab:init()
+    self.blurbs = {
+        [Subtabs.enabled]='These are the tools that can be enabled right now.'..
+            ' Most tools can only be enabled when you have a fort loaded.'..
+            ' Once enabled, tools will stay enabled when you save and reload'..
+            ' your fort. If you want them to be auto-enabled for new forts,'..
+            ' please see the "Autostart" tab.',
+        [Subtabs.autostart]='Tools that are enabled on this page will be'..
+            ' auto-run or auto-enabled for you when you start a new fort (or,'..
+            ' for "global" tools, when you start the game). To see tools that'..
+            ' are enabled right now, please click on the "Enabled" tab.',
+    }
+end
+
+function CommandTab:init_main_panel(panel)
+    panel:addviews{
+        widgets.TabBar{
+            view_id='subtabbar',
+            frame={t=5},
+            key='CUSTOM_CTRL_N',
+            key_back='CUSTOM_CTRL_M',
+            labels={
+                'Enabled',
+                'Autostart',
+            },
+            on_select=function(val)
+                subtab = val
+                self:updateLayout()
+                self:refresh()
+            end,
+            get_cur_page=function() return subtab end,
+        },
+        widgets.WrappedLabel{
+            frame={t=7},
+            text_to_wrap=function() return self.blurbs[subtab] end,
+        },
+        widgets.FilteredList{
+            frame={t=9},
+            view_id='list',
+            on_select=self:callback('on_select'),
+            on_double_click=self:callback('on_submit'),
+            on_double_click2=self:callback('launch_config'),
+            row_height=2,
+            visible=function() return #self.subviews.list:getChoices() > 0 end,
+        },
+        widgets.Label{
+            frame={t=9, l=0},
+            text={
+                'Please load a fort to see the fort-mode tools. Alternately,', NEWLINE,
+                'please switch to the "Autostart" tab to configure which', NEWLINE,
+                'tools should be run or enabled on embark.',
+            },
+            text_pen=COLOR_LIGHTRED,
+            visible=function() return #self.subviews.list:getChoices() == 0 end,
+        },
+    }
+end
+
+function CommandTab:init_footer(panel)
+    panel:addviews{
+        widgets.HotkeyLabel{
+            frame={t=0, l=0},
+            label='Toggle enabled',
+            key='SELECT',
+            auto_width=true,
+            on_activate=self:callback('on_submit')
+        },
+        widgets.HotkeyLabel{
+            frame={t=1, l=0},
+            label='Show full tool help or run custom command',
+            auto_width=true,
+            key='CUSTOM_CTRL_H',
+            on_activate=self:callback('show_help'),
+        },
+        widgets.HotkeyLabel{
+            frame={t=2, l=26},
+            label='Launch tool-specific config UI',
+            key='CUSTOM_CTRL_G',
+            auto_width=true,
+            enabled=self:callback('has_config'),
+            visible=function() return subtab == Subtabs.enabled end,
+            on_activate=self:callback('launch_config'),
+        },
+    }
+end
+
+local function launch_help(data)
+    dfhack.run_command('gui/launcher', data.help_command or data.command .. ' ')
+end
+
+function CommandTab:show_help()
+    _,choice = self.subviews.list:getSelected()
+    if not choice then return end
+    launch_help(choice.data)
+end
+
+function CommandTab:has_config()
+    _,choice = self.subviews.list:getSelected()
+    return choice and choice.gui_config
+end
+
+function CommandTab:launch_config()
+    if subtab ~= Subtabs.enabled then return end
+    _,choice = self.subviews.list:getSelected()
+    if not choice or not choice.gui_config then return end
+    dfhack.run_command(choice.gui_config)
+end
+
+function CommandTab:refresh()
+    local choices = subtab == Subtabs.enabled and
+        get_enabled_choices(self) or get_autostart_choices(self)
+    local list = self.subviews.list
+    local filter = list:getFilter()
+    local selected = list:getSelected()
+    list:setChoices(choices)
+    list:setFilter(filter, selected)
+    list.edit:setFocus(true)
+end
+
+function CommandTab:on_submit()
+    _,choice = self.subviews.list:getSelected()
+    if not choice then return end
+    if subtab == Subtabs.enabled then
+        enabled_on_submit(self, choice.data)
+    else
+        autostart_on_submit(self, choice.data)
+    end
+    self:refresh()
+end
+
+-- pick up enablement changes made from other sources (e.g. gui config tools)
+function CommandTab:onRenderFrame(dc, rect)
+    if subtab == Subtabs.enabled then
+        self.enabled_map = common.get_enabled_map()
+    end
+    CommandTab.super.onRenderFrame(self, dc, rect)
+end
+
+function CommandTab:onInput(keys)
+    local handled = CommandTab.super.onInput(self, keys)
+    if subtab == Subtabs.enabled then
+        enabled_onInput(self, keys)
+    else
+        autostart_onInput(self, keys)
+    end
+    return handled
+end
+
+function CommandTab:restore_defaults()
+    dialogs.showYesNoPrompt('Are you sure?',
+        ('Are you sure you want to restore %s\ndefaults for %s tools?'):format(
+            self.subviews.subtabbar.labels[subtab], self.group),
+        nil, function()
+            if subtab == Subtabs.enabled then
+                enabled_restore_defaults(self)
+            else
+                autostart_restore_defaults(self)
+            end
+            self:refresh()
+            dialogs.showMessage('Success',
+                ('%s defaults restored for %s tools.'):format(
+                    self.subviews.subtabbar.labels[subtab], self.group))
+        end)
+end
+
+
+--
+-- AutomationTab
+--
+
+AutomationTab = defclass(AutomationTab, CommandTab)
+AutomationTab.ATTRS{
+    intro_text='These run in the background and help you manage your'..
+        ' fort. They are always safe to enable, and allow you to concentrate'..
+        ' on other aspects of gameplay that you find more enjoyable.',
+    group='automation',
+}
+
+
+--
+-- BugFixesTab
+--
+
+BugFixesTab = defclass(BugFixesTab, CommandTab)
+BugFixesTab.ATTRS{
+    intro_text='These automatically fix dangerous or annoying vanilla'..
+        ' bugs. You should generally have all of these enabled.',
+    group='bugfix',
+}
+
+
+--
+-- GameplayTab
+--
+
+GameplayTab = defclass(GameplayTab, CommandTab)
+GameplayTab.ATTRS{
+    intro_text='These change or extend gameplay. Read their help docs to'..
+        ' see what they do and enable the ones that appeal to you.',
+    group='gameplay'
+}
 
 
 --
@@ -592,18 +646,22 @@ function OverlaysTab:on_submit()
 end
 
 function OverlaysTab:restore_defaults()
-    local state = overlay.get_state()
-    for name, db_entry in pairs(state.db) do
-        enable_overlay(name, db_entry.widget.default_enabled)
-    end
-    self:refresh()
-    dialogs.showMessage('Success', 'Overlay defaults restored.')
+    dialogs.showYesNoPrompt('Are you sure?',
+    'Are you sure you want to restore overlay defaults?',
+    nil, function()
+        local state = overlay.get_state()
+        for name, db_entry in pairs(state.db) do
+            enable_overlay(name, db_entry.widget.default_enabled)
+        end
+        self:refresh()
+        dialogs.showMessage('Success', 'Overlay defaults restored.')
+    end)
 end
 
 function OverlaysTab:show_help()
     _,choice = self.subviews.list:getSelected()
     if not choice then return end
-    launch_help(choice.data.command)
+    launch_help(choice.data)
 end
 
 
@@ -803,12 +861,16 @@ function PreferencesTab:set_val(val)
 end
 
 function PreferencesTab:restore_defaults()
-    for _,data in ipairs(registry.PREFERENCES_BY_IDX) do
-        common.set_preference(data, data.default)
-    end
-    common.config:write()
-    self:refresh()
-    dialogs.showMessage('Success', 'Default preferences restored.')
+    dialogs.showYesNoPrompt('Are you sure?',
+    'Are you sure you want to restore default preferences?',
+    nil, function()
+        for _,data in ipairs(registry.PREFERENCES_BY_IDX) do
+            common.set_preference(data, data.default)
+        end
+        common.config:write()
+        self:refresh()
+        dialogs.showMessage('Success', 'Default preferences restored.')
+    end)
 end
 
 
@@ -819,7 +881,7 @@ end
 ControlPanel = defclass(ControlPanel, widgets.Window)
 ControlPanel.ATTRS {
     frame_title='DFHack Control Panel',
-    frame={w=68, h=44},
+    frame={w=74, h=44},
     resizable=true,
     resize_min={h=39},
     autoarrange_subviews=true,
@@ -831,8 +893,9 @@ function ControlPanel:init()
         widgets.TabBar{
             frame={t=0},
             labels={
-                'Enabled',
-                'Autostart',
+                'Automation',
+                'Bug Fixes',
+                'Gameplay',
                 'UI Overlays',
                 'Preferences',
             },
@@ -843,13 +906,18 @@ function ControlPanel:init()
             view_id='pages',
             frame={t=5, l=0, b=0, r=0},
             subviews={
-                EnabledTab{},
-                AutostartTab{},
+                AutomationTab{},
+                BugFixesTab{},
+                GameplayTab{},
                 OverlaysTab{},
                 PreferencesTab{},
             },
         },
     }
+
+    if not dfhack.world.isFortressMode() then
+        self.subviews.pages:setSelected(3)
+    end
 
     self:refresh_page()
 end

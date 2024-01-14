@@ -26,6 +26,7 @@ Examples
 ``gui/reveal``
     Reveal all "normal" terrain, but keep areas with late-game surprises hidden.
 ``gui/reveal hell``
-    Fully reveal adamantine spires, gemstone pillars, and the underworld. Note
-    that keeping these areas unrevealed when you exit `gui/reveal` will trigger
-    all the surprise events immediately.
+    Fully reveal adamantine spires, gemstone pillars, and the underworld. The
+    game cannot be unpaused with these features revealed, so the choice to keep
+    the map unrevealed when you close `gui/reveal` is disabled when this option
+    is specified.

@@ -238,11 +238,12 @@ local function do_up_down_stair(digctx)
         if is_construction(digctx.tileattrs) or
                 (not is_wall(digctx.tileattrs) and
                  not is_fortification(digctx.tileattrs) and
+                 not is_diggable_floor(digctx.tileattrs) and
                  not is_up_stair(digctx.tileattrs)) then
             return nil
         end
     end
-    if is_up_stair(digctx.tileattrs) then
+    if is_diggable_floor(digctx.tileattrs) then
         return function() digctx.flags.dig = values.dig_downstair end
     end
     return function() digctx.flags.dig = values.dig_updownstair end

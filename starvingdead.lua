@@ -3,8 +3,6 @@
 --@module = true
 
 local argparse = require('argparse')
-local json = require('json')
-local persist = require('persist-table')
 
 local GLOBAL_KEY = 'starvingdead'
 
@@ -15,8 +13,8 @@ function isEnabled()
 end
 
 local function persist_state()
-  persist.GlobalTable[GLOBAL_KEY] = json.encode({
-    enabled = starvingDeadInstance ~= nil,
+  dfhack.persistent.saveSiteData(GLOBAL_KEY, {
+    enabled = isEnabled(),
     decay_rate = starvingDeadInstance and starvingDeadInstance.decay_rate or 1,
     death_threshold = starvingDeadInstance and starvingDeadInstance.death_threshold or 6
   })
@@ -32,7 +30,7 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
       return
   end
 
-  local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '{}')
+  local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
 
   if persisted_data.enabled then
     starvingDeadInstance = StarvingDead{

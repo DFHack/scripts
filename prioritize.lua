@@ -3,9 +3,7 @@
 --@enable = true
 
 local argparse = require('argparse')
-local json = require('json')
 local eventful = require('plugins.eventful')
-local persist = require('persist-table')
 local utils = require('utils')
 
 local GLOBAL_KEY = 'prioritize' -- used for state change hooks and persistence
@@ -54,7 +52,12 @@ function isEnabled()
 end
 
 local function persist_state()
-    persist.GlobalTable[GLOBAL_KEY] = json.encode(get_watched_job_matchers())
+    local data_to_persist = {}
+    -- convert enum keys into strings so json doesn't get confused and think the map is a list
+    for k, v in pairs(get_watched_job_matchers()) do
+        data_to_persist[tostring(k)] = v
+    end
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, data_to_persist)
 end
 
 local function make_matcher_map(keys)
@@ -613,8 +616,8 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     if sc ~= SC_MAP_LOADED or df.global.gamemode ~= df.game_mode.DWARF then
         return
     end
-    local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '') or {}
-    -- sometimes the keys come back as strings; fix that up
+    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
+    -- convert the string keys back into enum values
     for k,v in pairs(persisted_data) do
         if type(k) == 'string' then
             persisted_data[tonumber(k)] = v
