@@ -122,13 +122,11 @@ local function on_dispatch_tick()
         if job.order_id == -1 then goto nextjob end
         local order = orders[job.order_id]
         if not order then goto nextjob end -- order wasn't bugged
-        if #job.items ~= 0 then
-            -- job in progress: only happens on the first run.
-            -- experimental fix: remove the items and un-task them
-            while #job.items ~= 0 do
-                job.items[0].item.flags.in_job = false
-                job.items:erase(0)
-            end
+        -- job in progress: only happens on the first run.
+        -- experimental fix: remove the items and un-task them
+        while #job.items ~= 0 do
+            job.items[0].item.flags.in_job = false
+            job.items:erase(0)
         end
         enforce_order_details(job, order)
         :: nextjob ::
@@ -148,7 +146,8 @@ end
 local function enable(yell)
     local manager_timer = df.global.plotinfo.manager_timer
     local d = df.global.cur_year_tick
-    local time_until = -(d - 30) % 150 -- + manager_timer * 150
+    -- it's a potential dispatch tick when tick % 150 == 30
+    local time_until = (30 - d) % 150 -- + manager_timer * 150
     if time_until == 0 then
         schedule_handler()
     else
