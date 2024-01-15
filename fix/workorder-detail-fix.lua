@@ -37,10 +37,8 @@ local function correct_item_details(job_item, order_item)
         local order_flags = order_item[flags]
         if type(order_flags) == 'number' then
             job_item[flags] = order_flags
-        else -- copy over the flags one by one
-            for o_flag, val in pairs(order_flags) do
-                job_item[flags][o_flag] = val
-            end
+        else
+            job_item[flags].whole = order_flags.whole
         end
     end
 end
