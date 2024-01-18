@@ -76,9 +76,6 @@ local function get_bugged_orders()
         if not offending_jobs[order_job_type] then goto nextorder end
         if #order.items == 0 then goto nextorder end -- doesn't happen
 
-        local improve_item_index = 1
-        local item
-
         -- for PrepareMeal jobs, any one of the items could be an issue.
         if order_job_type == PrepareMeal then
             for _, _item in ipairs(order.items) do
@@ -88,11 +85,13 @@ local function get_bugged_orders()
         end
 
         -- All other types are improve jobs; only the improved item is checked
-        -- Only SewImage has the item-to-improve at items[0]
-        improve_item_index = (order_job_type ~= SewImage) and 1 or 0
-        item = order.items[improve_item_index]
-        if not item then goto nextorder end -- error here?
-        if item.item_type == NONE then goto nextorder end
+        do
+            -- Only SewImage has the item-to-improve at items[0]
+            local improve_item_index = (order_job_type == SewImage) and 0 or 1
+            local item = order.items[improve_item_index]
+            if not item then goto nextorder end -- error here?
+            if item.item_type == NONE then goto nextorder end
+        end
         :: fix ::
         num_bugged = num_bugged + 1
         orders[order.id] = order
@@ -165,7 +164,6 @@ function disable(yell)
     if yell then print(script_name.." DISABLED") end
 end
 
--- (not working with enabled API, probably something to do with module mode)
 local function status()
     local status = enabled and "Enabled" or "Disabled"
     if enabled then
