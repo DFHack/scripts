@@ -2,7 +2,7 @@
 --@module = true
 local repeatutil = require 'repeat-util'
 local utils = require 'utils'
-local script_name = "workorder-detail-fix"
+local script_name = "fix/workorder-details"
 local schedule_key = script_name..":dispatch"
 
 enabled = enabled or false -- enabled API
@@ -11,7 +11,7 @@ function isEnabled() return enabled end
 local managers = df.global.plotinfo.main.fortress_entity.assignments_by_type.MANAGE_PRODUCTION
 if not managers then error("NO MANAGERS VECTOR!") end
 local last_job_id = -1
-local jobs_corrected = 0
+jobs_corrected = jobs_corrected or 0
 
 -- all jobs with the NONE (-1) type in its default job_items may be a problem
 local offending_jobs = {
@@ -142,6 +142,7 @@ local function schedule_handler()
 end
 
 local function enable(yell)
+    jobs_corrected = 0
     local manager_timer = df.global.plotinfo.manager_timer
     local d = df.global.cur_year_tick
     -- it's a potential dispatch tick when tick % 150 == 30
@@ -167,8 +168,8 @@ end
 
 -- (not working with enabled API, probably something to do with module mode)
 local function status()
-    local status = "DISABLED" or enabled and "ENABLED"
-    print(script_name.." status: "..status.." # jobs corrected: "..tostring(jobs_corrected))
+    local status = enabled and "Enabled" or "Disabled"
+    print(script_name.." status: "..status..". Jobs corrected: "..tostring(jobs_corrected))
 end
 
 -- check if script was called by enable API
@@ -187,7 +188,7 @@ if dfhack_flags.module then return end
 local args={...}
 
 if not args[1] then
-    print(script_name.." valid cmds: enable, disable, status")
+    status()
     return
 end
 
