@@ -134,9 +134,6 @@ end
 
 timeout_id = timeout_id or nil
 local function schedule_handler()
-    if repeatutil.cancel(schedule_key) then
-        print(script_name..": canceled old dispatch handler")
-    end
     repeatutil.scheduleEvery(schedule_key, 150, 'ticks', on_dispatch_tick)
     timeout_id = nil
 end
