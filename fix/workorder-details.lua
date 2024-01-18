@@ -87,7 +87,6 @@ local function get_bugged_orders()
             goto nextorder
         end
 
-
         -- All other types are improve jobs; only the improved item is checked
         -- Only SewImage has the item-to-improve at items[0]
         improve_item_index = (order_job_type ~= SewImage) and 1 or 0
@@ -104,17 +103,13 @@ local function get_bugged_orders()
 end
 
 -- correct newly dispatched work order jobs
-local disable
+local disable, schedule_handler
 local function on_dispatch_tick()
-    if df.global.cur_year_tick % 150 ~= 30 then
-        print(script_name.." desynced from dispatch tick")
-        repeatutil.cancel(schedule_key)
-        disable(true)
-    end
     if not dfhack.units.getUnitByNobleRole('manager') then return end
     if df.global.plotinfo.manager_timer ~= 10 then return end
     local orders = get_bugged_orders()
     if not orders then return end -- no bugs to fix
+
     local highest = last_job_id
     for _, job in utils.listpairs(df.global.world.jobs.list) do
         if job.id <= last_job_id then goto nextjob end
@@ -122,29 +117,40 @@ local function on_dispatch_tick()
         if job.order_id == -1 then goto nextjob end
         local order = orders[job.order_id]
         if not order then goto nextjob end -- order wasn't bugged
+        -- skip jobs with items already gathered
+        if job.items and (#job.items > 0) then goto nextjob end
         enforce_order_details(job, order)
         :: nextjob ::
     end
     last_job_id = highest
+
+    if df.global.cur_year_tick % 150 ~= 30 then
+        print(script_name..": lost sync with dispatch tick. Resetting...")
+        schedule_handler()
+    end
 end
 
 timeout_id = timeout_id or nil
-local function schedule_handler()
+local function start_handler()
     repeatutil.scheduleEvery(schedule_key, 150, 'ticks', on_dispatch_tick)
     timeout_id = nil
 end
 
-local function enable(yell)
-    jobs_corrected = 0
+function schedule_handler()
     local manager_timer = df.global.plotinfo.manager_timer
     local d = df.global.cur_year_tick
     -- it's a potential dispatch tick when tick % 150 == 30
     local time_until = (30 - d) % 150 -- + manager_timer * 150
     if time_until == 0 then
-        schedule_handler()
+        start_handler()
     else
-        timeout_id = dfhack.timeout(time_until, 'ticks', schedule_handler)
+        timeout_id = dfhack.timeout(time_until, 'ticks', start_handler)
     end
+end
+
+local function enable(yell)
+    jobs_corrected = 0
+    schedule_handler()
     enabled = true
     if yell then print(script_name.." ENABLED") end
 end
