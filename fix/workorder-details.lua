@@ -120,12 +120,6 @@ local function on_dispatch_tick()
         if job.order_id == -1 then goto nextjob end
         local order = orders[job.order_id]
         if not order then goto nextjob end -- order wasn't bugged
-        -- job in progress: only happens on the first run.
-        -- experimental fix: remove the items and un-task them
-        while #job.items ~= 0 do
-            job.items[0].item.flags.in_job = false
-            job.items:erase(0)
-        end
         enforce_order_details(job, order)
         :: nextjob ::
     end
