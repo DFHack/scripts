@@ -8,8 +8,6 @@ local schedule_key = script_name..":dispatch"
 enabled = enabled or false -- enabled API
 function isEnabled() return enabled end
 
-local managers = df.global.plotinfo.main.fortress_entity.assignments_by_type.MANAGE_PRODUCTION
-if not managers then error("NO MANAGERS VECTOR!") end
 local last_job_id = -1
 jobs_corrected = jobs_corrected or 0
 
@@ -71,12 +69,15 @@ local SewImage = df.job_type.SewImage
 local NONE = df.job_type.NONE
 local function get_bugged_orders()
     local orders = {}
-    local num_bugged, improve_item_index, item = 0, 1, nil
+    local num_bugged = 0
     for _, order in ipairs(df.global.world.manager_orders) do
         if not order.items then goto nextorder end
         local order_job_type = order.job_type
         if not offending_jobs[order_job_type] then goto nextorder end
         if #order.items == 0 then goto nextorder end -- doesn't happen
+
+        local improve_item_index = 1
+        local item
 
         -- for PrepareMeal jobs, any one of the items could be an issue.
         if order_job_type == PrepareMeal then
@@ -85,6 +86,7 @@ local function get_bugged_orders()
             end
             goto nextorder
         end
+
 
         -- All other types are improve jobs; only the improved item is checked
         -- Only SewImage has the item-to-improve at items[0]
@@ -109,7 +111,7 @@ local function on_dispatch_tick()
         repeatutil.cancel(schedule_key)
         disable(true)
     end
-    if #managers == 0 then return end
+    if not dfhack.units.getUnitByNobleRole('manager') then return end
     if df.global.plotinfo.manager_timer ~= 10 then return end
     local orders = get_bugged_orders()
     if not orders then return end -- no bugs to fix
