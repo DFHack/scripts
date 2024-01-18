@@ -13,6 +13,8 @@ Example 2: a Prepare Meal order, modified to use all plant type ingredients, ins
 
 This fix forces these jobs to properly inherit the item details from their work order.
 
+Jobs that were active before enabling the fix may not be affected.
+
 Usage
 -----
 
