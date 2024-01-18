@@ -14,26 +14,26 @@ local last_job_id = -1
 jobs_corrected = jobs_corrected or 0
 
 -- all jobs with the NONE (-1) type in its default job_items may be a problem
-local offending_jobs = {
-    [df.job_type.EncrustWithGems] = true,
-    [df.job_type.EncrustWithGlass] = true,
-    [df.job_type.StudWith] = true,
-    [df.job_type.PrepareMeal] = true,
-    [df.job_type.DecorateWith] = true,
-    [df.job_type.SewImage] = true,
+local offending_jobs = utils.invert({
+    df.job_type.EncrustWithGems,
+    df.job_type.EncrustWithGlass,
+    df.job_type.StudWith,
+    df.job_type.PrepareMeal,
+    df.job_type.DecorateWith,
+    df.job_type.SewImage,
     -- list may be incomplete
-}
+})
 
 -- copy order.item fields/flags over to job's job_item
 -- only the essentials: stuff that is editable via gui/job-details
 local function correct_item_details(job_item, order_item)
     local fields = {'item_type', 'item_subtype', 'mat_type', 'mat_index'}
-    for _, field in pairs(fields) do
+    for _, field in ipairs(fields) do
         job_item[field] = order_item[field]
     end
 
     local flags_names = {'flags1', 'flags2', 'flags3', 'flags4', 'flags5'}
-    for _, flags in pairs(flags_names) do
+    for _, flags in ipairs(flags_names) do
         local order_flags = order_item[flags]
         if type(order_flags) == 'number' then
             job_item[flags] = order_flags
