@@ -166,7 +166,10 @@ end
 -- (not working with enabled API, probably something to do with module mode)
 local function status()
     local status = enabled and "Enabled" or "Disabled"
-    print(script_name.." status: "..status..". Jobs corrected: "..tostring(jobs_corrected))
+    if enabled then
+        status = status..". Jobs corrected: "..tostring(jobs_corrected)
+    end
+    print(script_name.." status: "..status)
 end
 
 -- check if script was called by enable API
