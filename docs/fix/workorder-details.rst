@@ -1,5 +1,5 @@
-fix/workorder-detail-fix
-========================
+fix/workorder-details
+=====================
 
 .. dfhack-tool::
     :summary: Fixes a bug with modified work orders creating incorrect jobs.
@@ -16,9 +16,8 @@ This fix forces these jobs to properly inherit the item details from their work 
 Usage
 -----
 
-``fix/workorder-detail-fix enable``
-    enables the fix
-``fix/workorder-detail-fix disable``
-    disables the fix
-``fix/workorder-detail-fix status``
-    print fix status
+::
+
+    enable fix/workorder-details
+
+    fix/workorder-details [status]
