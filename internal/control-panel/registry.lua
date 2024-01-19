@@ -64,6 +64,7 @@ COMMANDS_BY_IDX = {
     {command='fix/stuck-instruments', group='bugfix', mode='repeat', default=true,
         desc='Fix activity references on stuck instruments to make them usable again.',
         params={'--time', '1', '--timeUnits', 'days', '--command', '[', 'fix/stuck-instruments', ']'}},
+    {command='fix/workorder-details', group='bugfix', mode='enable', default=true},
     {command='preserve-tombs', group='bugfix', mode='enable', default=true},
 
     -- gameplay tools

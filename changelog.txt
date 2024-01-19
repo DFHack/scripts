@@ -46,6 +46,7 @@ Template for new versions:
 - `warn-stranded`: Update onZoom to use df's centering functionality
 - `ban-cooking`: fix banning creature alcohols resulting in error
 - `confirm`: properly detect clicks on the remove zone button even when the unit selection screen is also open (e.g. the vanilla assign animal to pasture panel)
+- `fix/workorder-details`: fix item types not being passed properly on some modified work order jobs
 - `quickfort`: if a blueprint specifies an up/down stair, but the tile the blueprint is applied to cannot make an up stair (e.g. it has already been dug out), still designate a down stair if possible
 - `suspendmanager`: correctly handle building collisions with smoothing designations when the building is on the edge of the map
 - `empty-bin`: now correctly sends ammunition in carried quivers to the tile underneath the unit instead of teleporting them to an invalid (or possibly just far away) location
