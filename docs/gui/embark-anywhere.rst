@@ -14,6 +14,12 @@ to tempt fate by embarking *inside of* a necromancer tower? !!FUN!!
 Any and all consequences of embarking in strange locations are up to you to
 handle (possibly with other `armok <armok-tag-index>` tools).
 
+The DFHack logo is not shown on the embark screen since it would hide the
+vanilla embark size adjustment widgets. Remember, though, that the backtick
+(\`) hotkey will bring up the in-game `gui/launcher` directly where you can run
+the command. For people with keyboards with difficult-to-access backtick keys,
+:kbd:`Ctrl`:kbd:`Shift`:kbd:`D` will also bring the launcher up.
+
 Usage
 -----
 
