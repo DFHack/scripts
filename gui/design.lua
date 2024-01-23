@@ -1247,6 +1247,9 @@ function Design:onRenderFrame(dc, rect)
         self.marks[self.placing_mark.index] = mouse_pos
     end
 
+    -- Set main points
+    local points = copyall(self.marks)
+
     -- Set the pos of the currently moving extra point
     if self.placing_extra.active then
         self.extra_points[self.placing_extra.index] = mouse_pos
@@ -1285,10 +1288,7 @@ function Design:onRenderFrame(dc, rect)
 
         self.prev_center = mouse_pos
     end
-	
-	-- Set main points
-    local points = copyall(self.marks)
-	
+
     if self.mirror_point then
         points = self:get_mirrored_points(points)
     end
