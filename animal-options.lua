@@ -129,8 +129,8 @@ self:addviews{
                 label='Butcher',
                 key='CUSTOM_CTRL_B',
                 options={
-                    {label=NO, value=NO, pen=COLOR_WHITE},
-                    {label=YES, value=YES, pen=COLOR_GREEN},
+                    {label=NO, value=false, pen=COLOR_WHITE},
+                    {label=YES, value=true, pen=COLOR_GREEN},
                 },
                 view_id='butcher_animal',
                 on_change=function(val) self:set_slaughter_flag(val) end,
