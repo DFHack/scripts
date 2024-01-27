@@ -10,16 +10,11 @@ local NO = 'No'
 -- Make sure an animal unit of your civ is selected as well as not a pet
 local function check_valid_unit()
     local unit = dfhack.gui.getSelectedUnit(true)
-    if unit ~= nil
+    return unit
         and dfhack.units.isFortControlled(unit)
         and dfhack.units.isAlive(unit)
         and not dfhack.units.isPet(unit)
-        and dfhack.units.isAnimal(unit) then
-
-            return true
-    else
-        return false
-    end
+        and dfhack.units.isAnimal(unit)
 end
 
 creature_screen=defclass(creature_screen, overlay.OverlayWidget)
