@@ -21,11 +21,7 @@ local function is_geldable()
     local unit = dfhack.gui.getSelectedUnit(true)
 
     -- If the unit is not male or already gelded do nothing
-    if unit.sex ~= 1 or unit.flags3.gelded == true then
-        return false
-    else
-        return true
-    end
+    return dfhack.units.isGeldable(unit)
 end
 
 creature_screen=defclass(creature_screen, overlay.OverlayWidget)
