@@ -1,5 +1,5 @@
 animal-options
-=============
+==============
 
 .. dfhack-tool::
     :summary: Add animal options geld/butcher/pet to valid animals viewsheet
