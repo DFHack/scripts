@@ -44,7 +44,7 @@ local function set_gel_flag()
         unit.flags3.marked_for_gelding = 0
     else
         unit.flags3.marked_for_gelding = 1
-    end    
+    end
 end
 
 -- set available for adoption flag
@@ -61,7 +61,7 @@ end
 -- Check current flag status of animal to dynamically set on/off for each unit?
 local function initial_butcher()
     local unit = dfhack.gui.getSelectedUnit(true)
-    
+
     if unit.flags2.slaughter == 1 then
         return true
     else
@@ -71,7 +71,7 @@ end
 
 local function initial_geld()
     local unit = dfhack.gui.getSelectedUnit(true)
-    
+
     if unit.flags3.marked_for_gelding == 1 then
         return true
     else
@@ -81,7 +81,7 @@ end
 
 local function initial_adopt()
     local unit = dfhack.gui.getSelectedUnit(true)
-    
+
     if unit.flags3.available_for_adoption == 1 then
         return true
     else
