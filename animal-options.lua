@@ -17,6 +17,17 @@ local function check_valid_unit()
         and dfhack.units.isAnimal(unit)
 end
 
+local function is_geldable()
+    local unit = dfhack.gui.getSelectedUnit(true)
+
+    -- If the unit is not male or already gelded do nothing
+    if unit.sex ~= 1 or unit.flags3.gelded == true then
+        return false
+    else
+        return true
+    end
+end
+
 creature_screen=defclass(creature_screen, overlay.OverlayWidget)
 creature_screen.ATTRS {
     desc = "Add options to tamed animals view sheet",
@@ -45,11 +56,6 @@ function creature_screen:set_geld_flag(option)
     local unit = dfhack.gui.getSelectedUnit(true)
 
     if not unit then return end
-
-    -- If the unit is not male or already gelded do nothing
-    if unit.sex ~= 1 or unit.flags3.gelded == true then
-        return
-    end
 
     if option == YES then
         unit.flags3.marked_for_gelding = true
@@ -140,6 +146,7 @@ self:addviews{
                     {label=YES, value=YES, pen=COLOR_GREEN},
                 },
                 view_id='geld_animal',
+                enabled=is_geldable,
                 on_change = function(val) self:set_geld_flag(val) end
             },
             widgets.ToggleHotkeyLabel{
