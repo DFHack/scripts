@@ -6,3 +6,10 @@ animal-options
     :tags: fort units
 
 You can enable ``animal-options`` in `gui/control-panel` in the "UI Overlays" subtab.
+
+Usage
+-----
+
+::
+
+    animal-options
