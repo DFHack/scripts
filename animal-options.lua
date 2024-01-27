@@ -108,9 +108,11 @@ end
 function creature_screen:render(dc)
     local unit = dfhack.gui.getSelectedUnit(true)
 
-    self.subviews.butcher_animal:setOption(self:get_butcher(unit))
-    self.subviews.geld_animal:setOption(self:get_geld(unit))
-    self.subviews.adopt_animal:setOption(self:get_adopt(unit))
+    if unit then
+        self.subviews.butcher_animal:setOption(dfhack.units.isMarkedForSlaughter(unit))
+        self.subviews.geld_animal:setOption(dfhack.units.isMarkedForGelding(unit))
+        self.subviews.adopt_animal:setOption(dfhack.units.isAvailableForAdoption(unit))
+    end
 
     creature_screen.super.render(self, dc)
 end
