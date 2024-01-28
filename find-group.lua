@@ -2,7 +2,7 @@ local usage = [====[
 
 find-group
 =============
-Prints out unit names associated with the searched for group aka Guild, Site, Performance Troupe etc. 
+Prints out unit names associated with the searched for group aka Guild, Site, Performance Troupe etc.
 
 EX: find-group "group name"
 
