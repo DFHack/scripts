@@ -919,7 +919,7 @@ function GenericOptionsPanel:init()
             disabled = false,
             show_tooltip = true,
             on_activate = function()
-				--self.design_panel:copy_designated_tiles()
+                self.design_panel:copy_designated_tiles()
                 self.design_panel:start_stamp_mode()
                 self.design_panel.needs_update = true
             end,
@@ -1564,6 +1564,63 @@ function Design:onInput(keys)
 
     -- send movement and pause keys through, but otherwise we're a modal dialog
     return not (keys.D_PAUSE or guidm.getMapKey(keys))
+end
+
+-- Mimic the shape of the designated tiles under the current shape as a point drawing.
+function Design:copy_designated_tiles()
+    self.designation_mask = {}
+
+    local top_left, bot_right = self.shape:get_true_dims()
+    local view_bounds = self:get_view_bounds()
+    local grid = self.shape:transform(0, 0)
+    for zlevel = 0, math.abs(view_bounds.z1 - view_bounds.z2) do
+        self.designation_mask[zlevel] = {}
+        for row = 0, math.abs(bot_right.y - top_left.y) do
+            self.designation_mask[zlevel][row] = {}
+            for col = 0, math.abs(bot_right.x - top_left.x) do
+                if grid[col] and grid[col][row] then
+                    local pos = xyz2pos(top_left.x + col, top_left.y + row, math.min(view_bounds.z1, view_bounds.z2) + zlevel)
+                    self.designation_mask[zlevel][row][col] = dfhack.maps.getTileFlags(pos)
+                end
+            end
+        end
+    end
+
+    --Clear all points. This is the same as the clear all points option in the panel, maybe move that into a function in the future?
+    self.marks = {}
+    self.placing_mark.active = true
+    self.placing_mark.index = 1
+    self.extra_points = {}
+    self.prev_center = nil
+    self.start_center = nil
+    self.needs_update = true
+
+    -- TODO This is bad, presumes that point drawing exists, is at this specific index and behaves a certain manner, find another way.
+    self.subviews.shape_name:setOption(7, true)
+
+    ----TODO Is there any way for bot_right and top_left to actually end up inverted? Or view_bounds.z1 and .z2 for that matter?
+    for zlevel = 0, math.abs(view_bounds.z1 - view_bounds.z2) do
+        for row = 0, math.abs(bot_right.y - top_left.y) do
+            for col = 0, math.abs(bot_right.x - top_left.x) do
+                if  (self.designation_mask[zlevel]
+                    and self.designation_mask[zlevel][row]
+                    and self.designation_mask[zlevel][row][col]) then
+
+                    if self.designation_mask[zlevel][row][col].dig ~= df.tile_dig_designation.No then
+                        local pos = Point({x = top_left.x + col, y = top_left.y + row, z = math.min(view_bounds.z1, view_bounds.z2) + zlevel})
+                        self.marks[self.placing_mark.index] = pos
+                        self.placing_mark.index = self.placing_mark.index + 1
+                        self.placing_mark.active = false
+                    end
+                end
+            end
+        end
+    end
+
+    --Calling this then calling stamp mode right after does not give time for onRenderFrame() to update the shape.
+    --So we need to let the shape know it has new points before someone tries to get it's center or something.
+    self.shape:update(copyall(self.marks))
+    self.needs_update = true
 end
 
 --The intention is making it easy to paste the current shape many times over using only the mouse, instead of spamming the commit shortcut.
