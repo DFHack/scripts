@@ -909,6 +909,22 @@ function GenericOptionsPanel:init()
             end,
         },
         widgets.HotkeyLabel {
+            view_id = "copy_label",
+            key = "CUSTOM_CTRL_V",
+            label = "Copy Designated Tiles",
+            active = true,
+            enabled = function()
+                return not self.design_panel.placing_mark.active and not self.design_panel.placing_extra.active
+            end,
+            disabled = false,
+            show_tooltip = true,
+            on_activate = function()
+				--self.design_panel:copy_designated_tiles()
+                self.design_panel:start_stamp_mode()
+                self.design_panel.needs_update = true
+            end,
+        },
+        widgets.HotkeyLabel {
             view_id = "commit_label",
             key = "CUSTOM_CTRL_C",
             label = "Commit Designation",
@@ -977,6 +993,7 @@ Design.ATTRS {
     mirror_point = DEFAULT_NIL,
     mirror = { horizontal = false, vertical = false },
     show_guides = true,
+    stamp_mode = false,
 }
 
 -- Check to see if we're moving a point, or some change was made that implise we need to update the shape
@@ -1403,6 +1420,9 @@ function Design:onInput(keys)
                 self.extra_points[i] = point + transform
             end
 
+            -- Disable stamp mode it was on.
+            self.stamp_mode = false
+
             self.prev_center = nil
             self.start_center = nil
             self.needs_update = true
@@ -1448,6 +1468,11 @@ function Design:onInput(keys)
     end
 
     if keys._MOUSE_L and pos then
+        -- If in stamp_mode just commit
+        if self.stamp_mode then
+            self:commit()
+            return true
+        end
         -- TODO Refactor this a bit
         if self.shape.max_points and #self.marks == self.shape.max_points and self.placing_mark.active then
             self.marks[self.placing_mark.index] = pos
@@ -1539,6 +1564,17 @@ function Design:onInput(keys)
 
     -- send movement and pause keys through, but otherwise we're a modal dialog
     return not (keys.D_PAUSE or guidm.getMapKey(keys))
+end
+
+--The intention is making it easy to paste the current shape many times over using only the mouse, instead of spamming the commit shortcut.
+--This also sidesteps the problem of having the user click on the center point to drag when there's a mark under it, which causes strange
+--behavior at the moment.
+function Design:start_stamp_mode()
+    local mouse_pos = getMousePoint()
+    self.start_center = self.shape:get_center()
+    self.start_center.z = mouse_pos.z
+    self.prev_center = self.start_center
+    self.stamp_mode = true
 end
 
 -- Put any special logic for designation type here
