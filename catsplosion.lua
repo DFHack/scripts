@@ -1,3 +1,5 @@
+local datetime = require('datetime')
+
 local world = df.global.world
 
 if not dfhack.isWorldLoaded() then
@@ -68,6 +70,19 @@ for id in pairs(creatures) do
             female.pregnancy_caste = female.caste  -- To handle female only species
             total_created = total_created + 1
         end
+        local hf = df.historical_figure.find(female.histfig_id)
+        if not hf then goto continue end
+        if not hf.info then
+            hf.info = df.historical_figure_info:new()
+        end
+        if not hf.info.wounds then
+            hf.info.wounds = df.historical_figure_info.T_wounds:new()
+        end
+        local dt = datetime.DateTime.now()
+        dt:addTicks(female.pregnancy_timer)
+        local wounds = hf.info.wounds
+        wounds.childbirth_year, wounds.childbirth_ticks = dt:getYears()
+        ::continue::
     end
 end
 
