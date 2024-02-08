@@ -19,7 +19,7 @@ Probe.ATTRS{
 
 function Probe:init()
     self:addviews{
-		widgets.ToggleHotkeyLabel{
+        widgets.ToggleHotkeyLabel{
             view_id='lock',
             frame={t=0, l=0},
             key='CUSTOM_CTRL_F',
@@ -34,8 +34,8 @@ function Probe:init()
 end
 
 function Probe:onRenderBody()
-	if self.subviews.lock:getOptionValue() then return end
-	guidm.setCursorPos(dfhack.gui.getMousePos())
+    if self.subviews.lock:getOptionValue() or self:getMouseFramePos() then return end
+    guidm.setCursorPos(dfhack.gui.getMousePos())
     local report = dfhack.run_command_silent('probe')
     self.subviews.report:setText(report)
     self:updateLayout()
