@@ -26,7 +26,7 @@ function Probe:init()
             label='Lock on tile:',
             initial_option=false,
         },
-        widgets.Label{
+        widgets.WrappedLabel{
             view_id='report',
             frame={t=2, l=0},
         },
@@ -35,9 +35,9 @@ end
 
 function Probe:onRenderBody()
     if self.subviews.lock:getOptionValue() or self:getMouseFramePos() then return end
-    guidm.setCursorPos(dfhack.gui.getMousePos())
-    local report = dfhack.run_command_silent('probe')
-    self.subviews.report:setText(report)
+    pos = dfhack.gui.getMousePos()
+    local report = dfhack.run_command_silent('probe', '--cursor', string.format("%d,%d,%d", pos.x, pos.y, pos.z))
+    self.subviews.report.text_to_wrap = report
     self:updateLayout()
 end
 
@@ -53,7 +53,7 @@ end
 
 ProbeScreen = defclass(ProbeScreen, gui.ZScreen)
 ProbeScreen.ATTRS{
-    focus_string='probe-screen',
+    focus_string = 'probe',
     pass_pause = true,
     pass_movement_keys = true,
 }
