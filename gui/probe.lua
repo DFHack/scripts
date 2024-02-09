@@ -51,9 +51,11 @@ function Probe:onInput(keys)
     end
 end
 
-ProbeScreen = defclass(ProbeScreen, gui.ZScreenModal)
+ProbeScreen = defclass(ProbeScreen, gui.ZScreen)
 ProbeScreen.ATTRS{
     focus_string='probe-screen',
+    pass_pause = true,
+    pass_movement_keys = true,
 }
 
 function ProbeScreen:init()
