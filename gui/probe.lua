@@ -17,6 +17,17 @@ Probe.ATTRS{
     frame_title='Probe',
 }
 
+local cursor_pen = dfhack.pen.parse {
+    ch = "+",
+    fg = COLOR_YELLOW,
+    keep_lower = true,
+    tile = dfhack.screen.findGraphicsTile(
+        "CURSORS",
+        0,
+        22
+    ),
+}
+
 function Probe:init()
     self:addviews{
         widgets.ToggleHotkeyLabel{
@@ -34,8 +45,9 @@ function Probe:init()
 end
 
 function Probe:onRenderBody()
-    if self.subviews.lock:getOptionValue() or self:getMouseFramePos() then return end
     pos = dfhack.gui.getMousePos()
+    guidm.renderMapOverlay(function() return cursor_pen end, {x1 = pos.x, x2= pos.x, y1 = pos.y, y2= pos.y, z1 = pos.z, z2= pos.z})
+    if self.subviews.lock:getOptionValue() or self:getMouseFramePos() then return end
     local report = dfhack.run_command_silent('probe', '--cursor', string.format("%d,%d,%d", pos.x, pos.y, pos.z))
     self.subviews.report.text_to_wrap = report
     self:updateLayout()
