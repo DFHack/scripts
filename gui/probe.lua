@@ -45,13 +45,13 @@ function Probe:init()
 end
 
 function Probe:onRenderBody()
-    pos = dfhack.gui.getMousePos()
     if dfhack.screen.inGraphicsMode() then
         guidm.renderMapOverlay(function() return cursor_pen end, {x1 = pos.x, x2= pos.x, y1 = pos.y, y2= pos.y, z1 = pos.z, z2= pos.z})
     elseif gui.blink_visible(500) then
         guidm.renderMapOverlay(function() return cursor_pen end, {x1 = pos.x, x2= pos.x, y1 = pos.y, y2= pos.y, z1 = pos.z, z2= pos.z})
     end
     if self.subviews.lock:getOptionValue() or self:getMouseFramePos() then return end
+    pos = dfhack.gui.getMousePos()
     local report = dfhack.run_command_silent('probe', '--cursor', string.format("%d,%d,%d", pos.x, pos.y, pos.z))
     self.subviews.report.text_to_wrap = report
     self:updateLayout()
