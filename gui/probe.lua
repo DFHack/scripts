@@ -15,6 +15,7 @@ Probe.ATTRS{
     },
     resizable=true,
     frame_title='Probe',
+    cycle_lock=false,
 }
 
 local cursor_pen = dfhack.pen.parse {
@@ -31,6 +32,7 @@ local cursor_pen = dfhack.pen.parse {
 function Probe:init()
     self:addviews{
         widgets.ToggleHotkeyLabel{
+            key='CUSTOM_CTRL_F',
             view_id='lock',
             frame={t=0, l=0},
             key='CUSTOM_CTRL_F',
@@ -45,13 +47,40 @@ function Probe:init()
 end
 
 function Probe:onRenderBody()
+    --Cycle the cursor lock if the user just clicked the map.
+    if self.cycle_lock then
+        if not (dfhack.gui.getSelectedUnit(true) or dfhack.gui.getSelectedBuilding(true)) then
+            self.subviews.lock:cycle()
+        end
+        self.cycle_lock = false
+    end
+
+    --If a unit is selected, show unit details.
+    if dfhack.gui.getSelectedUnit(true) then
+        local report = dfhack.run_command_silent('cprobe')
+        self.subviews.report.text_to_wrap = report
+        self:updateLayout()
+        return true
+    end
+
+    --If a building is selected, show building details.
+    if dfhack.gui.getSelectedBuilding(true) then
+        local report = dfhack.run_command_silent('bprobe')
+        self.subviews.report.text_to_wrap = report
+        self:updateLayout()
+        return true
+    end
+
+    --If nor unit nor building is selected, show cursor and details on the tile under mouse.
     if dfhack.screen.inGraphicsMode() then
         guidm.renderMapOverlay(function() return cursor_pen end, {x1 = pos.x, x2= pos.x, y1 = pos.y, y2= pos.y, z1 = pos.z, z2= pos.z})
     elseif gui.blink_visible(500) then
         guidm.renderMapOverlay(function() return cursor_pen end, {x1 = pos.x, x2= pos.x, y1 = pos.y, y2= pos.y, z1 = pos.z, z2= pos.z})
     end
-    if self.subviews.lock:getOptionValue() or self:getMouseFramePos() then return end
-    pos = dfhack.gui.getMousePos()
+
+    if not (self.subviews.lock:getOptionValue() or self:getMouseFramePos()) then
+        pos = dfhack.gui.getMousePos() or pos
+    end
     local report = dfhack.run_command_silent('probe', '--cursor', string.format("%d,%d,%d", pos.x, pos.y, pos.z))
     self.subviews.report.text_to_wrap = report
     self:updateLayout()
@@ -61,9 +90,21 @@ function Probe:onInput(keys)
     if Probe.super.onInput(self, keys) then
         return true
     end
+
+    --Cycle the cursor lock if the user clicks the map.
     if keys._MOUSE_L and not self:getMouseFramePos() then
-        self.subviews.lock:cycle()
-        return true
+        self.cycle_lock = true
+        return false
+    end
+
+    if (keys.LEAVESCREEN or keys._MOUSE_R) then
+        if dfhack.gui.getSelectedUnit(true) or dfhack.gui.getSelectedBuilding(true) then
+            self.parent_view:sendInputToParent(keys)
+            return true
+        else
+            self.parent_view:dismiss()
+            return true
+        end
     end
 end
 
@@ -72,6 +113,8 @@ ProbeScreen.ATTRS{
     focus_string = 'probe',
     pass_pause = true,
     pass_movement_keys = true,
+    pass_mouse_clicks = true,
+    defocusable=false,
 }
 
 function ProbeScreen:init()
