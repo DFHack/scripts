@@ -328,8 +328,10 @@ function ActionPanel:get_action_text()
         text = "Select any draggable points"
     elseif self.parent_view.placing_extra.active then
         text = "Place any extra points"
-    elseif self.parent_view.prev_center then
+    elseif self.parent_view.prev_center and not self.parent_view.stamp_mode then
         text = "Place the center point"
+    elseif self.parent_view.stamp_mode then
+        text = "Paste the designation"
     else
         text = "Select any draggable points"
     end

@@ -15,6 +15,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `gui\design`: Can now copy and paste designations by drawing a shape over them and pressing ctrl+v. Remember to disable auto-commit first!
 
 ## Fixes
 - `makeown`: fix error when adopting units that need a historical figure to be created
