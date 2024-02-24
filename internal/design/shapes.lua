@@ -669,7 +669,7 @@ Drawing.ATTRS {
 }
 
 function Drawing:init()
-    
+
 end
 
 function Drawing:has_point(x, y)
