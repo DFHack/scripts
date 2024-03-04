@@ -28,6 +28,7 @@ Template for new versions:
 
 ## New Tools
 - `fix/stuck-worship`: fix prayer so units don't get stuck in uninterruptible "Worship!" states
+- `instruments`: provides information on how to craft the instruments used by the player civilization.
 
 ## New Features
 - `gui/settings-manager`: add import, export, and autoload for work details
