@@ -657,7 +657,30 @@ function FreeForm:point_in_polygon(x, y)
     return inside
 end
 
+
+-- This is not a shape, this is dumb, please help find another way to achieve this.
+Drawing = defclass(Drawing, Shape)
+Drawing.ATTRS {
+    name = "Point Drawing",
+    min_points = 1,
+    max_points = math.huge,
+    drag_corners = { ne = false, nw = false, se = false, sw = false },
+    basic_shape = false
+}
+
+function Drawing:init()
+
+end
+
+function Drawing:has_point(x, y)
+    top_left, _ = self:get_point_dims()
+    for _, point in ipairs(self.points) do
+        if point.x - top_left.x == x and point.y - top_left.y == y then return true end
+    end
+    return false
+end
+
 -- module users can get shapes through this global, shape option values
 -- persist in these as long as the module is loaded
 -- idk enough lua to know if this is okay to do or not
-all_shapes = { Rectangle {}, Ellipse {}, Rows {}, Diag {}, Line {}, FreeForm {} }
+all_shapes = { Rectangle {}, Ellipse {}, Rows {}, Diag {}, Line {}, FreeForm {}, Drawing{} }

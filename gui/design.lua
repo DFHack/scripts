@@ -328,8 +328,10 @@ function ActionPanel:get_action_text()
         text = "Select any draggable points"
     elseif self.parent_view.placing_extra.active then
         text = "Place any extra points"
-    elseif self.parent_view.prev_center then
+    elseif self.parent_view.prev_center and not self.parent_view.stamp_mode then
         text = "Place the center point"
+    elseif self.parent_view.stamp_mode then
+        text = "Paste the designation"
     else
         text = "Select any draggable points"
     end
@@ -909,6 +911,22 @@ function GenericOptionsPanel:init()
             end,
         },
         widgets.HotkeyLabel {
+            view_id = "copy_label",
+            key = "CUSTOM_CTRL_V",
+            label = "Copy Designated Tiles",
+            active = true,
+            enabled = function()
+                return not self.design_panel.placing_mark.active and not self.design_panel.placing_extra.active
+            end,
+            disabled = false,
+            show_tooltip = true,
+            on_activate = function()
+                self.design_panel:copy_designated_tiles()
+                self.design_panel:start_stamp_mode()
+                self.design_panel.needs_update = true
+            end,
+        },
+        widgets.HotkeyLabel {
             view_id = "commit_label",
             key = "CUSTOM_CTRL_C",
             label = "Commit Designation",
@@ -977,6 +995,7 @@ Design.ATTRS {
     mirror_point = DEFAULT_NIL,
     mirror = { horizontal = false, vertical = false },
     show_guides = true,
+    stamp_mode = false,
 }
 
 -- Check to see if we're moving a point, or some change was made that implise we need to update the shape
@@ -1403,6 +1422,9 @@ function Design:onInput(keys)
                 self.extra_points[i] = point + transform
             end
 
+            -- Disable stamp mode it was on.
+            self.stamp_mode = false
+
             self.prev_center = nil
             self.start_center = nil
             self.needs_update = true
@@ -1448,6 +1470,11 @@ function Design:onInput(keys)
     end
 
     if keys._MOUSE_L and pos then
+        -- If in stamp_mode just commit
+        if self.stamp_mode then
+            self:commit()
+            return true
+        end
         -- TODO Refactor this a bit
         if self.shape.max_points and #self.marks == self.shape.max_points and self.placing_mark.active then
             self.marks[self.placing_mark.index] = pos
@@ -1546,6 +1573,74 @@ function Design:onInput(keys)
 
     -- send movement and pause keys through, but otherwise we're a modal dialog
     return not (keys.D_PAUSE or guidm.getMapKey(keys))
+end
+
+-- Mimic the shape of the designated tiles under the current shape as a point drawing.
+function Design:copy_designated_tiles()
+    self.designation_mask = {}
+
+    local top_left, bot_right = self.shape:get_true_dims()
+    local view_bounds = self:get_view_bounds()
+    local grid = self.shape:transform(0, 0)
+    for zlevel = 0, math.abs(view_bounds.z1 - view_bounds.z2) do
+        self.designation_mask[zlevel] = {}
+        for row = 0, math.abs(bot_right.y - top_left.y) do
+            self.designation_mask[zlevel][row] = {}
+            for col = 0, math.abs(bot_right.x - top_left.x) do
+                if grid[col] and grid[col][row] then
+                    local pos = xyz2pos(top_left.x + col, top_left.y + row, math.min(view_bounds.z1, view_bounds.z2) + zlevel)
+                    self.designation_mask[zlevel][row][col] = dfhack.maps.getTileFlags(pos)
+                end
+            end
+        end
+    end
+
+    --Clear all points. This is the same as the clear all points option in the panel, maybe move that into a function in the future?
+    self.marks = {}
+    self.placing_mark.active = true
+    self.placing_mark.index = 1
+    self.extra_points = {}
+    self.prev_center = nil
+    self.start_center = nil
+    self.needs_update = true
+
+    -- TODO This is bad, presumes that point drawing exists, is at this specific index and behaves a certain manner, find another way.
+    self.subviews.shape_name:setOption(7, true)
+
+    ----TODO Is there any way for bot_right and top_left to actually end up inverted? Or view_bounds.z1 and .z2 for that matter?
+    for zlevel = 0, math.abs(view_bounds.z1 - view_bounds.z2) do
+        for row = 0, math.abs(bot_right.y - top_left.y) do
+            for col = 0, math.abs(bot_right.x - top_left.x) do
+                if  (self.designation_mask[zlevel]
+                    and self.designation_mask[zlevel][row]
+                    and self.designation_mask[zlevel][row][col]) then
+
+                    if self.designation_mask[zlevel][row][col].dig ~= df.tile_dig_designation.No then
+                        local pos = Point({x = top_left.x + col, y = top_left.y + row, z = math.min(view_bounds.z1, view_bounds.z2) + zlevel})
+                        self.marks[self.placing_mark.index] = pos
+                        self.placing_mark.index = self.placing_mark.index + 1
+                        self.placing_mark.active = false
+                    end
+                end
+            end
+        end
+    end
+
+    --Calling this then calling stamp mode right after does not give time for onRenderFrame() to update the shape.
+    --So we need to let the shape know it has new points before someone tries to get it's center or something.
+    self.shape:update(copyall(self.marks))
+    self.needs_update = true
+end
+
+--The intention is making it easy to paste the current shape many times over using only the mouse, instead of spamming the commit shortcut.
+--This also sidesteps the problem of having the user click on the center point to drag when there's a mark under it, which causes strange
+--behavior at the moment.
+function Design:start_stamp_mode()
+    local mouse_pos = getMousePoint()
+    self.start_center = self.shape:get_center()
+    self.start_center.z = mouse_pos.z
+    self.prev_center = self.start_center
+    self.stamp_mode = true
 end
 
 -- Put any special logic for designation type here
