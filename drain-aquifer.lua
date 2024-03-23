@@ -2,24 +2,38 @@ local argparse = require('argparse')
 
 local zmin = 0
 local zmax = df.global.world.map.z_count - 1
+local aqtype = null
 
 local function drain()
     local layers = {} --as:bool[]
     local layer_count = 0
     local tile_count = 0
-
+    local aqTypeToDrain = 3
+    if aqtype == "light" then
+      aqTypeToDrain = 1
+    elseif aqtype == "heavy" then
+      aqTypeToDrain = 2
+    elseif aqtype ~= nil then
+      qerror("Invalid aquifer type "..aqtype)
+    end
+    
     for _, block in ipairs(df.global.world.map.map_blocks) do
+        local aquiferInBlock = false
+
         if not block.flags.has_aquifer then goto continue end
         if block.map_pos.z < zmin or block.map_pos.z > zmax then goto continue end
-
-        block.flags.has_aquifer = false
-        block.flags.check_aquifer = false
-
-        for _, row in ipairs(block.designation) do
-            for _, tile in ipairs(row) do
-                if tile.water_table then
+        local oldTileCount = tile_count
+        for i, row in ipairs(block.designation) do
+            for j, tile in ipairs(row) do
+                if (aqTypeToDrain == 3 or 
+                  (block.occupancy[i][j].heavy_aquifer and aqTypeToDrain == 2) or
+                  (not block.occupancy[i][j].heavy_aquifer and aqTypeToDrain == 1)) and  
+                  tile.water_table then
                     tile.water_table = false
                     tile_count = tile_count + 1
+                end
+                if tile.water_table then
+                  aquiferInBlock = true
                 end
             end
         end
@@ -28,6 +42,12 @@ local function drain()
             layers[block.map_pos.z] = true
             layer_count = layer_count + 1
         end
+
+        if aquiferInBlock == false then
+          block.flags.has_aquifer = false
+          block.flags.check_aquifer = false
+        end
+
         ::continue::
     end
 
@@ -44,6 +64,7 @@ local positionals = argparse.processArgsGetopt({...}, {
     {'d', 'zdown', handler=function() zmax = df.global.window_z end},
     {'u', 'zup', handler=function() zmin = df.global.window_z end},
     {'z', 'cur-zlevel', handler=function() zmax, zmin = df.global.window_z, df.global.window_z end},
+    {'f', 'filter', hasArg=true, handler=function(fil) aqtype = string.lower(fil) end},
 })
 
 if help or positionals[1] == 'help' then

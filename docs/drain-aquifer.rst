@@ -24,6 +24,9 @@ Examples
     Remove all aquifers on the map except for the top 2 levels of aquifer.
 ``drain-aquifer -d``
     Remove all aquifers on the current z-level and below.
+``drain-aquifer -f light``
+    Remove all light aquifers on the map.
+
 
 Options
 -------
@@ -39,3 +42,5 @@ Options
     Remove all aquifers on the current z-level and above.
 ``-z``, ``--cur-zlevel``
     Remove all aquifers on the current z-level.
+``-f``, ``--filter [light/heavy]``
+    Remove all light or heavy aquifers.
