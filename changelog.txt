@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `open-legends`: (reinstated) open legends mode directly from a loaded fort
 
 ## New Features
 

@@ -1,90 +1,123 @@
 -- open legends screen when in fortress mode
---@ module = true
 
 local dialogs = require('gui.dialogs')
 local gui = require('gui')
-local utils = require('utils')
+local widgets = require('gui.widgets')
 
-Restorer = defclass(Restorer, gui.Screen)
-Restorer.ATTRS{
-    focus_path='open-legends'
+-- --------------------------------
+-- LegendsManager
+--
+
+LegendsManager = defclass(LegendsManager, gui.Screen)
+LegendsManager.ATTRS {
+    focus_path='open-legends',
 }
 
-function Restorer:init()
-    print('initializing restorer')
-    self.region_details_backup = {} --as:df.world_region_details[]
-    local v = df.global.world.world_data.region_details
-    while (#v > 0) do
-        table.insert(self.region_details_backup, 1, v[0])
-        v:erase(0)
-    end
+function LegendsManager:init()
+    df.global.gametype = df.game_type.VIEW_LEGENDS
+
+    local legends = df.viewscreen_legendsst:new()
+    legends.page:insert("#",{new=true, header="Legends", mode=0, index=-1})
+    dfhack.screen.show(legends)
+
+    self:addviews{
+        widgets.Panel{
+            view_id='done_mask',
+            frame={t=1, r=1, w=9, h=3},
+        },
+    }
 end
 
-function Restorer:onIdle()
-    self:dismiss()
+function LegendsManager:render()
+    self:renderParent()
 end
 
-function Restorer:onDismiss()
-    print('dismissing restorer')
-    local v = df.global.world.world_data.region_details
-    while (#v > 0) do v:erase(0) end
-    for _,item in pairs(self.region_details_backup) do
-        v:insert(0, item)
+function LegendsManager:onInput(keys)
+    if keys.LEAVESCREEN or (keys._MOUSE_L and self.subviews.done_mask:getMousePos()) then
+        dialogs.showMessage('Exiting to avoid save corruption',
+            'Dwarf Fortress may be in a non-playable state\nand will now exit to protect your savegame.',
+            COLOR_YELLOW,
+            self:callback('dismiss'))
+        return true
     end
+    self:sendInputToParent(keys)
+    return true
 end
 
-function show_screen()
-    local ok, err = pcall(function()
-        Restorer{}:show()
-        dfhack.screen.show(df.viewscreen_legendsst:new())
-    end)
-    if not ok then
-        qerror('Failed to set up legends screen: ' .. tostring(err))
-    end
+function LegendsManager:onDismiss()
+    dfhack.run_command('die')
 end
 
-function main(force)
-    if not dfhack.isWorldLoaded() then
-        qerror('no world loaded')
-    end
+-- --------------------------------
+-- LegendsWarning
+--
 
-    local view = df.global.gview.view
-    while view do
-        if df.viewscreen_legendsst:is_instance(view) then
-            qerror('legends screen already displayed')
-        end
-        view = view.child
-    end
+LegendsWarning = defclass(LegendsWarning, widgets.Window)
+LegendsWarning.ATTRS {
+    frame_title='Open Legends Mode',
+    frame={w=50, h=21},
+    autoarrange_subviews=true,
+}
 
-    if not dfhack.world.isFortressMode(df.global.gametype) and not dfhack.world.isAdventureMode(df.global.gametype) and not force then
-        qerror('mode not tested: ' .. df.game_type[df.global.gametype] .. ' (use "force" to force)')
-    end
-
-    if force then
-        show_screen()
-    else
-        dialogs.showYesNoPrompt('Save corruption possible',
-            'This script can CORRUPT YOUR SAVE. If you care about this world,\n' ..
-            'DO NOT SAVE AFTER RUNNING THIS SCRIPT - run "die" to quit DF\n' ..
-            'without saving.\n\n' ..
-            'To use this script safely,\n' ..
-            '1. Press "esc" to exit this prompt\n' ..
-            '2. Pause DF\n' ..
-            '3. Run "quicksave" to save this world\n' ..
-            '4. Run this script again and press ENTER to enter legends mode\n' ..
-            '5. IMMEDIATELY AFTER EXITING LEGENDS, run "die" to quit DF\n\n' ..
-            'Press "esc" below to go back, or "y" to enter legends mode.\n' ..
-            'By pressing "y", you acknowledge that your save could be\n' ..
-            'permanently corrupted if you do not follow the above steps.',
-            COLOR_LIGHTRED,
-            show_screen
-        )
-    end
+function LegendsWarning:init()
+    self:addviews{
+        widgets.Label{
+            text={
+                'This script allows you to jump into legends', NEWLINE,
+                'mode from a loaded fort, but beware that this', NEWLINE,
+                'is a', {gap=1, text='ONE WAY TRIP', pen=COLOR_RED}, '.', NEWLINE,
+                NEWLINE,
+                'Returning to fort mode from legends mode', NEWLINE,
+                'would make the game unstable, so to protect', NEWLINE,
+                'your savegame, Dwarf Fortress will exit when', NEWLINE,
+                'you are done browsing.', NEWLINE,
+                NEWLINE,
+                {text='This is your last chance to save your game.', pen=COLOR_LIGHTRED}, NEWLINE,
+                NEWLINE,
+            },
+        },
+        widgets.HotkeyLabel{
+            frame={l=0},
+            key='CUSTOM_SHIFT_S',
+            label='Please click here to create an Autosave',
+            text_pen=COLOR_YELLOW,
+            on_activate=function() dfhack.run_command('quicksave') end,
+        },
+        widgets.Label{
+            text={
+                NEWLINE,
+                'or exit out of this dialog and create a named', NEWLINE,
+                'save of your choice.', NEWLINE,
+                NEWLINE,
+            },
+        },
+        widgets.HotkeyLabel{
+            key='CUSTOM_ALT_L',
+            label='Click here to continue to legends mode',
+            auto_width=true,
+            on_activate=function()
+                self.parent_view:dismiss()
+                LegendsManager{}:show()
+            end,
+        },
+    }
 end
 
-if dfhack_flags.module then
-    return
+LegendsWarningScreen = defclass(LegendsWarningScreen, gui.ZScreenModal)
+LegendsWarningScreen.ATTRS {
+    focus_path='open-legends/warning',
+}
+
+function LegendsWarningScreen:init()
+    self:addviews{LegendsWarning{}}
 end
 
-local iargs = utils.invert{...}
-main(iargs.force)
+function LegendsWarningScreen:onDismiss()
+    view = nil
+end
+
+if not dfhack.isWorldLoaded() then
+    qerror('no world loaded')
+end
+
+view = view and view:raise() or LegendsWarningScreen{}:show()
