@@ -1,23 +1,20 @@
-gui/workshop-job
-================
+gui/job-details
+===============
 
 .. dfhack-tool::
-    :summary: Adjust the input materials used for a job at a workshop.
-    :tags: unavailable fort inspection jobs
+    :summary: Adjust the input materials and traits used for a job or manager order.
+    :tags: fort inspection jobs workorders interface
 
-This tool allows you to inspect or change the input reagents for the selected
-workshop job (in :kbd:`q` mode).
-
-.. image:: /docs/images/workshop-job.png
+This tool allows you to inspect or change the input reagents for the selected job:
+open the job's "Details" screen by clicking the magnifying glass, then press :kbd:`Ctrl-D`
+or click the "Configure job inputs" label. This is possible in a workshop
+job list and manager work order list (in case the magnifying glass is present),
+as well as from the work order conditions screen.
 
 Pressing :kbd:`i` shows a dialog where you can select an item type from a list.
 
-.. image:: /docs/images/workshop-job-item.png
-
 Pressing :kbd:`m` (unless the item type does not allow a material) lets you
 choose a material.
-
-.. image:: /docs/images/workshop-job-material.png
 
 Since there are a lot more materials than item types, this dialog is more
 complex and uses a hierarchy of sub-menus. List choices that open a sub-menu are
@@ -48,4 +45,10 @@ Usage
 
 ::
 
-    gui/workshop-job
+    gui/job-details
+
+Overlay
+-------
+
+The position of the "details" button that appears when a job details
+window is open is configurable via `gui/overlay`.
