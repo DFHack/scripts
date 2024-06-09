@@ -33,6 +33,49 @@ local function clearNemesisFromLinkedSites(nem)
     end
 end
 
+-- shamelessly copypasted from makeown.lua
+local function get_translation(race_id)
+    local race_name = df.global.world.raws.creatures.all[race_id].creature_id
+    local backup = nil
+    for _,translation in ipairs(df.global.world.raws.language.translations) do
+        if translation.name == race_name then
+            return translation
+        end
+        if translation.name == 'GEN_DIVINE' then
+            backup = translation
+        end
+    end
+    -- Use a divine name if no normal name is found
+    if backup then
+        return backup
+    end
+    -- Use the first language in the list if no divine language is found, this is normally the DWARF language.
+    return df.global.world.raws.language.translations[0]
+end
+
+local function pick_first_name(race_id)
+    local translation = get_translation(race_id)
+    return translation.words[math.random(0, #translation.words-1)].value
+end
+
+local LANGUAGE_IDX = 0
+local word_table = df.global.world.raws.language.word_table[LANGUAGE_IDX][35]
+
+local function name_nemesis(nemesis)
+    local figure = nemesis.figure
+    if figure.name.has_name then return end
+
+    figure.name.first_name = pick_first_name(figure.race)
+    figure.name.words.FrontCompound = word_table.words.FrontCompound[math.random(0, #word_table.words.FrontCompound-1)]
+    figure.name.words.RearCompound = word_table.words.RearCompound[math.random(0, #word_table.words.RearCompound-1)]
+
+    figure.name.language = LANGUAGE_IDX
+    figure.name.parts_of_speech.FrontCompound = df.part_of_speech.Noun
+    figure.name.parts_of_speech.RearCompound = df.part_of_speech.Verb3rdPerson
+    figure.name.type = df.language_name_type.Figure
+    figure.name.has_name = true
+end
+
 local function createNemesis(unit)
     local nemesis = unit:create_nemesis(1, 1)
     nemesis.figure.flags.never_cull = true
@@ -122,6 +165,8 @@ local function swapAdvUnit(newUnit)
     if not newNem then
         qerror("Failed to obtain target nemesis!")
     end
+    
+    name_nemesis(newNem)
 
     setOldAdvNemFlags(oldNem)
     setNewAdvNemFlags(newNem)
