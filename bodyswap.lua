@@ -165,7 +165,7 @@ local function swapAdvUnit(newUnit)
     if not newNem then
         qerror("Failed to obtain target nemesis!")
     end
-    
+
     name_nemesis(newNem)
 
     setOldAdvNemFlags(oldNem)
@@ -186,7 +186,7 @@ local function swapAdvUnit(newUnit)
     reveal_tile(xyz2pos(pos.x-1, pos.y+1, pos.z))
     reveal_tile(xyz2pos(pos.x,   pos.y+1, pos.z))
     reveal_tile(xyz2pos(pos.x+1, pos.y+1, pos.z))
-    
+
     dfhack.gui.revealInDwarfmodeMap(pos, true)
 end
 
