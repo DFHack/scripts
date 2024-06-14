@@ -1,3 +1,5 @@
+--@module = true
+--@enable = true
 -- speeds up the calendar, units, or both
 -- based on https://gist.github.com/IndigoFenix/cf358b8c994caa0f93d5
 
@@ -34,12 +36,21 @@ Examples:
 Original timestream.lua: https://gist.github.com/IndigoFenix/cf358b8c994caa0f93d5
 ]====]
 
-
 local MINIMAL_FPS           = 10    -- This ensures you won't get crazy values on pausing/saving, or other artefacts on extremely low FPS.
 local DEFAULT_MAX_FPS       = 100
 
+local GLOBAL_KEY = 'timestream'
 
---- DO NOT CHANGE BELOW UNLESS YOU KNOW WHAT YOU'RE DOING ---
+dfhack.onStateChange[GLOBAL_KEY] = function(code)
+    if code == SC_MAP_UNLOADED then
+        print('Clearing timestream cache')
+    end
+end
+
+enabled = enabled or false
+function isEnabled()
+    return enabled
+end
 
 local utils = require("utils")
 args = utils.processArgs({...}, utils.invert({
@@ -51,7 +62,7 @@ args = utils.processArgs({...}, utils.invert({
 local rate = tonumber(args.rate) or -1
 local desired_fps = tonumber(args.fps)
 local simulating_units = tonumber(args.units)
-if args.units == '' then
+if not args.units then
     simulating_units = 1
 end
 local debug_mode = not not args.debug
@@ -71,8 +82,9 @@ local speedy_frame_delta = desired_fps or DEFAULT_MAX_FPS
 local SEASON_LEN = 3360
 local YEAR_LEN = 403200
 
-if not dfhack.world.isFortressMode() then
-    print("timestream: Will start when fortress mode is loaded.")
+if df.global.gamemode ~= df.game_mode.DWARF or not dfhack.isMapLoaded() then
+    dfhack.println('timestream: Will start when fortress mode is loaded.')
+    return
 end
 
 if rate == nil then
@@ -96,6 +108,7 @@ eventNow = false
 seasonNow = false
 timestream = 0
 counter = 0
+
 if df.global.cur_season_tick < SEASON_LEN then
     month = 1
 elseif df.global.cur_season_tick < SEASON_LEN * 2 then
@@ -105,6 +118,8 @@ else
 end
 
 dfhack.onStateChange.loadTimestream = function(code)
+    if not enabled then return end
+
     if code==SC_MAP_LOADED then
         if rate ~= 1 then
             last_frame = df.global.world.frame_counter
@@ -153,6 +168,8 @@ dfhack.onStateChange.loadTimestream = function(code)
 end
 
 function update()
+    if not enabled then return end
+
     loaded = false
     prev_tick = df.global.cur_year_tick
     local current_frame = df.global.world.frame_counter
@@ -286,7 +303,43 @@ function update()
                     end
                 elseif simulating_units == 1 then
                     local dec = math.floor(ticks_left) - 1  -- A value used to determine how much more to decrement from the timers per tick.
-                    for k1, unit in pairs(df.global.world.units.active) do
+
+                    -- this needs some frame counter logic. seeds only grow every so many frames and the number varies depending on the seed
+                    -- so we will need to pull this from raws
+                    --[[for _k1, seed in ipairs(df.global.world.items.other.SEEDS) do
+                        if not seed.flags.in_building then goto next end
+
+                        for _k2, building_ref in ipairs(seed.general_refs) do
+                            if not df.general_ref_building_holderst:is_instance(building_ref) then
+                                goto next
+                            end
+                        end
+
+                        seed.grow_counter = seed.grow_counter - -dec
+
+                        ::next::
+                    end]]--
+
+                    --handle social events with timers
+                    for _k1, activity in ipairs(df.activity_entry.get_vector()) do
+                        for _k2, event in ipairs(activity.events) do
+                            local timer = nil
+                            local ok = pcall(function()
+                                timer = event.timer
+                            end)
+
+                            if ok ~= -1 and timer ~= nil then
+                                local d = event.timer - dec
+                                if d < 1 then
+                                    d = 1
+                                end
+                                event.timer = d
+                            end
+                        end
+                    end
+
+
+                    for _k1, unit in ipairs(df.global.world.units.active) do
                         if dfhack.units.isActive(unit) then
                             if unit.sex == 0 then   -- Check to see if unit is female.
                                 local ptimer = unit.pregnancy_timer
@@ -298,7 +351,7 @@ function update()
                                     unit.pregnancy_timer = ptimer
                                 end
                             end
-                            for k2, action in pairs(unit.actions) do
+                            for _k2, action in ipairs(unit.actions) do
                                 local action_type = action.type
                                 if action_type == df.unit_action_type.Move then
                                     local d = action.data.move.timer - dec
@@ -433,6 +486,13 @@ end
 
 --Initial call
 
-if dfhack.isMapLoaded() then
-    dfhack.onStateChange.loadTimestream(SC_MAP_LOADED)
+if dfhack_flags.enable then
+    if dfhack_flags.enable_state then
+        enabled = true
+        dfhack.onStateChange.loadTimestream(SC_MAP_LOADED)
+    else
+        enabled = false
+        loaded = false
+        dfhack.println('timstream disabled')
+    end
 end
