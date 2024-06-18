@@ -24,6 +24,7 @@ local function get_sections()
     end
     local prev_line = nil
     for line in lines do
+        line = dfhack.utf2df(line)
         if line:match('^[=-]+$') then
             add_section_widget(sections, section)
             section = {}

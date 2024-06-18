@@ -3,7 +3,7 @@ gaydar
 
 .. dfhack-tool::
     :summary: Shows the sexual orientation of units.
-    :tags: untested fort inspection animals units
+    :tags: fort inspection animals units
 
 ``gaydar`` is useful for social engineering or checking the viability of
 livestock breeding programs.
@@ -21,7 +21,7 @@ Examples
 ``gaydar``
     Show sexual orientation of the selected unit.
 ``gaydar --citizens --asexual``
-    Identify asexual citizens.
+    Identify asexual citizens and residents.
 
 Target options
 --------------
@@ -29,7 +29,7 @@ Target options
 ``--all``
     Selects every creature on the map.
 ``--citizens``
-    Selects fort citizens.
+    Selects fort citizens and residents.
 ``--named``
     Selects all named units on the map.
 

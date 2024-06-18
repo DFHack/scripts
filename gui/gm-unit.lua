@@ -9,7 +9,7 @@ rng = rng or dfhack.random.new(nil, 10)
 local target
 --TODO: add more ways to guess what unit you want to edit
 if args[1] ~= nil then
-    target = df.units.find(args[1])
+    target = df.unit.find(args[1])
 else
     target = dfhack.gui.getSelectedUnit(true)
 end
@@ -147,7 +147,7 @@ end
 function Editor_Unit:onInput(keys)
     local pages = self.subviews.pages
     if pages:getSelected() == 1 or
-            (not keys.LEAVESCREEN and not keys._MOUSE_R_DOWN) then
+            (not keys.LEAVESCREEN and not keys._MOUSE_R) then
         return Editor_Unit.super.onInput(self, keys)
     end
     local page = pages:getSelectedPage()

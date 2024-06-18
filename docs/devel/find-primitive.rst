@@ -3,7 +3,7 @@ devel/find-primitive
 
 .. dfhack-tool::
     :summary: Discover memory offsets for new variables.
-    :tags: untested dev
+    :tags: dev
 
 This tool helps find a primitive variable in DF's data section, relying on the
 user to change its value and then scanning for memory that has changed to that

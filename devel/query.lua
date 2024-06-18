@@ -169,12 +169,19 @@ function main()
     query(selection, path_info, args.search, path_info)
 end
 
+local eval_env = utils.df_shortcut_env()
+function eval(s)
+    local f, err = load("return " .. s, "expression", "t", eval_env)
+    if err then qerror(err) end
+    return f()
+end
+
 function getSelectionData()
     local selection = nil
     local path_info = nil
     if args.table then
         debugf(0,"table selection")
-        selection = utils.df_expr_to_ref(args.table)
+        selection = eval(args.table)
         path_info = args.table
         path_info_pattern = escapeSpecialChars(path_info)
     elseif args.json then
@@ -213,7 +220,22 @@ function getSelectionData()
         path_info_pattern = path_info
     elseif args.job then
         debugf(0,"job selection")
-        selection = dfhack.gui.getSelectedJob()
+        selection = dfhack.gui.getSelectedJob(true)
+        if selection == nil and df.global.cursor.x >= 0 then
+            local pos = { x=df.global.cursor.x,
+                          y=df.global.cursor.y,
+                          z=df.global.cursor.z }
+            print("searching for a job at the cursor")
+            for _link, job in utils.listpairs(df.global.world.jobs.list) do
+                local jp = job.pos
+                if jp.x == pos.x and jp.y == pos.y and jp.z == pos.z then
+                    if selection == nil then
+                        selection = {}
+                    end
+                    table.insert(selection, job)
+                end
+            end
+        end
         path_info = "job"
         path_info_pattern = path_info
     elseif args.tile then

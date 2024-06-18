@@ -35,7 +35,7 @@ function update_slot_text(slot)
 
     slot.text=string.format("%02d. Filled(%d/%d):%s",slot.id+1,slot.filled_amount,slot.job_item.quantity,items)
 end
---items-> table => key-> id of job.job_items, value-> table => key (num), value => item(ref)
+--items-> table => key-> id of job.job_items.elements, value-> table => key (num), value => item(ref)
 function jobitemEditor:init(args)
     --self.job=args.job
     if self.job==nil and self.job_items==nil then qerror("This screen must have job target or job_items list") end
@@ -156,7 +156,7 @@ function jobitemEditor:fill()
         local job_item
 
         if self.job then
-            job_item=self.job.job_items[k]
+            job_item=self.job.job_items.elements[k]
         else
             job_item=self.job_items[k]
         end

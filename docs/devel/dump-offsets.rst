@@ -3,7 +3,7 @@ devel/dump-offsets
 
 .. dfhack-tool::
     :summary: Dump the contents of the table of global addresses.
-    :tags: untested dev
+    :tags: dev
 
 .. warning::
 

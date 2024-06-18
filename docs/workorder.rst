@@ -73,5 +73,7 @@ Also:
   ``load(code)(order, orders)`` that must return an integer.
 
 A custom field ``__reduce_amount`` can be set if existing open orders should be
-taken into account, reducing the new order's ``total_amount`` (possibly all the
-way to ``0``). An empty ``amount_total`` implies ``"__reduce_amount": true``.
+taken into account. The first matching existing order will be modified to have
+the desired quantity remaining. If the desired quantity is negative, the
+existing order will be removed. An empty ``amount_total`` implies
+``"__reduce_amount": true``.

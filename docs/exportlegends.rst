@@ -2,46 +2,49 @@ exportlegends
 =============
 
 .. dfhack-tool::
-    :summary: Exports legends data for external viewing.
-    :tags: untested legends inspection
+    :summary: Exports extended legends data for external viewing.
+    :tags: legends inspection
 
-When run from legends mode, you can export detailed data about your world so
-that it can be browsed with external programs like
-:forums:`World Viewer <128932>` and other similar utilities. The data exported
-with this tool is more detailed than what you can get with vanilla export
-functionality, and some external tools depend on this extra information.
+When run from the legends mode screen, this tool will export detailed data
+about your world so that it can be browsed with external programs like
+:forums:`Legends Browser <179848>`. The data is more detailed than what you can
+get with vanilla export functionality, and many external tools depend on this
+extra information.
 
-``exportlegends`` can be especially useful when you are generating a lot of
-worlds that you later want to inspect or when you want a map of every site when
-there are several hundred.
+By default, ``exportlegends`` hooks into the standard vanilla ``Export XML`` button and runs in the background when you click it, allowing both the vanilla export and the extended data export to execute simultaneously. You can continue to browse legends mode via the vanilla UI while the export is running.
+
+To use:
+
+- Enter legends by "Starting a new game" in an existing world and selecting
+  Legends mode
+- Ensure the toggle for "Also export extended legends data" is on (which is the
+  default)
+- Click the "Export XML" button to generate both the standard export and the
+  extended data export
+
+You can also generate just the extended data export by manually running the
+``exportlegends`` command while legends mode is open.
 
 Usage
 -----
 
 ::
 
-    exportlegends <command> [<folder name>]
+    exportlegends
 
-Valid commands are:
+Overlay
+-------
 
-:info:   Exports the world/gen info, the legends XML, and an extended info file.
-:custom: Exports just the extended info file.
-:sites:  Exports all available site maps.
-:maps:   Exports all seventeen detailed maps.
-:all:    Equivalent to calling all of the above, in that order.
+This script also provides an overlay that is managed by the `overlay` framework.
+When the overlay is enabled, a toggle for exporting extended legends data will
+appear below the vanilla "Export XML" button. If the toggle is enabled when the
+"Export XML" button is clicked, then ``exportlegends`` will run alongside the
+vanilla data export.
 
-The default folder name is generated from the region number of the world and the
-current in-world date: ``legends-regionX-YYYYY-MM-DD``. You can use a different
-folder by naming it on the ``exportlegends`` command line. Nested paths are
-accepted, but all but the last folder has to already exist. To export to the
-top-level DF folder, specify ``.`` as the folder name.
+While the extended data is being exported, a status line will appear in place
+of the toggle, reporting the current export target and the overall percent
+complete.
 
-Examples
---------
-
-``exportlegends all``
-    Export all information to the ``legends-regionX-YYYYY-MM-DD`` folder.
-``exportlegends all legends/myregion``
-    Export all information to the ``legends/myregion`` folder.
-``exportlegends custom .``
-    Export just the extended info file to the DF folder (no subfolder).
+There is an additional overlay that masks out the "Done" button while the
+extended export is running. This prevents the player from exiting legends mode
+before the export is complete.

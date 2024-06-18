@@ -3,7 +3,7 @@ emigration
 
 .. dfhack-tool::
     :summary: Allow dwarves to emigrate from the fortress when stressed.
-    :tags: untested fort auto gameplay units
+    :tags: fort gameplay units
 
 If a dwarf is spiraling downward and is unable to cope in your fort, this tool
 will give them the choice to leave the fortress (and the map).

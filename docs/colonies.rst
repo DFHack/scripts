@@ -3,7 +3,7 @@ colonies
 
 .. dfhack-tool::
     :summary: Manipulate vermin colonies and hives.
-    :tags: untested fort armok map
+    :tags: fort armok map
 
 Usage
 -----

@@ -5,17 +5,10 @@ if not dfhack_flags.module then
     qerror('this script cannot be called directly')
 end
 
-local quickfort_reader = reqscript('internal/quickfort/reader')
-
-local config_file = 'dfhack-config/quickfort/quickfort.txt'
-
--- keep deprecated settings in the table so we don't break existing configs
 local settings = {
-    blueprints_dir={default_value='blueprints'},
-    buildings_use_blocks={default_value=false, deprecated=true},
-    force_interactive_build={default_value=false, deprecated=true},
+    blueprints_user_dir={default_value='dfhack-config/blueprints'},
+    blueprints_library_dir={default_value='hack/data/blueprints'},
     force_marker_mode={default_value=false},
-    query_unsafe={default_value=false},
     stockpiles_max_barrels={default_value=-1},
     stockpiles_max_bins={default_value=-1},
     stockpiles_max_wheelbarrows={default_value=0},
@@ -59,44 +52,13 @@ local function set_setting(key, value)
     settings[key].value = value
 end
 
-local function read_settings(reader)
-    local line = reader:get_next_row()
-    while line do
-        local _, _, key, value = string.find(line, '^%s*([%a_]+)%s*=%s*(%S.*)')
-        if (key) then
-            set_setting(key, value)
-        end
-        line = reader:get_next_row()
-    end
-end
-
-local function reset_to_defaults()
-    for _,v in pairs(settings) do
-        v.value = nil
-    end
-end
-
-local function reset_settings(get_reader_fn)
-    local reader = nil
-    local init_reader = function() reader = get_reader_fn() end
-    reset_to_defaults()
-    local ok, err = pcall(init_reader)
-    if ok then
-        read_settings(reader)
-    else
-        print(string.format('%s; using internal defaults', tostring(err)))
-    end
-end
-
 local function print_settings()
     print('active settings:')
     local width = 1
     local settings_arr = {}
     for k,v in pairs(settings) do
-        if not v.deprecated then
-            if #k > width then width = #k end
-            table.insert(settings_arr, k)
-        end
+        if #k > width then width = #k end
+        table.insert(settings_arr, k)
     end
     table.sort(settings_arr)
     for _, k in ipairs(settings_arr) do
@@ -114,18 +76,9 @@ function do_set(args)
 end
 
 function do_reset()
-    print(string.format('reading quickfort configuration from "%s"',
-                        config_file))
-    local get_reader_fn = function()
-        return quickfort_reader.TextReader{filepath=config_file}
+    for _,v in pairs(settings) do
+        v.value = nil
     end
-    reset_settings(get_reader_fn)
-end
-
-if not initialized and not dfhack.internal.IN_TEST then
-    -- this is the first time we're initializing the environment
-    do_reset()
-    initialized = true
 end
 
 if dfhack.internal.IN_TEST then
@@ -133,8 +86,6 @@ if dfhack.internal.IN_TEST then
         settings=settings,
         get_setting=get_setting,
         set_setting=set_setting,
-        read_settings=read_settings,
-        reset_to_defaults=reset_to_defaults,
-        reset_settings=reset_settings,
+        reset_to_defaults=do_reset,
     }
 end

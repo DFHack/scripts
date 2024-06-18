@@ -3,7 +3,7 @@ gui/family-affairs
 
 .. dfhack-tool::
     :summary: Inspect or meddle with romantic relationships.
-    :tags: untested fort armok inspection units
+    :tags: unavailable
 
 This tool provides a user-friendly interface to view romantic relationships,
 with the ability to add, remove, or otherwise change them at your whim -

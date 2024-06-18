@@ -4,35 +4,7 @@
 -- updated with print all and clear all functions on the 11th of April 2015
 -- Praise Armok!
 
---[====[
-
-prefchange
-==========
-Sets preferences for mooding to include a weapon type, equipment type,
-and material.  If you also wish to trigger a mood, see
-`strangemood`.
-
-Valid options:
-
-:show:  show preferences of all units
-:c:     clear preferences of selected unit
-:all:   clear preferences of all units
-:axp:   likes axes, breastplates, and steel
-:has:   likes hammers, mail shirts, and steel
-:swb:   likes short swords, high boots, and steel
-:spb:   likes spears, high boots, and steel
-:mas:   likes maces, shields, and steel
-:xbh:   likes crossbows, helms, and steel
-:pig:   likes picks, gauntlets, and steel
-:log:   likes long swords, gauntlets, and steel
-:dap:   likes daggers, greaves, and steel
-
-Feel free to adjust the values as you see fit, change the has steel to
-platinum, change the axp axes to great axes, whatnot.
-
-]====]
-
-local utils = require 'utils'
+local utils = require('utils')
 
 -- ---------------------------------------------------------------------------
 function axeplate()
@@ -302,20 +274,16 @@ function clear_all(v)
 end
 -- ---------------------------------------------------------------------------
 function printpref_all_dwarves()
-    for _,v in ipairs(df.global.world.units.active) do
-        if v.race == df.global.plotinfo.race_id then
-            print("Showing Preferences for "..dfhack.TranslateName(dfhack.units.getVisibleName(v)))
-            print_all(v)
-        end
+    for _,v in ipairs(dfhack.units.getCitizens()) do
+        print("Showing Preferences for "..dfhack.TranslateName(dfhack.units.getVisibleName(v)))
+        print_all(v)
     end
 end
 -- ---------------------------------------------------------------------------
 function clearpref_all_dwarves()
-    for _,v in ipairs(df.global.world.units.active) do
-        if v.race == df.global.plotinfo.race_id then
-            print("Clearing Preferences for "..dfhack.TranslateName(dfhack.units.getVisibleName(v)))
-            clear_all(v)
-        end
+    for _,v in ipairs(dfhack.units.getCitizens()) do
+        print("Clearing Preferences for "..dfhack.TranslateName(dfhack.units.getVisibleName(v)))
+        clear_all(v)
     end
 end
 -- ---------------------------------------------------------------------------

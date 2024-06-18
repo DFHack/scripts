@@ -3,7 +3,7 @@ set-timeskip-duration
 
 .. dfhack-tool::
     :summary: Modify the duration of the pre-game world update.
-    :tags: untested adventure embark fort armok
+    :tags: adventure embark fort armok
 
 Starting a new fortress/adventurer session is preceded by an "Updating World"
 process which is normally 2 weeks long. This script allows you to modify the

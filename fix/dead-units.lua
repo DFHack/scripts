@@ -1,28 +1,24 @@
--- Remove uninteresting dead units from the unit list.
---[====[
+local argparse = require('argparse')
 
-fix/dead-units
-==============
-Removes uninteresting dead units from the unit list. Doesn't seem to give any
-noticeable performance gain, but migrants normally stop if the unit list grows
-to around 3000 units, and this script reduces it back.
-
-]====]
 local units = df.global.world.units.active
-local count = 0
 local MONTH = 1200 * 28
 local YEAR = MONTH * 12
 
-for i=#units-1,0,-1 do
-    local unit = units[i]
-    if dfhack.units.isDead(unit) and not dfhack.units.isOwnRace(unit) then
+local count = 0
+
+local function scrub_active()
+    for i=#units-1,0,-1 do
+        local unit = units[i]
+        if not dfhack.units.isDead(unit) or dfhack.units.isOwnRace(unit) then
+            goto continue
+        end
         local remove = false
         if dfhack.units.isMarkedForSlaughter(unit) then
             remove = true
         elseif unit.hist_figure_id == -1 then
             remove = true
         elseif not dfhack.units.isOwnCiv(unit) and
-               not (dfhack.units.isMerchant(unit) or dfhack.units.isDiplomat(unit)) then
+            not (dfhack.units.isMerchant(unit) or dfhack.units.isDiplomat(unit)) then
             remove = true
         end
         if remove and unit.counters.death_id ~= -1 then
@@ -44,7 +40,34 @@ for i=#units-1,0,-1 do
             count = count + 1
             units:erase(i)
         end
+        ::continue::
     end
 end
 
-print('Units removed from active: '..count)
+local function scrub_burrows()
+    for _, burrow in ipairs(df.global.plotinfo.burrows.list) do
+        for _, unit_id in ipairs(burrow.units) do
+            local unit = df.unit.find(unit_id)
+            if unit and dfhack.units.isDead(unit) then
+                count = count + 1
+                dfhack.burrows.setAssignedUnit(burrow, unit, false)
+            end
+        end
+    end
+end
+
+local args = {...}
+if not args[1] then args[1] = '--active' end
+
+local quiet = false
+
+argparse.processArgsGetopt(args, {
+    {nil, 'active', handler=scrub_active},
+    {nil, 'burrow', handler=scrub_burrows},
+    {nil, 'burrows', handler=scrub_burrows},
+    {'q', 'quiet', handler=function() quiet = true end},
+})
+
+if count > 0 or not quiet then
+    print('Dead units scrubbed: ' .. count)
+end

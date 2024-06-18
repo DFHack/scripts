@@ -3,7 +3,7 @@ starvingdead
 
 .. dfhack-tool::
     :summary: Prevent infinite accumulation of roaming undead.
-    :tags: fort auto fps gameplay units
+    :tags: fort fps gameplay units
 
 With this tool running, all undead that have been on the map for one month
 gradually decay, losing strength, speed, and toughness. After six months,

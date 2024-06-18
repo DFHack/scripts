@@ -1,9 +1,9 @@
--- Prevents a "loyalty cascade" (civil war) when a citizen is killed.
+-- Prevents a "loyalty cascade" (intra-fort civil war) when a citizen is killed.
 
 -- Checks if a unit is a former member of a given entity as well as it's
 -- current enemy.
 local function getUnitRenegade(unit, entity_id)
-    local unit_entity_links = df.global.world.history.figures[unit.hist_figure_id].entity_links
+    local unit_entity_links = df.historical_figure.find(unit.hist_figure_id).entity_links
     local former_index = nil
     local enemy_index = nil
 
@@ -27,7 +27,7 @@ local function getUnitRenegade(unit, entity_id)
 end
 
 local function convertUnit(unit, entity_id, former_index, enemy_index)
-    local unit_entity_links = df.global.world.history.figures[unit.hist_figure_id].entity_links
+    local unit_entity_links = df.historical_figure.find(unit.hist_figure_id).entity_links
 
     unit_entity_links:erase(math.max(former_index, enemy_index))
     unit_entity_links:erase(math.min(former_index, enemy_index))
@@ -53,27 +53,27 @@ local function fixUnit(unit)
     -- If the unit is a former member of your civilization, as well as now an
     -- enemy of it, we make it become a member again.
     if former_civ_index and enemy_civ_index then
-        local civ_name = dfhack.TranslateName(df.global.world.entities.all[df.global.plotinfo.civ_id].name)
+        local civ_name = dfhack.TranslateName(df.historical_entity.find(df.global.plotinfo.civ_id).name)
 
         convertUnit(unit, df.global.plotinfo.civ_id, former_civ_index, enemy_civ_index)
 
-        dfhack.gui.showAnnouncement(([[loyaltycascade: %s is now a member of %s again]]):format(unit_name, civ_name), COLOR_WHITE)
+        dfhack.gui.showAnnouncement(('loyaltycascade: %s is now a member of %s again'):format(unit_name, civ_name), COLOR_WHITE)
 
         fixed = true
     end
 
     if former_group_index and enemy_group_index then
-        local group_name = dfhack.TranslateName(df.global.world.entities.all[df.global.plotinfo.group_id].name)
+        local group_name = dfhack.TranslateName(df.historical_entity.find(df.global.plotinfo.group_id).name)
 
         convertUnit(unit, df.global.plotinfo.group_id, former_group_index, enemy_group_index)
 
-        dfhack.gui.showAnnouncement(([[loyaltycascade: %s is now a member of %s again]]):format(unit_name, group_name), COLOR_WHITE)
+        dfhack.gui.showAnnouncement(('loyaltycascade: %s is now a member of %s again'):format(unit_name, group_name), COLOR_WHITE)
 
         fixed = true
     end
 
     if fixed and unit.enemy.enemy_status_slot ~= -1 then
-        local status_cache = unit.enemy.enemy_status_cache
+        local status_cache = df.global.world.enemy_status_cache
         local status_slot = unit.enemy.enemy_status_slot
 
         unit.enemy.enemy_status_slot = -1
@@ -84,13 +84,13 @@ local function fixUnit(unit)
         end
 
         for index, _ in pairs(status_cache.rel_map) do
-            status_cache.rel_map[index] = -1
+            status_cache.rel_map[index][status_slot] = -1
         end
 
         -- TODO: what if there were status slots taken above status_slot?
         -- does everything need to be moved down by one?
-        if cache.next_slot > status_slot then
-            cache.next_slot = status_slot
+        if status_cache.next_slot > status_slot then
+            status_cache.next_slot = status_slot
         end
     end
 
@@ -98,14 +98,14 @@ local function fixUnit(unit)
 end
 
 local count = 0
-for _, unit in pairs(df.global.world.units.all) do
-    if dfhack.units.isCitizen(unit) and fixUnit(unit) then
+for _, unit in pairs(dfhack.units.getCitizens()) do
+    if fixUnit(unit) then
         count = count + 1
     end
 end
 
 if count > 0 then
-    print(([[Fixed %s units from a loyalty cascade.]]):format(count))
+    print(('Fixed %s units from a loyalty cascade.'):format(count))
 else
-    print("No loyalty cascade found.")
+    print('No loyalty cascade found.')
 end

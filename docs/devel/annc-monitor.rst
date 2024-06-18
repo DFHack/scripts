@@ -3,7 +3,7 @@ devel/annc-monitor
 
 .. dfhack-tool::
     :summary: Track announcements and reports and echo them to the console.
-    :tags: untested dev
+    :tags: dev
 
 This tool monitors announcements and reports and echoes their contents to the
 console.

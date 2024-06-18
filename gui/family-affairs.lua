@@ -1,32 +1,5 @@
 -- gui/family-affairs
 -- derived from v1.2 @ http://www.bay12forums.com/smf/index.php?topic=147779
-local helpstr = [====[
-
-gui/family-affairs
-==================
-A user-friendly interface to view romantic relationships,
-with the ability to add, remove, or otherwise change them at
-your whim - fantastic for depressed dwarves with a dead spouse
-(or matchmaking players...).
-
-The target/s must be alive, sane, and in fortress mode.
-
-.. image:: /docs/images/family-affairs.png
-   :align: center
-
-``gui/family-affairs [unitID]``
-        shows GUI for the selected unit, or the specified unit ID
-
-``gui/family-affairs divorce [unitID]``
-        removes all spouse and lover information from the unit
-        and it's partner, bypassing almost all checks.
-
-``gui/family-affairs [unitID] [unitID]``
-        divorces the two specified units and their partners,
-        then arranges for the two units to marry, bypassing
-        almost all checks.  Use with caution.
-
-]====]
 
 local dlg = require ('gui.dialogs')
 
@@ -187,9 +160,8 @@ function ChooseNewSpouse (source)
     local choicelist = {}
     targetlist = {}
 
-    for k,v in pairs (df.global.world.units.active) do
-        if dfhack.units.isCitizen(v)
-            and v.race == source.race
+    for k,v in pairs (dfhack.units.getCitizens()) do
+        if v.race == source.race
             and v.sex ~= source.sex
             and v.relationship_ids.Spouse == -1
             and v.relationship_ids.Lover == -1
@@ -250,10 +222,11 @@ end
 
 local args = {...}
 
-if args[1] == "help" or args[1] == "?" then print(helpstr) return end
+if args[1] == "help" or args[1] == "?" then print(dfhack.script_help()) return end
 
 if not dfhack.world.isFortressMode() then
-    print (helpstr) qerror ("invalid game mode") return
+    print(dfhack.script_help())
+    qerror("invalid game mode") return
 end
 
 if args[1] == "divorce" and tonumber(args[2]) then
@@ -278,13 +251,13 @@ if tonumber(args[1]) then
 end
 
 if selected then
-    if dfhack.units.isCitizen(selected) and dfhack.units.isSane(selected) then
+    if dfhack.units.isCitizen(selected) then
         MainDialog(selected)
     else
         qerror("You must select a sane fortress citizen.")
         return
     end
 else
-    print (helpstr)
+    print(dfhack.script_help())
     qerror("Select a sane fortress dwarf")
 end

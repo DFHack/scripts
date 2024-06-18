@@ -9,7 +9,7 @@ This tool provides an in-game virtual keyboard. You can choose from all the
 characters that DF supports (code page 437). Just click on the characters to
 build the text that you want to send to the parent screen. The text is sent
 as soon as you hit :kbd:`Enter`, so make sure there is a text field selected
-before starting this UI!
+in the parent window before starting this UI!
 
 Usage
 -----

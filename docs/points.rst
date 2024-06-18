@@ -3,7 +3,7 @@ points
 
 .. dfhack-tool::
     :summary: Sets available points at the embark screen.
-    :tags: untested embark fort armok
+    :tags: embark fort armok
 
 Run at the embark screen when you are choosing items to bring with you and
 skills to assign to your dwarves. You can set the available points to any

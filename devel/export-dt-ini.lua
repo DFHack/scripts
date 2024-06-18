@@ -1,11 +1,5 @@
 -- Exports an ini file for Dwarf Therapist.
---[====[
-devel/export-dt-ini
-===================
-Exports an ini file containing memory addresses for Dwarf Therapist.
-]====]
 
-local utils = require 'utils'
 local ms = require 'memscan'
 
 -- Utility functions
@@ -72,9 +66,9 @@ end
 header('addresses')
 address('cur_year_tick',globals,'cur_year_tick')
 address('current_year',globals,'cur_year')
-address('dwarf_civ_index',globals,'ui','civ_id')
-address('dwarf_race_index',globals,'ui','race_id')
-address('fortress_entity',globals,'ui','main','fortress_entity')
+address('dwarf_civ_index',globals,'plotinfo','civ_id')
+address('dwarf_race_index',globals,'plotinfo','race_id')
+address('fortress_entity',globals,'plotinfo','main','fortress_entity')
 address('historical_entities_vector',globals,'world','entities','all')
 address('creature_vector',globals,'world','units','all')
 address('active_creature_vector',globals,'world','units','active')
@@ -129,6 +123,8 @@ address('historical_figures_vector',globals,'world','history','figures')
 address('world_site_type',df.world_site,'type')
 address('active_sites_vector',df.world_data,'active_site')
 address('gview',globals,'gview')
+address('external_flag',globals,'game','external_flag')
+address('global_equipment_update',globals,'plotinfo','equipment','update')
 vtable('viewscreen_setupdwarfgame_vtable','viewscreen_setupdwarfgamest')
 
 header('offsets')
@@ -226,10 +222,10 @@ address('id',df.item,'id')
 address('general_refs',df.item,'general_refs')
 address('stack_size',df.item_actual,'stack_size')
 address('wear',df.item_actual,'wear')
-address('mat_type',df.item_crafted,'mat_type')
-address('mat_index',df.item_crafted,'mat_index')
-address('maker_race',df.item_crafted,'maker_race')
-address('quality',df.item_crafted,'quality')
+address('mat_type',df.item_constructed,'mat_type') -- should be item_crafted
+address('mat_index',df.item_constructed,'mat_index') -- should be item_crafted
+address('maker_race',df.item_constructed,'maker_race') -- should be item_crafted
+address('quality',df.item_constructed,'quality') -- should be item_crafted
 address('artifact_id',df.artifact_record,'id')
 address('artifact_name',df.artifact_record,'name')
 
@@ -319,11 +315,11 @@ address('civ',df.unit,'civ_id')
 address('specific_refs',df.unit,'specific_refs')
 address('squad_id',df.unit,'military','squad_id')
 address('squad_position',df.unit,'military','squad_position')
-address('recheck_equipment',df.unit,'military','pickup_flags')
+address('recheck_equipment',df.unit,'uniform','pickup_flags')
 address('mood',df.unit,'mood')
 address('birth_year',df.unit,'birth_year')
 address('birth_time',df.unit,'birth_time')
-address('pet_owner_id',df.unit,'relationship_ids',df.unit_relationship_type.Pet)
+address('pet_owner_id',df.unit,'relationship_ids',df.unit_relationship_type.PetOwner)
 address('current_job',df.unit,'job','current_job')
 address('physical_attrs',df.unit,'body','physical_attrs')
 address('body_size',df.unit,'appearance','body_modifiers')
@@ -390,7 +386,7 @@ address('emotions',df.unit_personality,'emotions')
 address('goals',df.unit_personality,'dreams')
 address('goal_realized',df.unit_personality.T_dreams,'flags')
 address('traits',df.unit_personality,'traits')
-address('stress',df.unit_personality,'stress')
+address('stress_level',df.unit_personality,'stress')
 address('needs',df.unit_personality,'needs')
 address('current_focus',df.unit_personality,'current_focus')
 address('undistracted_focus',df.unit_personality,'undistracted_focus')
@@ -404,13 +400,13 @@ address('focus_level',df.unit_personality.T_needs,'focus_level')
 address('need_level',df.unit_personality.T_needs,'need_level')
 
 header('emotion_offsets')
-address('emotion_type',df.unit_personality.T_emotions,'type')
-address('strength',df.unit_personality.T_emotions,'strength')
-address('thought_id',df.unit_personality.T_emotions,'thought')
-address('sub_id',df.unit_personality.T_emotions,'subthought')
-address('level',df.unit_personality.T_emotions,'severity')
-address('year',df.unit_personality.T_emotions,'year')
-address('year_tick',df.unit_personality.T_emotions,'year_tick')
+address('emotion_type',df.personality_moodst,'type')
+address('strength',df.personality_moodst,'relative_strength')
+address('thought_id',df.personality_moodst,'thought')
+address('sub_id',df.personality_moodst,'subthought')
+address('level',df.personality_moodst,'severity')
+address('year',df.personality_moodst,'year')
+address('year_tick',df.personality_moodst,'year_tick')
 
 header('job_details')
 address('id',df.job,'job_type')
@@ -431,10 +427,10 @@ address('schedules',df.squad,'schedule')
 value('sched_size',df.squad_schedule_entry:sizeof())
 address('sched_orders',df.squad_schedule_entry,'orders')
 address('sched_assign',df.squad_schedule_entry,'order_assignments')
-address('alert',df.squad,'cur_alert_idx')
+address('alert',df.squad,'cur_routine_idx')
 address('carry_food',df.squad,'carry_food')
 address('carry_water',df.squad,'carry_water')
-address('ammunition',df.squad,'ammunition')
+address('ammunition',df.squad,'ammo','ammunition')
 address('ammunition_qty',df.squad_ammo_spec,'amount')
 address('quiver',df.squad_position,'quiver')
 address('backpack',df.squad_position,'backpack')
@@ -448,6 +444,7 @@ address('shield_vector',df.squad_position,'uniform','shield')
 address('weapon_vector',df.squad_position,'uniform','weapon')
 address('uniform_item_filter',df.squad_uniform_spec,'item_filter')
 address('uniform_indiv_choice',df.squad_uniform_spec,'indiv_choice')
+address('equipment_update',df.squad,'ammo','update')
 
 header('activity_offsets')
 address('activity_type',df.activity_entry,'type')
@@ -470,7 +467,7 @@ address('name',df.poetic_form,'name')
 header('viewscreen_offsets')
 address('view',df.interfacest,'view')
 address('child',df.viewscreen,'child')
-address('setupdwarfgame_units',df.viewscreen_setupdwarfgamest,'units')
+address('setupdwarfgame_units',df.viewscreen_setupdwarfgamest,'s_unit')
 
 -- Final creation of the file
 

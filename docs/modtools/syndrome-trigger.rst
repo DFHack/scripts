@@ -3,7 +3,7 @@ modtools/syndrome-trigger
 
 .. dfhack-tool::
     :summary: Trigger DFHack commands when units acquire syndromes.
-    :tags: untested dev
+    :tags: unavailable
 
 This script helps you set up commands that trigger when syndromes are applied to
 units.

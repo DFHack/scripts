@@ -25,12 +25,9 @@ function ActionPanel:init()
     self:addviews{
         widgets.WrappedLabel{
             view_id='action_label',
-            text_to_wrap=self:callback('get_action_text')},
-        widgets.TooltipLabel{
-            view_id='selected_area',
-            indent=1,
-            text={{text=self:callback('get_area_text')}},
-            show_tooltip=self.get_mark_fn}}
+            text_to_wrap=self:callback('get_action_text')
+        }
+    }
 end
 function ActionPanel:get_action_text()
     local text = 'Select the '
@@ -42,16 +39,6 @@ function ActionPanel:get_action_text()
         text = text .. 'first corner'
     end
     return text .. ' with the mouse.'
-end
-function ActionPanel:get_area_text()
-    local mark = self.get_mark_fn()
-    if not mark then return '' end
-    local other = dfhack.gui.getMousePos()
-            or {x=mark.x, y=mark.y, z=df.global.window_z}
-    local width, height, depth = get_dims(mark, other)
-    local tiles = width * height * depth
-    local plural = tiles > 1 and 's' or ''
-    return ('%dx%dx%d (%d tile%s)'):format(width, height, depth, tiles, plural)
 end
 
 NamePanel = defclass(NamePanel, widgets.ResizingPanel)
@@ -65,6 +52,7 @@ function NamePanel:init()
         widgets.EditField{
             view_id='name',
             key='CUSTOM_N',
+            label_text='name: ',
             text=self.name,
             on_change=self:callback('update_tooltip'),
             on_focus=self:callback('on_edit_focus'),
@@ -111,7 +99,8 @@ function NamePanel:detect_name_collision()
 
     local suffix_pos = #name + 1
 
-    local paths = dfhack.filesystem.listdir_recursive('blueprints', nil, false)
+    local paths = dfhack.filesystem.listdir_recursive('dfhack-config/blueprints', nil, false)
+    if not paths then return false end
     for _,v in ipairs(paths) do
         if (v.isdir and v.path..'/' == name) or
                 (v.path:startswith(name) and
@@ -147,7 +136,7 @@ function PhasesPanel:init()
         widgets.CycleHotkeyLabel{
             view_id='phases',
             key='CUSTOM_SHIFT_P',
-            label='phases',
+            label='phases:',
             options={{label='Autodetect', value='Autodetect', pen=COLOR_GREEN},
                      'Custom'},
             initial_option=self.phases.auto_phase and 'Autodetect' or 'Custom',
@@ -165,39 +154,38 @@ function PhasesPanel:init()
         widgets.Panel{
             frame={h=1},
             subviews={widgets.ToggleHotkeyLabel{view_id='dig_phase',
-                        frame={t=0, l=0}, key='CUSTOM_D', label='dig',
+                        frame={t=0, l=0, w=19}, key='CUSTOM_D', label='dig',
                         initial_option=self:get_default('dig'), label_width=9},
                       widgets.ToggleHotkeyLabel{view_id='carve_phase',
-                        frame={t=0, l=19}, key='CUSTOM_SHIFT_D', label='carve',
+                        frame={t=0, l=19, w=19}, key='CUSTOM_SHIFT_D', label='carve',
                         initial_option=self:get_default('carve')},
                     }},
         widgets.Panel{
             frame={h=1},
             subviews={widgets.ToggleHotkeyLabel{view_id='construct_phase',
-                        frame={t=0, l=0}, key='CUSTOM_SHIFT_B',
+                        frame={t=0, l=0, w=19}, key='CUSTOM_SHIFT_B',
                         label='construct',
                         initial_option=self:get_default('construct')},
                       widgets.ToggleHotkeyLabel{view_id='build_phase',
-                        frame={t=0, l=19}, key='CUSTOM_B', label='build',
+                        frame={t=0, l=19, w=19}, key='CUSTOM_B', label='build',
                         initial_option=self:get_default('build')}}},
---         widgets.Panel{frame={h=1},
---             subviews={widgets.ToggleHotkeyLabel{view_id='place_phase',
---                         frame={t=0, l=0},
---                         key='CUSTOM_P', label='place',
---                         initial_option=self:get_default('place')},
+        widgets.Panel{frame={h=1},
+            subviews={widgets.ToggleHotkeyLabel{view_id='place_phase',
+                        frame={t=0, l=0, w=19}, key='CUSTOM_P', label='place',
+                        initial_option=self:get_default('place'), label_width=9},
 --                     widgets.ToggleHotkeyLabel{view_id='zone_phase',
---                         frame={t=0, l=15},
+--                         frame={t=0, l=15, w=19},
 --                         key='CUSTOM_Z', label='zone',
 --                         initial_option=self:get_default('zone'),
 --                         label_width=5}
---                     }},
+                    }},
 --         widgets.Panel{frame={h=1},
 --             subviews={widgets.ToggleHotkeyLabel{view_id='query_phase',
---                         frame={t=0, l=0},
+--                         frame={t=0, l=0, w=19},
 --                         key='CUSTOM_Q', label='query',
 --                         initial_option=self:get_default('query')},
 --                     widgets.ToggleHotkeyLabel{view_id='rooms_phase',
---                         frame={t=0, l=15},
+--                         frame={t=0, l=15, w=19},
 --                         key='CUSTOM_SHIFT_Q', label='rooms',
 --                         initial_option=self:get_default('rooms')}
 --                     }},
@@ -240,8 +228,8 @@ function StartPosPanel:init()
     self:addviews{
         widgets.CycleHotkeyLabel{
             view_id='startpos',
-            key='CUSTOM_P',
-            label='playback start',
+            key='CUSTOM_O',
+            label='playback start:',
             options={'Unset', 'Setting', 'Set'},
             initial_option=self.start_pos and 'Set' or 'Unset',
             on_change=self:callback('on_change'),
@@ -292,7 +280,7 @@ end
 Blueprint = defclass(Blueprint, widgets.Window)
 Blueprint.ATTRS {
     frame_title='Blueprint',
-    frame={w=47, h=40, r=2, t=18},
+    frame={w=47, h=38, r=2, t=18},
     resizable=true,
     resize_min={h=10},
     autoarrange_subviews=true,
@@ -324,7 +312,7 @@ function Blueprint:init()
             widgets.ToggleHotkeyLabel{
                 view_id='engrave',
                 key='CUSTOM_SHIFT_E',
-                label='engrave',
+                label='engrave:',
                 options={{label='On', value=true}, {label='Off', value=false}},
                 initial_option=not not self.presets.engrave},
             widgets.TooltipLabel{
@@ -334,7 +322,7 @@ function Blueprint:init()
             widgets.ToggleHotkeyLabel{
                 view_id='smooth',
                 key='CUSTOM_SHIFT_S',
-                label='smooth',
+                label='smooth:',
                 options={{label='On', value=true}, {label='Off', value=false}},
                 initial_option=not not self.presets.smooth},
             widgets.TooltipLabel{
@@ -344,7 +332,7 @@ function Blueprint:init()
             widgets.CycleHotkeyLabel{
                 view_id='format',
                 key='CUSTOM_F',
-                label='format',
+                label='format:',
                 options={{label='Minimal text .csv', value='minimal', pen=COLOR_GREEN},
                         {label='Pretty text .csv', value='pretty'}},
                 initial_option=self.presets.format},
@@ -361,7 +349,7 @@ function Blueprint:init()
             widgets.ToggleHotkeyLabel{
                 view_id='meta',
                 key='CUSTOM_M',
-                label='meta',
+                label='meta:',
                 initial_option=not self.presets.nometa},
             widgets.TooltipLabel{
                 text_to_wrap='Combine blueprints that can be replayed together.',
@@ -370,7 +358,7 @@ function Blueprint:init()
             widgets.CycleHotkeyLabel{
                 view_id='splitby',
                 key='CUSTOM_T',
-                label='split',
+                label='split:',
                 options={{label='No', value='none', pen=COLOR_GREEN},
                             {label='By group', value='group'},
                             {label='By phase', value='phase'}},
@@ -458,7 +446,7 @@ end
 function Blueprint:onInput(keys)
     if Blueprint.super.onInput(self, keys) then return true end
 
-    if keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
+    if keys.LEAVESCREEN or keys._MOUSE_R then
         if self:is_setting_start_pos() then
             self.subviews.startpos.option_idx = 1
             self.saved_cursor = nil
@@ -473,7 +461,7 @@ function Blueprint:onInput(keys)
     end
 
     local pos = nil
-    if keys._MOUSE_L_DOWN and not self:getMouseFramePos() then
+    if keys._MOUSE_L and not self:getMouseFramePos() then
         pos = dfhack.gui.getMousePos()
         if pos then
             guidm.setCursorPos(pos)
@@ -496,9 +484,6 @@ function Blueprint:onInput(keys)
         end
         return true
     end
-
-    -- send movement keys through, but otherwise we're a modal dialog
-    return not guidm.getMapKey(keys)
 end
 
 -- assemble and execute the blueprint commandline
@@ -533,6 +518,14 @@ function Blueprint:commit(pos)
 
     -- set cursor to top left corner of the *uppermost* z-level
     local bounds = self:get_bounds()
+    if not bounds then
+        dialogs.MessageBox{
+            frame_title='Error',
+            text='Ensure blueprint bounds are set'
+        }:show()
+        return
+    end
+
     table.insert(params, ('--cursor=%d,%d,%d')
                          :format(bounds.x1, bounds.y1, bounds.z2))
 
@@ -597,22 +590,23 @@ end
 BlueprintScreen = defclass(BlueprintScreen, gui.ZScreen)
 BlueprintScreen.ATTRS {
     focus_path='blueprint',
-    force_pause=true,
-    pass_pause=false,
     pass_movement_keys=true,
     pass_mouse_clicks=false,
     presets=DEFAULT_NIL,
 }
 
 function BlueprintScreen:init()
-    self.saved_pause_state = df.global.pause_state
-    df.global.pause_state = true
-    self:addviews{Blueprint{presets=presets}}
+    local window = Blueprint{presets=self.presets}
+    self:addviews{
+        window,
+        widgets.DimensionsTooltip{
+            get_anchor_pos_fn=function() return window.mark end,
+        },
+    }
 end
 
 function BlueprintScreen:onDismiss()
     view = nil
-    df.global.pause_state = self.saved_pause_state
 end
 
 if dfhack_flags.module then

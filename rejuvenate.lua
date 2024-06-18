@@ -1,29 +1,18 @@
--- make the selected dwarf 20 years old
+-- set age of selected unit
 -- by vjek
 --@ module = true
---[====[
-
-rejuvenate
-==========
-Decreases the age of the selected dwarf to 20 years. Useful if valuable citizens
-are getting old.
-
-Arguments:
-
-- ``-all``: applies to all citizens
-- ``-force``: also applies to units under 20 years old. Useful if there are too many babies around...
-- ``-dry-run``: only list units that would be changed; don't actually change ages
-
-]====]
 
 local utils = require('utils')
 
-function rejuvenate(unit, force, dry_run)
+function rejuvenate(unit, force, dry_run, age)
     local current_year = df.global.cur_year
-    local new_birth_year = current_year - 20
+    if not age then
+        age = 20
+    end
+    local new_birth_year = current_year - age
     local name = dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(unit)))
     if unit.birth_year > new_birth_year and not force then
-        print(name .. ' is under 20 years old. Use -force to force.')
+        print(name .. ' is under ' .. age .. ' years old. Use --force to force.')
         return
     end
     if dry_run then
@@ -31,29 +20,24 @@ function rejuvenate(unit, force, dry_run)
         return
     end
     unit.birth_year = new_birth_year
-    if unit.old_year < current_year + 100 then
-        unit.old_year = current_year + 100
+    if unit.old_year < new_birth_year + 160 then
+        unit.old_year = new_birth_year + 160
     end
     if unit.profession == df.profession.BABY or unit.profession == df.profession.CHILD then
         unit.profession = df.profession.STANDARD
     end
-    print(name .. ' is now 20 years old and will live at least 100 years')
+    print(name .. ' is now ' .. age .. ' years old and will live to at least 160')
 end
 
 function main(args)
-    local current_year, newbirthyear
     local units = {} --as:df.unit[]
     if args.all then
-        for _, u in ipairs(df.global.world.units.all) do
-            if dfhack.units.isCitizen(u) then
-                table.insert(units, u)
-            end
-        end
+        units = dfhack.units.getCitizens()
     else
-        table.insert(units, dfhack.gui.getSelectedUnit(true) or qerror("No unit under cursor! Aborting."))
+        table.insert(units, dfhack.gui.getSelectedUnit(true) or qerror("Please select a unit in the UI."))
     end
     for _, u in ipairs(units) do
-        rejuvenate(u, args.force, args['dry-run'])
+        rejuvenate(u, args.force, args['dry-run'], args.age)
     end
 end
 
@@ -63,4 +47,5 @@ main(utils.processArgs({...}, utils.invert({
     'all',
     'force',
     'dry-run',
+    'age'
 })))

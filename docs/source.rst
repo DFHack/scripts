@@ -20,7 +20,7 @@ Usage
     Add a source or drain at the selected tile position. If the target level is
     not specified, it defaults to ``7``. The cursor must be over a flow-passable
     tile (e.g. empty space, floor, staircase, etc.) and not too high in the sky.
-``source list``
+``source [list]``
     List all currently registered source tiles.
 ``source delete``
     Remove the source under the cursor.

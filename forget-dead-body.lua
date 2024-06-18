@@ -1,14 +1,6 @@
 -- Removes emotions associated with seeing a dead body
 --@ module = true
 
-local help = [====[
-
-forget-dead-body
-================
-Removes emotions associated with seeing a dead body.
-
-]====]
-
 local utils = require 'utils'
 
 local validArgs = utils.invert({
@@ -28,22 +20,20 @@ function main(...)
     local args = utils.processArgs({...}, validArgs)
 
     if args.help then
-        print(help)
+        print(dfhack.script_help())
         return
     end
 
     if args.all then
-        for _, unit in ipairs(df.global.world.units.active) do
-            if dfhack.units.isCitizen(unit) then
-                forgetDeadBody(unit)
-            end
+        for _, unit in ipairs(dfhack.units.getCitizens()) do
+            forgetDeadBody(unit)
         end
     else
         local unit = dfhack.gui.getSelectedUnit()
         if unit then
             forgetDeadBody(unit)
         else
-            qerror('Invalid usage: No unit selected and -all argument not given.')
+            qerror('Invalid usage: No unit selected and --all argument not given.')
         end
     end
 end

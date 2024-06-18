@@ -2,7 +2,7 @@ prioritize
 ==========
 
 .. dfhack-tool::
-    :summary: Automatically boost the priority of selected job types.
+    :summary: Automatically boost the priority of important job types.
     :tags: fort auto jobs
 
 This tool encourages specified types of jobs to get assigned and completed as
@@ -22,9 +22,6 @@ types in your fort, the *other* tasks in your fort can get ignored. This causes
 the same problem that ``prioritize`` is designed to solve. The script provides
 a good default set of job types to prioritize that have been suggested and
 playtested by the DF community.
-
-Also see the `do-job-now tweak <tweak>` and the `do-job-now` script for boosting
-the priority of specific individual jobs (as opposed to entire classes of jobs).
 
 Usage
 -----
@@ -113,14 +110,24 @@ Default list of job types to prioritize
 
 The community has assembled a good default list of job types that most players
 will benefit from. They have been playtested across a wide variety of fort
-types. It is a good idea to enable prioritize for all your forts.
+types. It is a good idea to enable `prioritize` with at least these defaults
+for all your forts.
 
 The default prioritize list includes:
 
 - Handling items that can rot
 - Medical, hygiene, and hospice tasks
-- Putting items in bins/barrels/pots/minecarts
 - Interactions with animals and prisoners
-- Dumping items, pulling levers, felling trees, and other tasks that you, as a
-  player, might stare at and internally scream "why why why isn't this getting
-  done??".
+- Noble-specific tasks (like managing workorders)
+- Dumping items, felling trees, and other tasks that you, as a player, might
+  stare at and internally scream "why why why isn't this getting done??".
+
+Overlay
+-------
+
+This script also provides an overlay that is managed by the `overlay`
+framework. A panel is added to the info sheet for buildings that are queued for
+construction or destruction. If a unit has taken the job, their name will be
+listed. Click on the name to zoom to the unit. There is also a toggle button
+for high priority status for the job. Toggle it on if the job is not being
+taken and you need it to be completed quickly.

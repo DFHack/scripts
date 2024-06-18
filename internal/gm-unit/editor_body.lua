@@ -2,7 +2,6 @@
 --@ module = true
 
 local dialog = require 'gui.dialogs'
-local gui = require 'gui'
 local widgets = require 'gui.widgets'
 local base_editor = reqscript("internal/gm-unit/base_editor")
 
@@ -42,6 +41,7 @@ function Editor_Body_Modifier:selected(index, selected)
     nil,
     tostring(selected.value),
     function(newValue)
+      self.target_unit.flags4.portrait_must_be_refreshed = true
       local value = tonumber(newValue)
       if self.partChoice.type == "part" then
         self:setPartModifier(selected.modifier.idx, value)
@@ -163,7 +163,7 @@ function Editor_Body_Modifier:init(args)
 end
 
 function Editor_Body_Modifier:onInput(keys)
-    if keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
+    if keys.LEAVESCREEN or keys._MOUSE_R then
         self:setFocus(false)
         self.visible = false
     else
@@ -183,8 +183,8 @@ function makePartList(caste)
 
   for index, modifier in ipairs(caste.bp_appearance.modifiers) do
     local name
-    if modifier.noun ~= "" then
-      name = modifier.noun
+    if modifier.modifier.noun ~= "" then
+      name = modifier.modifier.noun
     else
       name = caste.body_info.body_parts[modifier.body_parts[0]].name_singular[0].value -- Use the name of the first body part modified
     end

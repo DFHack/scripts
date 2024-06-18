@@ -1,56 +1,4 @@
--- Embark underground.
--- author: Atomic Chicken
-
 --@ module = true
-
-local usage = [====[
-
-deep-embark
-===========
-Moves the starting units and equipment to
-a specific underground region upon embarking.
-
-This script can be run directly from the console
-at any point whilst setting up an embark.
-
-Alternatively, create a file called "onLoad.init"
-in the DF raw folder (if one does not exist already)
-and enter the script command within it. Doing so will
-cause the script to run automatically and should hence
-be especially useful for modders who want their mod
-to include underground embarks by default.
-
-Example::
-
-    deep-embark -depth CAVERN_2
-
-Usage::
-
-    -depth X
-        (obligatory)
-        replace "X" with one of the following:
-            CAVERN_1
-            CAVERN_2
-            CAVERN_3
-            UNDERWORLD
-
-    -blockDemons
-        including this arg will prevent demon surges
-        in the context of breached underworld spires
-        (intended mainly for UNDERWORLD embarks)
-        ("wildlife" demon spawning will be unaffected)
-
-    -atReclaim
-        if the script is being run from onLoad.init,
-        including this arg will enable deep embarks
-        when reclaiming sites too
-        (there's no need to specify this if running
-        the script directly from the console)
-
-    -clear
-        re-enable normal surface embarks
-
-]====]
 
 local utils = require 'utils'
 
@@ -99,8 +47,8 @@ function getFeatureBlocks(featureID)
 end
 
 function isValidTiletype(tiletype)
-  local tiletype = df.tiletype[tiletype]
-  local tiletypeAttrs = df.tiletype.attrs[tiletype]
+  local tt = df.tiletype[tiletype]
+  local tiletypeAttrs = df.tiletype.attrs[tt]
   local material = tiletypeAttrs.material
   local forbiddenMaterials = {
     df.tiletype_material.TREE, -- so as not to embark stranded on top of a tree
@@ -114,11 +62,7 @@ function isValidTiletype(tiletype)
     end
   end
   local shapeAttrs = df.tiletype_shape.attrs[tiletypeAttrs.shape]
-  if shapeAttrs.walkable and shapeAttrs.basic_shape ~= df.tiletype_shape_basic.Open then -- downward ramps are walkable but open; units placed here would fall
-    return true
-  else
-    return false
-  end
+  return shapeAttrs.walkable
 end
 
 function getValidEmbarkTiles(block)
@@ -148,7 +92,7 @@ function blockGlowingBarrierAnnouncements(recenter)
   dfhack.timeout(1,'ticks', function() -- barrier disappears after 1 tick
     announcementFlags:assign(oldFlags) -- restore announcement settings
     if recenter then
---    Remove glowing barrier notifications:
+      -- Remove glowing barrier notifications:
       local status = df.global.world.status
       local announcements = status.announcements
       for i = #announcements-1, 0, -1 do
@@ -178,7 +122,7 @@ function reveal(pos)
   local tiletype = block.tiletype[x%16][y%16]
   if tiletype ~= df.tiletype.GlowingBarrier then -- to avoid multiple instances
     block.tiletype[x%16][y%16] = df.tiletype.GlowingBarrier
-    local barriers = df.global.world.glowing_barriers
+    local barriers = df.global.world.event.glowing_barriers
     local barrier = df.glowing_barrier:new()
     barrier.buildings:insert('#',-1) -- being unbound to a building makes the barrier disappear immediately
     barrier.pos:assign(pos)
@@ -197,7 +141,7 @@ end
 function moveEmbarkStuff(selectedBlock, embarkTiles)
   local spawnPosCentre
   for _, hotkey in ipairs(df.global.plotinfo.main.hotkeys) do
-    if hotkey.name == "Gate" then -- the preset hotkey is centred around the spawn point
+    if hotkey.name == "Wagon arrival location" then -- the preset hotkey is centred around the spawn point
       spawnPosCentre = xyz2pos(hotkey.x, hotkey.y, hotkey.z)
       hotkey:assign(embarkTiles[math.random(1, #embarkTiles)]) -- set the hotkey to the new spawn point
       break
@@ -234,7 +178,7 @@ function moveEmbarkStuff(selectedBlock, embarkTiles)
     if wagon.age == 0 then -- just in case there's an older wagon present for some reason
       local contained = wagon.contained_items
       for i = #contained-1, 0, -1 do
-        if contained[i].use_mode == 0 then -- actual contents (as opposed to building components)
+        if contained[i].use_mode == df.building_item_role_type.TEMP then -- actual contents (as opposed to building components)
           local item = contained[i].item
 --        dfhack.items.moveToGround() does not handle items within buildings, so do this manually:
           contained:erase(i)
@@ -269,7 +213,6 @@ function moveEmbarkStuff(selectedBlock, embarkTiles)
       and flags.on_ground
       and not flags.in_inventory
       and not flags.in_building
-      and not flags.in_chest
       and not flags.construction
       and not flags.spider_web
       and not flags.encased then
@@ -312,7 +255,7 @@ end
 
 function disableSpireDemons()
 --  marks underworld spires on the map as having been breached already, preventing HFS events
-  for _, spire in ipairs(df.global.world.deep_vein_hollows) do
+  for _, spire in ipairs(df.global.world.event.deep_vein_hollows) do
     spire.triggered = true
   end
 end
@@ -349,7 +292,7 @@ if moduleMode then
 end
 
 if args.help then
-  print(usage)
+  print(dfhack.script_help())
   return
 end
 
@@ -360,7 +303,7 @@ if args.clear then
 end
 
 if not args.depth then
-  qerror('Depth not specified! Enter "deep-embark -help" for more information.')
+  qerror('Depth not specified! Enter "help deep-embark" for more information.')
 end
 
 local validDepths = {
@@ -376,12 +319,9 @@ end
 
 local consoleMode = dfhack.is_interactive() -- true if the script has been called directly from the DFHack console, false if called from onLoad.init
 
-if not inEmbarkMode() then
-  if consoleMode then
-    qerror('This script must be run prior to embarking! Enter "deep-embark -help" for more information.')
-  else
-    return -- terminate silently to prevent unwanted error messages every time onLoad.init is run in non-embark scenarios
-  end
+if consoleMode and not inEmbarkMode() then
+  -- if running from the console (not onLoad.init), abort if not currently in an embark viewscreen.
+  qerror('When run from the command line, this script should be run during the embark setup screens. Enter "help deep-embark" for more information.')
 end
 
 if consoleMode then
@@ -390,14 +330,16 @@ end
 
 dfhack.onStateChange.DeepEmbarkMonitor = function(event)
   if event == SC_VIEWSCREEN_CHANGED then -- I initially tried using SC_MAP_LOADED, but the map appears to be loaded too early when reclaiming sites
-    if dfhack.gui.getCurViewscreen()._type ~= df.viewscreen_textviewerst then -- embark message; map should have been loaded by the time this is presented
-      return
-    end
+    local view = dfhack.gui.getCurViewscreen()
     if not consoleMode and not args.atReclaim and df.global.gametype == df.game_type.DWARF_RECLAIM then -- it's assumed that a player who chooses to run the script from console whilst reclaiming knows what they're doing, so there's no need to check for -atReclaim in this scenario
       dfhack.onStateChange.DeepEmbarkMonitor = nil -- stop monitoring
       return -- don't deepEmbark if running from onLoad.init and in reclaim mode without -atReclaim
-    else
-      deepEmbark(args.depth, args.blockDemons)
+    elseif view._type == df.viewscreen_choose_start_sitest then -- on embark screen
+      if view.choosing_embark or view.choosing_reclaim then -- on a fresh embark, or on a reclaim
+        deepEmbark(args.depth, args.blockDemons)
+        dfhack.onStateChange.DeepEmbarkMonitor = nil
+      end
+    elseif view._type == df.viewscreen_dwarfmodest then -- we're in game. If we got here then we never got an embark screen, so this is loading a save and we abort.
       dfhack.onStateChange.DeepEmbarkMonitor = nil
     end
   elseif event == SC_WORLD_UNLOADED then -- embark aborted

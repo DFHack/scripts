@@ -1,35 +1,3 @@
--- Attempts to fully heal the selected unit
---author Kurik Amudnil, Urist DaVinci
---edited by expwnent and AtomicChicken
-
---[====[
-
-full-heal
-=========
-Attempts to fully heal the selected unit from anything, optionally
-including death.  Usage:
-
-:full-heal:
-    Completely heal the currently selected unit.
-:full-heal -unit [unitId]:
-    Apply command to the unit with the given ID, instead of selected unit.
-:full-heal -r [-keep_corpse]:
-    Heal the unit, raising from the dead if needed.
-    Add ``-keep_corpse`` to avoid removing their corpse.
-    The unit can be targeted by selecting its corpse on the UI.
-:full-heal -all [-r] [-keep_corpse]:
-    Heal all units on the map.
-:full-heal -all_citizens [-r] [-keep_corpse]:
-    Heal all fortress citizens on the map. Does not include pets.
-:full-heal -all_civ [-r] [-keep_corpse]:
-    Heal all units belonging to your parent civilisation, including pets and visitors.
-
-For example, ``full-heal -r -keep_corpse -unit ID_NUM`` will fully heal
-unit ID_NUM.  If this unit was dead, it will be resurrected without deleting
-the corpse - creepy!
-
-]====]
-
 --@ module = true
 
 local utils = require('utils')
@@ -64,12 +32,6 @@ function isCitizen(unit)
     end
 end
 
-function isFortCivMember(unit)
-    if unit.civ_id == df.global.plotinfo.civ_id then
-        return true
-    end
-end
-
 function addResurrectionEvent(histFigID)
     local event = df.history_event_hist_figure_revivedst:new()
     event.histfig = histFigID
@@ -80,7 +42,7 @@ function addResurrectionEvent(histFigID)
     df.global.hist_event_next_id = df.global.hist_event_next_id + 1
 end
 
-function heal(unit,resurrect,keep_corpse)
+function heal(unit, resurrect, keep_corpse)
     if not unit then
         return
     end
@@ -105,7 +67,7 @@ function heal(unit,resurrect,keep_corpse)
                 addResurrectionEvent(hf.id)
             end
 
-            if dfhack.world.isFortressMode() and isFortCivMember(unit) then
+            if dfhack.world.isFortressMode() and dfhack.units.isOwnCiv(unit) then
                 unit.flags2.resident = false -- appears to be set to true for dead citizens in a reclaimed fortress, which causes them to be marked as hostile when resurrected
 
                 local deadCitizens = df.global.plotinfo.main.dead_citizens
@@ -146,7 +108,6 @@ function heal(unit,resurrect,keep_corpse)
     --print("Resetting status flags...")
     unit.flags2.has_breaks = false
     unit.flags2.gutted = false
-    unit.flags2.circulatory_spray = false
     unit.flags2.vision_good = true
     unit.flags2.vision_damaged = false
     unit.flags2.vision_missing = false
@@ -221,17 +182,17 @@ function heal(unit,resurrect,keep_corpse)
 
     unit.status2.body_part_temperature:resize(0) -- attempting to rewrite temperature was causing body parts to melt for some reason; forcing repopulation in this manner appears to be safer
 
-    for i = 0,#unit.enemy.body_part_8a8-1,1 do
-        unit.enemy.body_part_8a8[i] = 1 -- not sure what this does, but values appear to change following injuries
+    for i = 0,#unit.enemy.body_part_useable-1,1 do
+        unit.enemy.body_part_useable[i] = 1 -- not sure what this does, but values appear to change following injuries
     end
-    for i = 0,#unit.enemy.body_part_8d8-1,1 do
-        unit.enemy.body_part_8d8[i] = 0 -- same as above
+    for i = 0,#unit.enemy.invorder_bp_start-1,1 do
+        unit.enemy.invorder_bp_start[i] = 0 -- same as above
     end
-    for i = 0,#unit.enemy.body_part_878-1,1 do
-        unit.enemy.body_part_878[i] = 3 -- as above
+    for i = 0,#unit.enemy.motor_nervenet-1,1 do
+        unit.enemy.motor_nervenet[i] = 3 -- as above
     end
-    for i = 0,#unit.enemy.body_part_888-1,1 do
-        unit.enemy.body_part_888[i] = 3 -- as above
+    for i = 0,#unit.enemy.sensory_nervenet-1,1 do
+        unit.enemy.sensory_nervenet[i] = 3 -- as above
     end
 
     local histFig = df.historical_figure.find(unit.hist_figure_id)
@@ -254,7 +215,7 @@ function heal(unit,resurrect,keep_corpse)
         health.dressing_cntdn = 0
         health.suture_cntdn = 0
         health.crutch_cntdn = 0
-        health.unk_18_cntdn = 0
+        health.try_for_cast_cntdn = 0
     end
 
     local job = unit.job.current_job
@@ -278,49 +239,48 @@ function heal(unit,resurrect,keep_corpse)
     end
 end
 
-if not dfhack_flags.module then
+if dfhack_flags.module then
+    return
+end
 
-    if args.all then
-        for _,unit in ipairs(df.global.world.units.active) do
-            heal(unit,args.r,args.keep_corpse)
-        end
-
-    elseif args.all_citizens then
-        for _,unit in ipairs(df.global.world.units.active) do
-            if isCitizen(unit) then
-                heal(unit,args.r,args.keep_corpse)
-            end
-        end
-
-    elseif args.all_civ then
-        for _,unit in ipairs(df.global.world.units.active) do
-            if isFortCivMember(unit) then
-                heal(unit,args.r,args.keep_corpse)
-            end
-        end
-
-    else
-        local unit
-        if args.unit then
-            unit = df.unit.find(tonumber(args.unit))
-            if not unit then
-                qerror('Invalid unit ID: ' .. args.unit)
-            end
-        else
-            local item = dfhack.gui.getSelectedItem(true)
-            if item and df.item_corpsest:is_instance(item) then
-                unit = df.unit.find(item.unit_id)
-                if not unit then
-                    qerror('This corpse can no longer be resurrected.') -- unit has been offloaded
-                end
-                unit.pos:assign(xyz2pos(dfhack.items.getPosition(item))) -- to make the unit resurrect at the location of the corpse, rather than the location of death
-            else
-                unit = dfhack.gui.getSelectedUnit()
-            end
-        end
-        if not unit then
-            qerror('Please select a unit or corpse, or specify its ID via the -unit argument.')
-        end
+if args.all then
+    for _,unit in ipairs(df.global.world.units.active) do
         heal(unit,args.r,args.keep_corpse)
     end
+elseif args.all_citizens then
+    -- can't use dfhack.units.getCitizens since we want dead ones too
+    for _,unit in ipairs(df.global.world.units.active) do
+        if dfhack.units.isCitizen(unit) or dfhack.units.isResident(unit) then
+            heal(unit,args.r,args.keep_corpse)
+        end
+    end
+elseif args.all_civ then
+    for _,unit in ipairs(df.global.world.units.active) do
+        if dfhack.units.isOwnCiv(unit) then
+            heal(unit,args.r,args.keep_corpse)
+        end
+    end
+else
+    local unit
+    if args.unit then
+        unit = df.unit.find(tonumber(args.unit))
+        if not unit then
+            qerror('Invalid unit ID: ' .. args.unit)
+        end
+    else
+        local item = dfhack.gui.getSelectedItem(true)
+        if item and df.item_corpsest:is_instance(item) then
+            unit = df.unit.find(item.unit_id)
+            if not unit then
+                qerror('This corpse can no longer be resurrected.') -- unit has been offloaded
+            end
+            unit.pos:assign(xyz2pos(dfhack.items.getPosition(item))) -- to make the unit resurrect at the location of the corpse, rather than the location of death
+        else
+            unit = dfhack.gui.getSelectedUnit()
+        end
+    end
+    if not unit then
+        qerror('Please select a unit or corpse, or specify its ID via the -unit argument.')
+    end
+    heal(unit,args.r,args.keep_corpse)
 end

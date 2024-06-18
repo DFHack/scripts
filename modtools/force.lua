@@ -1,34 +1,6 @@
 -- Forces an event (caravan, migrants, etc)
 -- author Putnam
 -- edited by expwnent
-local help = [====[
-
-modtools/force
-==============
-This tool triggers events like megabeasts, caravans, and migrants.
-
-Usage::
-
-    -eventType event
-        specify the type of the event to trigger
-        examples:
-            Megabeast
-            Migrants
-            Caravan
-            Diplomat
-            WildlifeCurious
-            WildlifeMischievous
-            WildlifeFlier
-            NightCreature
-    -civ entity
-        specify the civ of the event, if applicable
-        examples:
-            player
-            MOUNTAIN
-            EVIL
-            28
-
-]====]
 local utils = require 'utils'
 
 local function findCiv(arg)
@@ -50,8 +22,7 @@ local validArgs = utils.invert({
 
 local args = utils.processArgs({...}, validArgs)
 if args.help then
- print(help)
- print('force: -eventType [Megabeast, Migrants, Caravan, Diplomat, WildlifeCurious, WildlifeMischievous, WildlifeFlier, NightCreature] -civ [player,ENTITY_ID]')
+ print(dfhack.script_help())
  return
 end
 
@@ -59,6 +30,8 @@ if not args.eventType then
  error 'Specify an eventType.'
 elseif not df.timed_event_type[args.eventType] then
  error('Invalid eventType: ' .. args.eventType)
+elseif args.eventType == 'FeatureAttack' then
+ qerror('Event type: FeatureAttack is not currently supported')
 end
 
 local civ = nil --as:df.historical_entity

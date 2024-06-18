@@ -3,7 +3,7 @@ set-orientation
 
 .. dfhack-tool::
     :summary: Alter a unit's romantic inclinations.
-    :tags: untested fort armok units
+    :tags: fort armok units
 
 This tool lets you tinker with the interest levels your dwarves have towards
 dwarves of the same/different sex.

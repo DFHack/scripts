@@ -9,9 +9,665 @@ top of this file (even if no changes are listed under it), or you will get a
 changelogs when making a new release, docs/changelog.txt in the dfhack repo must
 have the new release listed in the right place, even if no changes were made in
 that repo.
+
+Template for new versions:
+
+## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
 ]]]
 
 # Future
+
+## New Tools
+- `advtools`: collection of useful commands and overlays for adventure mode
+- `pop-control`: (reinstated) limit the maximum size of migrant waves
+- `bodyswap`: (reinstated) take control of another unit in adventure mode
+- `gui/sitemap`: list and zoom to nearby people, locations, and artifacts
+- `devel/tree-info`: print a visualization of tree_info data
+- `gui/tiletypes`: interface for modifying map tiles and tile properties
+- `fix/population-cap`: fixes the situation where you continue to get migrant waves even when you are above your configured population cap
+- `fix/occupancy`: fixes issues where you can't build somewhere because the game tells you an item/unit/building is in the way but there's nothing there
+
+## New Features
+- `buildingplan`: dimension tooltip is now displayed for constructions and buildings that are designated over an area
+- `gui/notify`: new notification type: injured citizens; click to zoom to injured units; also displays warning if your hospital is not functional (or if you have no hospital)
+- `prioritize`: new info panel on under-construction buildings showing if the construction job has been taken and by whom. click to zoom to builder; toggle high priority status for job if it's not yet taken and you need it to be built ASAP
+
+## Fixes
+- `item`: don't match uncollected spider webs when you search for "silk"
+- `assign-profile`: fix handling of unit option for setting target unit id
+- `gui/gm-unit`: correctly display skill levels above Legendary+5
+- `quickfort`: fix merge logic for disjoint stockpiles that are given the same label
+- `makeown`: set target animals to tame and domesticated
+- `gui/sandbox`: created citizens can now be useful military squad members
+- `gui/sandbox`: created undead now have a purple shade (after save and reload)
+- `caravan`: fix errors in trade dialog if all fort items are traded away while the trade dialog is showing fort items and the `confirm` trade confirmation is shown
+- `control-panel`: restore non-default values of per-save enabled/disabled settings for repeat-based commands
+- `confirm`: fix confirmation prompt for overwriting a hotkey zoom location
+- `quickfort`: allow farm plots to be built on muddy stone
+- `suspend`: remove broken ``--onlyblocking`` option; restore functionality to suspend all construction jobs
+- `gui/create-item`: allow creation of adamantine thread, wool, and yarn
+
+## Misc Improvements
+- `gui/launcher`: "space space to toggle pause" behavior is skipped if the game was paused when `gui/launcher` came up to prevent accidental unpausing
+- `gui/unit-info-viewer`: now displays a unit's weight, relative to either dwarves, elephants or cats
+- `gui/unit-info-viewer`: shows a unit's relative size to its race's average.
+- `caravan`: optional overlay to hide vanilla bring trade goods to depot button (if you prefer to always use the DFHack version and don't want to accidentally click on the vanilla button). enable ``caravan.movegoods_hider`` in `gui/control-panel` UI Overlays tab to use.
+- `caravan`: bring goods to depot screen now shows (approximate) distance from item to depot
+- `gui/design`: significant redesign of UI for much improved usability
+- `gui/design`: circles are more circular
+- `gui/unit-info-viewer`: add precise unit size in cc (cubic centimeters) for comparison against the wiki values. you can set your preferred number format for large numbers like this in the preferences of `control-panel` or `gui/control-panel`
+- `gui/quickfort`: delete blueprints from the blueprint load dialog
+- `quickfort`: new ``delete`` command for deleting player-owned blueprints (library and mod-added blueprints cannot be deleted)
+- `quickfort`: support enabling `logistics` features for autoforbid and autoclaim on stockpiles
+- `gui/quickfort`: allow farm plots, dirt roads, and paved roads to be designated around partial obstructions without callling it an error, matching vanilla behavior
+- `gui/launcher`: refresh default tag filter when mortal mode is toggled in `gui/control-panel` so changes to which tools autocomplete take effect immediately
+- `gui/civ-alert`: you can now register multiple burrows as civilian alert safe spaces
+- `lever`: enable use of ``reqscript`` to access lever pulling functions.
+- `exterminate`: add ``all`` target for convenient scorched earth tactics
+- `caravan`: add shortcut to the trade request screen for selecting item types by value
+- `gui/notify`: notification panel extended to apply to adventure mode
+- `gui/control-panel`: highlight prefrences that have been changed from the defaults
+- `gui/quickfort`: buildings can now be constructed in a "high priority" state, giving them first dibs on `buildingplan` materials and setting their construction jobs to the highest priority
+
+## Removed
+- `max-wave`: merged into `pop-control`
+- `devel/find-offsets`, `devel/find-twbt`, `devel/prepare-save`: remove development scripts that are no longer useful
+- `fix/item-occupancy`, `fix/tile-occupancy`: merged into `fix/occupancy`
+- `adv-rumors`: merged into `advtools`
+
+# 50.13-r2
+
+## New Tools
+- Updated for adventure mode: `gui/sandbox`, `gui/create-item`, `gui/reveal`
+- `ghostly`: (reinstated) allow your adventurer to phase through walls
+- `markdown`: (reinstated) export description of selected unit or item to a text file
+- `adaptation`: (reinstated) inspect or set unit cave adaptation levels
+- `fix/engravings`: fix corrupt engraving tiles
+- `unretire-anyone`: (reinstated) choose anybody in the world as an adventurer
+- `reveal-adv-map`: (reinstated) reveal (or hide) the adventure map
+- `resurrect-adv`: (reinstated) allow your adventurer to recover from death
+- `flashstep`: (reinstated) teleport your adventurer to the mouse cursor
+
+## New Features
+- `instruments`: new subcommand ``instruments order`` for creating instrument work orders
+
+## Fixes
+- `modtools/create-item`: now functions properly when the ``reaction-gloves`` tweak is active
+- `quickfort`: don't designate multiple tiles of the same tree for chopping when applying a tree chopping blueprint to a multi-tile tree
+- `gui/quantum`: fix processing when creating a quantum dump instead of a quantum stockpile
+- `caravan`: don't include undiscovered divine artifacts in the goods list
+- `quickfort`: fix detection of valid tiles for wells
+- `combine`: respect container volume limits
+
+## Misc Improvements
+- `gui/autobutcher`: add shortcuts for butchering/unbutchering all animals
+- `combine`: reduce combined drink sizes to 25
+- `gui/launcher`: add button for copying output to the system clipboard
+- `deathcause`: automatically find and choose a corpse when a pile of mixed items is selected
+- `gui/quantum`: add option for whether a minecart automatically gets ordered and/or attached
+- `gui/quantum`: when attaching a minecart, show which minecart was attached
+- `gui/quantum`: allow multiple feeder stockpiles to be linked to the minecart route
+- `prioritize`: add PutItemOnDisplay jobs to the default prioritization list -- when these kinds of jobs are requested by the player, they generally want them done ASAP
+
+# 50.13-r1.1
+
+## Fixes
+- `gui/quantum`: accept all item types in the output stockpile as intended
+- `deathcause`: fix error on run
+
+# 50.13-r1
+
+## New Tools
+- `gui/unit-info-viewer`: (reinstated) give detailed information on a unit, such as egg laying behavior, body size, birth date, age, and information about their afterlife behavior (if a ghost)
+- `gui/quantum`: (reinstated) point and click interface for creating quantum stockpiles or quantum dumps
+
+## Fixes
+- `open-legends`: don't interfere with the dragging of vanilla list scrollbars
+- `gui/create-item`: properly restrict bags to bag materials by default
+- `gui/create-item`: allow gloves and shoees to be made out of textiles by default
+- `exterminate`: don't classify dangerous non-invader units as friendly (e.g. snatchers)
+
+## Misc Improvements
+- `open-legends`: allow player to cancel the "DF will now exit" dialog and continue browsing
+- `gui/gm-unit`: changes to unit appearance will now immediately be reflected in the unit portrait
+
+# 50.12-r3
+
+## New Tools
+- `gui/aquifer`: interactive aquifer visualization and editing
+- `open-legends`: (reinstated) open legends mode directly from a loaded fort
+
+## New Features
+- `quickfort`: add options for setting warm/damp dig markers when applying blueprints
+- `gui/quickfort`: add options for setting warm/damp dig markers when applying blueprints
+- `gui/reveal`: new "aquifer only" mode to only see hidden aquifers but not reveal any tiles
+- `gui/notify`: optional notification for general wildlife (not on by default)
+
+## Fixes
+- `fix/loyaltycascade`: fix edge case where loyalties of renegade units were not being fixed
+- `quickfort`: reject tiles for building that contain magma or deep water
+- `armoks-blessing`: fix error when making "Normal" attributes legendary
+- `emigration`: remove units from burrows when they emigrate
+- `agitation-rebalance`: fix calculated percent chance of cavern invasion
+- `gui/launcher`: don't pop up a result dialog if a command run from minimal mode has no output
+
+## Misc Improvements
+- `gui/reveal`: show aquifers even when not in mining mode
+- `gui/control-panel`: add alternate "nodump" version for `cleanowned` that does not cause citizens to toss their old clothes in the dump. this is useful for players who would rather sell old clothes than incinerate them
+- `agitation-rebalance`: when more than the maximum allowed cavern invaders are trying to enter the map, prefer keeping the animal people invaders instead of their war animals
+
+## Removed
+- `drain-aquifer`: replaced by ``aquifer drain --all``; an alias now exists so ``drain-aquifer`` will automatically run the new command
+
+# 50.12-r2.1
+
+## Fixes
+- `fix/noexert-exhaustion`: fix typo in control panel registry entry which prevented the fix from being run when enabled
+- `gui/suspendmanager`: fix script startup errors
+- `control-panel`: properly auto-enable newly added bugfixes
+
+## Misc Improvements
+- `gui/unit-syndromes`: make syndromes searchable by their display names (e.g.  "necromancer")
+
+# 50.12-r2
+
+## New Tools
+- `agitation-rebalance`: alter mechanics of irriation-related attacks so they are less constant and are more responsive to recent player bahavior
+- `fix/ownership`: fix instances of multiple citizens claiming the same items, resulting in "Store owned item" job loops
+- `fix/stuck-worship`: fix prayer so units don't get stuck in uninterruptible "Worship!" states
+- `instruments`: provides information on how to craft the instruments used by the player civilization
+- `modtools/item-trigger`: (reinstated) modder's resource for triggering scripted content when specific items are used
+- `modtools/if-entity`: (reinstated) modder's resource for triggering scripted content depending on the race of the loaded fort
+- `devel/block-borders`: (reinstated) highlights boundaries of map blocks or embark tile blocks
+- `fix/noexert-exhaustion`: fix "Tired" NOEXERT units. Enabling via `gui/control-panel` prevents NOEXERT units from getting stuck in a "Tired" state
+
+## New Features
+- `gui/settings-manager`: add import, export, and autoload for work details
+- `exterminate`: new "disintegrate" kill method that additionally destroys carried items
+- `quickfort`: allow setting of workshop profile properties (e.g. labor, skill restrictions) from build blueprints
+
+## Fixes
+- `gui/launcher`: fix history scanning (Up/Down arrow keys) being slow to respond when in minimal mode
+- `control-panel`: fix filtering not filtering when running the ``list`` command
+- `gui/notify`: don't zoom to forbidden depots for merchants ready to trade notification
+- `catsplosion`: only cause pregnancies in adults
+
+## Misc Improvements
+- `gui/launcher`: add interface for browsing and filtering commands by tags
+- `gui/launcher`: add support for history search (Alt-s hotkey) when in minimal mode
+- `gui/launcher`: add support for the ``clear`` command and clearing the scrollback buffer
+- `control-panel`: enable tweaks quietly on fort load so we don't spam the console
+- `devel/tile-browser`: simplify interface now that SDL automatically normalizes texture scale
+- `exterminate`: make race name matching case and space insensitive
+- `gui/gm-editor`: support opening engraved art for inspection
+- `gui/notify`: Shift click or Shift Enter on a zoomable notification to zoom to previous target
+- `allneeds`: select a dwarf in the UI to see a summary of needs for just that dwarf
+- `allneeds`: provide options for sorting the cumulative needs by different criteria
+- `prioritize`: print out custom reaction and hauling jobs in the same format that is used for ``prioritize`` command arguments so the player can just copy and paste
+
+# 50.12-r1
+
+## Fixes
+- `gui/notify`: persist notification settings when toggled in the UI
+
+## Misc Improvements
+- `gui/launcher`: developer mode hotkey restored to Ctrl-D
+
+# 50.11-r7
+
+## New Tools
+- `undump-buildings`: (reinstated) remove dump designation from in-use building materials
+- `gui/petitions`: (reinstated) show outstanding (or all historical) petition agreements for guildhalls and temples
+- `gui/notify`: display important notifications that vanilla doesn't support yet and provide quick zoom links to notification targets.
+- `list-waves`: (reinstated) show migration wave information
+- `make-legendary`: (reinstated) make a dwarf legendary in specified skills
+- `combat-harden`: (reinstated) set a dwarf's resistence to being affected by visible corpses
+- `add-thought`: (reinstated) add custom thoughts to a dwarf
+- `devel/input-monitor`: interactive UI for debugging input issues
+
+## Fixes
+- `gui/design`: clicking the center point when there is a design mark behind it will no longer simultaneously enter both mark dragging and center dragging modes. Now you can click once to move the shape, and click twice to move only the mark behind the center point.
+- `fix/retrieve-units`: prevent pulling in duplicate units from offscreen
+- `warn-stranded`: when there was at least one truly stuck unit and miners were actively mining, the miners were also confusingly shown in the stuck units list
+- `source`: fix issue where removing sources would make some other sources inactive
+- `caravan`: display book and scroll titles in the goods and trade dialogs instead of generic scroll descriptions
+- `item`: avoid error when scanning items that have no quality rating (like bars and other construction materials)
+- `gui/blueprint`: changed hotkey for setting blueprint origin tile so it doesn't conflict with default map movement keys
+- `gui/control-panel`: fix error when toggling autostart settings
+
+## Misc Improvements
+- `exportlegends`: make progress increase smoothly over the entire export and increase precision of progress percentage
+- `gui/autobutcher`: ask for confirmation before zeroing out targets for all races
+- `caravan`: move goods to trade depot dialog now allocates more space for the display of the value of very expensive items
+- `extinguish`: allow selecting units/items/buildings in the UI to target them for extinguishing; keyboard cursor is only required for extinguishing map tiles that cannot be selected any other way
+- `item`: change syntax so descriptions can be searched for without indicating the ``--description`` option. e.g. it's now ``item count royal`` instead of ``item count --description royal``
+- `item`: add ``--verbose`` option to print each item as it is matched
+- `gui/mod-manager`: will automatically unmark the default mod profile from being the default if it fails to load (due to missing or incompatible mods)
+- `gui/quickfort`: can now dynamically adjust the dig priority of tiles designated by dig blueprints
+- `gui/quickfort`: can now opt to apply dig blueprints in marker mode
+
+## Removed
+- `gui/manager-quantity`: the vanilla UI can now modify manager order quantities after creation
+- `gui/create-tree`: replaced by `gui/sandbox`
+- `warn-starving`: combined into `gui/notify`
+- `warn-stealers`: combined into `gui/notify`
+
+# 50.11-r6
+
+## Fixes
+- `makeown`: fix error when adopting units that need a historical figure to be created
+- `item`: fix missing item categories when using ``--by-type``
+
+# 50.11-r5
+
+## New Tools
+- `control-panel`: new commandline interface for control panel functions
+- `uniform-unstick`: (reinstated) force squad members to drop items that they picked up in the wrong order so they can get everything equipped properly
+- `gui/reveal`: temporarily unhide terrain and then automatically hide it again when you're ready to unpause
+- `gui/teleport`: mouse-driven interface for selecting and teleporting units
+- `gui/biomes`: visualize and inspect biome regions on the map
+- `gui/embark-anywhere`: bypass those pesky warnings and embark anywhere you want to
+- `item`: perform bulk operations on groups of items.
+
+## New Features
+- `uniform-unstick`: add overlay to the squad equipment screen to show a equipment conflict report and give you a one-click button to (attempt to) fix
+- `gui/settings-manager`: save and load embark difficulty settings and standing orders; options for auto-load on new embark
+
+## Fixes
+- `source`: water and magma sources and sinks now persist with fort across saves and loads
+- `gui/design`: fix incorrect dimensions being shown when you're placing a stockpile, but a start coordinate hasn't been selected yet
+- `warn-stranded`: don't warn for citizens who are only transiently stranded, like those on stepladders gathering plants or digging themselves out of a hole
+- `ban-cooking`: fix banning creature alcohols resulting in error
+- `confirm`: properly detect clicks on the remove zone button even when the unit selection screen is also open (e.g. the vanilla assign animal to pasture panel)
+- `caravan`: ensure items are marked for trade when the move trade goods dialog is closed even when they were selected and then the list filters were changed such that the items were no longer actively shown
+- `quickfort`: if a blueprint specifies an up/down stair, but the tile the blueprint is applied to cannot make an up stair (e.g. it has already been dug out), still designate a down stair if possible
+- `suspendmanager`: correctly handle building collisions with smoothing designations when the building is on the edge of the map
+- `empty-bin`: now correctly sends ammunition in carried quivers to the tile underneath the unit instead of teleporting them to an invalid (or possibly just far away) location
+
+## Misc Improvements
+- `warn-stranded`: center the screen on the unit when you select one in the list
+- `gui/control-panel`: reduce frequency for `warn-stranded` check to once every 2 days
+- `gui/control-panel`: tools are now organized by type: automation, bugfix, and gameplay
+- `confirm`: updated confirmation dialogs to use clickable widgets and draggable windows
+- `confirm`: added confirmation prompt for right clicking out of the trade agreement screen (so your trade agreement selections aren't lost)
+- `confirm`: added confirmation prompts for irreversible actions on the trade screen
+- `confirm`: added confirmation prompt for deleting a uniform
+- `confirm`: added confirmation prompt for convicting a criminal
+- `confirm`: added confirmation prompt for re-running the embark site finder
+- `confirm`: added confirmation prompt for reassigning or clearing zoom hotkeys
+- `confirm`: added confirmation prompt for exiting the uniform customization page without saving
+- `gui/autobutcher`: interface redesigned to better support mouse control
+- `gui/launcher`: now persists the most recent 32KB of command output even if you close it and bring it back up
+- `gui/quickcmd`: clickable buttons for command add/remove/edit operations
+- `uniform-unstick`: warn if a unit belongs to a squad from a different site (can happen with migrants from previous forts)
+- `gui/mass-remove`: can now differentiate planned constructions, stockpiles, and regular buildings
+- `gui/mass-remove`: can now remove zones
+- `gui/mass-remove`: can now cancel removal for buildings and constructions
+- `fix/stuck-instruments`: now handles instruments that are left in the "in job" state but that don't have any actual jobs associated with them
+- `gui/launcher`: make autocomplete case insensitive
+
+# 50.11-r4
+
+## New Tools
+- `build-now`: (reinstated) instantly complete unsuspended buildings that are ready to be built
+
+## Fixes
+- `combine`: prevent stack sizes from growing beyond quantities that you would normally see in vanilla gameplay
+- `gui/design`: Center dragging shapes now track the mouse correctly
+
+## Misc Improvements
+- `caravan`: enable searching within containers in trade screen when in "trade bin with contents" mode
+
+# 50.11-r3
+
+## New Tools
+- `sync-windmills`: synchronize or randomize movement of active windmills
+- `trackstop`: (reimplemented) integrated overlay for changing track stop and roller settings after construction
+
+## New Features
+- `gui/design`: show selected dimensions next to the mouse cursor when designating with vanilla tools, for example when painting a burrow or designating digging
+- `quickfort`: new ``burrow`` blueprint mode for designating or manipulating burrows
+- `unforbid`: now ignores worn and tattered items by default (X/XX), use -X to bypass
+- `fix/dead-units`: gained ability to scrub dead units from burrow membership lists
+
+## Fixes
+- `gui/unit-syndromes`: show the syndrome names properly in the UI
+- `emigration`: fix clearing of work details assigned to units that leave the fort
+
+## Misc Improvements
+- `warn-stranded`: don't warn for units that are temporarily on unwalkable tiles (e.g. as they pass under a waterfall)
+
+## Removed
+- `gui/control-panel`: removed always-on system services from the ``System`` tab: `buildingplan`, `confirm`, `logistics`, and `overlay`. The base services should not be turned off by the player. Individual confirmation prompts can be managed via `gui/confirm`, and overlays (including those for `buildingplan` and `logistics`) are managed on the control panel ``Overlays`` tab.
+- `gui/control-panel`: removed `autolabor` from the ``Fort`` and ``Autostart`` tabs. The tool does not function correctly with the new labor types, and is causing confusion. You can still enable `autolabor` from the commandline with ``enable autolabor`` if you understand and accept its limitations.
+
+# 50.11-r2
+
+## New Tools
+- `add-recipe`: (reinstated) add reactions to your civ (e.g. for high boots if your civ didn't start with the ability to make high boots)
+- `fix/corrupt-jobs`: prevents crashes by automatically removing corrupted jobs
+- `burial`: (reinstated) create tomb zones for unzoned coffins
+
+## New Features
+- `burial`: new options to configure automatic burial and limit scope to the current z-level
+- `drain-aquifer`: gained ability to drain just above or below a certain z-level
+- `drain-aquifer`: new option to drain all layers except for the first N aquifer layers, in case you want some aquifer layers but not too many
+- `gui/control-panel`: ``drain-aquifer --top 2`` added as an autostart option
+
+## New Scripts
+- `warn-stranded`: new repeatable maintenance script to check for stranded units, similar to `warn-starving`
+
+## Fixes
+- `suspendmanager`: fix errors when constructing near the map edge
+- `gui/sandbox`: fix scrollbar moving double distance on click
+- `hide-tutorials`: fix the embark tutorial prompt sometimes not being skipped
+- `full-heal`: fix removal of corpse after resurrection
+- `toggle-kbd-cursor`: clear the cursor position when disabling, preventing the game from sometimes jumping the viewport around when cursor keys are hit
+
+## Misc Improvements
+- `prioritize`: refuse to automatically prioritize dig and smooth/carve job types since it can break the DF job scheduler; instead, print a suggestion that the player use specialized units and vanilla designation priorities
+- `gui/overlay`: filter overlays by current context so there are fewer on the screen at once and you can more easily click on the one you want to reposition
+- `quickfort`: now allows constructions to be built on top of constructed floors and ramps, just like vanilla. however, to allow blueprints to be safely reapplied to the same area, for example to fill in buildings whose constructions were canceled due to lost items, floors will not be rebuilt on top of floors and ramps will not be rebuilt on top of ramps
+- `gui/gm-editor`: for fields with primitive types, change from click to edit to click to select, double-click to edit. this should help prevent accidental modifications to the data and make hotkeys easier to use (since you have to click on a data item to use a hotkey on it)
+
+# 50.11-r1
+
+## New Tools
+- `startdwarf`: (reinstated) set number of starting dwarves
+
+## New Features
+- `startdwarf`: overlay scrollbar so you can scroll through your starting dwarves if they don't all fit on the screen
+- A new searchable, sortable, filterable dialog for selecting items for display on pedestals and display cases
+
+## Fixes
+- `suspendmanager`: fixed a bug where floor grates, bars, bridges etc. wouldn't be recognised as walkable, leading to unnecessary suspensions in certain cases.
+
+## Misc Improvements
+- `devel/inspect-screen`: display total grid size for UI and map layers
+- `suspendmanager`: now suspends constructions that would cave-in immediately on completion
+
+# 50.10-r1
+
+## Fixes
+- 'fix/general-strike: fix issue where too many seeds were getting planted in farm plots
+
+# 50.09-r4
+
+## Misc Improvements
+- `autofish`: changed ``--raw`` argument format to allow explicit setting to on or off
+- `caravan`: move goods to depot screen can now see/search/trade items inside of barrels and pots
+- `gui/launcher`: show tagged tools in the autocomplete list when a tag name is typed
+
+# 50.09-r3
+
+## New Tools
+- `devel/scan-vtables`: scan and dump likely vtable addresses (for memory research)
+- `hide-interface`: hide the vanilla UI elements for clean screenshots or laid-back fortress observing
+- `hide-tutorials`: hide the DF tutorial popups; enable in the System tab of `gui/control-panel`
+- `set-orientation`: tinker with romantic inclinations (reinstated from back catalog of tools)
+
+## New Features
+- `exportlegends`: new overlay that integrates with the vanilla "Export XML" button. Now you can generate both the vanilla export and the extended data export with a single click!
+
+## Fixes
+- `suspendmanager`: Fix the overlay enabling/disabling `suspendmanager` unexpectedly
+- `caravan`: correct price adjustment values in trade agreement details screen
+- `caravan`: apply both import and export trade agreement price adjustments to items being both bought or sold to align with how vanilla DF calculates prices
+- `caravan`: cancel any active TradeAtDepot jobs if all caravans are instructed to leave
+- `emigration`: fix errors loading forts after dwarves assigned to work details or workshops have emigrated
+- `emigration`: fix citizens sometimes "emigrating" to the fortress site
+- `suspendmanager`: improve the detection on "T" and "+" shaped high walls
+- `starvingdead`: ensure sieges end properly when undead siegers starve
+- `fix/retrieve-units`: fix retrieved units sometimes becoming duplicated on the map
+- `quickfort`: cancel old dig jobs that point to a tile when a new designation is applied to the tile
+- `gui/launcher`, `gui/gm-editor`: recover gracefully when the saved frame position is now offscreen
+- `gui/sandbox`: correctly load equipment materials in modded games that categorize non-wood plants as wood
+
+## Misc Improvements
+- `devel/lsmem`: added support for filtering by memory addresses and filenames
+- `gui/gm-editor`: hold down shift and right click to exit, regardless of how many substructures deep you are
+- `quickfort`: linked stockpiles and workshops can now be specified by ID instead of only by name. this is mostly useful when dynamically generating blueprints and applying them via the `quickfort` API
+- `gui/quickfort`: blueprint details screen can now be closed with Ctrl-D (the same hotkey used to open the details)
+- `suspendmanager`: display a different color for jobs suspended by suspendmanager
+- `caravan`: optionally display items within bins in bring goods to depot screen
+- `gui/gm-editor`: display in the title bar whether the editor window is scanning for live updates
+- `gui/design`: change "auto commit" hotkey from ``c`` to ``Alt-c`` to avoid conflict with the default keybinding for z-level down
+- `gui/liquids`: support removing river sources by converting them into stone floors
+
+# 50.09-r2
+
+## New Scripts
+- `caravan`: new trade screen UI replacements for bringing goods to trade depot and trading
+- `fix/empty-wheelbarrows`: new script to empty stuck rocks from all wheelbarrows on the map
+
+## Fixes
+- `gui/autodump`: when "include items claimed by jobs" is on, actually cancel the job so the item can be teleported
+- `gui/gm-unit`: fix commandline processing when a unit id is specified
+- `suspendmanager`: take in account already built blocking buildings
+- `suspendmanager`: don't consider tree branches as a suitable access path to a building
+
+## Misc Improvements
+- `gui/unit-syndromes`: make lists searchable
+- `suspendmanager`: display the suspension reason when viewing a suspended building
+- `quickfort`: blueprint libraries are now moddable -- add a ``blueprints/`` directory to your mod and they'll show up in `quickfort` and `gui/quickfort`!
+
+# 50.09-r1
+
+## Misc Improvements
+- `caravan`: new overlay for selecting all/none on trade request screen
+- `suspendmanager`: don't suspend constructions that are built over open space
+
+# 50.08-r4
+
+## Fixes
+- `gui/create-item`: allow blocks to be made out of wood when using the restrictive filters
+- `emigration`: reassign home site for emigrating units so they don't just come right back to the fort
+- `gui/sandbox`: allow creatures that have separate caste-based graphics to be spawned (like ewes/rams)
+- `gui/liquids`: ensure tile temperature is set correctly when painting water or magma
+- `workorder`: prevent ``autoMilkCreature`` from over-counting milkable animals, which was leading to cancellation spam for the MilkCreature job
+- `gui/quickfort`: allow traffic designations to be applied over buildings
+- `gui/quickfort`: protect against meta blueprints recursing infinitely if they include themselves
+
+## Misc Improvements
+- `gui/control-panel`: add some popular startup configuration commands for `autobutcher` and `autofarm`
+- `gui/control-panel`: add option for running `fix/blood-del` on new forts (enabled by default)
+- `gui/sandbox`: when creating citizens, give them names appropriate for their races
+- `gui/autodump`: add option to clear the ``trader`` flag from teleported items, allowing you to reclaim items dropped by merchants
+- `quickfort`: significant rewrite for DF v50! now handles zones, locations, stockpile configuration, hauling routes, and more
+- `suspendmanager`: now suspends construction jobs on top of floor designations, protecting the designations from being erased
+- `prioritize`: add wild animal management tasks and lever pulling to the default list of prioritized job types
+- `suspendmanager`: suspend blocking jobs when building high walls or filling corridors
+- `workorder`: reduce existing orders for automatic shearing and milking jobs when animals are no longer available
+- `gui/quickfort`: adapt "cursor lock" to mouse controls so it's easier to see the full preview for multi-level blueprints before you apply them
+- `gui/quickfort`: only display post-blueprint messages once when repeating the blueprint up or down z-levels
+- `combine`: reduce max different stacks in containers to 30 to prevent contaners from getting overfull
+
+## Removed
+- `gui/automelt`: replaced by an overlay panel that appears when you click on a stockpile
+
+# 50.08-r3
+
+# 50.08-r2
+
+## New Scripts
+- `diplomacy`: view or alter diplomatic relationships
+- `exportlegends`: (reinstated) export extended legends information for external browsing
+- `modtools/create-item`: (reinstated) commandline and API interface for creating items
+- `light-aquifers-only`: (reinstated) convert heavy aquifers to light
+- `necronomicon`: search fort for items containing the secrets of life and death
+- `fix/stuck-instruments`: fix instruments that are attached to invalid jobs, making them unusable. turn on automatic fixing in `gui/control-panel` in the ``Maintenance`` tab.
+- `gui/mod-manager`: automatically restore your list of active mods when generating new worlds
+- `gui/autodump`: point and click item teleportation and destruction interface (available only if ``armok`` tools are shown)
+- `gui/sandbox`: creation interface for units, trees, and items (available only if ``armok`` tools are shown)
+- `assign-minecarts`: (reinstated) quickly assign minecarts to hauling routes
+
+## Fixes
+- `quickfort`: properly allow dwarves to smooth, engrave, and carve beneath walkable tiles of buildings
+- `deathcause`: fix incorrect weapon sometimes being reported
+- `gui/create-item`: allow armor to be made out of leather when using the restrictive filters
+- `gui/design`: Fix building and stairs designation
+- `quickfort`: fixed detection of tiles where machines are allowed (e.g. water wheels *can* be built on stairs if there is a machine support nearby)
+- `quickfort`: fixed rotation of blueprints with carved track tiles
+
+## Misc Improvements
+- `gui/quickfort`: blueprints that designate items for dumping/forbidding/etc. no longer show an error highlight for tiles that have no items on them
+- `gui/quickfort`: place (stockpile layout) mode is now supported. note that detailed stockpile configurations were part of query mode and are not yet supported
+- `gui/quickfort`: you can now generate manager orders for items required to complete bluerpints
+- `gui/create-item`: ask for number of items to spawn by default
+- `light-aquifers-only`: now available as a fort Autostart option in `gui/control-panel`. note that it will only appear if "armok" tools are configured to be shown on the Preferences tab.
+- `gui/gm-editor`: when passing the ``--freeze`` option, further ensure that the game is frozen by halting all rendering (other than for DFHack tool windows)
+- `gui/gm-editor`: Alt-A now enables auto-update mode, where you can watch values change live when the game is unpaused
+
+# 50.08-r1
+
+## Fixes
+- `deteriorate`: ensure remains of enemy dwarves are properly deteriorated
+- `suspendmanager`: Fix over-aggressive suspension of jobs that could still possibly be done (e.g. jobs that are partially submerged in water)
+
+## Misc Improvements
+- `combine`: Now supports ammo, parts, powders, and seeds, and combines into containers
+- `deteriorate`: add option to exclude useable parts from deterioration
+- `gui/gm-editor`: press ``g`` to move the map to the currently selected item/unit/building
+- `gui/gm-editor`: press ``Ctrl-D`` to toggle read-only mode to protect from accidental changes; this state persists across sessions
+- `gui/gm-editor`: new ``--freeze`` option for ensuring the game doesn't change while you're inspecting it
+- `gui/launcher`: DFHack version now shown in the default help text
+- `gui/prerelease-warning`: widgets are now clickable
+
+# 50.07-r1
+
+## New Scripts
+
+## Fixes
+-@ `caravan`: fix trade good list sometimes disappearing when you collapse a bin
+-@ `gui/gm-editor`: no longer nudges last open window when opening a new one
+- `warn-starving`: no longer warns for dead units
+-@ `gui/control-panel`: the config UI for `automelt` is no longer offered when not in fortress mode
+
+## Misc Improvements
+- `gui/gm-editor`: can now jump to material info objects from a mat_type reference with a mat_index using ``i``
+- `gui/gm-editor`: the key column now auto-fits to the widest key
+- `prioritize`: revise and simplify the default list of prioritized jobs -- be sure to tell us if your forts are running noticeably better (or worse!)
+-@ `gui/control-panel`: add `faststart` to the system services
+
+## Removed
+
+# 50.07-beta2
+
+## New Scripts
+- `fix/general-strike`: fix known causes of the general strike bug (contributed by Putnam)
+- `gui/seedwatch`: GUI config and status panel interface for `seedwatch`
+- `gui/civ-alert`: configure and trigger civilian alerts
+
+## Fixes
+-@ `caravan`: item list length now correct when expanding and collapsing containers
+-@ `prioritize`: fixed all watched job type names showing as ``nil`` after a game load
+-@ `suspendmanager`: does not suspend non-blocking jobs such as floor bars or bridges anymore
+-@ `suspendmanager`: fix occasional bad identification of buildingplan jobs
+- `warn-starving`: no longer warns for enemy and neutral units
+
+## Misc Improvements
+- `gui/control-panel`: Now detects overlays from scripts named with capital letters
+- `gui/cp437-table`: now has larger key buttons and clickable backspace/submit/cancel buttons, making it fully usable on the Steam Deck and other systems that don't have an accessible keyboard
+-@ `gui/design`: Now supports placing constructions using 'Building' mode. Inner and Outer tile constructions are configurable. Uses buildingplan filters set up with the regular buildingplan interface.
+- `exterminate`: add support for ``vaporize`` kill method for when you don't want to leave a corpse
+- `combine`: you can select a target stockpile in the UI instead of having to use the keyboard cursor
+- `combine`: added ``--quiet`` option for no output when there are no changes
+- `stripcaged`: added ``--skip-forbidden`` option for greater control over which items are marked for dumping
+- `stripcaged`: items that are marked for dumping are now automatically unforbidden (unless ``--skip-forbidden`` is set)
+-@ `gui/control-panel`: added ``combine all`` maintenance option for automatic combining of partial stacks in stockpiles
+-@ `gui/control-panel`: added ``general-strike`` maintenance option for automatic fixing of (at least one cause of) the general strike bug
+- `gui/cp437-table`: dialog is now fully controllable with the mouse, including highlighting which key you are hovering over and adding a clickable backspace button
+
+## Removed
+- `autounsuspend`: replaced by `suspendmanager`
+-@ `gui/dig`: renamed to `gui/design`
+
+# 50.07-beta1
+
+## New Scripts
+- `suspendmanager`: automatic job suspension management (replaces `autounsuspend`)
+- `gui/suspendmanager`: graphical configuration interface for `suspendmanager`
+- `suspend`: suspends building construction jobs
+
+## Fixes
+-@ `quicksave`: now reliably triggers an autosave, even if one has been performed recently
+- `gui/launcher`: tab characters in command output now appear as a space instead of a code page 437 "blob"
+
+## Misc Improvements
+- `quickfort`: now reads player-created blueprints from ``dfhack-config/blueprints/`` instead of the old ``blueprints/`` directory. Be sure to move over your personal blueprints to the new directory!
+- `gui/gm-editor`: can now open the selected stockpile if run without parameters
+
+# 50.07-alpha3
+
+## Fixes
+-@ `gui/create-item`: fix generic corpsepiece spawning
+
+## Misc Improvements
+- `gui/create-item`: added ability to spawn 'whole' corpsepieces (every layer of a part)
+-@ `gui/dig`: Allow placing an extra point (curve) while still placing the second main point
+-@ `gui/dig`: Allow placing n-point shapes, shape rotation/mirroring
+-@ `gui/dig`: Allow second bezier point, mirror-mode for freeform shapes, symmetry mode
+
+# 50.07-alpha2
+
+## New Scripts
+- `combine`: combines stacks of food and plant items.
+
+## Fixes
+-@ `troubleshoot-item`: fix printing of job details for chosen item
+-@ `makeown`: fixes errors caused by using makeown on an invader
+-@ `gui/blueprint`: correctly use setting presets passed on the commandline
+-@ `gui/quickfort`: correctly use settings presets passed on the commandline
+- `devel/query`: can now properly index vectors in the --table argument
+-@ `forbid`: fix detection of unreachable items for items in containers
+-@ `unforbid`: fix detection of unreachable items for items in containers
+
+## Misc Improvements
+- `troubleshoot-item`: output as bullet point list with indenting, with item description and ID at top
+- `troubleshoot-item`: reports on items that are hidden, artifacts, in containers, and held by a unit
+- `troubleshoot-item`: reports on the contents of containers with counts for each contained item type
+- `devel/visualize-structure`: now automatically inspects the contents of most pointer fields, rather than inspecting the pointers themselves
+- `devel/query`: will now search for jobs at the map coordinate highlighted, if no explicit job is highlighted and there is a map tile highlighted
+- `caravan`: add trade screen overlay that assists with seleting groups of items and collapsing groups in the UI
+- `gui/gm-editor`: will now inspect a selected building itself if the building has no current jobs
+
+## Removed
+- `combine-drinks`: replaced by `combine`
+- `combine-plants`: replaced by `combine`
+
+# 50.07-alpha1
+
+## New Scripts
+- `gui/design`: digging and construction designation tool with shapes and patterns
+- `makeown`: makes the selected unit a citizen of your fortress
+
+## Fixes
+-@ `gui/unit-syndromes`: allow the window widgets to be interacted with
+-@ `fix/protect-nicks`: now works by setting the historical figure nickname
+-@ `gui/liquids`: fixed issues with unit pathing after adding/removing liquids
+-@ `gui/dig`: Fix for 'continuing' auto-stair designation. Avoid nil index issue for tile_type
+
+## Misc Improvements
+- `gui/gm-editor`: now supports multiple independent data inspection windows
+- `gui/gm-editor`: now prints out contents of coordinate vars instead of just the type
+- `rejuvenate`: now takes an --age parameter to choose a desired age.
+-@ `gui/dig` : Added 'Line' shape that also can draw curves, added draggable center handle
+
+# 50.05-alpha3.1
+
+## Fixes
+-@ `gui/launcher`: no longer resets to the Help tab on every keystroke
+
+# 50.05-alpha3
 
 ## New Scripts
 - `autofish`: auto-manage fishing labors to control your stock of fish
@@ -35,21 +691,24 @@ that repo.
 - `ban-cooking`: report number of items banned.
 - `build-now`: now handles dirt roads and initializes farm plots properly
 - `devel/click-monitor`: report on middle mouse button actions
-- `gui/autochop`: hide uninteresting burrows by default
-- `gui/blueprint`: allow map movement with the keyboard while the UI is open
+-@ `gui/autochop`: hide uninteresting burrows by default
+-@ `gui/blueprint`: allow map movement with the keyboard while the UI is open
 - `gui/create-item`: support spawning corpse pieces (e.g. shells) under "body part"
 - `gui/create-item`: added search and filter capabilities to the selection lists
 - `gui/launcher`: make command output scrollback separate from the help text so players can continue to see the output of the previous command as they type the next one
+- `gui/launcher`: allow double spacebar to pause/unpause the game, even while typing a command
 - `gui/launcher`: clarify what is being shown in the autocomplete list (all commands, autocompletion of partially typed command, or commands related to typed command)
+- `gui/launcher`: support running commands directly from the autocomplete list via double-clicking
 - `gui/liquids`: interface overhaul, also now allows spawning river sources, setting/adding/removing liquid levels, and cleaning water from being salty or stagnant
 - `gui/overlay`: now focuses on repositioning overlay widgets; enabling, disabling, and getting help for overlay widgets has moved to the new `gui/control-panel`
 -@ `gui/quickcmd`: now acts like a regular window instead of a modal dialog
 - `gui/quickfort`: don't close the window when applying a blueprint so players can apply the same blueprint multiple times more easily
 - `locate-ore`: now only searches revealed tiles by default
 - `modtools/spawn-liquid`: sets tile temperature to stable levels when spawning water or magma
-- `prioritize`: pushing minecarts is now included in the default priortization list
+-@ `prioritize`: pushing minecarts is now included in the default priortization list
 - `prioritize`: now automatically starts boosting the default list of job types when enabled
 - `unforbid`: avoids unforbidding unreachable and underwater items by default
+- `gui/create-item`: added whole corpse spawning alongside corpsepieces. (under "corpse")
 
 ## Removed
 - `show-unit-syndromes`: replaced by `gui/unit-syndromes`; html export is no longer supported
@@ -66,7 +725,7 @@ that repo.
 # 50.05-alpha1
 
 ## New Scripts
-- `gui/autochop`: configuration frontend for the `autochop` plugin. you can pin the window and leave it up on the screen somewhere for live monitoring of your logging industry.
+- `gui/autochop`: configuration frontend and status monitor for the `autochop` plugin
 - `devel/tile-browser`: page through available textures and see their texture ids
 - `allneeds`: list all unmet needs sorted by how many dwarves suffer from them.
 

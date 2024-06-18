@@ -7,10 +7,11 @@ function resetTemperature(position)
   local map_block = dfhack.maps.getTileBlock(position)
   local tile = dfhack.maps.getTileFlags(position)
 
-  if tile.liquid_type == df.tile_liquid.Water or tile.flow_size == 0 then
+  -- tile.liquid_type is interpreted as a boolean; 0 (Water) is interpreted as false
+  if tile.liquid_type == false or tile.liquid_type == df.tile_liquid.Water or tile.flow_size == 0 then
     map_block.temperature_1[position.x % 16][position.y % 16] = 10015
     map_block.temperature_2[position.x % 16][position.y % 16] = 10015
-  elseif tile.liquid_type == df.tile_liquid.Magma then
+  elseif tile.liquid_type == true or tile.liquid_type == df.tile_liquid.Magma then
     map_block.temperature_1[position.x % 16][position.y % 16] = 12000
     map_block.temperature_2[position.x % 16][position.y % 16] = 12000
   end

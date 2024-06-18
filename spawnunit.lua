@@ -1,19 +1,5 @@
 -- create unit at pointer or given location
 -- wraps modtools/create-unit.lua
-local usage = [====[
-
-spawnunit
-=========
-Provides a simpler interface to `modtools/create-unit`, for creating units.
-
-Usage:  ``spawnunit [-command] RACE CASTE [NAME] [x y z] [...]``
-
-The ``-command`` flag prints the generated `modtools/create-unit` command
-instead of running it.  ``RACE`` and ``CASTE`` specify the race and caste
-of the unit to be created.  The name and coordinates of the unit are optional.
-Any further arguments are simply passed on to `modtools/create-unit`.
-
-]====]
 
 local guidm = require('gui.dwarfmode')
 local utils = require('utils')
@@ -28,7 +14,7 @@ local show_command = false
 local args = {...}
 local first_arg = (args[1] or ''):gsub('^-*', '')
 if first_arg == 'help' or #args < 2 then
-    print(usage)
+    print(dfhack.script_help())
     return
 elseif first_arg == 'command' then
     show_command = true

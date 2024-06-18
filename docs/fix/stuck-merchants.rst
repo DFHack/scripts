@@ -3,7 +3,7 @@ fix/stuck-merchants
 
 .. dfhack-tool::
     :summary: Dismiss merchants that are stuck off the edge of the map.
-    :tags: untested fort bugfix units
+    :tags: fort bugfix units
 
 This tool dismisses merchants that haven't entered the map yet. This can fix
 :bug:`9593`. Where you get a trade caravan announcement, but no merchants ever

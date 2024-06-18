@@ -1,7 +1,7 @@
 -- Read from the screen and display info about the tiles
 
 local gui = require('gui')
-local utils = require('utils')
+local guidm = require('gui.dwarfmode')
 local widgets = require('gui.widgets')
 local overlay = require('plugins.overlay')
 
@@ -19,32 +19,42 @@ function Inspect:init()
     self:addviews{
         widgets.Label{
             frame={t=0, l=0},
-            text={'Current screen: ', {text=scr_name, pen=COLOR_CYAN}}},
+            text={'Current screen: ', {text=scr_name, pen=COLOR_CYAN}},
+        },
         widgets.CycleHotkeyLabel{
             view_id='layer',
             frame={t=2, l=0},
             key='CUSTOM_CTRL_A',
             label='Inspect layer:',
             options={{label='UI', value='ui'}, 'map'},
-            enabled=self:callback('is_unfrozen')},
+            enabled=self:callback('is_unfrozen'),
+        },
         widgets.CycleHotkeyLabel{
             view_id='empties',
             frame={t=3, l=0},
             key='CUSTOM_CTRL_E',
             label='Empty elements:',
-            options={'hide', 'show'}},
+            options={'hide', 'show'},
+        },
         widgets.ToggleHotkeyLabel{
             view_id='freeze',
             frame={t=4, l=0},
             key='CUSTOM_CTRL_F',
             label='Freeze current tile:',
-            initial_option=false},
+            initial_option=false,
+        },
         widgets.Label{
             frame={t=6},
-            text={{text=self:callback('get_mouse_pos')}}},
+            text={{text=self:callback('get_grid_size')}},
+        },
+        widgets.Label{
+            frame={t=7},
+            text={{text=self:callback('get_mouse_pos')}},
+        },
         widgets.Label{
             view_id='report',
-            frame={t=8},},
+            frame={t=9},
+        },
     }
 end
 
@@ -54,6 +64,15 @@ end
 
 function Inspect:do_refresh()
     return self:is_unfrozen() and not self:getMouseFramePos()
+end
+
+function Inspect:get_grid_size()
+    if self.subviews.layer:getOptionValue() == 'ui' then
+        local width, height = dfhack.screen.getWindowSize()
+        return ('UI grid size: %d x %d'):format(width, height)
+    end
+    local layout = guidm.getPanelLayout()
+    return ('Map grid size: %d x %d'):format(layout.map.width, layout.map.height)
 end
 
 local cur_mouse_pos = {x=-1, y=-1}
@@ -147,6 +166,8 @@ local function get_ui_report(show_empty)
     add_texpos_report_line(report, gps, 'screentexpos_lower', index, show_empty)
     add_texpos_report_line(report, gps, 'screentexpos', index, show_empty)
     add_texpos_report_line(report, gps, 'screentexpos_anchored', index, show_empty)
+    add_texpos_report_line(report, gps, 'screentexpos_anchored_x', index, show_empty)
+    add_texpos_report_line(report, gps, 'screentexpos_anchored_y', index, show_empty)
     add_texpos_flag_report_line(report, gps, 'screentexpos_flag', index,
                                 screentexpos_flags, show_empty)
 
@@ -155,6 +176,8 @@ local function get_ui_report(show_empty)
         add_texpos_report_line(report, gps, 'screentexpos_top_lower', index, show_empty)
         add_texpos_report_line(report, gps, 'screentexpos_top', index, show_empty)
         add_texpos_report_line(report, gps, 'screentexpos_top_anchored', index, show_empty)
+        add_texpos_report_line(report, gps, 'screentexpos_top_anchored_x', index, show_empty)
+        add_texpos_report_line(report, gps, 'screentexpos_top_anchored_y', index, show_empty)
         add_texpos_flag_report_line(report, gps, 'screentexpos_top_flag', index,
                                     screentexpos_flags, show_empty)
     end
@@ -294,37 +317,34 @@ local function get_map_report(show_empty)
 end
 
 function Inspect:onRenderBody()
-    if self:do_refresh() then
-        local show_empty = self.subviews.empties:getOptionValue() == 'show'
-        local report = self.subviews.layer:getOptionValue() == 'ui' and
-                get_ui_report(show_empty) or get_map_report(show_empty)
-        self.subviews.report:setText(report)
-        self:updateLayout()
-    end
+    if not self:do_refresh() then return end
+    local show_empty = self.subviews.empties:getOptionValue() == 'show'
+    local report = self.subviews.layer:getOptionValue() == 'ui' and
+            get_ui_report(show_empty) or get_map_report(show_empty)
+    self.subviews.report:setText(report)
+    self:updateLayout()
 end
 
 function Inspect:onInput(keys)
     if Inspect.super.onInput(self, keys) then
         return true
     end
-    if keys._MOUSE_L_DOWN and not self:getMouseFramePos() then
+    if keys._MOUSE_L and not self:getMouseFramePos() then
         self.subviews.freeze:cycle()
         return true
     end
 end
 
-InspectScreen = defclass(InspectScreen, gui.ZScreen)
+InspectScreen = defclass(InspectScreen, gui.ZScreenModal)
 InspectScreen.ATTRS{
     focus_string='inspect-screen',
-    force_pause=true,
-    pass_mouse_clicks=false,
 }
 
 function InspectScreen:init()
     -- prevent hotspot widgets from reacting
     overlay.register_trigger_lock_screen(self)
 
-    self:addviews{Inspect{view_id='main'}}
+    self:addviews{Inspect{}}
 end
 
 function InspectScreen:onDismiss()

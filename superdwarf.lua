@@ -57,10 +57,8 @@ commands = {
         repeatUtil.scheduleEvery(timerId, 1, 'ticks', onTimer)
     end,
     all = function(arg)
-        for _, unit in pairs(df.global.world.units.active) do
-            if dfhack.units.isCitizen(unit) then
-                commands.add(unit)
-            end
+        for _, unit in pairs(dfhack.units.getCitizens()) do
+            commands.add(unit)
         end
     end,
     del = function(arg)

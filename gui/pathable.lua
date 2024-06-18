@@ -8,6 +8,7 @@ local widgets = require('gui.widgets')
 Pathable = defclass(Pathable, gui.ZScreen)
 Pathable.ATTRS{
     focus_path='pathable',
+    pass_movement_keys=true,
 }
 
 function Pathable:init()
@@ -34,11 +35,11 @@ function Pathable:init()
             initial_option=true,
         },
         widgets.ToggleHotkeyLabel{
-            view_id='skip',
+            view_id='show',
             frame={t=2, l=0},
             key='CUSTOM_CTRL_U',
-            label='Skip unrevealed',
-            initial_option=true,
+            label='Show hidden',
+            initial_option=false,
         },
         widgets.EditField{
             view_id='group',
@@ -63,22 +64,21 @@ function Pathable:onRenderBody()
     self.saved_target = target
 
     local group = self.subviews.group
-    local skip = self.subviews.skip:getOptionValue()
+    local show = self.subviews.show:getOptionValue()
 
     if not target then
         group:setText('')
         return
-    elseif skip and not dfhack.maps.isTileVisible(target) then
+    elseif not show and not dfhack.maps.isTileVisible(target) then
         group:setText('Hidden')
         return
     end
 
-    local block = dfhack.maps.getTileBlock(target)
-    local walk_group = block.walkable[target.x % 16][target.y % 16]
+    local walk_group = dfhack.maps.getWalkableGroup(target)
     group:setText(walk_group == 0 and 'None' or tostring(walk_group))
 
     if self.subviews.draw:getOptionValue() then
-        plugin.paintScreen(target, skip)
+        plugin.paintScreenPathable(target, show)
     end
 end
 

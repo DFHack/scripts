@@ -3,56 +3,27 @@ name: Build
 on: [push, pull_request]
 
 jobs:
+  test:
+    uses: DFHack/dfhack/.github/workflows/test.yml@develop
+    with:
+      scripts_repo: ${{ github.repository }}
+      scripts_ref: ${{ github.ref }}
+    secrets: inherit
+
   docs:
-    runs-on: ubuntu-22.04
-    steps:
-    - name: Set up Python 3
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3
-    - name: Install dependencies
-      run: |
-        pip install 'sphinx<4.4.0'
-    - name: Clone scripts
-      uses: actions/checkout@v1
-    - name: Set up DFHack
-      run: |
-        git clone https://github.com/DFHack/dfhack.git $HOME/dfhack --depth 1 --branch develop
-        git -C $HOME/dfhack submodule update --init --depth 1 --remote plugins/stonesense library/xml
-        rmdir $HOME/dfhack/scripts
-        ln -sv $(pwd) $HOME/dfhack/scripts
-    - name: Build docs
-      run: |
-        sphinx-build -W --keep-going -j3 --color $HOME/dfhack html
-    - name: Check for missing docs
-      if: success() || failure()
-      run: python $HOME/dfhack/ci/script-docs.py .
-    - name: Upload docs
-      if: success() || failure()
-      uses: actions/upload-artifact@master
-      with:
-        name: docs
-        path: html
+    uses: DFHack/dfhack/.github/workflows/build-linux.yml@develop
+    with:
+      scripts_repo: ${{ github.repository }}
+      scripts_ref: ${{ github.ref }}
+      artifact-name: docs
+      platform-files: false
+      common-files: false
+      docs: true
+    secrets: inherit
+
   lint:
-    runs-on: ubuntu-22.04
-    steps:
-    - name: Set up Python 3
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install lua5.3
-    - name: Clone scripts
-      uses: actions/checkout@v1
-    - name: Set up DFHack
-      run: |
-        git clone https://github.com/DFHack/dfhack.git $HOME/dfhack --depth 1 --branch develop
-        rmdir $HOME/dfhack/scripts
-        ln -sv $(pwd) $HOME/dfhack/scripts
-    - name: Check whitespace
-      run: python $HOME/dfhack/ci/lint.py --git-only --github-actions
-    - name: Check Lua syntax
-      if: success() || failure()
-      run: python $HOME/dfhack/ci/script-syntax.py --ext=lua --cmd="luac5.3 -p" --github-actions
+    uses: DFHack/dfhack/.github/workflows/lint.yml@develop
+    with:
+      scripts_repo: ${{ github.repository }}
+      scripts_ref: ${{ github.ref }}
+    secrets: inherit

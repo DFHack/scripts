@@ -3,31 +3,41 @@
 
 local argparse = require('argparse')
 
--- reqscript all internal files here, even if they're not directly used by this
--- top-level file. this ensures modified transitive dependencies are properly
--- reloaded when this script is run.
-local quickfort_aliases = reqscript('internal/quickfort/aliases')
 local quickfort_api = reqscript('internal/quickfort/api')
-local quickfort_build = reqscript('internal/quickfort/build')
-local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_command = reqscript('internal/quickfort/command')
 local quickfort_common = reqscript('internal/quickfort/common')
-local quickfort_config = reqscript('internal/quickfort/config')
-local quickfort_dig = reqscript('internal/quickfort/dig')
-local quickfort_keycodes = reqscript('internal/quickfort/keycodes')
 local quickfort_list = reqscript('internal/quickfort/list')
-local quickfort_map = reqscript('internal/quickfort/map')
-local quickfort_meta = reqscript('internal/quickfort/meta')
-local quickfort_notes = reqscript('internal/quickfort/notes')
-local quickfort_orders = reqscript('internal/quickfort/orders')
-local quickfort_parse = reqscript('internal/quickfort/parse')
-local quickfort_place = reqscript('internal/quickfort/place')
-local quickfort_preview = reqscript('internal/quickfort/preview')
-local quickfort_query = reqscript('internal/quickfort/query')
-local quickfort_reader = reqscript('internal/quickfort/reader')
 local quickfort_set = reqscript('internal/quickfort/set')
-local quickfort_transform = reqscript('internal/quickfort/transform')
-local quickfort_zone = reqscript('internal/quickfort/zone')
+
+local GLOBAL_KEY = 'quickfort'
+
+function refresh_scripts()
+    -- reqscript all internal files here, even if they're not directly used by this
+    -- top-level file. this ensures modified transitive dependencies are properly
+    -- reloaded when this script is run.
+    reqscript('internal/quickfort/aliases')
+    reqscript('internal/quickfort/api')
+    reqscript('internal/quickfort/build')
+    reqscript('internal/quickfort/building')
+    reqscript('internal/quickfort/burrow')
+    reqscript('internal/quickfort/command')
+    reqscript('internal/quickfort/common')
+    reqscript('internal/quickfort/dig')
+    reqscript('internal/quickfort/keycodes')
+    reqscript('internal/quickfort/list')
+    reqscript('internal/quickfort/map')
+    reqscript('internal/quickfort/meta')
+    reqscript('internal/quickfort/notes')
+    reqscript('internal/quickfort/orders')
+    reqscript('internal/quickfort/parse')
+    reqscript('internal/quickfort/place')
+    reqscript('internal/quickfort/preview')
+    reqscript('internal/quickfort/reader')
+    reqscript('internal/quickfort/set')
+    reqscript('internal/quickfort/transform')
+    reqscript('internal/quickfort/zone')
+end
+refresh_scripts()
 
 -- public API
 function apply_blueprint(params)
@@ -45,11 +55,6 @@ function apply_blueprint(params)
     return quickfort_api.clean_stats(ctx.stats)
 end
 
--- interactive script
-if dfhack_flags.module then
-    return
-end
-
 local function do_help()
     print(dfhack.script_help())
 end
@@ -58,10 +63,27 @@ local function do_gui(params)
     dfhack.run_script('gui/quickfort', table.unpack(params))
 end
 
+local function do_reset()
+    quickfort_list.blueprint_dirs = nil
+    quickfort_set.do_reset()
+end
+
+dfhack.onStateChange[GLOBAL_KEY] = function(sc)
+    if sc == SC_WORLD_LOADED or sc == SC_WORLD_UNLOADED then
+        do_reset()
+    end
+end
+
+-- interactive script
+if dfhack_flags.module then
+    return
+end
+
 local action_switch = {
     set=quickfort_set.do_set,
-    reset=quickfort_set.do_reset,
+    reset=do_reset,
     list=quickfort_list.do_list,
+    delete=quickfort_list.do_delete,
     gui=do_gui,
     run=quickfort_command.do_command,
     orders=quickfort_command.do_command,

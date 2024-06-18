@@ -3,7 +3,7 @@ modtools/skill-change
 
 .. dfhack-tool::
     :summary: Modify unit skills.
-    :tags: untested dev
+    :tags: dev
 
 Sets or modifies a skill of a unit.
 

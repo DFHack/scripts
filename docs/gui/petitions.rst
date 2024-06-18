@@ -2,8 +2,8 @@ gui/petitions
 =============
 
 .. dfhack-tool::
-    :summary: Show information about your fort's petitions.
-    :tags: untested fort inspection
+    :summary: List guildhall and temple agreements.
+    :tags: fort inspection
 
 Show your fort's petitions, both pending and fulfilled.
 

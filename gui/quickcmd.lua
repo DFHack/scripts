@@ -74,16 +74,26 @@ function QCMDDialog:init(info)
             text={'Command list is empty.', NEWLINE, 'Hit "A" to add one!'},
             visible=function() return #self.commands == 0 end,
         },
-        widgets.Label{
-            frame={b=0, h=2},
-            text={
-                {key='CUSTOM_SHIFT_A', text=': Add command',
-                 on_activate=self:callback('onAddCommand')}, ' ',
-                {key='CUSTOM_SHIFT_D', text=': Delete command',
-                 on_activate=self:callback('onDelCommand')}, NEWLINE,
-                {key='CUSTOM_SHIFT_E', text=': Edit command',
-                 on_activate=self:callback('onEditCommand')},
-            },
+        widgets.HotkeyLabel{
+            frame={b=1, l=0},
+            key='CUSTOM_SHIFT_A',
+            label='Add command',
+            auto_width=true,
+            on_activate=self:callback('onAddCommand'),
+        },
+        widgets.HotkeyLabel{
+            frame={b=1, l=19},
+            key='CUSTOM_SHIFT_D',
+            label='Delete command',
+            auto_width=true,
+            on_activate=self:callback('onDelCommand'),
+        },
+        widgets.HotkeyLabel{
+            frame={b=0, l=0},
+            key='CUSTOM_SHIFT_E',
+            label='Edit command',
+            auto_width=true,
+            on_activate=self:callback('onEditCommand'),
         },
     }
 
@@ -92,7 +102,6 @@ end
 
 function QCMDDialog:submit(idx, choice)
     local screen = self.parent_view
-    local parent = screen._native.parent
     dfhack.screen.hideGuard(screen, function()
         dfhack.run_command(choice.command)
     end)

@@ -3,32 +3,34 @@
 --@enable = true
 
 local argparse = require('argparse')
-local json = require('json')
 local eventful = require('plugins.eventful')
-local persist = require('persist-table')
+local gui = require('gui')
+local overlay = require('plugins.overlay')
+local utils = require('utils')
+local widgets = require('gui.widgets')
 
 local GLOBAL_KEY = 'prioritize' -- used for state change hooks and persistence
 
 local DEFAULT_HAUL_LABORS = {'Food', 'Body', 'Animals'}
-local DEFAULT_REACTION_NAMES = {'TAN_A_HIDE'}
+local DEFAULT_REACTION_NAMES = {'TAN_A_HIDE', 'ADAMANTINE_WAFERS'}
 local DEFAULT_JOB_TYPES = {
     -- take care of rottables before they rot
-    'StoreItemInStockpile', 'CustomReaction', 'PrepareRawFish',
+    'StoreItemInStockpile', 'CustomReaction', 'StoreItemInBarrel',
+    'PrepareRawFish', 'PlaceItemInTomb',
     -- ensure medical, hygiene, and hospice tasks get done
-    'CleanSelf', 'RecoverWounded', 'ApplyCast', 'BringCrutch', 'CleanPatient',
-    'DiagnosePatient', 'DressWound', 'GiveFood', 'GiveWater', 'ImmobilizeBreak',
-    'PlaceInTraction', 'SetBone', 'Surgery', 'Suture',
-    -- organize items efficiently so new items can be brought to the stockpiles
-    'StoreItemInVehicle', 'StoreItemInBag', 'StoreItemInBarrel',
-    'StoreItemInLocation', 'StoreItemInBin', 'PushTrackVehicle',
+    'ApplyCast', 'BringCrutch', 'CleanPatient', 'CleanSelf',
+    'DiagnosePatient', 'DressWound', 'GiveFood', 'GiveWater',
+    'ImmobilizeBreak', 'PlaceInTraction', 'RecoverWounded',
+    'SeekInfant', 'SetBone', 'Surgery', 'Suture',
     -- ensure prisoners and animals are tended to quickly
-    'TameAnimal', 'TrainAnimal', 'TrainHuntingAnimal', 'TrainWarAnimal',
-    'PenLargeAnimal', 'PitLargeAnimal', 'SlaughterAnimal',
-    -- when these things come up, get them done ASAP
-    'ManageWorkOrders', 'TradeAtDepot', 'BringItemToDepot', 'DumpItem',
-    'DestroyBuilding', 'RemoveConstruction', 'PullLever', 'FellTree',
-    'FireBallista', 'FireCatapult', 'OperatePump', 'CollectSand', 'MakeArmor',
-    'MakeWeapon',
+    -- (Animal/prisoner storage already covered by 'StoreItemInStockpile' above)
+    'SlaughterAnimal', 'PenLargeAnimal', 'ChainAnimal', 'LoadCageTrap',
+    -- ensure noble tasks never get starved
+    'InterrogateSubject', 'ManageWorkOrders', 'ReportCrime', 'TradeAtDepot',
+    -- get tasks done quickly that might block the player from getting on to
+    -- the next thing they want to do
+    'BringItemToDepot', 'DestroyBuilding', 'DumpItem', 'FellTree',
+    'RemoveConstruction', 'PullLever', 'FillPond', 'PutItemOnDisplay',
 }
 
 -- set of job types that we are watching. maps job_type (as a number) to
@@ -43,17 +45,17 @@ function get_watched_job_matchers() return g_watched_job_matchers end
 eventful.enableEvent(eventful.eventType.UNLOAD, 1)
 eventful.enableEvent(eventful.eventType.JOB_INITIATED, 5)
 
-local function has_elements(collection)
-    for _,_ in pairs(collection) do return true end
-    return false
-end
-
 function isEnabled()
-    return has_elements(get_watched_job_matchers())
+    return next(get_watched_job_matchers())
 end
 
 local function persist_state()
-    persist.GlobalTable[GLOBAL_KEY] = json.encode(get_watched_job_matchers())
+    local data_to_persist = {}
+    -- convert enum keys into strings so json doesn't get confused and think the map is a list
+    for k, v in pairs(get_watched_job_matchers()) do
+        data_to_persist[tostring(k)] = v
+    end
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, data_to_persist)
 end
 
 local function make_matcher_map(keys)
@@ -122,16 +124,12 @@ end
 
 local function update_handlers()
     local watched_job_matchers = get_watched_job_matchers()
-    if has_elements(watched_job_matchers) then
+    if next(watched_job_matchers) then
         eventful.onUnload.prioritize = clear_watched_job_matchers
         eventful.onJobInitiated.prioritize = on_new_job
     else
         clear_watched_job_matchers()
     end
-end
-
-local function get_annotation_str(annotation)
-    return (' (%s)'):format(annotation)
 end
 
 local function get_unit_labor_str(unit_labor)
@@ -140,7 +138,11 @@ local function get_unit_labor_str(unit_labor)
 end
 
 local function get_unit_labor_annotation_str(unit_labor)
-    return get_annotation_str(get_unit_labor_str(unit_labor))
+    return (' --haul-labor %s'):format(get_unit_labor_str(unit_labor))
+end
+
+local function get_reaction_annotation_str(reaction)
+    return (' --reaction-name %s'):format(reaction)
 end
 
 local function print_status_line(num_jobs, job_type, annotation)
@@ -162,7 +164,7 @@ local function status()
             end
         elseif v.reaction_matchers then
             for rk,rv in pairs(v.reaction_matchers) do
-                print_status_line(rv, k, get_annotation_str(rk))
+                print_status_line(rv, k, get_reaction_annotation_str(rk))
             end
         else
             print_status_line(v.num_prioritized, k)
@@ -269,6 +271,27 @@ local function boost_and_watch_special(job_type, job_matcher,
     end
 end
 
+local JOB_TYPES_DENYLIST = utils.invert{
+    df.job_type.CarveFortification,
+    df.job_type.SmoothWall,
+    df.job_type.SmoothFloor,
+    df.job_type.DetailWall,
+    df.job_type.DetailFloor,
+    df.job_type.Dig,
+    df.job_type.CarveUpwardStaircase,
+    df.job_type.CarveDownwardStaircase,
+    df.job_type.CarveUpDownStaircase,
+    df.job_type.CarveRamp,
+    df.job_type.DigChannel,
+}
+
+local DIG_SMOOTH_WARNING = {
+    'Priortizing current pending jobs, but skipping automatic boosting of dig and',
+    'smooth/engrave job types. Automatic priority boosting of these types of jobs',
+    'will overwhelm the DF job scheduler. Instead, consider specializing units for',
+    'mining and related work details, and using vanilla designation priorities.',
+}
+
 local function boost_and_watch(job_matchers, opts)
     local quiet = opts.quiet
     boost(job_matchers, opts)
@@ -283,7 +306,11 @@ local function boost_and_watch(job_matchers, opts)
             boost_and_watch_special(job_type, job_matcher,
                 function(jm) return jm.reaction_matchers end,
                 function(jm) jm.reaction_matchers = nil end,
-                get_annotation_str, quiet)
+                get_reaction_annotation_str, quiet)
+        elseif JOB_TYPES_DENYLIST[job_type] then
+            for _,msg in ipairs(DIG_SMOOTH_WARNING) do
+                dfhack.printerr(msg)
+            end
         elseif watched_job_matchers[job_type] then
             if not quiet then
                 print_skip_add_message(job_type)
@@ -338,7 +365,7 @@ local function remove_watch_special(job_type, job_matcher,
             end
         end
     end
-    if not has_elements(wspecial_matchers) then
+    if not next(wspecial_matchers) then
         watched_job_matchers[job_type] = nil
     end
 end
@@ -384,7 +411,7 @@ local function remove_watch(job_matchers, opts)
                     end
                     return jm.reaction_matchers
                 end,
-                get_annotation_str, quiet)
+                get_reaction_annotation_str, quiet)
         else
             error('unhandled case') -- should not ever happen
         end
@@ -400,7 +427,7 @@ local function get_job_type_str(job)
                                get_unit_labor_annotation_str(job.item_subtype))
     elseif job_type == df.job_type.CustomReaction then
         return ('%s%s'):format(job_type_str,
-                               get_annotation_str(job.reaction_name))
+                               get_reaction_annotation_str(job.reaction_name))
     else
         return job_type_str
     end
@@ -408,7 +435,7 @@ end
 
 local function print_current_jobs(job_matchers, opts)
     local job_counts_by_type = {}
-    local filtered = has_elements(job_matchers)
+    local filtered = next(job_matchers)
     for_all_live_postings(
         function(posting)
             local job = posting.job
@@ -425,7 +452,7 @@ local function print_current_jobs(job_matchers, opts)
             print('Current unclaimed jobs:')
             first = false
         end
-        print(('%d\t%s'):format(v, k))
+        print(('%4d %s'):format(v, k))
     end
     if first then print('No current unclaimed jobs.') end
 end
@@ -470,7 +497,7 @@ local function print_registry()
             table.insert(t, v.code)
         end
     end
-    if not has_elements(t) then
+    if not next(t) then
         t = {'Load a game to see reactions'}
     end
     print_registry_section('Reaction names (for CustomReaction jobs)', t)
@@ -575,7 +602,7 @@ local function parse_commandline(args)
     end
     opts.job_matchers = job_matchers
 
-    if action == status and has_elements(job_matchers) then
+    if action == status and next(job_matchers) then
         action = boost
     end
     opts.action = action
@@ -587,8 +614,15 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     if sc ~= SC_MAP_LOADED or df.global.gamemode ~= df.game_mode.DWARF then
         return
     end
-    local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '')
-    g_watched_job_matchers = persisted_data or {}
+    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
+    -- convert the string keys back into enum values
+    for k,v in pairs(persisted_data) do
+        if type(k) == 'string' then
+            persisted_data[tonumber(k)] = v
+            persisted_data[k] = nil
+        end
+    end
+    g_watched_job_matchers = persisted_data
     update_handlers()
 end
 
@@ -610,10 +644,90 @@ if dfhack_flags.module then
     return
 end
 
+--------------------------------
+-- EnRouteOverlay
+--
+
+local function is_visible()
+    local job = dfhack.gui.getSelectedJob(true)
+    return job and not job.flags.suspend and
+        (job.job_type == df.job_type.DestroyBuilding or
+         job.job_type == df.job_type.ConstructBuilding)
+end
+
+EnRouteOverlay = defclass(EnRouteOverlay, overlay.OverlayWidget)
+EnRouteOverlay.ATTRS{
+    desc='Adds a panel to unbuilt buildings indicating whether a dwarf is on their way to build.',
+    default_pos={x=-40, y=26},
+    default_enabled=true,
+    viewscreens='dwarfmode/ViewSheets/BUILDING',
+    frame={w=57, h=5},
+    frame_style=gui.FRAME_MEDIUM,
+    frame_background=gui.CLEAR_PEN,
+    visible=is_visible,
+}
+
+function EnRouteOverlay:init()
+    self:addviews{
+        widgets.Label{
+            frame={t=0, l=0},
+            text={
+                'Job taken by:',
+                {gap=1, text=self:callback('get_builder_name'), pen=self:callback('get_builder_name_pen')}
+            },
+            on_click=self:callback('zoom_to_builder'),
+        },
+        widgets.ToggleHotkeyLabel{
+            view_id='do_now',
+            frame={t=2, l=0},
+            label='Make top priority:',
+            key='CUSTOM_CTRL_T',
+            on_change=function(val)
+                local job = dfhack.gui.getSelectedJob(true)
+                if not job then return end
+                job.flags.do_now = val
+            end,
+        },
+    }
+end
+
+function EnRouteOverlay:get_builder_name()
+    if not self.builder then return 'N/A' end
+    return dfhack.units.getReadableName(self.builder)
+end
+
+function EnRouteOverlay:get_builder_name_pen()
+    if not self.builder then return COLOR_DARKGRAY end
+    return COLOR_GREEN
+end
+
+function EnRouteOverlay:zoom_to_builder()
+    local job = dfhack.gui.getSelectedJob(true)
+    if not job then return end
+    local builder = dfhack.job.getWorker(job)
+    if builder then
+        dfhack.gui.revealInDwarfmodeMap(xyz2pos(dfhack.units.getPosition(builder)), true, true)
+    end
+end
+
+function EnRouteOverlay:render(dc)
+    local job = dfhack.gui.getSelectedJob(true)
+    self.builder = dfhack.job.getWorker(job)
+    self.subviews.do_now:setOption(job.flags.do_now)
+    EnRouteOverlay.super.render(self, dc)
+    self.builder = nil
+end
+
+OVERLAY_WIDGETS = {enroute=EnRouteOverlay}
+
 if df.global.gamemode ~= df.game_mode.DWARF or not dfhack.isMapLoaded() then
     dfhack.printerr('prioritize needs a loaded fortress map to work')
     return
 end
+
+--------------------------------
+-- main
+--
 
 local args = {...}
 

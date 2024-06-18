@@ -3,7 +3,7 @@ clear-smoke
 
 .. dfhack-tool::
     :summary: Removes all smoke from the map.
-    :tags: untested fort armok fps map
+    :tags: fort armok fps map
 
 Note that this can leak memory and should be used sparingly.
 

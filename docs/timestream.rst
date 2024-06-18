@@ -3,7 +3,7 @@ timestream
 
 .. dfhack-tool::
     :summary: Fix FPS death.
-    :tags: untested fort auto fps
+    :tags: unavailable
 
 Do you remember when you first start a new fort, your initial 7 dwarves zip
 around the screen and get things done so quickly? As a player, you never had

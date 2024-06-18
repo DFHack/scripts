@@ -19,7 +19,7 @@ if #items > 0 then
     print('Emptying ' .. dfhack.items.getDescription(bin, 0))
     for _, item in pairs(items) do
         print('  ' .. dfhack.items.getDescription(item, 0))
-        dfhack.items.moveToGround(item, bin.pos)
+        dfhack.items.moveToGround(item, xyz2pos(dfhack.items.getPosition(bin)))
     end
 else
     print('No contained items')

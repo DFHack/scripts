@@ -65,9 +65,11 @@ function launch(unitSource,unitRider)
     proj.speed_x=resultx*10000
     proj.speed_y=resulty*10000
     proj.speed_z=resultz*15000 --higher z speed makes it easier to reach a target safely
-    if df.global.world.units.active[0].job.hunt_target==nil then
+
+    local adv = dfhack.world.getAdventurer()
+    if adv.job.hunt_target==nil then
         proj.flags.safe_landing=true
-    elseif df.global.world.units.active[0].job.hunt_target then
+    elseif adv.job.hunt_target then
         proj.flags.safe_landing=false
     end
     local unitoccupancy = dfhack.maps.ensureTileBlock(unitSource.pos).occupancy[unitSource.pos.x%16][unitSource.pos.y%16]
@@ -80,11 +82,11 @@ function launch(unitSource,unitRider)
     unitSource.flags1.on_ground=false
 end
 
-local unitSource = df.global.world.units.active[0]
+local unitSource = dfhack.world.getAdventurer()
 local unitRider = nil --as:df.unit
 if unitSource.job.hunt_target ~= nil then
     unitRider = unitSource
-    unitSource = df.global.world.units.active[0].job.hunt_target
+    unitSource = unitSource.job.hunt_target
     unitSource.general_refs:insert("#",{new=df.general_ref_unit_riderst,unit_id=unitRider.id})
     unitRider.relationship_ids.RiderMount=unitSource.id
     unitRider.flags1.rider=true

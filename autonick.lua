@@ -1,33 +1,4 @@
 -- gives dwarves unique nicknames
---[====[
-
-autonick
-========
-Gives dwarves unique nicknames chosen randomly from ``dfhack-config/autonick.txt``.
-
-One nickname per line.
-Empty lines, lines beginning with ``#`` and repeat entries are discarded.
-
-Dwarves with manually set nicknames are ignored.
-
-If there are fewer available nicknames than dwarves, the remaining
-dwarves will go un-nicknamed.
-
-You may wish to use this script with the "repeat" command, e.g:
-``repeat -name autonick -time 3 -timeUnits months -command [ autonick all ]``
-
-Usage:
-
-    autonick all [<options>]
-    autonick help
-
-Options:
-
-:``-h``, ``--help``:
-    Show this text.
-:``-q``, ``--quiet``:
-    Do not report how many dwarves were given nicknames.
-]====]
 
 local options = {}
 
@@ -48,9 +19,8 @@ end
 
 local seen = {}
 --check current nicknames
-for _,unit in ipairs(df.global.world.units.active) do
-    if dfhack.units.isCitizen(unit) and
-    unit.name.nickname ~= "" then
+for _,unit in ipairs(dfhack.units.getCitizens()) do
+    if unit.name.nickname ~= "" then
         seen[unit.name.nickname] = true
     end
 end
@@ -70,16 +40,15 @@ end
 
 --assign names
 local count = 0
-for _,unit in ipairs(df.global.world.units.active) do
+for _,unit in ipairs(dfhack.units.getCitizens()) do
     if (#names == 0) then
             if options.quiet ~= true then
-                print("no free names left in dfhack-config/autonick.txt")
+                print("not enough unique names in dfhack-config/autonick.txt")
             end
         break
     end
     --if there are any names left
-    if dfhack.units.isCitizen(unit) and
-    unit.name.nickname == "" then
+    if unit.name.nickname == "" then
         newnameIndex = math.random (#names)
         dfhack.units.setNickname(unit, names[newnameIndex])
         table.remove(names, newnameIndex)

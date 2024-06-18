@@ -194,7 +194,7 @@ function AddBackpackItems(backpack,items)
 end
 function GetItemsAtPos(pos)
     local ret={}
-    for k,v in pairs(df.global.world.items.all) do
+    for k,v in pairs(df.global.world.items.other.IN_PLAY) do
         if v.flags.on_ground and v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
             table.insert(ret,v)
         end
@@ -346,14 +346,14 @@ end},
     return true
 end},
 {name="follow",f=function (unit_list)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     for k,v in pairs(unit_list) do
         v.relationship_ids.GroupLeader=adv.id
     end
     return true
 end},
 {name="leave",f=function (unit_list)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local t_nem=dfhack.units.getNemesis(adv)
     for k,v in pairs(unit_list) do
 
@@ -398,7 +398,7 @@ end},
     if not CheckCursor(pos) then
         return false
     end
-    adv=df.global.world.units.active[0]
+    adv=dfhack.world.getAdventurer()
     item=GetItemsAtPos(df.global.cursor)[1]
     print(item.id)
     for k,v in pairs(unit_list) do
@@ -413,7 +413,7 @@ end},
 }
 
 function getCompanions(unit)
-    unit=unit or df.global.world.units.active[0]
+    unit=unit or dfhack.world.getAdventurer()
     local t_nem=dfhack.units.getNemesis(unit)
     if t_nem==nil then
         qerror("Invalid unit! No nemesis record")

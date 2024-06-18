@@ -3,7 +3,7 @@ devel/test-perlin
 
 .. dfhack-tool::
     :summary: Generate an image based on perlin noise.
-    :tags: untested dev
+    :tags: unavailable
 
 Generates an image using multiple octaves of perlin noise.
 

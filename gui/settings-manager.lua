@@ -1,11 +1,584 @@
+--@ module = true
+
+local argparse = require('argparse')
+local control_panel = reqscript('control-panel')
+local gui = require('gui')
+local json = require('json')
+local overlay = require('plugins.overlay')
+local utils = require('utils')
+local widgets = require('gui.widgets')
+
+local GLOBAL_KEY = 'settings-manager'
+
+config = config or json.open("dfhack-config/settings-manager.json")
+
+--------------------------
+-- DifficultyOverlayBase
+--
+
+DifficultyOverlayBase = defclass(DifficultyOverlayBase, overlay.OverlayWidget)
+DifficultyOverlayBase.ATTRS {
+    frame={w=46, h=5},
+    frame_style=gui.MEDIUM_FRAME,
+    frame_background=gui.CLEAR_PEN,
+}
+
+local function save_difficulty(df_difficulty)
+    local difficulty = utils.clone(df_difficulty, true)
+    for _, v in pairs(difficulty) do
+        if type(v) == 'table' and not v[1] then
+            for name in pairs(v) do
+                if tonumber(name) then
+                    -- remove numeric "filler" vals from bitflag records
+                    v[name] = nil
+                end
+            end
+        end
+    end
+    -- replace top-level button states to say "Custom"
+    -- one of the vanilla presets might actually apply, but we don't know that
+    -- unless we do some diffing
+    difficulty.difficulty_enemies = df.setting_difficulty_enemies_type.Custom
+    difficulty.difficulty_economy = df.setting_difficulty_economy_type.Custom
+    config.data.difficulty = difficulty
+    config:write()
+end
+
+local function load_difficulty(df_difficulty)
+    local difficulty = utils.clone(config.data.difficulty or {}, true)
+    for _, v in pairs(difficulty) do
+        if type(v) == 'table' and v[1] then
+            -- restore 0-based index for static arrays and prevent resizing
+            for i, elem in ipairs(v) do
+                v[i-1] = elem
+                v[i] = nil
+            end
+            v.resize = false
+        end
+    end
+    df_difficulty:assign(difficulty)
+end
+
+local function save_auto(val)
+    config.data.auto = val
+    config:write()
+end
+
+function DifficultyOverlayBase:init()
+    self:addviews{
+        widgets.HotkeyLabel{
+            view_id='save',
+            frame={l=0, t=0, w=16},
+            key='CUSTOM_SHIFT_S',
+            label='Save settings',
+            on_activate=self:callback('do_save'),
+        },
+        widgets.Label{
+            view_id='save_flash',
+            frame={l=6, t=0},
+            text='Saved',
+            text_pen=COLOR_GREEN,
+            visible=false,
+        },
+        widgets.HotkeyLabel{
+            view_id='load',
+            frame={l=22, t=0, w=22},
+            key='CUSTOM_SHIFT_L',
+            label='Load saved settings',
+            on_activate=self:callback('do_load'),
+            enabled=function() return next(config.data.difficulty or {}) end,
+        },
+        widgets.Label{
+            view_id='load_flash',
+            frame={l=28, t=0},
+            text='Loaded',
+            text_pen=COLOR_GREEN,
+            visible=false,
+        },
+        widgets.ToggleHotkeyLabel{
+            frame={l=0, t=2},
+            key='CUSTOM_SHIFT_A',
+            label='Apply saved settings for new embarks:',
+            on_change=save_auto,
+            initial_option=not not config.data.auto,
+            enabled=function() return next(config.data.difficulty or {}) end,
+        },
+    }
+end
+
+local function flash(self, which)
+    self.subviews[which].visible = false
+    self.subviews[which..'_flash'].visible = true
+    local end_ms = dfhack.getTickCount() + 5000
+    local function label_reset()
+        if dfhack.getTickCount() < end_ms then
+            dfhack.timeout(10, 'frames', label_reset)
+        else
+            self.subviews[which..'_flash'].visible = false
+            self.subviews[which].visible = true
+        end
+    end
+    label_reset()
+end
+
+-- overridden by subclasses
+function DifficultyOverlayBase:get_df_struct()
+end
+
+function DifficultyOverlayBase:do_save()
+    flash(self, 'save')
+    save_difficulty(self:get_df_struct().difficulty)
+end
+
+function DifficultyOverlayBase:do_load()
+    flash(self, 'load')
+    load_difficulty(self:get_df_struct().difficulty)
+end
+
+function DifficultyOverlayBase:onInput(keys)
+    if self:get_df_struct().entering_value_str then return false end
+    return DifficultyOverlayBase.super.onInput(self, keys)
+end
+
+----------------------------
+-- DifficultyEmbarkOverlay
+--
+
+DifficultyEmbarkOverlay = defclass(DifficultyEmbarkOverlay, DifficultyOverlayBase)
+DifficultyEmbarkOverlay.ATTRS {
+    desc='Adds buttons to the embark difficulty screen for saving and restoring settings.',
+    default_pos={x=-20, y=5},
+    viewscreens='setupdwarfgame/CustomSettings',
+    default_enabled=true,
+}
+
+show_notification = show_notification or false
+
+function DifficultyEmbarkOverlay:get_df_struct()
+    return dfhack.gui.getDFViewscreen(true)
+end
+
+function DifficultyEmbarkOverlay:onInput(keys)
+    show_notification = false
+    return DifficultyEmbarkOverlay.super.onInput(self, keys)
+end
+
+----------------------------------------
+-- DifficultyEmbarkNotificationOverlay
+--
+
+DifficultyEmbarkNotificationOverlay = defclass(DifficultyEmbarkNotificationOverlay, overlay.OverlayWidget)
+DifficultyEmbarkNotificationOverlay.ATTRS {
+    desc='Displays a message when saved difficulty settings have been automatically applied.',
+    default_pos={x=75, y=18},
+    viewscreens='setupdwarfgame/Default',
+    default_enabled=true,
+    frame={w=23, h=3},
+}
+
+function DifficultyEmbarkNotificationOverlay:init()
+    self:addviews{
+        widgets.Panel{
+            frame={t=0, w=25},
+            frame_style=gui.FRAME_MEDIUM,
+            frame_background=gui.CLEAR_PEN,
+            subviews={
+                widgets.Label{
+                    text='Saved settings restored',
+                    text_pen=COLOR_LIGHTGREEN,
+                },
+            },
+            visible=function() return show_notification end,
+        },
+    }
+end
+
+function DifficultyEmbarkNotificationOverlay:preUpdateLayout(parent_rect)
+    self.frame.w = parent_rect.width - (self.frame.l or (self.default_pos.x - 1))
+end
+
+local last_scr_type
+dfhack.onStateChange[GLOBAL_KEY] = function(sc)
+    if sc ~= SC_VIEWSCREEN_CHANGED then return end
+    local scr = dfhack.gui.getDFViewscreen(true)
+    if last_scr_type == scr._type then return end
+    last_scr_type = scr._type
+    show_notification = false
+    if not df.viewscreen_setupdwarfgamest:is_instance(scr) then return end
+    if not config.data.auto then return end
+    load_difficulty(scr.difficulty)
+    show_notification = true
+end
+
+------------------------------
+-- DifficultySettingsOverlay
+--
+
+DifficultySettingsOverlay = defclass(DifficultySettingsOverlay, DifficultyOverlayBase)
+DifficultySettingsOverlay.ATTRS {
+    desc='Adds buttons to the fort difficulty screen for saving and restoring settings.',
+    default_pos={x=-42, y=8},
+    viewscreens='dwarfmode/Settings/DIFFICULTY/CustomSettings',
+    default_enabled=true,
+}
+
+function DifficultySettingsOverlay:get_df_struct()
+    return df.global.game.main_interface.settings
+end
+
+------------------------------
+-- ImportExportAutoOverlay
+--
+
+ImportExportAutoOverlay = defclass(ImportExportAutoOverlay, overlay.OverlayWidget)
+ImportExportAutoOverlay.ATTRS {
+    default_enabled=true,
+    frame_style=gui.MEDIUM_FRAME,
+    frame_background=gui.CLEAR_PEN,
+    save_label=DEFAULT_NIL,
+    load_label=DEFAULT_NIL,
+    auto_label=DEFAULT_NIL,
+    save_fn=DEFAULT_NIL,
+    load_fn=DEFAULT_NIL,
+    has_data_fn=DEFAULT_NIL,
+    autostart_command=DEFAULT_NIL,
+}
+
+function ImportExportAutoOverlay:init()
+    self:addviews{
+        widgets.HotkeyLabel{
+            view_id='save',
+            frame={l=0, t=0, w=39},
+            key='CUSTOM_CTRL_E',
+            label=self.save_label,
+            on_activate=self:callback('do_save'),
+        },
+        widgets.Label{
+            view_id='save_flash',
+            frame={l=18, t=0},
+            text='Saved',
+            text_pen=COLOR_GREEN,
+            visible=false,
+        },
+        widgets.HotkeyLabel{
+            view_id='load',
+            frame={l=42, t=0, w=34},
+            key='CUSTOM_CTRL_I',
+            label=self.load_label,
+            on_activate=self:callback('do_load'),
+            enabled=self.has_data_fn,
+        },
+        widgets.Label{
+            view_id='load_flash',
+            frame={l=51, t=0},
+            text='Loaded',
+            text_pen=COLOR_GREEN,
+            visible=false,
+        },
+        widgets.ToggleHotkeyLabel{
+            view_id='auto',
+            frame={l=0, t=2},
+            key='CUSTOM_CTRL_A',
+            label=self.auto_label,
+            on_change=self:callback('do_auto'),
+            enabled=self.has_data_fn,
+        },
+    }
+end
+
+function ImportExportAutoOverlay:do_save()
+    flash(self, 'save')
+    self.save_fn()
+end
+
+function ImportExportAutoOverlay:do_load()
+    flash(self, 'load')
+    self.load_fn()
+end
+
+AutoMessage = defclass(AutoMessage, widgets.Window)
+AutoMessage.ATTRS {
+    frame={w=61, h=9},
+    autostart_command=DEFAULT_NIL,
+    enabled=DEFAULT_NIL,
+}
+
+function AutoMessage:init()
+    self:addviews{
+        widgets.Label{
+            view_id='label',
+            frame={t=0, l=0},
+            text={
+                'The "', self.autostart_command, '" command', NEWLINE,
+                'has been ',
+                {text=self.enabled and 'enabled' or 'disabled', pen=self.enabled and COLOR_GREEN or COLOR_LIGHTRED},
+                ' in the ',
+                {text='Automation', pen=COLOR_YELLOW}, ' -> ',
+                {text='Autostart', pen=COLOR_YELLOW}, ' tab of ', NEWLINE,
+                {text='.', gap=25},
+            },
+        },
+        widgets.HotkeyLabel{
+            frame={t=2, l=0},
+            label='gui/control-panel',
+            key='CUSTOM_CTRL_G',
+            auto_width=true,
+            on_activate=function()
+                self.parent_view:dismiss()
+                dfhack.run_script('gui/control-panel')
+            end,
+        },
+        widgets.HotkeyLabel{
+            frame={b=0, l=0, r=0},
+            label='Ok',
+            key='SELECT',
+            auto_width=true,
+            on_activate=function() self.parent_view:dismiss() end,
+        },
+    }
+end
+
+AutoMessageScreen = defclass(AutoMessageScreen, gui.ZScreenModal)
+AutoMessageScreen.ATTRS {
+    focus_path='settings-manager/prompt',
+    autostart_command=DEFAULT_NIL,
+    enabled=DEFAULT_NIL,
+}
+
+function AutoMessageScreen:init()
+    self:addviews{
+        AutoMessage{
+            frame_title=(self.enabled and 'Enabled' or 'Disabled')..' auto-restore',
+            autostart_command=self.autostart_command,
+            enabled=self.enabled,
+        },
+    }
+end
+
+function ImportExportAutoOverlay:do_auto(val)
+    dfhack.run_script('control-panel', (val and '' or 'no') .. 'autostart', self.autostart_command)
+    AutoMessageScreen{autostart_command=self.autostart_command, enabled=val}:show()
+end
+
+function ImportExportAutoOverlay:onRenderFrame(dc, rect)
+    ImportExportAutoOverlay.super.onRenderFrame(self, dc, rect)
+    local enabled = control_panel.get_autostart(self.autostart_command)
+    self.subviews.auto:setOption(enabled)
+end
+
+------------------------------
+-- StandingOrdersOverlay
+--
+
+local li = df.global.plotinfo.labor_info
+
+local function save_standing_orders()
+    local standing_orders = {}
+    for name, val in pairs(df.global) do
+        if name:startswith('standing_orders_') then
+            standing_orders[name] = val
+        end
+    end
+    config.data.standing_orders = standing_orders
+    local chores = {}
+    chores.enabled = li.flags.children_do_chores
+    chores.labors = utils.clone(li.chores)
+    config.data.chores = chores
+    config:write()
+end
+
+local function load_standing_orders()
+    for name, val in pairs(config.data.standing_orders or {}) do
+        df.global[name] = val
+    end
+    li.flags.children_do_chores = not not safe_index(config.data.chores, 'enabled')
+    for i, val in ipairs(safe_index(config.data.chores, 'labors') or {}) do
+        li.chores[i-1] = val
+    end
+end
+
+local function has_saved_standing_orders()
+    return next(config.data.standing_orders or {})
+end
+
+StandingOrdersOverlay = defclass(StandingOrdersOverlay, ImportExportAutoOverlay)
+StandingOrdersOverlay.ATTRS {
+    desc='Adds buttons to the standing orders screen for saving and restoring settings.',
+    default_pos={x=6, y=-5},
+    viewscreens='dwarfmode/Info/LABOR/STANDING_ORDERS/AUTOMATED_WORKSHOPS',
+    frame={w=78, h=5},
+    save_label='Save standing orders (all tabs)',
+    load_label='Load saved standing orders',
+    auto_label='Apply saved settings for new embarks:',
+    save_fn=save_standing_orders,
+    load_fn=load_standing_orders,
+    has_data_fn=has_saved_standing_orders,
+    autostart_command='gui/settings-manager load-standing-orders',
+}
+
+------------------------------
+-- WorkDetailsOverlay
+--
+
+local function clone_wd_flags(flags)
+    return {
+        cannot_be_everybody=flags.cannot_be_everybody,
+        no_modify=flags.no_modify,
+        mode=flags.mode,
+    }
+end
+
+local function save_work_details()
+    local details = {}
+    for idx, wd in ipairs(li.work_details) do
+        local detail = {
+            name=wd.name,
+            icon=wd.icon,
+            flags=clone_wd_flags(wd.flags),
+            allowed_labors=utils.clone(wd.allowed_labors),
+        }
+        details[idx+1] = detail
+    end
+    config.data.work_details = details
+    config:write()
+end
+
+local function load_work_details()
+    if not config.data.work_details or #config.data.work_details < 10 then
+        -- not enough data to cover built-in work details
+        return
+    end
+    li.work_details:resize(#config.data.work_details)
+    -- keep unit assignments for overwritten indices
+    for idx, wd in ipairs(config.data.work_details) do
+        local detail = {
+            new=df.work_detail,
+            name=wd.name,
+            icon=wd.icon,
+            flags=wd.flags or wd.work_detail_flags, -- compat for old name
+        }
+        li.work_details[idx-1] = detail
+        local al = li.work_details[idx-1].allowed_labors
+        for i,v in ipairs(wd.allowed_labors) do
+            al[i-1] = v
+        end
+    end
+    local scr = dfhack.gui.getDFViewscreen(true)
+    if dfhack.gui.matchFocusString('dwarfmode/Info/LABOR/WORK_DETAILS', scr) then
+        gui.simulateInput(scr, 'LEAVESCREEN')
+        gui.simulateInput(scr, 'D_LABOR')
+    end
+end
+
+local function has_saved_work_details()
+    return next(config.data.work_details or {})
+end
+
+WorkDetailsOverlay = defclass(WorkDetailsOverlay, ImportExportAutoOverlay)
+WorkDetailsOverlay.ATTRS {
+    desc='Adds buttons to the work details screen for saving and restoring settings.',
+    default_pos={x=80, y=-5},
+    viewscreens='dwarfmode/Info/LABOR/WORK_DETAILS/Default',
+    frame={w=35, h=5},
+    save_label='Save work details',
+    load_label='Load work details',
+    auto_label='Load for new embarks:',
+    save_fn=save_work_details,
+    load_fn=load_work_details,
+    has_data_fn=has_saved_work_details,
+    autostart_command='gui/settings-manager load-work-details',
+}
+
+function WorkDetailsOverlay:init()
+    self.subviews.save.frame.w = 25
+    self.subviews.save_flash.frame.l = 10
+    self.subviews.load.frame.t = 1
+    self.subviews.load.frame.l = 0
+    self.subviews.load.frame.w = 25
+    self.subviews.load_flash.frame.t = 1
+    self.subviews.load_flash.frame.l = 10
+end
+
+OVERLAY_WIDGETS = {
+    embark_difficulty=DifficultyEmbarkOverlay,
+    embark_notification=DifficultyEmbarkNotificationOverlay,
+    settings_difficulty=DifficultySettingsOverlay,
+    standing_orders=StandingOrdersOverlay,
+    work_details=WorkDetailsOverlay,
+}
+
+if dfhack_flags.module then
+    return
+end
+
+------------------------------
+-- CLI processing
+--
+
+local help = false
+
+local positionals = argparse.processArgsGetopt({...}, {
+        {'h', 'help', handler=function() help = true end},
+    })
+
+local command = (positionals or {})[1]
+
+if help then
+    print(dfhack.script_help())
+    return
+end
+
+local scr = dfhack.gui.getDFViewscreen(true)
+local is_embark = df.viewscreen_setupdwarfgamest:is_instance(scr)
+local is_fort = df.viewscreen_dwarfmodest:is_instance(scr)
+
+if command == 'save-difficulty' then
+    if is_embark then save_difficulty(scr.difficulty)
+    elseif is_fort then
+        save_difficulty(df.global.game.main_interface.settings.difficulty)
+    else
+        qerror('must be on the embark preparation screen or in a loaded fort')
+    end
+elseif command == 'load-difficulty' then
+    if is_embark then
+        load_difficulty(scr.difficulty)
+        show_notification = true
+    elseif is_fort then
+        load_difficulty(df.global.game.main_interface.settings.difficulty)
+    else
+        qerror('must be on the embark preparation screen or in a loaded fort')
+    end
+elseif command == 'save-standing-orders' then
+    if is_fort then save_standing_orders()
+    else
+        qerror('must be in a loaded fort')
+    end
+elseif command == 'load-standing-orders' then
+    if is_fort then load_standing_orders()
+    else
+        qerror('must be in a loaded fort')
+    end
+elseif command == 'save-work-details' then
+    if is_fort then save_work_details()
+    else
+        qerror('must be in a loaded fort')
+    end
+elseif command == 'load-work-details' then
+    if is_fort then load_work_details()
+    else
+        qerror('must be in a loaded fort')
+    end
+else
+    print(dfhack.script_help())
+end
+
+return
+
+--[[
+
+TODO: reinstate color editor
+
 -- An in-game init file editor
---[====[
-
-gui/settings-manager
-====================
-An in-game manager for settings defined in ``init.txt`` and ``d_init.txt``.
-
-]====]
 
 VERSION = '0.6.0'
 
@@ -67,7 +640,6 @@ if dfhack.getOSType() == 'linux' or dfhack.getOSType() == 'darwin' then
     table.insert(print_modes, {'TEXT', 'TEXT (ncurses)'})
 end
 
---[[
 Setting descriptions
 
 Settings listed MUST exist, but settings not listed will be ignored
@@ -98,7 +670,7 @@ Fields:
 
 Reserved field names:
 - value (set to current setting value when settings are loaded)
-]]
+
 SETTINGS = {
     init = {
         {id = 'SOUND', type = 'bool', desc = 'Enable sound'},
@@ -892,3 +1464,5 @@ if dfhack.gui.getCurFocus() == 'dfhack/lua/settings_manager' then
     dfhack.screen.dismiss(dfhack.gui.getCurViewscreen())
 end
 settings_manager():show()
+
+]]

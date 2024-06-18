@@ -3,7 +3,7 @@ gui/workshop-job
 
 .. dfhack-tool::
     :summary: Adjust the input materials used for a job at a workshop.
-    :tags: untested fort inspection jobs
+    :tags: unavailable fort inspection jobs
 
 This tool allows you to inspect or change the input reagents for the selected
 workshop job (in :kbd:`q` mode).

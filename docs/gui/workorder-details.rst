@@ -3,7 +3,7 @@ gui/workorder-details
 
 .. dfhack-tool::
     :summary: Adjust input materials and traits for workorders.
-    :tags: untested fort inspection workorders
+    :tags: unavailable fort inspection workorders
 
 This tool allows you to adjust item types, materials, and/or traits for items
 used in manager workorders. The jobs created from those workorders will inherit

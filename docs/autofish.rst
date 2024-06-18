@@ -12,6 +12,7 @@ collecting too many rotten fish.
 
 Usage
 -----
+
 ``enable autofish``
     Enable the script
 ``disable autofish``
@@ -22,23 +23,30 @@ Usage
 ``autofish <max> [min] [<options>]``
     Change autofish settings.
 
-    ``max`` (default: 100) controls the maximum amount of fish you  want to keep
-    on hand in your fortress. Fishing will be disabled when the amount of fish
-    goes above this value.
+Positional Parameters
+---------------------
 
-    ``min`` (default: 50) controls the minimum fish you want before restarting
-    fishing.
+``max``
+    (default: 100) controls the maximum amount of fish you want to keep on hand
+    in your fortress. Fishing will be disabled when the amount of fish goes
+    above this value.
 
-    Use ``--toggle-raw``(``-r``) (default: on) to toggle letting the script
-    also count your raw fish as part of your quota. Use it a second time to
-    disable this.
+``min``
+    (default: 75) controls the minimum fish you want before restarting fishing.
+
+Options
+-------
+
+``r``, ``--raw (true | false)``
+    (default: ``true``) Set whether or not raw fish should be counted in the running
+    total of fish in your fortress.
 
 Examples
 --------
 
 ``enable autofish``
     Enables the script.
-``autofish -r 150``
+``autofish 150 -r true``
     Sets your maximum fish to 150, and enables counting raw fish.
 ``autofish 300 250``
     Sets your maximum fish to 300 and minimum to 250.

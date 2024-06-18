@@ -3,7 +3,7 @@ devel/luacov
 
 .. dfhack-tool::
     :summary: Lua script coverage report generator.
-    :tags: untested dev
+    :tags: unavailable
 
 This script generates a coverage report from collected statistics. By default it
 reports on every Lua file in all of DFHack. To filter filenames, specify one or

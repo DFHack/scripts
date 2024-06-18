@@ -1,11 +1,10 @@
 local argparse = require('argparse')
 local opts = {}
-local positionals = argparse.processArgsGetopt({...},
-    {{'h', 'help', handler = function() opts.help = true end},
-    {nil, 'include-vermin',
-    handler = function() opts.include_vermin = true end},
-    {nil, 'include-pets',
-    handler = function() opts.include_pets = true end},
+local positionals = argparse.processArgsGetopt({...}, {
+    {'h', 'help', handler = function() opts.help = true end},
+    {nil, 'include-vermin', handler = function() opts.include_vermin = true end},
+    {nil, 'include-pets', handler = function() opts.include_pets = true end},
+    {'f', 'skip-forbidden', handler = function() opts.skip_forbidden = true end},
 })
 
 local function plural(nr, name)
@@ -14,22 +13,23 @@ local function plural(nr, name)
 end
 
 -- Checks item against opts to see if it's a vermin type that we ignore
-local function isexcludedvermin(item, opts)
+local function isexcludedvermin(item)
     if df.item_verminst:is_instance(item) then
-        if opts.include_vermin then
-            return false
-        else
-            return true
-        end
+        return not opts.include_vermin
     elseif df.item_petst:is_instance(item) then
-        if opts.include_pets then
-            return false
-        else
-            return true
-        end
-    else
-        return false
+        return not opts.include_pets
     end
+    return false
+end
+
+local function dump_item(item)
+    if item.flags.dump then return 0 end
+    if not item.flags.forbid or not opts.skip_forbidden then
+        item.flags.dump = true
+        item.flags.forbid = false
+        return 1
+    end
+    return 0
 end
 
 local function cage_dump_items(list)
@@ -40,9 +40,8 @@ local function cage_dump_items(list)
         for _, ref in ipairs(cage.general_refs) do
             if df.general_ref_contains_itemst:is_instance(ref) then
                 local item = df.item.find(ref.item_id)
-                if not item.flags.dump and not isexcludedvermin(item, opts) then
-                    count = count + 1
-                    item.flags.dump = true
+                if not isexcludedvermin(item) then
+                    count = count + dump_item(item)
                 end
             end
         end
@@ -61,10 +60,8 @@ local function cage_dump_armor(list)
             if df.general_ref_contains_unitst:is_instance(ref) then
                 local inventory = df.unit.find(ref.unit_id).inventory
                 for _, it in ipairs(inventory) do
-                    if not it.item.flags.dump and
-                            it.mode == df.unit_inventory_item.T_mode.Worn then
-                        count = count + 1
-                        it.item.flags.dump = true
+                    if it.mode == df.unit_inventory_item.T_mode.Worn then
+                        count = count + dump_item(it.item)
                     end
                 end
             end
@@ -84,10 +81,8 @@ local function cage_dump_weapons(list)
             if df.general_ref_contains_unitst:is_instance(ref) then
                 local inventory = df.unit.find(ref.unit_id).inventory
                 for _, it in ipairs(inventory) do
-                    if not it.item.flags.dump and
-                        it.mode == df.unit_inventory_item.T_mode.Weapon then
-                        count = count + 1
-                        it.item.flags.dump = true
+                    if it.mode == df.unit_inventory_item.T_mode.Weapon then
+                        count = count + dump_item(it.item)
                     end
                 end
             end
@@ -101,23 +96,19 @@ end
 local function cage_dump_all(list)
     local count = 0
     local count_cage = 0
-
     for _, cage in ipairs(list) do
         local pre_count = count
         for _, ref in ipairs(cage.general_refs) do
-
             if df.general_ref_contains_itemst:is_instance(ref) then
                 local item = df.item.find(ref.item_id)
-                if not item.flags.dump and not isexcludedvermin(item, opts) then
-                    count = count + 1
-                    item.flags.dump = true
+                if not isexcludedvermin(item) then
+                    count = count + dump_item(item)
                 end
             elseif df.general_ref_contains_unitst:is_instance(ref) then
                 local inventory = df.unit.find(ref.unit_id).inventory
                 for _, it in ipairs(inventory) do
-                    if not it.item.flags.dump and not isexcludedvermin(it.item, opts) then
-                        count = count + 1
-                        it.item.flags.dump = true
+                    if not isexcludedvermin(it.item) then
+                        count = count + dump_item(it.item)
                     end
                 end
             end
@@ -137,26 +128,18 @@ local function cage_dump_list(list)
         for _, ref in ipairs(cage.general_refs) do
             if df.general_ref_contains_itemst:is_instance(ref) then
                 local item = df.item.find(ref.item_id)
-                if not isexcludedvermin(item, opts) then
+                if not isexcludedvermin(item) then
                     local classname = df.item_type.attrs[item:getType()].caption
                     count[classname] = (count[classname] or 0) + 1
                 end
             elseif df.general_ref_contains_unitst:is_instance(ref) then
                 local inventory = df.unit.find(ref.unit_id).inventory
                 for _, it in ipairs(inventory) do
-                    if not isexcludedvermin(it.item, opts) then
+                    if not isexcludedvermin(it.item) then
                         local classname = df.item_type.attrs[it.item:getType()].caption
                         count[classname] = (count[classname] or 0) + 1
                     end
                 end
-
-                --[[ TODO: Determine how/if to handle a DEBUG flag.
-
-                --Ruby:
-                  else
-                      puts "unhandled ref #{ref.inspect}" if $DEBUG
-                  end
-                ]]
             end
         end
 

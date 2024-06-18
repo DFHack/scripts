@@ -1,26 +1,10 @@
 -- makes a job involving current selection high priority
 
+local utils = require('utils')
+
 local function print_help()
-    print [====[
-
-do-job-now
-==========
-
-The script will try its best to find a job related to the selected entity
-(which can be a job, dwarf, animal, item, building, plant or work order) and then
-mark this job as high priority. There is no visual indicator, please look
-at the dfhack console for output. If a work order is selected, every job
-currently present job from this work order is affected, but not the future ones.
-
-For best experience add the following to your ``dfhack*.init``::
-
-    keybinding add Alt-N do-job-now
-
-Also see ``do-job-now`` `tweak` and `prioritize`.
-]====]
+    print(dfhack.script_help())
 end
-
-local utils = require 'utils'
 
 local function getUnitName(unit)
     local language_name = dfhack.units.getVisibleName(unit)
@@ -150,7 +134,7 @@ local function getSelectedWorkOrder()
     local orders
     local idx
     if df.viewscreen_jobmanagementst:is_instance(scr) then
-        orders = df.global.world.manager_orders
+        orders = df.global.world.manager_orders.all
         idx = scr.sel_idx
     elseif df.viewscreen_workshop_profilest:is_instance(scr)
         and scr.tab == df.viewscreen_workshop_profilest.T_tab.Orders

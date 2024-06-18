@@ -7,18 +7,19 @@ local widgets = require('gui.widgets')
 local HIGHLIGHT_PEN = dfhack.pen.parse{
     ch=string.byte(' '),
     fg=COLOR_LIGHTGREEN,
-    bg=COLOR_LIGHTGREEN}
+    bg=COLOR_LIGHTGREEN,
+}
 
-HelloWorld = defclass(HelloWorld, gui.Screen)
+HelloWorldWindow = defclass(HelloWorldWindow, widgets.Window)
+HelloWorldWindow.ATTRS{
+    frame={w=20, h=14},
+    frame_title='Hello World',
+    autoarrange_subviews=true,
+    autoarrange_gap=1,
+}
 
-function HelloWorld:init()
-    local window = widgets.Window{
-        frame={w=20, h=14},
-        frame_title='Hello World',
-        autoarrange_subviews=true,
-        autoarrange_gap=1,
-    }
-    window:addviews{
+function HelloWorldWindow:init()
+    self:addviews{
         widgets.Label{text={{text='Hello, world!', pen=COLOR_LIGHTGREEN}}},
         widgets.HotkeyLabel{
             frame={l=0, t=0},
@@ -29,37 +30,31 @@ function HelloWorld:init()
         widgets.Panel{
             view_id='highlight',
             frame={w=10, h=5},
-            frame_style=gui.THIN_FRAME,
+            frame_style=gui.INTERIOR_FRAME,
         },
     }
-    self:addviews{window}
 end
 
-function HelloWorld:toggleHighlight()
+function HelloWorldWindow:toggleHighlight()
     local panel = self.subviews.highlight
     panel.frame_background = not panel.frame_background and HIGHLIGHT_PEN or nil
 end
 
-function HelloWorld:onDismiss()
+HelloWorldScreen = defclass(HelloWorldScreen, gui.ZScreen)
+HelloWorldScreen.ATTRS{
+    focus_path='hello-world',
+}
+
+function HelloWorldScreen:init()
+    self:addviews{HelloWorldWindow{}}
+end
+
+function HelloWorldScreen:onDismiss()
     view = nil
-end
-
-function HelloWorld:onInput(keys)
-    if self:inputToSubviews(keys) then
-        return true
-    elseif keys.LEAVESCREEN or keys.SELECT then
-        self:dismiss()
-        return true
-    end
-end
-
-function HelloWorld:onRenderFrame(dc, rect)
-    -- since we're not taking up the entire screen
-    self:renderParent()
 end
 
 if dfhack_flags.module then
     return
 end
 
-view = view or HelloWorld{}:show()
+view = view and view:raise() or HelloWorldScreen{}:show()

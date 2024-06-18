@@ -36,7 +36,7 @@ for _,reaction in ipairs(df.global.world.raws.reactions.reactions) do
   end
   local inorganic = df.global.world.raws.inorganics[product.mat_index]
   local didInorganicName
-  for _,syndrome in ipairs(inorganic.material.syndrome) do
+  for _,syndrome in ipairs(inorganic.material.syndrome.syndrome) do
    local workerOnly = true
    local allowMultipleTargets = false;
    local command

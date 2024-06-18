@@ -1,39 +1,63 @@
 -- Prints the sum of all citizens' needs.
 
-local fort_needs = {}
-for _, unit in pairs(df.global.world.units.all) do
-    if not dfhack.units.isCitizen(unit) or not dfhack.units.isAlive(unit) then
-        goto skipunit
-    end
+local argparse = require('argparse')
 
+local sorts = {
+    id=function(a,b) return a.id < b.id end,
+    strength=function(a,b) return a.strength > b.strength end,
+    focus=function(a,b) return a.focus < b.focus end,
+    freq=function(a,b) return a.freq > b.freq end,
+}
+
+local sort = 'focus'
+
+argparse.processArgsGetopt({...}, {
+    {'s', 'sort', hasArg=true, handler=function(optarg) sort = optarg end}
+})
+
+if not sorts[sort] then
+    qerror(('unknown sort: "%s"'):format(sort))
+end
+
+local fort_needs = {}
+
+local units = dfhack.gui.getSelectedUnit(true)
+if units then
+    print(('Summarizing needs for %s:'):format(dfhack.units.getReadableName(units)))
+    units = {units}
+else
+    print('Summarizing needs for all (sane) citizens and residents:')
+    units = dfhack.units.getCitizens()
+end
+print()
+
+for _, unit in ipairs(units) do
     local mind = unit.status.current_soul.personality.needs
     -- sum need_level and focus_level for each need
-    for _,need in pairs(mind) do
+    for _,need in ipairs(mind) do
         local needs = ensure_key(fort_needs, need.id)
-        needs.cumulative_need = (needs.cumulative_need or 0) + need.need_level
-        needs.cumulative_focus = (needs.cumulative_focus or 0) + need.focus_level
-        needs.citizen_count = (needs.citizen_count or 0) + 1
+        needs.strength = (needs.strength or 0) + need.need_level
+        needs.focus = (needs.focus or 0) + need.focus_level
+        needs.freq = (needs.freq or 0) + 1
     end
-
-    :: skipunit ::
 end
 
 local sorted_fort_needs = {}
 for id, need in pairs(fort_needs) do
     table.insert(sorted_fort_needs, {
-        df.need_type[id],
-        need.cumulative_need,
-        need.cumulative_focus,
-        need.citizen_count
+        id=df.need_type[id],
+        strength=need.strength,
+        focus=need.focus,
+        freq=need.freq,
     })
 end
 
-table.sort(sorted_fort_needs, function(a, b)
-    return a[2] > b[2]
-end)
+table.sort(sorted_fort_needs, sorts[sort])
 
 -- Print sorted output
-print(([[%20s %8s %8s %10s]]):format("Need", "Weight", "Focus", "# Dwarves"))
-for _, need in pairs(sorted_fort_needs) do
-    print(([[%20s %8.f %8.f %10d]]):format(need[1], need[2], need[3], need[4]))
+local fmt = '%20s  %8s  %12s  %9s'
+print(fmt:format("Need", "Strength", "Focus Impact", "Frequency"))
+print(fmt:format("----", "--------", "------------", "---------"))
+for _, need in ipairs(sorted_fort_needs) do
+    print(fmt:format(need.id, need.strength, need.focus, need.freq))
 end

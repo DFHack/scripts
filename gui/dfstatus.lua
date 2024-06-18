@@ -125,7 +125,7 @@ function dfstatus:init()
         metals[id] = 0
     end
 
-    for _, item in ipairs(df.global.world.items.all) do
+    for _, item in ipairs(df.global.world.items.other.IN_PLAY) do
         local flags = item.flags
         if not (flags.rotten or flags.dump or flags.forbid or flags.construction or flags.trader) then
             if item:getType() == df.item_type.WOOD then

@@ -3,7 +3,7 @@ feature
 
 .. dfhack-tool::
     :summary: Control discovery flags for map features.
-    :tags: untested fort armok map
+    :tags: fort armok map
 
 This tool allows you to toggle the flags that the game uses to track your
 discoveries of map features. For example, you can make the game think that you

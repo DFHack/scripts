@@ -7,8 +7,8 @@ gui/autobutcher
     :tags: fort auto fps animals
 
 This is an in-game interface for `autobutcher`, which allows you to set
-thresholds for how many animals you want to keep and will automatically butcher
-the extras.
+thresholds for how many animals you want to keep and the extras will be
+automatically butchered.
 
 Usage
 -----

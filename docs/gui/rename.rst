@@ -3,7 +3,7 @@ gui/rename
 
 .. dfhack-tool::
     :summary: Give buildings and units new names, optionally with special chars.
-    :tags: untested fort productivity buildings stockpiles units
+    :tags: unavailable
 
 Once you select a target on the game map, this tool allows you to rename it. It
 is more powerful than the in-game rename functionality since it allows you to

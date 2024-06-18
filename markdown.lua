@@ -1,227 +1,142 @@
--- Save a text screen in markdown (eg for reddit)
--- This is a derivatiwe work based upon scripts/forum-dwarves.lua by Caldfir and expwnent
--- Adapted for markdown by Mchl https://github.com/Mchl
-local helpstr = [====[
+-- Save the description of a selected unit or item in Markdown file in UTF-8
+-- This script extracts the description of a selected unit or item and saves it
+-- as a Markdown file encoded in UTF-8 in the root game directory.
 
-markdown
-========
-Save a copy of a text screen in markdown (useful for Reddit, among other sites).
-See `forum-dwarves` for BBCode export (for e.g. the Bay12 Forums).
+local gui = require('gui')
+local argparse = require('argparse')
 
-This script will attempt to read the current df-screen, and if it is a
-text-viewscreen (such as the dwarf 'thoughts' screen or an item / creature
-'description') or an announcement list screen (such as announcements and
-combat reports) then append a marked-down version of this text to the
-target file (for easy pasting on reddit for example).
-Previous entries in the file are not overwritten, so you
-may use the``markdown`` command multiple times to create a single
-document containing the text from multiple screens (eg: text screens
-from several dwarves, or text screens from multiple artifacts/items,
-or some combination).
+-- Get world name for default filename
+local worldName = dfhack.df2utf(dfhack.TranslateName(df.global.world.world_data.name)):gsub(" ", "_")
 
-Usage::
+local help, overwrite, filenameArg = false, false, nil
+local positionals = argparse.processArgsGetopt({ ... }, {
+    {'o', 'overwrite', handler=function() overwrite = true end},
+    {'h', 'help',      handler=function() help = true end},
+})
 
-    markdown [-n] [filename]
+-- Extract non-option arguments (filename)
+filenameArg = positionals[1]
 
-:-n:    overwrites contents of output file
-:filename:
-        if provided, save to :file:`md_{filename}.md` instead
-        of the default :file:`md_export.md`
-
-The screens which have been tested and known to function properly with
-this script are:
-
-#. dwarf/unit 'thoughts' screen
-#. item/art 'description' screen
-#. individual 'historical item/figure' screens
-#. manual
-#. announements screen
-#. combat reports screen
-#. latest news (when meeting with liaison)
-
-There may be other screens to which the script applies.  It should be
-safe to attempt running the script with any screen active, with an
-error message to inform you when the selected screen is not appropriate
-for this script.
-
-]====]
-
-local args = {...}
-
-if args[1] == 'help' then
-    print(helpstr)
+if help then
+    print(dfhack.script_help())
     return
 end
 
-local writemode = 'a'
+-- Determine write mode and filename
+local writemode = overwrite and 'w' or 'a'
+local filename = 'markdown_' .. (filenameArg or worldName) .. '.md'
 
--- check if we want to append to an existing file (default) or overwrite previous contents
-if args[1] == '-n' or args[1] == '/n' then
-    writemode = 'w'
-    table.remove(args, 1)
-end
-
-local filename
-
-if args[1] ~= nil then
-    filename = 'md_' .. table.remove(args, 1) .. '.md'
-else
-    filename = 'md_export.md'
-end
-
-local utils = require 'utils'
-local gui = require 'gui'
-local dialog = require 'gui.dialogs'
-
-local scrn = dfhack.gui.getCurViewscreen()
-local flerb = dfhack.gui.getFocusString(scrn)
-
-local months = {
-    [1] = 'Granite',
-    [2] = 'Slate',
-    [3] = 'Felsite',
-    [4] = 'Hematite',
-    [5] = 'Malachite',
-    [6] = 'Galena',
-    [7] = 'Limestone',
-    [8] = 'Sandstone',
-    [9] = 'Timber',
-    [10] = 'Moonstone',
-    [11] = 'Opal',
-    [12] = 'Obsidian',
-}
-
+-- Utility functions
 local function getFileHandle()
-    return io.open(filename, writemode)
+    local handle, error = io.open(filename, writemode)
+    if not handle then
+        qerror("Error opening file: " .. filename .. ". " .. error)
+    end
+    return handle
 end
 
 local function closeFileHandle(handle)
-    handle:write('\n***\n\n')
+    handle:write('\n---\n\n')
     handle:close()
-    print ('Data exported to "' .. filename .. '"')
+    if writemode == 'a' then
+        print('\nData appended to "' .. 'Dwarf Fortress/' .. filename .. '"')
+    elseif writemode == 'w' then
+        print('\nData overwritten in "' .. 'Dwarf Fortress/' .. filename .. '"')
+    end
 end
 
-local function reformat(strin)
-    local strout = strin
-
-    -- [P] tags seem to indicate a new paragraph
-    local newline_idx = string.find(strout, '[P]', 1, true)
-    while newline_idx ~= nil do
-        strout = string.sub(strout, 1, newline_idx - 1) .. '\n***\n\n' .. string.sub(strout, newline_idx + 3)
-        newline_idx = string.find(strout, '[P]', 1, true)
-    end
-
-    -- [R] tags seem to indicate a new 'section'. Let's mark it with a horizontal line.
-    newline_idx = string.find(strout, '[R]', 1, true)
-    while newline_idx ~= nil do
-        strout = string.sub(strout, 1, newline_idx - 1) .. '\n***\n\n' .. string.sub(strout,newline_idx + 3)
-        newline_idx = string.find(strout, '[R]', 1, true)
-    end
-
-    -- No idea what [B] tags might indicate. Just removing them seems to work fine
-    newline_idx = string.find(strout, '[B]', 1, true)
-    while newline_idx ~= nil do
-        strout = string.sub(strout, 1, newline_idx - 1) .. string.sub(strout,newline_idx + 3)
-        newline_idx = string.find(strout, '[B]', 1, true)
-    end
-
-    -- Reddit doesn't support custom colors in markdown. We need to remove all color information :(
-    local color_idx = string.find(strout, '[C:', 1, true)
-    while color_idx ~= nil do
-        strout = string.sub(strout, 1, color_idx - 1) .. string.sub(strout, color_idx + 9)
-        color_idx = string.find(strout, '[C:', 1, true)
-    end
-
-    return strout
+local function reformat(str)
+    -- [B] tags seem to indicate a new paragraph
+    -- [R] tags seem to indicate a sub-blocks of text.Treat them as paragraphs.
+    -- [P] tags seem to be redundant
+    -- [C] tags indicate color. Remove all color information
+    return str:gsub('%[B%]', '\n\n')
+        :gsub('%[R%]', '\n\n')
+        :gsub('%[P%]', '')
+        :gsub('%[C:%d+:%d+:%d+%]', '')
+        :gsub('\n\n+', '\n\n')
 end
 
-local function formattime(year, ticks)
-    -- Dwarf Mode month is 33600 ticks long
-    local month = math.floor(ticks / 33600)
-    local dayRemainder = ticks - month * 33600
-
-    -- Dwarf Mode day is 1200 ticks long
-    local day = math.floor(dayRemainder / 1200)
-    local timeRemainder = dayRemainder - day * 1200
-
-    -- Assuming a 24h day each Dwarf Mode tick corresponds to 72 seconds
-    local seconds = timeRemainder * 72
-
-    local H = string.format("%02.f", math.floor(seconds / 3600));
-    local m = string.format("%02.f", math.floor(seconds / 60 - (H * 60)));
-    local i = string.format("%02.f", math.floor(seconds - H * 3600 - m * 60));
-
-    day = day + 1
-    if (day == 1 or day == 21) then
-        day = day .. 'st' --luacheck: retype
-    elseif (day == 2 or day == 22) then
-        day = day .. 'nd' --luacheck: retype
-    elseif (day == 3 or day == 23) then
-        day = day .. 'rd' --luacheck: retype
-    else
-        day = day .. 'th' --luacheck: retype
-    end
-
-    return (day .. " " .. months[month + 1] .. " " .. year .. " " .. H .. ":" .. m..":" .. i)
+local function getNameRaceAgeProf(unit)
+    --%s is a placeholder for a string, and %d is a placeholder for a number.
+    return string.format("%s, %d years old %s.", dfhack.units.getReadableName(unit), df.global.cur_year - unit
+        .birth_year, dfhack.units.getProfessionName(unit))
 end
 
-if flerb == 'textviewer' then
-    local scrn = scrn --as:df.viewscreen_textviewerst
+-- Main logic for item and unit processing
+local item = dfhack.gui.getSelectedItem(true)
+local unit = dfhack.gui.getSelectedUnit(true)
 
-    local lines = scrn.src_text
+if not item and not unit then
+    dfhack.printerr([[
+Error: No unit or item is currently selected.
+- To select a unit, click on it.
+- For items that are installed as buildings (like statues or beds),
+open the building's interface and click the magnifying glass icon.
+Please select a valid target and try running the script again.]])
+    -- Early return to avoid proceeding further if no unit or item is selected
+    return
+end
 
-    if lines ~= nil then
+local log = getFileHandle()
 
-        local log = getFileHandle()
-        log:write('### ' .. dfhack.df2utf(scrn.title) .. '\n')
+local gps = df.global.gps
+local mi = df.global.game.main_interface
 
-        print('Exporting ' .. dfhack.df2console(scrn.title) .. '\n')
+if item then
+    -- Item processing
+    local itemRawName = dfhack.items.getDescription(item, 0, true)
+    local itemRawDescription = mi.view_sheets.raw_description
+    log:write('### ' ..
+        dfhack.df2utf(itemRawName) .. '\n\n#### Description: \n' .. reformat(dfhack.df2utf(itemRawDescription)) .. '\n')
+    print('Exporting description of the ' .. itemRawName)
+elseif unit then
+    -- Unit processing
+    -- Simulate UI interactions to load data into memory (click through tabs). Note: Constant might change with DF updates/patches
+    local is_adv = dfhack.world.isAdventureMode()
+    local screen = dfhack.gui.getDFViewscreen()
+    local windowSize = dfhack.screen.getWindowSize()
 
-        for n,x in ipairs(lines) do
-            log:write(reformat(dfhack.df2utf(x.value)).." ")
--- debug output
---            print(x.value)
+    -- Click "Personality"
+    local personalityWidthConstant = is_adv and 68 or 48
+    local personalityHeightConstant = is_adv and 13 or 11
+
+    gps.mouse_x = windowSize - personalityWidthConstant
+    gps.mouse_y = personalityHeightConstant
+
+    gui.simulateInput(screen, '_MOUSE_L')
+
+    -- Click "Health"
+    local healthWidthConstant = 74
+    local healthHeightConstant = is_adv and 15 or 13
+
+    gps.mouse_x = windowSize - healthWidthConstant
+    gps.mouse_y = healthHeightConstant
+
+    gui.simulateInput(screen, '_MOUSE_L')
+
+    -- Click "Health/Description"
+    local healthDescriptionWidthConstant = is_adv and 74 or 51
+    local healthDescriptionHeightConstant = is_adv and 17 or 15
+
+    gps.mouse_x = windowSize - healthDescriptionWidthConstant
+    gps.mouse_y = healthDescriptionHeightConstant
+
+    gui.simulateInput(screen, '_MOUSE_L')
+
+    local unit_description_raw = #mi.view_sheets.unit_health_raw_str > 0 and mi.view_sheets.unit_health_raw_str[0].value or ''
+    local unit_personality_raw = mi.view_sheets.personality_raw_str
+
+    log:write('### ' ..
+        dfhack.df2utf(getNameRaceAgeProf(unit)) ..
+        '\n\n#### Description: \n' .. reformat(dfhack.df2utf(unit_description_raw)) .. '\n')
+    if #unit_personality_raw > 0 then
+        log:write('\n#### Personality: \n')
+        for _, unit_personality in ipairs(unit_personality_raw) do
+            log:write(reformat(dfhack.df2utf(unit_personality.value)) .. '\n')
         end
-        closeFileHandle(log)
     end
-
-elseif flerb == 'announcelist' then
-    local scrn = scrn --as:df.viewscreen_announcelistst
-
-    local lines = scrn.reports
-
-    if lines ~= nil then
-        local log = getFileHandle()
-        local lastTime = ""
-
-        for n,x in ipairs(lines) do
-            local currentTime = formattime(x.year, x.time)
-            if (currentTime ~= lastTime) then
-                lastTime = currentTime
-                log:write('\n***\n\n')
-                log:write('## ' .. currentTime .. '\n')
-            end
--- debug output
---            print(x.text)
-            log:write(x.text .. '\n')
-        end
-        closeFileHandle(log)
-    end
-
-
-elseif flerb == 'topicmeeting' then
-    local lines = scrn.text --hint:df.viewscreen_topicmeetingst
-
-    if lines ~= nil then
-        local log = getFileHandle()
-
-        for n,x in ipairs(lines) do
--- debug output
---            print(x.value)
-            log:write(x.value .. '\n')
-        end
-        closeFileHandle(log)
-    end
-else
-    print 'This is not a textview, announcelist or topicmeeting screen. Can\'t export data, sorry.'
+    print('Exporting Health/Description & Personality/Traits data for: \n' .. dfhack.df2console(getNameRaceAgeProf(unit)))
 end
+
+closeFileHandle(log)

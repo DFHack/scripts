@@ -416,9 +416,10 @@ dfhack.onStateChange["fire-rate"] = function(code)
   if code == SC_WORLD_UNLOADED then
     reset()
   elseif code == SC_WORLD_LOADED then
-    if ( not initialized ) then
-      init()
-    end
+-- Disable until this script is updated for v50
+--    if ( not initialized ) then
+--      init()
+--    end
   end
 end
 

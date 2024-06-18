@@ -2,8 +2,8 @@ list-waves
 ==========
 
 .. dfhack-tool::
-    :summary: Show migration wave information for your dwarves.
-    :tags: untested fort inspection units
+    :summary: Show migration wave information.
+    :tags: fort inspection units
 
 This script displays information about migration waves or identifies which wave
 a particular dwarf came from.

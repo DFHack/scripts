@@ -3,7 +3,7 @@ superdwarf
 
 .. dfhack-tool::
     :summary: Make a dwarf supernaturally speedy.
-    :tags: untested fort armok units
+    :tags: fort armok units
 
 Select a dwarf in-game and run this tool to make them super fast. They will
 complete tasks instantly and never need to rest.

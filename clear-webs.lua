@@ -1,36 +1,7 @@
 -- Removes webs and frees webbed units.
 -- Author: Atomic Chicken
 
-local usage = [====[
-
-clear-webs
-==========
-This script removes all webs that are currently on the map,
-and also frees any creatures who have been caught in one.
-
-Note that it does not affect sprayed webs until
-they settle on the ground.
-
-Usable in both fortress and adventurer mode.
-
-Web removal and unit release happen together by default.
-The following may be used to isolate one of these actions:
-
-Arguments::
-
-    -unitsOnly
-        Include this if you want to free all units from webs
-        without removing any webs
-
-    -websOnly
-        Include this if you want to remove all webs
-        without freeing any units
-
-See also `fix/drop-webs`.
-
-]====]
-
-local utils = require 'utils'
+local utils = require('utils')
 local validArgs = utils.invert({
   'unitsOnly',
   'websOnly',
@@ -39,12 +10,12 @@ local validArgs = utils.invert({
 local args = utils.processArgs({...}, validArgs)
 
 if args.help then
-  print(usage)
+  print(dfhack.script_help())
   return
 end
 
 if args.unitsOnly and args.websOnly then
-  qerror("You have specified both -unitsOnly and -websOnly. These cannot be used together.")
+  qerror("You have specified both --unitsOnly and --websOnly. These cannot be used together.")
 end
 
 local webCount = 0
@@ -57,7 +28,7 @@ end
 
 local unitCount = 0
 if not args.websOnly then
-  for _, unit in ipairs(df.global.world.units.all) do
+  for _, unit in ipairs(df.global.world.units.active) do
     if unit.counters.webbed > 0 and not unit.flags2.killed and not unit.flags1.inactive then -- the webbed status is retained in death
       unitCount = unitCount + 1
       unit.counters.webbed = 0

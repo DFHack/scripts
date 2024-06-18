@@ -3,8 +3,6 @@
 --@module = true
 
 local argparse = require('argparse')
-local json = require('json')
-local persist = require('persist-table')
 
 local GLOBAL_KEY = 'starvingdead'
 
@@ -15,8 +13,8 @@ function isEnabled()
 end
 
 local function persist_state()
-  persist.GlobalTable[GLOBAL_KEY] = json.encode({
-    enabled = starvingDeadInstance ~= nil,
+  dfhack.persistent.saveSiteData(GLOBAL_KEY, {
+    enabled = isEnabled(),
     decay_rate = starvingDeadInstance and starvingDeadInstance.decay_rate or 1,
     death_threshold = starvingDeadInstance and starvingDeadInstance.death_threshold or 6
   })
@@ -32,7 +30,7 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
       return
   end
 
-  local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '{}')
+  local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
 
   if persisted_data.enabled then
     starvingDeadInstance = StarvingDead{
@@ -45,26 +43,22 @@ end
 StarvingDead = defclass(StarvingDead)
 StarvingDead.ATTRS{
   decay_rate = 1,
-  death_threshold = 6
+  death_threshold = 6,
 }
 
 function StarvingDead:init()
   self.timeout_id = nil
   -- Percentage goal each attribute should reach before death.
-  self.attribute_goal = 10
-  self.attribute_decay = (self.attribute_goal ^ (1 / ((self.death_threshold * 28 / self.decay_rate)))) / 100
-  self.undead_count = 0
+  local attribute_goal = 10
+  self.attribute_decay = (attribute_goal ^ (1 / ((self.death_threshold * 28 / self.decay_rate)))) / 100
 
   self:checkDecay()
   print(([[StarvingDead started, checking every %s days and killing off at %s months]]):format(self.decay_rate, self.death_threshold))
 end
 
 function StarvingDead:checkDecay()
-  self.undead_count = 0
   for _, unit in pairs(df.global.world.units.active) do
     if (unit.enemy.undead and not unit.flags1.inactive) then
-      self.undead_count = self.undead_count + 1
-
       -- time_on_site is measured in ticks, a month is 33600 ticks.
       -- @see https://dwarffortresswiki.org/index.php/Time
       for _, attribute in pairs(unit.body.physical_attrs) do
@@ -72,8 +66,7 @@ function StarvingDead:checkDecay()
       end
 
       if unit.curse.time_on_site > (self.death_threshold * 33600) then
-        unit.flags1.inactive = true
-        unit.curse.rem_tags2.FIT_FOR_ANIMATION = true
+        unit.animal.vanish_countdown = 1
       end
     end
   end

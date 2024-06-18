@@ -3,7 +3,7 @@ deteriorate
 
 .. dfhack-tool::
     :summary: Cause corpses, clothes, and/or food to rot away over time.
-    :tags: untested fort auto fps gameplay items plants
+    :tags: unavailable
 
 When enabled, this script will cause the specified item types to slowly rot
 away. By default, items disappear after a few months, but you can choose to slow
@@ -18,14 +18,14 @@ dwarves feel, your FPS does not like it!
 Usage
 -----
 
-``deteriorate start --types <types> [--freq <frequency>] [--quiet]``
+``deteriorate start --types <types> [--freq <frequency>] [--quiet] [--keep-usable]``
     Starts deteriorating the specified item types while you play.
 ``deteriorate stop --types <types>``
     Stops deteriorating the specified item types.
 ``deteriorate status``
     Shows the item types that are currently being monitored and their
     deterioration frequencies.
-``deteriorate now --types <types> [--quiet]``
+``deteriorate now --types <types> [--quiet] [--keep-usable]``
     Causes all items (of the specified item types) to rot away within a few
     ticks.
 
@@ -35,9 +35,9 @@ You can have different types of items rotting away at different rates by running
 Examples
 --------
 
-Start deteriorating corpses and body parts::
+Start deteriorating corpses and body parts, keeping usable parts such as hair, wool::
 
-    deteriorate start --types corpses
+    deteriorate start --types corpses --keep-usable
 
 Start deteriorating corpses and food and do it at twice the default rate::
 
@@ -57,6 +57,8 @@ Options
     specified. The default frequency of 1 day will result in items disappearing
     after several months. The number does not need to be a whole number. E.g.
     ``--freq=0.5,days`` is perfectly valid.
+``-k``, ``--keep-usable``
+    Keep usable body parts such as hair, wool, hooves, bones, and skulls.
 ``-q``, ``--quiet``
     Silence non-error output.
 ``-t``, ``--types <types>``
@@ -68,8 +70,6 @@ Types
 
 :clothes:  All clothing pieces that have an armor rating of 0 and are lying on
            the ground.
-:corpses:  All non-dwarf corpses and body parts. This includes potentially
-           useful remains such as hair, wool, hooves, bones, and skulls. Use
-           them before you lose them!
+:corpses:  All resident corpses and body parts.
 :food:     All food and plants, regardless of whether they are in barrels or
            stockpiles. Seeds are left untouched.

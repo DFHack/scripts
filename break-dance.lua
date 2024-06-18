@@ -9,7 +9,7 @@ can't find a partner.
 ]====]
 local unit
 if dfhack.world.isAdventureMode() then
-    unit = df.global.world.units.active[0]
+    unit = dfhack.world.getAdventurer()
 else
     unit = dfhack.gui.getSelectedUnit(true) or qerror('No unit selected')
 end

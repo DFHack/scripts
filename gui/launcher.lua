@@ -8,7 +8,7 @@ local json = require('json')
 local utils = require('utils')
 local widgets = require('gui.widgets')
 
-local AUTOCOMPLETE_PANEL_WIDTH = 25
+local AUTOCOMPLETE_PANEL_WIDTH = 28
 local EDIT_PANEL_HEIGHT = 4
 
 local HISTORY_SIZE = 5000
@@ -22,12 +22,110 @@ local TITLE = 'DFHack Launcher'
 -- within 1s when adding text to a full scrollback buffer
 local SCROLLBACK_CHARS = 2^18
 
+-- smaller amount of scrollback persisted between gui/launcher invocations
+local PERSISTED_SCROLLBACK_CHARS = 2^15
+
 config = config or json.open('dfhack-config/launcher.json')
 base_freq = base_freq or json.open('hack/data/base_command_counts.json')
 user_freq = user_freq or json.open('dfhack-config/command_counts.json')
 
 -- track whether the user has enabled dev mode
 dev_mode = dev_mode or false
+
+-- track the last value of mortal mode
+prev_mortal_mode = prev_mortal_mode
+if prev_mortal_mode == nil then
+    prev_mortal_mode = dfhack.getMortalMode()
+end
+
+local function get_default_tag_filter_base(mortal_mode)
+    local ret = {
+        includes={},
+        excludes={},
+    }
+    if not dev_mode then
+        ret.excludes.dev = true
+        ret.excludes.unavailable = true
+        if mortal_mode then
+            ret.excludes.armok = true
+        end
+    end
+    return ret
+end
+
+local function get_default_tag_filter()
+    return get_default_tag_filter_base(dfhack.getMortalMode())
+end
+
+_tag_filter = _tag_filter or nil
+local selecting_filters = false
+
+local function get_tag_filter()
+    _tag_filter = _tag_filter or get_default_tag_filter()
+    return _tag_filter
+end
+
+local function toggle_dev_mode()
+    local tag_filter = get_tag_filter()
+    tag_filter.excludes.dev = dev_mode or nil
+    tag_filter.excludes.unavailable = dev_mode or nil
+    if not dev_mode then
+        tag_filter.excludes.armok = nil
+    elseif dfhack.getMortalMode() then
+        tag_filter.excludes.armok = true
+    end
+    dev_mode = not dev_mode
+end
+
+local function matches(a, b)
+    for k,v in pairs(a) do
+        if b[k] ~= v then return false end
+    end
+    for k,v in pairs(b) do
+        if a[k] ~= v then return false end
+    end
+    return true
+end
+
+local function is_default_filter_base(mortal_mode)
+    local tag_filter = get_tag_filter()
+    local default_filter = get_default_tag_filter_base(mortal_mode)
+    return matches(tag_filter.includes, default_filter.includes) and
+        matches(tag_filter.excludes, default_filter.excludes)
+end
+
+local function is_default_filter()
+    return is_default_filter_base(dfhack.getMortalMode())
+end
+
+local function get_filter_text()
+    local tag_filter = get_tag_filter()
+    if not next(tag_filter.includes) and not next(tag_filter.excludes) then
+        return 'Dev default'
+    elseif is_default_filter() then
+        return 'Default'
+    end
+    local ret
+    for tag in pairs(tag_filter.includes) do
+        if not ret then
+            ret = tag
+        else
+            return 'Custom'
+        end
+    end
+    return ret or 'Custom'
+end
+
+local function get_filter_pen()
+    local text = get_filter_text()
+    if text == 'Default' then
+        return COLOR_GREEN
+    elseif text == 'Dev default' then
+        return COLOR_LIGHTRED
+    else
+        return COLOR_YELLOW
+    end
+end
 
 -- trims the history down to its maximum size, if needed
 local function trim_history(hist, hist_set)
@@ -43,6 +141,7 @@ end
 
 -- removes duplicate existing history lines and adds the given line to the front
 local function add_history(hist, hist_set, line)
+    line = line:trim()
     if hist_set[line] then
         for i,v in ipairs(hist) do
             if v == line then
@@ -101,7 +200,7 @@ end
 local function get_first_word(text)
     local word = text:trim():split(' +')[1]
     if word:startswith(':') then word = word:sub(2) end
-    return word
+    return word:lower()
 end
 
 local function get_command_count(command)
@@ -116,14 +215,165 @@ local function record_command(line)
 end
 
 ----------------------------------
+-- TagFilterPanel
+--
+
+TagFilterPanel = defclass(TagFilterPanel, widgets.Panel)
+TagFilterPanel.ATTRS{
+    frame={t=0, r=AUTOCOMPLETE_PANEL_WIDTH, w=46, h=#helpdb.get_tags()+15},
+    frame_style=gui.FRAME_INTERIOR_MEDIUM,
+    frame_background=gui.CLEAR_PEN,
+}
+
+function TagFilterPanel:init()
+    self:addviews{
+        widgets.FilteredList{
+            view_id='list',
+            frame={t=0, l=0, r=0, b=11},
+            on_select=self:callback('on_select'),
+            on_double_click=self:callback('on_submit'),
+        },
+        widgets.Divider{
+            frame={l=0, r=0, b=9, h=1},
+            frame_style=gui.FRAME_INTERIOR,
+            frame_style_l=false,
+            frame_style_r=false,
+        },
+        widgets.WrappedLabel{
+            view_id='desc',
+            frame={b=3, h=6},
+            auto_height=false,
+            text_to_wrap='', -- updated in on_select
+        },
+        widgets.Divider{
+            frame={l=0, r=0, b=2, h=1},
+            frame_style=gui.FRAME_INTERIOR,
+            frame_style_l=false,
+            frame_style_r=false,
+        },
+        widgets.HotkeyLabel{
+            frame={b=0, l=0},
+            label='Cycle filter',
+            key='SELECT',
+            auto_width=true,
+            on_activate=self:callback('on_submit')
+        },
+        widgets.HotkeyLabel{
+            frame={b=0, r=0},
+            label='Cycle all',
+            key='CUSTOM_CTRL_A',
+            auto_width=true,
+            on_activate=self:callback('toggle_all')
+        },
+    }
+    self:refresh()
+end
+
+function TagFilterPanel:on_select(_, choice)
+    local desc = self.subviews.desc
+    desc.text_to_wrap = choice and choice.desc or ''
+    if desc.frame_body then
+        desc:updateLayout()
+    end
+end
+
+function TagFilterPanel:on_submit()
+    local _,choice = self.subviews.list:getSelected()
+    if not choice then return end
+    local tag_filter = get_tag_filter()
+    local tag = choice.tag
+    if tag_filter.includes[tag] then
+        tag_filter.includes[tag] = nil
+        tag_filter.excludes[tag] = true
+    elseif tag_filter.excludes[tag] then
+        tag_filter.excludes[tag] = nil
+    else
+        tag_filter.includes[tag] = true
+        tag_filter.excludes[tag] = nil
+    end
+    self:refresh()
+    self.parent_view:refresh_autocomplete()
+end
+
+function TagFilterPanel:toggle_all()
+    local choices = self.subviews.list:getVisibleChoices()
+    if not choices or #choices == 0 then return end
+    local tag_filter = get_tag_filter()
+    local canonical_tag = choices[1].tag
+    if tag_filter.includes[canonical_tag] then
+        for _,choice in ipairs(choices) do
+            local tag = choice.tag
+            tag_filter.includes[tag] = nil
+            tag_filter.excludes[tag] = true
+        end
+    elseif tag_filter.excludes[canonical_tag] then
+        for _,choice in ipairs(choices) do
+            local tag = choice.tag
+            tag_filter.includes[tag] = nil
+            tag_filter.excludes[tag] = nil
+        end
+    else
+        for _,choice in ipairs(choices) do
+            local tag = choice.tag
+            tag_filter.includes[tag] = true
+            tag_filter.excludes[tag] = nil
+        end
+    end
+    self:refresh()
+    self.parent_view:refresh_autocomplete()
+end
+
+local function get_tag_text(tag)
+    local status, pen = '', nil
+    local tag_filter = get_tag_filter()
+    if tag_filter.includes[tag] then
+        status, pen = '(included)', COLOR_GREEN
+    elseif tag_filter.excludes[tag] then
+        status, pen = '(excluded)', COLOR_LIGHTRED
+    end
+    return {
+        text={
+            {text=tag, width=20, rjustify=true},
+            {gap=1, text=status, pen=pen},
+        },
+        tag=tag,
+        desc=helpdb.get_tag_data(tag).description
+    }
+end
+
+function TagFilterPanel:refresh()
+    local choices = {}
+    for _, tag in ipairs(helpdb.get_tags()) do
+        table.insert(choices, get_tag_text(tag))
+    end
+    local list = self.subviews.list
+    local filter = list:getFilter()
+    local selected = list:getSelected()
+    list:setChoices(choices)
+    list:setFilter(filter, selected)
+end
+
+----------------------------------
 -- AutocompletePanel
 --
+
 AutocompletePanel = defclass(AutocompletePanel, widgets.Panel)
 AutocompletePanel.ATTRS{
+    frame_background=gui.CLEAR_PEN,
+    frame_inset={l=1},
     on_autocomplete=DEFAULT_NIL,
+    tag_filter_panel=DEFAULT_NIL,
+    on_double_click=DEFAULT_NIL,
+    on_double_click2=DEFAULT_NIL,
 }
 
 function AutocompletePanel:init()
+    local function open_filter_panel()
+        selecting_filters = true
+        self.tag_filter_panel.subviews.list.edit:setFocus(true)
+        self.tag_filter_panel:refresh()
+    end
+
     self:addviews{
         widgets.Label{
             frame={l=0, t=0},
@@ -131,24 +381,48 @@ function AutocompletePanel:init()
         },
         widgets.Label{
             frame={l=1, t=1},
-            text={{text='Shift+Left', pen=COLOR_LIGHTGREEN},
+            text={{text='Tab', pen=COLOR_LIGHTGREEN},
                   {text='/'},
-                  {text='Shift+Right', pen=COLOR_LIGHTGREEN}}
+                  {text='Shift+Tab', pen=COLOR_LIGHTGREEN}}
         },
         widgets.Label{
             frame={l=0, t=3},
+            text={
+                {key='CUSTOM_CTRL_W', key_sep=': ', on_activate=open_filter_panel, text='Tags:'},
+                {gap=1, pen=get_filter_pen, text=get_filter_text},
+            },
+            on_click=open_filter_panel,
+        },
+        widgets.HotkeyLabel{
+            frame={l=0, t=4},
+            key='CUSTOM_CTRL_G',
+            label='Reset tag filter',
+            disabled=is_default_filter,
+            on_activate=function()
+                _tag_filter = get_default_tag_filter()
+                if selecting_filters then
+                    self.tag_filter_panel:refresh()
+                end
+                self.parent_view:refresh_autocomplete()
+            end,
+        },
+        widgets.Label{
+            frame={l=0, t=6},
             text='Showing:',
         },
         widgets.Label{
             view_id="autocomplete_label",
-            frame={l=9, t=3},
-            text='All scripts'
+            frame={l=9, t=6},
+            text={{text='Matching tools', pen=COLOR_GREY}},
         },
         widgets.List{
             view_id='autocomplete_list',
+            frame={l=0, r=0, t=8, b=0},
             scroll_keys={},
             on_select=self:callback('on_list_select'),
-            frame={l=0, r=0, t=5, b=0}},
+            on_double_click=self.on_double_click,
+            on_double_click2=self.on_double_click2,
+        },
     }
 end
 
@@ -201,8 +475,10 @@ function EditPanel:init()
     self:addviews{
         widgets.Label{
             view_id='prefix',
-            frame={l=0, t=0},
+            frame={l=0, t=0, r=0},
+            frame_background=gui.CLEAR_PEN,
             text='[DFHack]#',
+            auto_width=false,
             visible=self.prefix_visible},
         widgets.EditField{
             view_id='editfield',
@@ -211,6 +487,13 @@ function EditPanel:init()
             -- held down as the launcher appears, it will be read and be added
             -- to the commandline
             ignore_keys={'STRING_A096'},
+            on_char=function(ch, text)
+                -- if game was not initially paused, then allow double-space to toggle pause
+                if ch == ' ' and not self.parent_view.parent_view.saved_pause_state then
+                    return text:sub(1, self.subviews.editfield.cursor - 1):match('%S$')
+                end
+                return true
+            end,
             on_change=self.on_change,
             on_submit=self.on_submit,
             on_submit2=self.on_submit2},
@@ -218,6 +501,7 @@ function EditPanel:init()
             frame={l=1, t=3, w=10},
             key='SELECT',
             label='run',
+            disabled=self.prefix_visible,
             on_activate=function()
                 if dfhack.internal.getModifiers().shift then
                     self.on_submit2(self.subviews.editfield.text)
@@ -229,12 +513,15 @@ function EditPanel:init()
             frame={r=0, t=0, w=10},
             key='CUSTOM_ALT_M',
             label=string.char(31)..string.char(30),
+            disabled=function() return selecting_filters end,
             on_activate=self.on_toggle_minimal},
         widgets.EditField{
             view_id='search',
-            frame={l=13, t=3, r=1},
+            frame={l=13, b=0, r=1},
+            frame_background=gui.CLEAR_PEN,
             key='CUSTOM_ALT_S',
             label_text='history search: ',
+            disabled=function() return selecting_filters end,
             on_change=function(text) self:on_search_text(text) end,
             on_focus=function()
                 local text = self.subviews.editfield.text
@@ -244,7 +531,10 @@ function EditPanel:init()
                 end end,
             on_unfocus=function()
                 self.subviews.search:setText('')
-                self.subviews.editfield:setFocus(true) end,
+                self.subviews.editfield:setFocus(true)
+                self.subviews.search.visible = not self.prefix_visible()
+                gui.Screen.request_full_screen_refresh = true
+            end,
             on_submit=function()
                 self.on_submit(self.subviews.editfield.text) end,
             on_submit2=function()
@@ -256,8 +546,13 @@ function EditPanel:reset_history_idx()
     self.history_idx = #history + 1
 end
 
-function EditPanel:set_text(text)
-    self.subviews.editfield:setText(text)
+function EditPanel:set_text(text, inhibit_change_callback)
+    local edit = self.subviews.editfield
+    if inhibit_change_callback then
+        edit.on_change = nil
+    end
+    edit:setText(text)
+    edit.on_change = self.on_change
     self:reset_history_idx()
 end
 
@@ -298,6 +593,11 @@ function EditPanel:on_search_text(search_str, next_match)
 end
 
 function EditPanel:onInput(keys)
+    if self.prefix_visible() then
+        local search = self.subviews.search
+        search.visible = keys.CUSTOM_ALT_S or search.focus
+    end
+
     if EditPanel.super.onInput(self, keys) then return true end
 
     if keys.STANDARDSCROLL_UP then
@@ -314,169 +614,104 @@ function EditPanel:onInput(keys)
     end
 end
 
+function EditPanel:preUpdateLayout()
+    local search = self.subviews.search
+    local minimized = self.prefix_visible()
+    if minimized then
+        self.frame_background = nil
+        search.frame.l = 0
+        search.frame.r = 11
+    else
+        self.frame_background = gui.CLEAR_PEN
+        search.frame.l = 13
+        search.frame.r = 1
+    end
+    search.visible = not minimized or search.focus
+end
+
 ----------------------------------
 -- HelpPanel
 --
 
-local to_pen = dfhack.pen.parse
-local active_tab_pens = {
-    text_mode_tab_pen=to_pen{fg=COLOR_YELLOW},
-    text_mode_label_pen=to_pen{fg=COLOR_WHITE},
-    lt=to_pen{tile=1005, write_to_lower=true},
-    lt2=to_pen{tile=1006, write_to_lower=true},
-    t=to_pen{tile=1007, fg=COLOR_BLACK, write_to_lower=true, top_of_text=true},
-    rt2=to_pen{tile=1008, write_to_lower=true},
-    rt=to_pen{tile=1009, write_to_lower=true},
-    lb=to_pen{tile=1015, write_to_lower=true},
-    lb2=to_pen{tile=1016, write_to_lower=true},
-    b=to_pen{tile=1017, fg=COLOR_BLACK, write_to_lower=true, bottom_of_text=true},
-    rb2=to_pen{tile=1018, write_to_lower=true},
-    rb=to_pen{tile=1019, write_to_lower=true},
-}
-
-local inactive_tab_pens = {
-    text_mode_tab_pen=to_pen{fg=COLOR_BROWN},
-    text_mode_label_pen=to_pen{fg=COLOR_DARKGREY},
-    lt=to_pen{tile=1000, write_to_lower=true},
-    lt2=to_pen{tile=1001, write_to_lower=true},
-    t=to_pen{tile=1002, fg=COLOR_WHITE, write_to_lower=true, top_of_text=true},
-    rt2=to_pen{tile=1003, write_to_lower=true},
-    rt=to_pen{tile=1004, write_to_lower=true},
-    lb=to_pen{tile=1010, write_to_lower=true},
-    lb2=to_pen{tile=1011, write_to_lower=true},
-    b=to_pen{tile=1012, fg=COLOR_WHITE, write_to_lower=true, bottom_of_text=true},
-    rb2=to_pen{tile=1013, write_to_lower=true},
-    rb=to_pen{tile=1014, write_to_lower=true},
-}
-
-Tab = defclass(Tabs, widgets.Widget)
-Tab.ATTRS{
-    id=DEFAULT_NIL,
-    label=DEFAULT_NIL,
-    on_select=DEFAULT_NIL,
-    get_pens=DEFAULT_NIL,
-}
-
-function Tab:preinit(init_table)
-    init_table.frame = init_table.frame or {}
-    init_table.frame.w = #init_table.label + 4
-    init_table.frame.h = 2
-end
-
-function Tab:onRenderBody(dc)
-    local pens = self.get_pens()
-    dc:seek(0, 0)
-    if dfhack.screen.inGraphicsMode() then
-        dc:char(nil, pens.lt):char(nil, pens.lt2)
-        for i=1,#self.label do
-            dc:char(self.label:sub(i,i), pens.t)
-        end
-        dc:char(nil, pens.rt2):char(nil, pens.rt)
-        dc:seek(0, 1)
-        dc:char(nil, pens.lb):char(nil, pens.lb2)
-        for i=1,#self.label do
-            dc:char(self.label:sub(i,i), pens.b)
-        end
-        dc:char(nil, pens.rb2):char(nil, pens.rb)
-    else
-        local tp = pens.text_mode_tab_pen
-        dc:char(' ', tp):char('/', tp)
-        for i=1,#self.label do
-            dc:char('-', tp)
-        end
-        dc:char('\\', tp):char(' ', tp)
-        dc:seek(0, 1)
-        dc:char('/', tp):char('-', tp)
-        dc:string(self.label, pens.text_mode_label_pen)
-        dc:char('-', tp):char('\\', tp)
-    end
-end
-
-function Tab:onInput(keys)
-    if keys._MOUSE_L_DOWN and self:getMousePos() then
-        self.on_select(self.id)
-        return true
-    end
-end
-
-TabBar = defclass(TabBar, widgets.ResizingPanel)
-TabBar.ATTRS{
-    labels=DEFAULT_NIL,
-    on_select=DEFAULT_NIL,
-    get_cur_page=DEFAULT_NIL,
-}
-
-function TabBar:init()
-    for idx,label in ipairs(self.labels) do
-        self:addviews{
-            Tab{
-                frame={t=0, l=0},
-                id=idx,
-                label=label,
-                on_select=self.on_select,
-                get_pens=function()
-                    return self.get_cur_page() == idx and
-                            active_tab_pens or inactive_tab_pens
-                end,
-            }
-        }
-    end
-end
-
-function TabBar:postComputeFrame(body)
-    local t, l, width = 0, 0, body.width
-    for _,tab in ipairs(self.subviews) do
-        if l > 0 and l + tab.frame.w > width then
-            t = t + 2
-            l = 0
-        end
-        tab.frame.t = t
-        tab.frame.l = l
-        l = l + tab.frame.w
-    end
-end
-
-function TabBar:onInput(keys)
-    if keys.CUSTOM_CTRL_T then
-        local zero_idx = self.get_cur_page() - 1
-        local next_zero_idx = (zero_idx + 1) % #self.labels
-        self.on_select(next_zero_idx + 1)
-        return true
-    end
-end
-
 HelpPanel = defclass(HelpPanel, widgets.Panel)
 HelpPanel.ATTRS{
-    autoarrange_subviews=true,
-    autoarrange_gap=1,
+    frame_background=gui.CLEAR_PEN,
     frame_inset={t=0, l=1, r=1, b=0},
 }
+
+persisted_scrollback = persisted_scrollback or ''
 
 -- this text is intentionally unwrapped so the in-UI wrapping can do the job
 local DEFAULT_HELP_TEXT = [[Welcome to DFHack!
 
-Type a command to see its help text here. Hit ENTER to run the command, or tap backtick (`) or hit ESC to close this dialog. This dialog also closes automatically if you run a command that shows a new GUI screen.
+Type a command or click on it in the autocomplete panel to see its help text here. Hit Enter or click on the "run" button to run the command as typed. You can also run a command without parameters by double clicking on it in the autocomplete list.
 
-Not sure what to do? First, try running "quickstart-guide" to get oriented with DFHack and its capabilities. Then maybe try the "tags" command to see the different categories of tools DFHack has to offer! Run "tags <tagname>" (e.g. "tags design") to see the tools in that category.
+You can filter the autocomplete list by clicking on the "Tags" button. Tap backtick (`) or hit ESC to close this dialog. This dialog also closes automatically if you run a command that shows a new GUI screen.
 
-To see help for this command launcher (including info on mouse controls), type "launcher" and click on "gui/launcher" to autocomplete.]]
+Not sure what to do? You can browse and configure DFHack most important tools in "gui/control-panel". Please also run "quickstart-guide" to get oriented with DFHack and its capabilities.
+
+To see more detailed help for this command launcher (including info on keyboard and mouse controls), type "gui/launcher".
+
+You're running DFHack ]] .. dfhack.getDFHackVersion() ..
+            (dfhack.isRelease() and '' or (' (git: %s)'):format(dfhack.getGitCommit(true)))
 
 function HelpPanel:init()
     self.cur_entry = ''
 
     self:addviews{
-        TabBar{
+        widgets.TabBar{
             frame={t=0, l=0},
             labels={
                 'Help',
                 'Output',
             },
             on_select=function(idx) self.subviews.pages:setSelected(idx) end,
-            get_cur_page=function() return self.subviews.pages:getSelected() end
+            get_cur_page=function() return self.subviews.pages:getSelected() end,
+        },
+        widgets.HotkeyLabel{
+            frame={t=0, r=1},
+            label='Clear output',
+            text_pen=COLOR_YELLOW,
+            auto_width=true,
+            on_activate=function() self:add_output('', true) end,
+            visible=function() return self.subviews.pages:getSelected() == 2 end,
+            enabled=function() return #self.subviews.output_label.text_to_wrap > 0 end,
+        },
+        widgets.HotkeyLabel{
+            view_id='copy',
+            frame={t=1, r=1},
+            label='Copy output to clipboard',
+            text_pen=COLOR_YELLOW,
+            auto_width=true,
+            on_activate=function()
+                dfhack.internal.setClipboardTextCp437Multiline(self.subviews.output_label.text_to_wrap)
+                self.subviews.copy.visible = false
+                self.subviews.copy_flash.visible = true
+                local end_ms = dfhack.getTickCount() + 5000
+                local function label_reset()
+                    if dfhack.getTickCount() < end_ms then
+                        dfhack.timeout(10, 'frames', label_reset)
+                    else
+                        self.subviews.copy_flash.visible = false
+                        self.subviews.copy.visible = true
+                    end
+                end
+                label_reset()
+            end,
+            visible=function() return self.subviews.pages:getSelected() == 2 end,
+            enabled=function() return #self.subviews.output_label.text_to_wrap > 0 end,
+        },
+        widgets.Label{
+            view_id='copy_flash',
+            frame={t=1, r=12},
+            text='Copied',
+            auto_width=true,
+            text_pen=COLOR_GREEN,
+            visible=false,
         },
         widgets.Pages{
             view_id='pages',
-            frame={t=2, l=0, b=0, r=0},
+            frame={t=3, l=0, b=0, r=0},
             subviews={
                 widgets.WrappedLabel{
                     view_id='help_label',
@@ -497,7 +732,7 @@ function HelpPanel:init()
                         STANDARDSCROLL_PAGEUP='-halfpage',
                         STANDARDSCROLL_PAGEDOWN='+halfpage',
                     },
-                    text_to_wrap=''},
+                    text_to_wrap=persisted_scrollback},
             },
         },
     }
@@ -509,25 +744,26 @@ local function HelpPanel_update_label(label, text)
     label:updateLayout() -- update the scroll arrows after rewrapping text
 end
 
-function HelpPanel:add_output(output)
+function HelpPanel:add_output(output, clear)
     self.subviews.pages:setSelected('output_label')
     local label = self.subviews.output_label
     local text_height = label:getTextHeight()
     label:scroll('end')
     local line_num = label.start_line_num
     local text = output
-    if label.text_to_wrap ~= '' then
+    if not clear and label.text_to_wrap ~= '' then
         text = label.text_to_wrap .. NEWLINE .. output
     end
     local text_len = #text
     if text_len > SCROLLBACK_CHARS then
         text = text:sub(-SCROLLBACK_CHARS)
         local text_diff = text_len - #text
-        HelpPanel_update_label(label, label.text_to_wrap:sub(text_len - #text))
+        HelpPanel_update_label(label, label.text_to_wrap:sub(text_diff))
         text_height = label:getTextHeight()
         label:scroll('end')
         line_num = label.start_line_num
     end
+    persisted_scrollback = text:sub(-PERSISTED_SCROLLBACK_CHARS)
     HelpPanel_update_label(label, text)
     if line_num == 1 then
         label:scroll(text_height - 1)
@@ -538,7 +774,10 @@ function HelpPanel:add_output(output)
     end
 end
 
-function HelpPanel:set_entry(entry_name)
+function HelpPanel:set_entry(entry_name, show_help)
+    if show_help then
+        self.subviews.pages:setSelected('help_label')
+    end
     local label = self.subviews.help_label
     if #entry_name == 0 then
         HelpPanel_update_label(label, DEFAULT_HELP_TEXT)
@@ -561,16 +800,24 @@ function HelpPanel:postComputeFrame()
     HelpPanel_update_label(self.subviews.help_label, wrapped_help)
 end
 
+function HelpPanel:postUpdateLayout()
+    if not self.sentinel then
+        self.sentinel = true
+        self.subviews.output_label:scroll('end')
+    end
+end
+
 ----------------------------------
 -- MainPanel
 --
 
-MainPanel = defclass(MainPanel, widgets.Window)
+MainPanel = defclass(MainPanel, widgets.Panel)
 MainPanel.ATTRS{
     frame_title=TITLE,
     frame_inset=0,
+    draggable=true,
     resizable=true,
-    resize_min={w=AUTOCOMPLETE_PANEL_WIDTH+49, h=EDIT_PANEL_HEIGHT+20},
+    resize_min={w=AUTOCOMPLETE_PANEL_WIDTH+48, h=EDIT_PANEL_HEIGHT+20},
     get_minimal=DEFAULT_NIL,
     update_autocomplete=DEFAULT_NIL,
     on_edit_input=DEFAULT_NIL,
@@ -581,77 +828,30 @@ function MainPanel:postUpdateLayout()
     config:write(self.frame)
 end
 
-local texpos = dfhack.textures.getThinBordersTexposStart()
-local tp = function(offset)
-    if texpos == -1 then return nil end
-    return texpos + offset
-end
-
-local H_SPLIT_PEN = dfhack.pen.parse{tile=tp(5), ch=196, fg=COLOR_GREY, bg=COLOR_BLACK}
-local V_SPLIT_PEN = dfhack.pen.parse{tile=tp(4), ch=179, fg=COLOR_GREY, bg=COLOR_BLACK}
-local TOP_SPLIT_PEN = dfhack.pen.parse{tile=gui.WINDOW_FRAME.t_frame_pen.tile,
-        ch=209, fg=COLOR_GREY, bg=COLOR_BLACK}
-local BOTTOM_SPLIT_PEN = dfhack.pen.parse{tile=gui.WINDOW_FRAME.b_frame_pen.tile,
-        ch=207, fg=COLOR_GREY, bg=COLOR_BLACK}
-local LEFT_SPLIT_PEN = dfhack.pen.parse{tile=gui.WINDOW_FRAME.l_frame_pen.tile,
-        ch=199, fg=COLOR_GREY, bg=COLOR_BLACK}
-local RIGHT_SPLIT_PEN = dfhack.pen.parse{tile=tp(17), ch=180, fg=COLOR_GREY, bg=COLOR_BLACK}
-
--- paint autocomplete panel border
-local function paint_vertical_border(rect)
-    local x = rect.x2 - (AUTOCOMPLETE_PANEL_WIDTH + 2)
-    local y1, y2 = rect.y1, rect.y2
-    dfhack.screen.paintTile(TOP_SPLIT_PEN, x, y1)
-    dfhack.screen.paintTile(BOTTOM_SPLIT_PEN, x, y2)
-    for y=y1+1,y2-1 do
-        dfhack.screen.paintTile(V_SPLIT_PEN, x, y)
-    end
-end
-
--- paint border between edit area and help area
-local function paint_horizontal_border(rect)
-    local panel_height = EDIT_PANEL_HEIGHT + 1
-    local x1, x2 = rect.x1, rect.x2
-    local v_border_x = x2 - (AUTOCOMPLETE_PANEL_WIDTH + 2)
-    local y = rect.y1 + panel_height
-    dfhack.screen.paintTile(LEFT_SPLIT_PEN, x1, y)
-    dfhack.screen.paintTile(RIGHT_SPLIT_PEN, v_border_x, y)
-    for x=x1+1,v_border_x-1 do
-        dfhack.screen.paintTile(H_SPLIT_PEN, x, y)
-    end
-end
-
-function MainPanel:onRenderFrame(dc, rect)
-    MainPanel.super.onRenderFrame(self, dc, rect)
-    if self.get_minimal() then return end
-    paint_vertical_border(rect)
-    paint_horizontal_border(rect)
-end
-
 function MainPanel:onInput(keys)
     if MainPanel.super.onInput(self, keys) then
         return true
-    elseif keys.CUSTOM_CTRL_C then
-        if self.focus_group.cur == self.subviews.editfield then
-            self.subviews.edit:set_text('')
-            self.on_edit_input('')
-        else
-            self.focus_group.cur:setText('')
-        end
-        return true
-    elseif keys.CUSTOM_CTRL_D then
-        dev_mode = not dev_mode
-        self.update_autocomplete(get_first_word(self.subviews.editfield.text))
-        return true
-    elseif keys.KEYBOARD_CURSOR_RIGHT_FAST then
-        self.subviews.autocomplete:advance(1)
-        return true
-    elseif keys.KEYBOARD_CURSOR_LEFT_FAST then
-        self.subviews.autocomplete:advance(-1)
-        return true
     end
+
+    if selecting_filters and (keys.LEAVESCREEN or keys._MOUSE_R) then
+        selecting_filters = false
+        self.subviews.search.on_unfocus()
+    elseif keys.CUSTOM_CTRL_D then
+        toggle_dev_mode()
+        self:refresh_autocomplete()
+    elseif keys.CHANGETAB then
+        self.subviews.autocomplete:advance(1)
+    elseif keys.SEC_CHANGETAB then
+        self.subviews.autocomplete:advance(-1)
+    else
+        return false
+    end
+    return true
 end
 
+function MainPanel:refresh_autocomplete()
+    self.update_autocomplete(get_first_word(self.subviews.editfield.text))
+end
 
 ----------------------------------
 -- LauncherUI
@@ -679,7 +879,7 @@ local function get_frame_r()
     return 0
 end
 
-function LauncherUI:init(args)
+function LauncherUI:init()
     self.firstword = ""
 
     local main_panel = MainPanel{
@@ -689,6 +889,8 @@ function LauncherUI:init(args)
         on_edit_input=self:callback('on_edit_input'),
     }
 
+    local function not_minimized() return not self.minimal end
+
     local frame_r = get_frame_r()
 
     local update_frames = function()
@@ -697,11 +899,17 @@ function LauncherUI:init(args)
             new_frame.l = 0
             new_frame.r = frame_r
             new_frame.t = 0
-            new_frame.h = 1
+            new_frame.h = 2
         else
             new_frame = config.data
             if not next(new_frame) then
-                new_frame = {l=5, r=25, t=5, b=5}
+                new_frame = {w=110, h=36}
+            else
+                for k,v in pairs(new_frame) do
+                    if v < 0 then
+                        new_frame[k] = 0
+                    end
+                end
             end
         end
         main_panel.frame = new_frame
@@ -709,8 +917,8 @@ function LauncherUI:init(args)
 
         local edit_frame = self.subviews.edit.frame
         edit_frame.r = self.minimal and
-                0 or AUTOCOMPLETE_PANEL_WIDTH+2
-        edit_frame.h = self.minimal and 1 or EDIT_PANEL_HEIGHT
+                0 or AUTOCOMPLETE_PANEL_WIDTH+1
+        edit_frame.h = self.minimal and 2 or EDIT_PANEL_HEIGHT
 
         local editfield_frame = self.subviews.editfield.frame
         editfield_frame.t = self.minimal and 0 or 1
@@ -718,16 +926,24 @@ function LauncherUI:init(args)
         editfield_frame.r = self.minimal and 11 or 1
     end
 
+    local tag_filter_panel = TagFilterPanel{
+        visible=function() return not_minimized() and selecting_filters end,
+    }
+
     main_panel:addviews{
         AutocompletePanel{
             view_id='autocomplete',
             frame={t=0, r=0, w=AUTOCOMPLETE_PANEL_WIDTH},
             on_autocomplete=self:callback('on_autocomplete'),
-            visible=function() return not self.minimal end},
+            tag_filter_panel=tag_filter_panel,
+            on_double_click=function(_,c) self:run_command(true, c.text) end,
+            on_double_click2=function(_,c) self:run_command(false, c.text) end,
+            visible=not_minimized,
+        },
         EditPanel{
             view_id='edit',
             frame={t=0, l=0},
-            on_change=self:callback('on_edit_input'),
+            on_change=function(text) self:on_edit_input(text, false) end,
             on_submit=self:callback('run_command', true),
             on_submit2=self:callback('run_command', false),
             on_toggle_minimal=function()
@@ -735,11 +951,26 @@ function LauncherUI:init(args)
                 update_frames()
                 self:updateLayout()
             end,
-            prefix_visible=function() return self.minimal end},
+            prefix_visible=function() return self.minimal end,
+        },
         HelpPanel{
             view_id='help',
-            frame={t=EDIT_PANEL_HEIGHT+1, l=0, r=AUTOCOMPLETE_PANEL_WIDTH+1},
-            visible=function() return not self.minimal end},
+            frame={t=EDIT_PANEL_HEIGHT+1, l=0, r=AUTOCOMPLETE_PANEL_WIDTH},
+            visible=not_minimized,
+        },
+        widgets.Divider{
+            frame={t=0, b=0, r=AUTOCOMPLETE_PANEL_WIDTH, w=1},
+            frame_style_t=false,
+            frame_style_b=false,
+            visible=not_minimized,
+        },
+        widgets.Divider{
+            frame={t=EDIT_PANEL_HEIGHT, l=0, r=AUTOCOMPLETE_PANEL_WIDTH, h=1},
+            interior=true,
+            frame_style_l=false,
+            visible=not_minimized,
+        },
+        tag_filter_panel,
     }
     self:addviews{main_panel}
 
@@ -747,13 +978,13 @@ function LauncherUI:init(args)
     self:on_edit_input('')
 end
 
-function LauncherUI:update_help(text, firstword)
-    local firstword = firstword or get_first_word(text)
+function LauncherUI:update_help(text, firstword, show_help)
+    firstword = firstword or get_first_word(text)
     if firstword == self.firstword then
         return
     end
     self.firstword = firstword
-    self.subviews.help:set_entry(firstword)
+    self.subviews.help:set_entry(firstword, show_help)
 end
 
 local function extract_entry(entries, firstword)
@@ -779,8 +1010,6 @@ local function sort_by_freq(entries)
     table.sort(entries, stable_sort_by_frequency)
 end
 
-local DEV_FILTER = {tag={'dev', 'untested'}}
-
 -- adds the n most closely affiliated peer entries for the given entry that
 -- aren't already in the entries list. affiliation is determined by how many
 -- tags the entries share.
@@ -788,9 +1017,12 @@ local function add_top_related_entries(entries, entry, n)
     local dev_ok = dev_mode or helpdb.get_entry_tags(entry).dev
     local tags = helpdb.get_entry_tags(entry)
     local affinities, buckets = {}, {}
+    local skip_armok = dfhack.getMortalMode()
     for tag in pairs(tags) do
         for _,peer in ipairs(helpdb.get_tag_data(tag)) do
-            affinities[peer] = (affinities[peer] or 0) + 1
+            if not skip_armok or not helpdb.get_entry_tags(peer).armok then
+                affinities[peer] = (affinities[peer] or 0) + 1
+            end
         end
         buckets[#buckets + 1] = {}
     end
@@ -816,39 +1048,52 @@ local function add_top_related_entries(entries, entry, n)
 end
 
 function LauncherUI:update_autocomplete(firstword)
-    local entries = helpdb.search_entries(
-        {str=firstword, types='command'},
-        dev_mode and {} or DEV_FILTER)
+    local includes = {str=firstword, types='command'}
+    local excludes = {}
+    if helpdb.is_tag(firstword) then
+        includes = {tag=firstword, types='command'}
+        for tag in pairs(get_default_tag_filter().excludes) do
+            table.insert(ensure_key(excludes, 'tag'), tag)
+        end
+    else
+        includes = {includes}
+        local tag_filter = get_tag_filter()
+        for tag in pairs(tag_filter.includes) do
+            table.insert(includes, {tag=tag})
+        end
+        for tag in pairs(tag_filter.excludes) do
+            table.insert(ensure_key(excludes, 'tag'), tag)
+        end
+    end
+    local entries = helpdb.search_entries(includes, excludes)
     -- if firstword is in the list, extract it so we can add it to the top later
     -- even if it's not in the list, add it back anyway if it's a valid db entry
     -- (e.g. if it's a dev script that we masked out) to show that it's a valid
     -- command
-    local found = extract_entry(entries,firstword) or helpdb.is_entry(firstword)
+    local found = extract_entry(entries, firstword) or helpdb.is_entry(firstword)
     sort_by_freq(entries)
-    if found then
+    if helpdb.is_tag(firstword) then
+        self.subviews.autocomplete_label:setText{{text='Tagged tools', pen=COLOR_LIGHTMAGENTA}}
+    elseif found then
         table.insert(entries, 1, firstword)
-        self.subviews.autocomplete_label:setText("Similar scripts")
+        self.subviews.autocomplete_label:setText{{text='Similar tools', pen=COLOR_BROWN}}
         add_top_related_entries(entries, firstword, 20)
     else
-        self.subviews.autocomplete_label:setText("Suggestions")
-    end
-
-    if #firstword == 0 then
-        self.subviews.autocomplete_label:setText("All scripts")
+        self.subviews.autocomplete_label:setText{{text='Matching tools', pen=COLOR_GREY}}
     end
 
     self.subviews.autocomplete:set_options(entries, found)
 end
 
-function LauncherUI:on_edit_input(text)
+function LauncherUI:on_edit_input(text, show_help)
     local firstword = get_first_word(text)
-    self:update_help(text, firstword)
+    self:update_help(text, firstword, show_help)
     self:update_autocomplete(firstword)
 end
 
 function LauncherUI:on_autocomplete(_, option)
     if option then
-        self.subviews.edit:set_text(option.text)
+        self.subviews.edit:set_text(option.text..' ', true)
         self:update_help(option.text)
     end
 end
@@ -858,42 +1103,69 @@ function LauncherUI:run_command(reappear, command)
     if #command == 0 then return end
     dfhack.addCommandToHistory(HISTORY_ID, HISTORY_FILE, command)
     record_command(command)
-    -- remember the previous parent screen address so we can detect changes
-    local _,prev_parent_addr = self._native.parent:sizeof()
-    -- propagate saved unpaused status to the new ZScreen
-    local saved_pause_state = df.global.pause_state
-    if not self.saved_pause_state then
-        df.global.pause_state = false
-    end
-    -- remove our viewscreen from the stack while we run the command. this
-    -- allows hotkey guards and tools that interact with the top viewscreen
-    -- without checking whether it is active to work reliably.
-    local output = dfhack.screen.hideGuard(self, dfhack.run_command_silent,
-                                           command)
-    df.global.pause_state = saved_pause_state
-    if #output > 0 then
-        print('Output from command run from gui/launcher:')
-        print('> ' .. command)
-        print()
-        print(output)
-    end
-    -- if we displayed a different screen, don't come back up even if reappear
-    -- is true so the user can interact with the new screen.
-    local _,parent_addr = self._native.parent:sizeof()
-    if not reappear or self.minimal or parent_addr ~= prev_parent_addr then
-        self:dismiss()
-        if self.minimal and #output > 0 then
-            dialogs.showMessage(TITLE, output)
+    local output, clear
+    if command == 'clear' or command == 'cls' or
+        command:startswith('clear ') or command:startswith('cls ')
+    then
+        output = ''
+        clear = true
+    else
+        -- remember the previous parent screen address so we can detect changes
+        local _,prev_parent_addr = self._native.parent:sizeof()
+        -- propagate saved unpaused status to the new ZScreen
+        local saved_pause_state = df.global.pause_state
+        if not self.saved_pause_state then
+            df.global.pause_state = false
         end
-        return
+        -- remove our viewscreen from the stack while we run the command. this
+        -- allows hotkey guards and tools that interact with the top viewscreen
+        -- without checking whether it is active to work reliably.
+        output = dfhack.screen.hideGuard(self, dfhack.run_command_silent,
+                                            command)
+        df.global.pause_state = saved_pause_state
+        if #output > 0 then
+            print('Output from command run from gui/launcher:')
+            print('> ' .. command)
+            print()
+            print(output)
+        end
+        output = output:gsub('\t', ' ')
+        -- if we displayed a different screen, don't come back up, even if reappear
+        -- is true, so the user can interact with the new screen.
+        local _,parent_addr = self._native.parent:sizeof()
+        if self.minimal or parent_addr ~= prev_parent_addr then
+            reappear = false
+            if self.minimal and #output > 0 then
+                dialogs.showMessage(TITLE, output)
+            end
+        end
+        if #output == 0 then
+            output = 'Command finished successfully'
+        end
+        if not output:endswith('\n') then
+            output = output .. '\n'
+        end
+        output = ('> %s\n\n%s'):format(command, output)
     end
-    -- reappear and show the command output
+
     self.subviews.edit:set_text('')
-    self:on_edit_input('')
-    if #output == 0 then
-        output = 'Command finished successfully'
+    self.subviews.help:add_output(output, clear)
+
+    if not reappear then
+        self:dismiss()
     end
-    self.subviews.help:add_output(('> %s\n\n%s'):format(command, output))
+end
+
+function LauncherUI:render(dc)
+    local mortal_mode = dfhack.getMortalMode()
+    if mortal_mode ~= prev_mortal_mode then
+        prev_mortal_mode = mortal_mode
+        if is_default_filter_base(not mortal_mode) then
+            _tag_filter = get_default_tag_filter_base(mortal_mode)
+            self.subviews.main:refresh_autocomplete()
+        end
+    end
+    LauncherUI.super.render(self, dc)
 end
 
 function LauncherUI:onDismiss()
@@ -904,30 +1176,28 @@ if dfhack_flags.module then
     return
 end
 
-if view then
-    if not view:hasFocus() then
-        view:raise()
-    else
-        -- running the launcher while it is open (e.g. from hitting the launcher
-        -- hotkey a second time) should close the dialog
-        view:dismiss()
-        return
-    end
-end
-
 local args = {...}
-local minimal
+local minimal = false
 if args[1] == '--minimal' or args[1] == '-m' then
     table.remove(args, 1)
     minimal = true
 end
+
 if not view then
     view = LauncherUI{minimal=minimal}:show()
-elseif minimal and not view.minimal then
+elseif minimal ~= view.minimal then
     view.subviews.edit.on_toggle_minimal()
+elseif not view:hasFocus() then
+    view:raise()
+elseif #args == 0 then
+    -- running the launcher while it is open (e.g. from hitting the launcher
+    -- hotkey a second time) should close the dialog
+    view:dismiss()
+    return
 end
-local initial_command = table.concat(args, ' ')
-if #initial_command > 0 then
+
+if #args > 0 then
+    local initial_command = table.concat(args, ' ')
     view.subviews.edit:set_text(initial_command)
-    view:on_edit_input(initial_command)
+    view:on_edit_input(initial_command, true)
 end

@@ -35,11 +35,45 @@ local function is_valid_clothing(item)
             and item.wear > 0
 end
 
-local function is_valid_corpse(item)
-    return not item.flags.dead_dwarf
+local function keep_usable(opts, item)
+    return opts.keep_usable and (
+                not item.corpse_flags.unbutchered and (
+                    item.corpse_flags.bone or
+                    item.corpse_flags.horn or
+                    item.corpse_flags.leather or
+                    item.corpse_flags.skull or
+                    item.corpse_flags.tooth) or (
+                item.corpse_flags.hair_wool or
+                item.corpse_flags.pearl or
+                item.corpse_flags.plant or
+                item.corpse_flags.shell or
+                item.corpse_flags.silk or
+                item.corpse_flags.yarn) )
 end
 
-local function is_valid_food(item)
+local function is_valid_corpse(opts, item)
+    -- check if the corpse is a resident of the fortress and is not keep_usable
+    local unit = df.unit.find(item.unit_id)
+    if not unit then
+        return not keep_usable(opts, item)
+    end
+    local hf = df.historical_figure.find(unit.hist_figure_id)
+    if not hf then
+        return not keep_usable(opts, item)
+    end
+    for _,link in ipairs(hf.entity_links) do
+        if link.entity_id == df.global.plotinfo.group_id and df.histfig_entity_link_type[link:getType()] == 'MEMBER' then
+            return false
+        end
+    end
+    return not keep_usable(opts, item)
+end
+
+local function is_valid_remains(opts, item)
+    return true
+end
+
+local function is_valid_food(opts, item)
     return true
 end
 
@@ -69,14 +103,13 @@ local function increment_food_wear(item)
     return increment_generic_wear(item, 24)
 end
 
-local function deteriorate(get_item_vectors_fn, is_valid_fn, increment_wear_fn)
+local function deteriorate(opts, get_item_vectors_fn, is_valid_fn, increment_wear_fn)
     local count = 0
     for _,v in ipairs(get_item_vectors_fn()) do
         for _,item in ipairs(v) do
-            if is_valid_fn(item) and increment_wear_fn(item)
+            if is_valid_fn(opts, item) and increment_wear_fn(item)
                     and not item.flags.garbage_collect then
-                item.flags.garbage_collect = true
-                item.flags.hidden = true
+                dfhack.items.remove(item)
                 count = count + 1
             end
         end
@@ -88,20 +121,20 @@ local function always_worn()
     return true
 end
 
-local function deteriorate_clothes(now)
-    return deteriorate(get_clothes_vectors, is_valid_clothing,
+local function deteriorate_clothes(opts, now)
+    return deteriorate(opts, get_clothes_vectors, is_valid_clothing,
                        now and always_worn or increment_clothes_wear)
 end
 
-local function deteriorate_corpses(now)
-    return deteriorate(get_corpse_vectors, is_valid_corpse,
+local function deteriorate_corpses(opts, now)
+    return deteriorate(opts, get_corpse_vectors, is_valid_corpse,
                        now and always_worn or increment_corpse_wear)
-            + deteriorate(get_remains_vectors, is_valid_corpse,
+            + deteriorate(opts, get_remains_vectors, is_valid_remains,
                           now and always_worn or increment_remains_wear)
 end
 
-local function deteriorate_food(now)
-    return deteriorate(get_food_vectors, is_valid_food,
+local function deteriorate_food(opts, now)
+    return deteriorate(opts, get_food_vectors, is_valid_food,
                        now and always_worn or increment_food_wear)
 end
 
@@ -141,7 +174,7 @@ local function make_timeout_cb(item_type, opts)
             return
         end
         if not first_time then
-            local count = type_fns[item_type]()
+            local count = type_fns[item_type](opts)
             if count > 0 then
                 print(('Deteriorated %d %s'):format(count, item_type))
             end
@@ -186,7 +219,7 @@ end
 
 local function now(opts)
     for _,v in ipairs(opts.types) do
-        local count = type_fns[v](true)
+        local count = type_fns[v](opts, true)
         if not opts.quiet then
             print(('Deteriorated %d %s'):format(count, v))
         end
@@ -245,6 +278,7 @@ local opts = {
     mode = 'days',
     quiet = false,
     types = {},
+    keep_usable = false,
     help = false,
 }
 
@@ -253,6 +287,7 @@ local nonoptions = argparse.processArgsGetopt({...}, {
          handler=function(optarg) opts.time,opts.mode = parse_freq(optarg) end},
         {'h', 'help', handler=function() opts.help = true end},
         {'q', 'quiet', handler=function() opts.quiet = true end},
+        {'k', 'keep-usable', handler=function() opts.keep_usable = true end},
         {'t', 'types', hasArg=true,
          handler=function(optarg) opts.types = parse_types(optarg) end}})
 

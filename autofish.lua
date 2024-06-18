@@ -1,11 +1,9 @@
 -- handles automatic fishing jobs to limit the number of fish the fortress keeps on hand
--- autofish [enable | disable] <max> [min] [--include-raw | -r]
+-- autofish [enable | disable] <max> [min] [<options>]
 
 --@ enable=true
 --@ module=true
 
-local json = require("json")
-local persist = require("persist-table")
 local argparse = require("argparse")
 local repeatutil = require("repeat-util")
 
@@ -17,8 +15,6 @@ s_maxFish = s_maxFish or 100
 s_minFish = s_minFish or 75
 s_useRaw = s_useRaw or true
 isFishing = isFishing or true
-local timer = nil
-
 
 --- Check if the script is enabled.
 -- @return true if the script is enabled, otherwise false.
@@ -28,21 +24,24 @@ end
 
 --- Save the current state of the script
 local function persist_state()
-    persist.GlobalTable[GLOBAL_KEY] = json.encode({enabled=enabled,
-        s_maxFish=s_maxFish, s_minFish=s_minFish, s_useRaw=s_useRaw,
-        isFishing=isFishing
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, {
+        enabled=enabled,
+        s_maxFish=s_maxFish,
+        s_minFish=s_minFish,
+        s_useRaw=s_useRaw,
+        isFishing=isFishing,
     })
 end
 
 --- Load the saved state of the script
 local function load_state()
     -- load persistent data
-    local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or "")
-    enabled = (persisted_data or {enabled=false})["enabled"]
-    s_maxFish = (persisted_data or {s_maxFish=100})["s_maxFish"]
-    s_minFish = (persisted_data or {s_minFish=75})["s_minFish"]
-    s_useRaw = (persisted_data or {s_useRaw=true})["s_useRaw"]
-    isFishing = (persisted_data or {isFishing=true})["isFishing"]
+    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
+    enabled = persisted_data.enabled or false
+    s_maxFish = persisted_data.s_maxFish or 100
+    s_minFish = persisted_data.s_minFish or 75
+    s_useRaw = persisted_data.s_useRaw or (persisted_data.s_useRaw == nil)
+    isFishing = persisted_data.isFishing or (persisted_data.isFishing == nil)
 end
 
 --- Set the maximum fish threshold.
@@ -75,19 +74,21 @@ end
 function toggle_fishing_labour(state)
     -- pass true to state to turn on, otherwise disable
     -- find all work details that have fishing enabled:
-    local work_details = df.global.plotinfo.hauling.work_details
+    local work_details = df.global.plotinfo.labor_info.work_details
     for _,v in pairs(work_details) do
         if v.allowed_labors.FISH then
-            -- set limited to true just in case a custom work detail is being
-            -- changed, to prevent *all* dwarves from fishing.
-            v.work_detail_flags.limited = true
-            v.work_detail_flags.enabled = state
+            v.flags.mode = state and
+                df.work_detail_mode.OnlySelectedDoesThis or df.work_detail_mode.NobodyDoesThis
 
-            -- workaround to actually enable labours
+            -- since the work details are not actually applied unless a button
+            -- is clicked on the work details screen, we have to manually set
+            -- unit labours
             for _,v2 in ipairs(v.assigned_units) do
                 -- find unit by ID and toggle fishing
                 local unit = df.unit.find(v2)
-                unit.status.labors.FISH = state
+                if unit then
+                    unit.status.labors.FISH = state
+                end
             end
         end
     end
@@ -206,13 +207,17 @@ if dfhack_flags and dfhack_flags.enable then
     args = {dfhack_flags.enable_state and "enable" or "disable"}
 end
 
--- find flags in args:
+-- handle options flags
 local positionals = argparse.processArgsGetopt(args,
-    {{"r", "toggle-raw",
-    handler=function() s_useRaw = not s_useRaw end}
+    {{"r", "raw", hasArg=true,
+    handler=function(optArg)
+       local val = argparse.boolean(optArg, "raw")
+       set_useRaw(val)
+    end}
 })
 
 load_state()
+-- handle the rest of the arguments
 if positionals[1] == "enable" then
     enabled = true
 
@@ -226,8 +231,9 @@ elseif positionals[1] == "status" then
     print_status()
     return
 
+-- positionals is an empty table if no positional arguments are set
 elseif positionals ~= nil then
-    -- positionals is a number?
+    -- check to see if passed args are numbers
     if positionals[1] and tonumber(positionals[1]) then
         -- assume we're changing setting:
         local newval = tonumber(positionals[1])
@@ -235,9 +241,6 @@ elseif positionals ~= nil then
         if not positionals[2] then
             set_minFish(math.floor(newval * 0.75))
         end
-    else
-        -- invalid or no argument
-        return
     end
 
     if positionals[2] and tonumber(positionals[2]) then

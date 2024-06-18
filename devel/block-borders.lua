@@ -1,19 +1,8 @@
 -- overlay that displays map block borders
 
---[====[
-
-devel/block-borders
-===================
-
-An overlay that draws borders of map blocks. See :doc:`/docs/api/Maps` for
-details on map blocks.
-
-]====]
-
-local gui = require "gui"
+local gui = require('gui')
 local guidm = require "gui.dwarfmode"
-
-local ui = df.global.plotinfo
+local widgets = require('gui.widgets')
 
 local DRAW_CHARS = {
     ns = string.char(179),
@@ -23,64 +12,39 @@ local DRAW_CHARS = {
     se = string.char(218),
     sw = string.char(191),
 }
--- persist across script runs
-color = color or COLOR_LIGHTCYAN
 
-BlockBordersOverlay = defclass(BlockBordersOverlay, guidm.MenuOverlay)
-BlockBordersOverlay.ATTRS{
-    block_size = 16,
-    draw_borders = true,
+BlockBorders = defclass(BlockBorders, widgets.Window)
+BlockBorders.ATTRS {
+    frame_title='Block Borders',
+    frame={t=20, r=3, w=29, h=7},
+    autoarrange_subviews=true,
+    autoarrange_gap=1,
 }
 
-function BlockBordersOverlay:onInput(keys)
-    if keys.LEAVESCREEN then
-        self:dismiss()
-    elseif keys.D_PAUSE then
-        self.draw_borders = not self.draw_borders
-    elseif keys.CUSTOM_B then
-        self.block_size = self.block_size == 16 and 48 or 16
-    elseif keys.CUSTOM_C then
-        color = color + 1
-        if color > 15 then
-            color = 1
-        end
-    elseif keys.CUSTOM_SHIFT_C then
-        color = color - 1
-        if color < 1 then
-            color = 15
-        end
-    elseif keys.D_LOOK then
-        self:sendInputToParent(ui.main.mode == df.ui_sidebar_mode.LookAround and 'LEAVESCREEN' or 'D_LOOK')
-    else
-        self:propagateMoveKeys(keys)
-    end
+function BlockBorders:init()
+    self:addviews{
+        widgets.ToggleHotkeyLabel{
+            view_id='draw',
+            key='CUSTOM_CTRL_D',
+            label='Draw borders:',
+            initial_option=true,
+        },
+        widgets.CycleHotkeyLabel{
+            view_id='size',
+            key='CUSTOM_CTRL_B',
+            label='  Block size:',
+            options={16, 48},
+        },
+    }
 end
 
-function BlockBordersOverlay:onRenderBody(dc)
-    dc = dc:viewport(1, 1, dc.width - 2, dc.height - 2)
-    dc:key_string('D_PAUSE', 'Toggle borders')
-      :newline()
-    dc:key_string('CUSTOM_B', self.block_size == 16 and '1 block (16 tiles)' or '3 blocks (48 tiles)')
-      :newline()
-    dc:key('CUSTOM_C')
-      :string(', ')
-      :key_string('CUSTOM_SHIFT_C', 'Color: ')
-      :string('Example', color)
-      :newline()
-    dc:key_string('D_LOOK', 'Toggle cursor')
-      :newline()
-
-    self:renderOverlay()
-end
-
-function BlockBordersOverlay:renderOverlay()
-    if not self.draw_borders then return end
-
-    local block_end = self.block_size - 1
-    self:renderMapOverlay(function(pos, is_cursor)
+function BlockBorders:render_overlay()
+    local block_size = self.subviews.size:getOptionValue()
+    local block_end = block_size - 1
+    guidm.renderMapOverlay(function(pos, is_cursor)
         if is_cursor then return end
-        local block_x = pos.x % self.block_size
-        local block_y = pos.y % self.block_size
+        local block_x = pos.x % block_size
+        local block_y = pos.y % block_size
         local key
         if block_x == 0 and block_y == 0 then
             key = 'se'
@@ -95,16 +59,34 @@ function BlockBordersOverlay:renderOverlay()
         elseif block_y == 0 or block_y == block_end then
             key = 'ew'
         end
-        return DRAW_CHARS[key], color or COLOR_LIGHTCYAN
+        if not key then return nil end
+        return COLOR_LIGHTCYAN, DRAW_CHARS[key]
     end)
+end
+
+function BlockBorders:onRenderFrame(dc, rect)
+    if self.subviews.draw:getOptionValue() then
+        self:render_overlay()
+    end
+    BlockBorders.super.onRenderFrame(self, dc, rect)
+end
+
+BlockBordersScreen = defclass(BlockBordersScreen, gui.ZScreen)
+BlockBordersScreen.ATTRS {
+    focus_path='block-borders',
+    pass_movement_keys=true,
+}
+
+function BlockBordersScreen:init()
+    self:addviews{BlockBorders{}}
+end
+
+function BlockBordersScreen:onDismiss()
+    view = nil
 end
 
 if not dfhack.isMapLoaded() then
     qerror('This script requires a fortress map to be loaded')
 end
 
--- we can work both with a cursor and without one. start in a mode that mirrors
--- the current game state
-local is_cursor = not not guidm.getCursorPos()
-local sidebar_mode = df.ui_sidebar_mode[is_cursor and 'LookAround' or 'Default']
-BlockBordersOverlay{sidebar_mode=sidebar_mode}:show()
+view = view and view:raise() or BlockBordersScreen{}:show()

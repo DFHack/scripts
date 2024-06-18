@@ -360,8 +360,8 @@ function update()
                                         d = 1
                                     end
                                     action.data.liedown.timer = d
-                                elseif action_type == df.unit_action_type.Job2 then
-                                    local d = action.data.job2.timer - dec
+                                elseif action_type == df.unit_action_type.JobRecover then
+                                    local d = action.data.jobrecover.timer - dec
                                     if d < 1 then
                                         d = 1
                                     end
@@ -378,6 +378,24 @@ function update()
                                         d = 1
                                     end
                                     action.data.suckblood.timer = d
+                                elseif action_type == df.unit_action_type.Mount then
+                                    local d = action.data.mount.timer - dec
+                                    if d < 1 then
+                                        d = 1
+                                    end
+                                    action.data.mount.timer = d
+                                elseif action_type == df.unit_action_type.Dismount then
+                                    local d = action.data.dismount.timer - dec
+                                    if d < 1 then
+                                        d = 1
+                                    end
+                                    action.data.dismount.timer = d
+                                elseif action_type == df.unit_action_type.HoldItem then
+                                    local d = action.data.holditem.timer - dec
+                                    if d < 1 then
+                                        d = 1
+                                    end
+                                    action.data.holditem.timer = d
                                 end
                             end
                         end

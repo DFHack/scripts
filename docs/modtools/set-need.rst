@@ -3,7 +3,7 @@ modtools/set-need
 
 .. dfhack-tool::
     :summary: Change the needs of a unit.
-    :tags: untested dev
+    :tags: unavailable
 
 Sets and edits unit needs.
 

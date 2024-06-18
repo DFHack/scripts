@@ -13,7 +13,6 @@ local REFRESH_MS = 10000
 
 BurrowSettings = defclass(BurrowSettings, widgets.Window)
 BurrowSettings.ATTRS{
-    lockable=false,
     frame={l=0, t=5, w=56, h=13},
 }
 
@@ -102,7 +101,7 @@ function BurrowSettings:commit()
 end
 
 function BurrowSettings:onInput(keys)
-    if keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
+    if keys.LEAVESCREEN or keys._MOUSE_R then
         self:hide()
         return true
     end

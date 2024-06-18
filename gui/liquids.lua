@@ -50,6 +50,11 @@ function SpawnLiquid:init()
             on_activate = self:callback('decreaseLiquidLevel'),
             disabled = function() return self.level == 1 end
         },
+        widgets.Label{
+            frame = { l = 0, b = 1, w = 1},
+            text_pen=COLOR_LIGHTGREEN,
+            text=string.char(27),
+        },
         widgets.HotkeyLabel{
             frame = { l = 19, b = 1},
             label = 'Increase level',
@@ -57,6 +62,11 @@ function SpawnLiquid:init()
             key = 'KEYBOARD_CURSOR_RIGHT',
             on_activate = self:callback('increaseLiquidLevel'),
             disabled = function() return self.level == 7 end
+        },
+        widgets.Label{
+            frame = { l = 19, b = 1, w = 1},
+            text_pen=COLOR_LIGHTGREEN,
+            text=string.char(26),
         },
         widgets.CycleHotkeyLabel{
             frame = {l = 0, b = 2},
@@ -68,7 +78,7 @@ function SpawnLiquid:init()
                 { label = "Magma", value = df.tile_liquid.Magma, pen = COLOR_RED },
                 { label = "River", value = df.tiletype.RiverSource, pen = COLOR_BLUE },
             },
-            initial_option = 0,
+            initial_option = df.tile_liquid.Water,
             on_change = function(new, _)
                 self.type = new
                 self.tile = SpawnLiquidCursor[new]
@@ -84,10 +94,11 @@ function SpawnLiquid:init()
                 { label = "Click", value = SpawnLiquidPaintMode.CLICK, pen = COLOR_WHITE },
                 { label = "Drag ", value = SpawnLiquidPaintMode.DRAG, pen = COLOR_WHITE },
             },
-            initial_option = 1,
+            initial_option = SpawnLiquidPaintMode.DRAG,
             on_change = function(new, _) self.paint_mode = new end,
         },
         widgets.CycleHotkeyLabel{
+            view_id = 'mode1',
             frame = {l = 18, b = 2},
             label = 'Mode:',
             auto_width = true,
@@ -98,9 +109,28 @@ function SpawnLiquid:init()
                 { label = "Remove", value = SpawnLiquidMode.REMOVE, pen = COLOR_WHITE },
                 { label = "Clean ", value = SpawnLiquidMode.CLEAN, pen = COLOR_WHITE },
             },
-            initial_option = 1,
-            on_change = function(new, _) self.mode = new end,
-            disabled = function() return self.type == df.tiletype.RiverSource end
+            initial_option = SpawnLiquidMode.SET,
+            on_change = function(new, _)
+                self.mode = new
+                self.subviews.mode2:setOption(new)
+            end,
+            visible = function() return self.type ~= df.tiletype.RiverSource end
+        },
+        widgets.CycleHotkeyLabel{
+            view_id = 'mode2',
+            frame = {l = 18, b = 2},
+            label = 'Mode:',
+            auto_width = true,
+            key = 'CUSTOM_X',
+            options = {
+                { label = "Set   ", value = SpawnLiquidMode.SET, pen = COLOR_WHITE },
+                { label = "Remove", value = SpawnLiquidMode.REMOVE, pen = COLOR_WHITE },
+            },
+            on_change = function(new, _)
+                self.mode = new
+                self.subviews.mode1:setOption(new)
+            end,
+            visible = function() return self.type == df.tiletype.RiverSource end
         },
     }
 end
@@ -143,12 +173,29 @@ function SpawnLiquid:spawn(pos)
             tile.water_salt = false
             tile.water_stagnant = false
         elseif self.type == df.tiletype.RiverSource then
-            map_block.tiletype[pos.x % 16][pos.y % 16] = df.tiletype.RiverSource
-
-            liquids.spawnLiquid(pos, 7, df.tile_liquid.Water)
+            if self.mode == SpawnLiquidMode.REMOVE then
+                local commands = {
+                    'f', 'any', ';',
+                    'f', 'sp', 'river_source', ';',
+                    'p', 'any', ';',
+                    'p', 's', 'floor', ';',
+                    'p', 'sp', 'normal', ';',
+                    'p', 'm', 'stone', ';',
+                }
+                dfhack.run_command('tiletypes-command', table.unpack(commands))
+                dfhack.run_command('tiletypes-here', '--quiet', ('--cursor=%d,%d,%d'):format(pos2xyz(pos)))
+                liquids.spawnLiquid(pos, 0, df.tile_liquid.Water)
+            else
+                map_block.tiletype[pos.x % 16][pos.y % 16] = df.tiletype.RiverSource
+                liquids.spawnLiquid(pos, 7, df.tile_liquid.Water)
+            end
         else
             liquids.spawnLiquid(pos, self:getLiquidLevel(pos), self.type)
         end
+
+        -- Regardless of spawning or removing liquids, we need to reindex to
+        -- ensure pathability is up to date.
+        df.global.world.reindex_pathfinding = true
     end
 end
 
@@ -173,7 +220,7 @@ function SpawnLiquid:onRenderFrame(dc, rect)
     local mouse_pos = dfhack.gui.getMousePos()
 
     if self.is_dragging then
-        if df.global.enabler.mouse_lbut == 0 then
+        if df.global.enabler.mouse_lbut_down == 0 then
             self.is_dragging = false
         elseif mouse_pos and not self:getMouseFramePos() then
             self:spawn(mouse_pos)
@@ -191,7 +238,7 @@ end
 function SpawnLiquid:onInput(keys)
     if SpawnLiquid.super.onInput(self, keys) then return true end
 
-    if keys._MOUSE_L_DOWN and not self:getMouseFramePos() then
+    if keys._MOUSE_L and not self:getMouseFramePos() then
         local mouse_pos = dfhack.gui.getMousePos()
 
         if self.paint_mode == SpawnLiquidPaintMode.CLICK and mouse_pos then
@@ -221,7 +268,7 @@ function SpawnLiquid:onInput(keys)
     end
 
     -- TODO: Holding the mouse down causes event spam.
-    if keys._MOUSE_L and not self:getMouseFramePos() then
+    if keys._MOUSE_L_DOWN and not self:getMouseFramePos() then
         if self.paint_mode == SpawnLiquidPaintMode.DRAG then
             self.is_dragging = true
             return true
@@ -234,7 +281,6 @@ SpawnLiquidScreen.ATTRS {
     focus_path = 'spawnliquid',
     pass_movement_keys = true,
     pass_mouse_clicks = false,
-    force_pause = true,
 }
 
 function SpawnLiquidScreen:init()

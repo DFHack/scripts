@@ -3,7 +3,7 @@ deep-embark
 
 .. dfhack-tool::
     :summary: Start a fort deep underground.
-    :tags: untested embark fort gameplay
+    :tags: embark fort gameplay
 
 Moves the starting units and equipment to a specified underground region upon
 embarking so you can start your fort from there.

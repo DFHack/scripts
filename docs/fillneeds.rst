@@ -15,4 +15,4 @@ Usage
 ``fillneeds --unit <id>``
     Make the specified unit focused and unstressed.
 ``fillneeds --all``
-    Make all units focused and unstressed.
+    Make all citizens and residents focused and unstressed.

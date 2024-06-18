@@ -3,7 +3,7 @@ putontable
 
 .. dfhack-tool::
     :summary: Make an item appear on a table.
-    :tags: untested fort armok items
+    :tags: unavailable
 
 To use this tool, move an item to the ground on the same tile as a built table.
 Then, place the cursor over the table and item and run this command. The item

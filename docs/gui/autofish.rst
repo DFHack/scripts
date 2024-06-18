@@ -11,7 +11,7 @@ should also count your raw fish. You can also check whether or not autofish is
 currently fishing or not.
 
 Usage
-=====
+-----
 
 ::
 

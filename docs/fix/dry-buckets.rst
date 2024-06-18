@@ -8,8 +8,9 @@ fix/dry-buckets
 Sometimes, dwarves drop buckets of water on the ground if their water hauling
 job is interrupted. These buckets then become unavailable for any other kind of
 use, such as making lye. This tool finds those discarded buckets and removes the
-water from them. Buckets in wells or being actively carried or used by a job are
-not affected.
+water from them.
+
+This tool also fixes over-full buckets that are blocking well operations.
 
 Usage
 -----

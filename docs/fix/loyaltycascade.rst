@@ -3,7 +3,7 @@ fix/loyaltycascade
 
 .. dfhack-tool::
     :summary: Halts loyalty cascades where dwarves are fighting dwarves.
-    :tags: untested fort bugfix units
+    :tags: fort bugfix units
 
 This tool aborts loyalty cascades by fixing units who consider their own
 civilization to be the enemy.

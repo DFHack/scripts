@@ -30,7 +30,7 @@ function findVermin(target_verm)
 end
 
 function list_colonies()
-    for idx, col in pairs(df.global.world.vermin.colonies) do
+    for idx, col in pairs(df.global.world.event.vermin_colonies) do
         local race = df.global.world.raws.creatures.all[col.race].creature_id
         print(race..'    at  '..col.pos.x..', '..col.pos.y..', '..col.pos.z)
     end
@@ -39,7 +39,7 @@ end
 function convert_vermin_to(target_verm)
     local vermin_id = findVermin(target_verm)
     local changed = 0
-    for _, verm in pairs(df.global.world.vermin.colonies) do
+    for _, verm in pairs(df.global.world.event.vermin_colonies) do
         verm.race = vermin_id
         verm.caste = -1 -- check for queen bee?
         verm.amount = 18826
@@ -61,8 +61,8 @@ function place_vermin(target_verm)
     verm.amount = 18826
     verm.visible = true
     verm.pos:assign(pos)
-    df.global.world.vermin.colonies:insert("#", verm)
-    df.global.world.vermin.all:insert("#", verm)
+    df.global.world.event.vermin_colonies:insert("#", verm)
+    df.global.world.event.vermin:insert("#", verm)
 end
 
 local args = {...}
@@ -75,7 +75,7 @@ elseif args[1] == 'convert' then
 elseif args[1] == 'place' then
     place_vermin(target_verm)
 else
-    if #df.global.world.vermin.colonies < 1 then
+    if #df.global.world.event.vermin_colonies < 1 then
         dfhack.printerr('There are no colonies on the map.')
     end
     list_colonies()

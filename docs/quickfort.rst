@@ -2,15 +2,13 @@ quickfort
 =========
 
 .. dfhack-tool::
-    :summary: Apply pre-designed blueprints to your fort.
+    :summary: Apply layout blueprints to your fort.
     :tags: fort design productivity buildings map stockpiles
 
-Quickfort reads blueprint files stored in the ``blueprints`` subfolder under the
-main DF game folder and applies the blueprint of your choice to the game map.
+Quickfort reads stored blueprint files and applies them to the game map.
 You can apply blueprints that designate digging, build buildings, place
-stockpiles, mark zones, and/or configure settings. If you find yourself spending
-time doing similar or repetitive things in your forts, this tool can be an
-immense help.
+stockpiles, mark zones, and more. If you find yourself spending time doing
+similar or repetitive designs in your forts, this tool can be an immense help.
 
 Note that this is the commandline tool. Please see `gui/quickfort` if you'd like
 a graphical in-game UI for selecting, previewing, and applying blueprints.
@@ -18,35 +16,34 @@ a graphical in-game UI for selecting, previewing, and applying blueprints.
 You can create the blueprints by hand (see the `quickfort-blueprint-guide` for
 details) or you can build your plan "for real" in Dwarf Fortress, and then
 export your map using `gui/blueprint`. This way you can effectively copy and
-paste sections of your fort if you need to.
+paste sections of your fort. Player-created blueprints are stored in the
+``dfhack-config/blueprints`` directory.
 
 There are many ready-to-use blueprints in the
 `blueprint library <blueprint-library-guide>` that is distributed with DFHack,
 so you can use this tool productively even if you haven't created any blueprints
-yourself.
-
-.. admonition:: Note
-
-    quickfort is still in the process of being updated for the new version of
-    DF. Stockpiles (the "place" mode), zones (the "zone" mode), building
-    configuration (the "query" mode), and game configuration (the "config" mode)
-    are not yet supported.
+yourself. Additional library blueprints can be
+`added with mods <modding-guide>` as well.
 
 Usage
 -----
 
 ``quickfort list [-m|--mode <mode>] [-u|--useronly] [-h|--hidden] [<search string>]``
-    Lists blueprints in the ``blueprints`` folder. Blueprints are ``.csv`` files
-    or sheets within ``.xlsx`` files that contain a ``#<mode>`` comment in the
-    upper-left cell (please see `quickfort-blueprint-guide` for more information
-    on modes). By default, blueprints in the ``blueprints/library/`` subfolder
-    are included and blueprints that contain a ``hidden()`` marker in their
-    modeline are excluded from the returned list. Specify ``-u`` or ``-h`` to
-    exclude library or include hidden blueprints, respectively. The list can
-    additionally be filtered by a specified mode (e.g. ``-m build``) and/or
-    strings to search for in a path, filename, mode, or comment. The id numbers
-    in the reported list may not be contiguous if there are hidden or filtered
-    blueprints that are not being shown.
+    Lists available blueprints. Blueprints are ``.csv`` files or sheets within
+    ``.xlsx`` files that contain a ``#<mode>`` comment in the upper-left cell
+    (please see `quickfort-blueprint-guide` for more information on modes). By
+    default, library blueprints are included and blueprints that contain a
+    ``hidden()`` marker in their modeline are excluded from the returned list.
+    Specify ``-u`` or ``-h`` to exclude library or include hidden blueprints,
+    respectively. The list can additionally be filtered by a specified mode
+    (e.g. ``-m build``) and/or strings to search for in a path, filename, mode,
+    or comment. The id numbers in the reported list may not be contiguous if
+    there are hidden or filtered blueprints that are not being shown.
+``quickfort delete <filename> [<filename> ...]``
+    Delete the specified blueprint file(s). Only player-owned blueprints (stored
+    in the ``dfhack-config/blueprints`` directory) can be deleted. Blueprints
+    provided by mods or the standard DFHack library cannot be deleted by this
+    command.
 ``quickfort gui [<filename or search terms>]``
     Invokes the quickfort UI with the specified parameters, giving you an
     interactive blueprint preview to work with before you apply it to the map.
@@ -67,8 +64,7 @@ Usage
     ``quickfort set`` to show current settings. See the Configuration_ section
     below for available keys and values.
 ``quickfort reset``
-    Resets quickfort configuration to the defaults in
-    :file:`dfhack-config/quickfort/quickfort.txt`.
+    Resets quickfort configuration to defaults.
 
 ``<command>`` is one of:
 
@@ -76,10 +72,9 @@ Usage
 :orders:  Uses the manager interface to queue up workorders to manufacture items
           needed by the specified blueprint(s).
 :undo:    Applies the inverse of the specified blueprint. Dig tiles are
-          undesignated, buildings are canceled or removed (depending on their
-          construction status), and stockpiles/zones are removed. There is no
-          effect for query and config blueprints since they can contain
-          arbitrary key sequences that are not reversible.
+          undesignated, buildings are canceled or scheduled for destruction
+          (depending on their construction status), and stockpiles/zones are
+          removed.
 
 Examples
 --------
@@ -95,16 +90,16 @@ Examples
     List all the blueprints that have both "dreamfort" and "help" as keywords.
 ``quickfort run library/dreamfort.csv``
     Run the first blueprint in the ``library/dreamfort.csv`` file (which happens
-    to be the blueprint that displays the help).
+    to be the "notes" blueprint that displays the help).
 ``quickfort run library/pump_stack.csv -n /dig --repeat up,80 --transform ccw,flipv``
     Dig a pump stack through 160 z-levels up from the current cursor location
     (each repetition of the ``library/pump_stack.csv -n /dig`` blueprint is 2
     z-levels). Also transform the blueprint by rotating counterclockwise and
     flipping vertically in order to fit the pump stack through some
     tricky-shaped caverns 50 z-levels above. Note that this kind of careful
-    positioning is much easier to do with `gui/quickfort`, but it can be done
-    via the commandline as well if you know exactly what transformations and
-    positioning you need.
+    positioning is much easier to do interactively with `gui/quickfort`, but it
+    can be done via the commandline as well if you know exactly what
+    transformations and positioning you need.
 ``quickfort orders 10,11,12 --dry-run``
     Process the blueprints with ids ``10``, ``11``, and ``12`` (run
     ``quickfort list`` to see which blueprints these are for you) and calculate
@@ -119,15 +114,27 @@ Command options
 ``<options>`` can be zero or more of:
 
 ``-c``, ``--cursor <x>,<y>,<z>``
-    Use the specified map coordinates instead of the current map cursor for the
-    the blueprint start position. If this option is specified, then an active
-    game map cursor is not necessary.
+    Use the specified map coordinates instead of the current keyboard map
+    cursor for the the blueprint start position. If this option is specified,
+    then an active keyboard map cursor is not necessary.
 ``-d``, ``--dry-run``
     Go through all the motions and print statistics on what would be done, but
     don't actually change any game state.
+``-m``, ``--marker <type>[,<type>...]``
+    Apply the given marker(s) to the tiles designated by the ``#dig`` blueprint
+    that you are applying. Valid marker types are: ``blueprint`` (designate but
+    don't dig), ``warm`` (dig even if the tiles are warm), and ``damp`` (dig
+    even if the tiles are damp). ``warm`` and ``damp`` markers are interpreted
+    by the `dig` tool for interruption-free digging through warm and damp tiles.
+``-p``, ``--priority <num>``
+    Set the priority to the given number (1-7) for tiles designated by the
+    ``#dig`` blueprint that you are applying. That is, tiles that normally have
+    a priority of ``4`` will instead have the priority you specify. If the
+    blueprint uses other explicit priorities, they will be shifted up or down
+    accordingly.
 ``--preserve-engravings <quality>``
-    Don't designate tiles for digging if they have an engraving with at least
-    the specified quality. Valid values for ``quality`` are: ``None``,
+    Don't designate tiles for digging/carving if they have an engraving with at
+    least the specified quality. Valid values for ``quality`` are: ``None``,
     ``Ordinary``, ``WellCrafted``, ``FinelyCrafted``, ``Superior``,
     ``Exceptional``, and ``Masterful``. Specify ``None`` to ignore engravings
     when designating tiles. Note that if ``Masterful`` tiles are dug out, the
@@ -156,8 +163,8 @@ Transformations
 
 All transformations are anchored at the blueprint start cursor position. This is
 the upper left corner by default, but it can be modified if the blueprint has a
-`start() modeline marker <quickfort-start>`. This just means that the blueprint
-tile that would normally appear under your cursor will still appear under your
+`start() modeline marker <quickfort-start>`. This means that the blueprint tile
+that would normally appear under your cursor will still appear under your
 cursor, regardless of how the blueprint is rotated or flipped.
 
 ``<transformation>`` is one of:
@@ -170,46 +177,30 @@ cursor, regardless of how the blueprint is rotated or flipped.
 Configuration
 -------------
 
-The quickfort script reads its global configuration from the
-:file:`dfhack-config/quickfort/quickfort.txt` file, which you can customize. The
-settings may be dynamically modified by the ``quickfort set`` command for the
-current session, but settings changed with the ``quickfort set`` command will
-not change the configuration stored in the file:
+The quickfort script has a few global configuration options that you can
+customize with the ``quickfort set`` command. Modified settings are only kept
+for the current session and will be reset when you restart DF.
 
-``blueprints_dir`` (default: ``blueprints``)
-    Directory tree to search for blueprints. Can be set to an absolute or
-    relative path. If set to a relative path, resolves to a directory under the
-    DF folder. Note that if you change this directory, you will not see
-    blueprints written by the DFHack `blueprint` plugin (which always writes to
-    the ``blueprints`` dir) or blueprints in the quickfort blueprint library.
+``blueprints_user_dir`` (default: ``dfhack-config/blueprints``)
+    Directory tree to search for player-created blueprints. It can be set to an
+    absolute or relative path. If set to a relative path, it resolves to a
+    directory under the DF folder. Note that if you change this directory, you
+    will not see blueprints written by the DFHack `blueprint` plugin (which
+    always writes to the ``dfhack-config/blueprints`` dir).
+``blueprints_library_dir`` (default: ``hack/data/blueprints``)
+    Directory tree to search for library blueprints.
 ``force_marker_mode`` (default: ``false``)
-    If true, will designate all dig blueprints in marker mode. If false, only
-    cells with dig codes explicitly prefixed with ``m`` will be designated in
-    marker mode.
-``query_unsafe`` (default: ``false``)
-    Skip ``query`` blueprint sanity checks that detect common blueprint errors
-    and halt or skip keycode playback. Checks include ensuring a configurable
-    building exists at the designated cursor position and verifying the active
-    UI screen is the same before and after sending keys for the cursor
-    position. If you find you need to enable this for one of your own
-    blueprints, you should probably be using a
-    `config blueprint <quickfort-config-blueprints>`, not a ``query`` blueprint.
-    Most players will never need to enable this setting.
+    If true, will designate all dig blueprints in marker=blueprint mode. If
+    false, only cells with dig codes explicitly prefixed with ``mb`` in the
+    blueprint cell will be designated in marker mode.
 ``stockpiles_max_barrels``, ``stockpiles_max_bins``, and ``stockpiles_max_wheelbarrows`` (defaults: ``-1``, ``-1``, ``0``)
     Set to the maximum number of resources you want assigned to stockpiles of
     the relevant types. Set to ``-1`` for DF defaults (number of stockpile tiles
     for stockpiles that take barrels and bins, and 1 wheelbarrow for stone
     stockpiles). The default here for wheelbarrows is ``0`` since using
-    wheelbarrows can *decrease* the efficiency of your fort unless you know how
-    to use them properly. Blueprints can `override <quickfort-place-containers>`
-    this value for specific stockpiles.
-
-There is one other configuration file in the ``dfhack-config/quickfort`` folder:
-:source:`aliases.txt <dfhack-config/quickfort/aliases.txt>`. It defines keycode
-shortcuts for query blueprints. The format for this file is described in the
-`quickfort-alias-guide`, and default aliases that all players can use and build
-on are available in the `quickfort-alias-library`. Some quickfort library
-aliases require the `search-plugin` plugin to be enabled.
+    wheelbarrows can *decrease* the efficiency of your fort unless you assign
+    an appropriate number of wheelbarrows to the stockpile. Blueprints can
+    `override <quickfort-place-containers>` this value for specific stockpiles.
 
 API
 ---
@@ -227,12 +218,12 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
 ``params`` is a table with the following fields:
 
 ``mode`` (required)
-    The name of the blueprint mode, e.g. ``dig``, ``build``, etc.
+    The blueprint mode, e.g. ``dig``, ``build``, etc.
 ``data`` (required)
     A sparse map populated such that ``data[z][y][x]`` yields the blueprint text
     that should be applied to the tile at map coordinate ``(x, y, z)``. You can
-    also just pass a string and it will be interpreted as the value of
-    ``data[0][0][0]``.
+    also just pass a string instead of a table and it will be interpreted as
+    the value of ``data[0][0][0]``.
 ``command``
     The quickfort command to execute, e.g. ``run``, ``orders``, etc. Defaults to
     ``run``.
@@ -243,12 +234,19 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
     specified, defaults to ``{x=0, y=0, z=0}``, which means that the coordinates
     in the ``data`` map are used without shifting.
 ``aliases``
-    A map of query blueprint aliases names to their expansions. If not
-    specified, defaults to ``{}``.
+    A map of blueprint alias names to their expansions. If not specified,
+    defaults to ``{}``.
+``marker``
+    A map of strings to booleans indicating which markers should be applied to
+    this ``dig`` mode blueprint. See `Command options`_ above for details. If
+    not specified, defaults to ``{blueprint=false, warm=false, damp=false}``.
+``priority``
+    An integer between ``1`` and ``7``, inclusive, indicating the base priority
+    for this ``dig`` blueprint. If not specified, defaults to ``4``.
 ``preserve_engravings``
-    Don't designate tiles for digging if they have an engraving with at least
-    the specified quality. Value is a ``df.item_quality`` enum name or value, or
-    the string ``None`` (or, equivalently, ``-1``) to indicate that no
+    Don't designate tiles for digging or carving if they have an engraving with
+    at least the specified quality. Value is a ``df.item_quality`` enum name or
+    value, or the string ``None`` (or, equivalently, ``-1``) to indicate that no
     engravings should be preserved. Defaults to ``df.item_quality.Masterful``.
 ``dry_run``
     Just calculate statistics, such as how many tiles are outside the boundaries
@@ -258,12 +256,11 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
 
 API usage example::
 
-    local guidm = require('gui.dwarfmode')
     local quickfort = reqscript('quickfort')
 
-    -- dig a 10x10 block at the cursor position
+    -- dig a 10x10 block at the mouse cursor position
     quickfort.apply_blueprint{mode='dig', data='d(10x10)',
-                              pos=guidm.getCursorPos()}
+                              pos=dfhack.gui.getMousePos()}
 
     -- dig a 10x10 block starting at coordinate x=30, y=40, z=50
     quickfort.apply_blueprint{mode='dig', data={[50]={[40]={[30]='d(10x10)'}}}}

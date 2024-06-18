@@ -196,11 +196,11 @@ function advGlobalPos()
     local map=df.global.world.map
     local wd=df.global.world.world_data
     local adv=df.global.world.units.active[0]
-    --wd.adv_region_x*16+wd.adv_emb_x,wd.adv_region_y*16+wd.adv_emb_y
-    --return wd.adv_region_x*16+wd.adv_emb_x,wd.adv_region_y*16+wd.adv_emb_y
-    --return wd.adv_region_x*16+wd.adv_emb_x+adv.pos.x/16,wd.adv_region_y*16+wd.adv_emb_y+adv.pos.y/16
+    --wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y
+    --return wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y
+    --return wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x+adv.pos.x/16,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y+adv.pos.y/16
     --print(map.region_x,map.region_y,adv.pos.x,adv.pos.y)
-    --print(map.region_x+adv.pos.x/48, map.region_y+adv.pos.y/48,wd.adv_region_x*16+wd.adv_emb_x,wd.adv_region_y*16+wd.adv_emb_y)
+    --print(map.region_x+adv.pos.x/48, map.region_y+adv.pos.y/48,wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y)
     return math.floor(map.region_x+adv.pos.x/48), math.floor(map.region_y+adv.pos.y/48)
 end
 function inSite()
@@ -242,7 +242,7 @@ function addJobAction(job,unit) --what about job2?
     if job==nil then
         error("invalid job")
     end
-    if findAction(unit,df.unit_action_type.Job) or findAction(unit,df.unit_action_type.Job2) then
+    if findAction(unit,df.unit_action_type.Job) or findAction(unit,df.unit_action_type.JobRecover) then
         print("Already has job action")
         return
     end
@@ -253,7 +253,7 @@ function addJobAction(job,unit) --what about job2?
     --job
     local data={type=df.unit_action_type.Job,data={job={x=pos.x,y=pos.y,z=pos.z,timer=10}}}
     --job2:
-    --local data={type=df.unit_action_type.Job2,data={job2={timer=10}}}
+    --local data={type=df.unit_action_type.JobRecover,data={job2={timer=10}}}
     add_action(unit,data)
     --add_action(unit,{type=df.unit_action_type.Unsteady,data={unsteady={timer=5}}})
 end
@@ -413,15 +413,14 @@ function SetCarveDir(args)
     local job=args.job
     local pos=args.pos
     local from_pos=args.from_pos
-    local dirs={up=18,down=19,right=20,left=21}
     if pos.x>from_pos.x then
-        job.item_category[dirs.right]=true
+        job.specflag.carve_track_flags.carve_track_east=true
     elseif pos.x<from_pos.x then
-        job.item_category[dirs.left]=true
+        job.specflag.carve_track_flags.carve_track_west=true
     elseif pos.y>from_pos.y then
-        job.item_category[dirs.down]=true
+        job.specflag.carve_track_flags.carve_track_south=true
     elseif pos.y<from_pos.y then
-        job.item_category[dirs.up]=true
+        job.specflag.carve_track_flags.carve_track_north=true
     end
 end
 function is_grasping_item( item_bp,unit )
@@ -556,7 +555,7 @@ function IsUnit(args)
 end
 function itemsAtPos(pos,tbl)
     local ret=tbl or {}
-    for k,v in pairs(df.global.world.items.all) do
+    for k,v in pairs(df.global.world.items.other.IN_PLAY) do
         if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z and v.flags.on_ground then
             table.insert(ret,v)
         end
@@ -770,13 +769,13 @@ end
 function EnumItems(args)
     local ret=args.table or {}
     if args.all then
-        for k,v in pairs(df.global.world.items.all) do
+        for k,v in pairs(df.global.world.items.other.IN_PLAY) do
             if v.flags.on_ground then
                 AddItem(ret,v,args.deep)
             end
         end
     elseif args.pos~=nil then
-        for k,v in pairs(df.global.world.items.all) do
+        for k,v in pairs(df.global.world.items.other.IN_PLAY) do
             if v.pos.x==args.pos.x and v.pos.y==args.pos.y and v.pos.z==args.pos.z and v.flags.on_ground then
                 AddItem(ret,v,args.deep)
             end
@@ -799,7 +798,7 @@ function putItemsInBuilding(building,job_item_refs)
         if not dfhack.items.moveToBuilding(v.item,building,0) then
             print("Could not put item:",k,v.item)
         end
-        v.is_fetching=0
+        v.flags.is_fetching=false
     end
 end
 function putItemsInHauling(unit,job_item_refs)
@@ -810,7 +809,7 @@ function putItemsInHauling(unit,job_item_refs)
         if not dfhack.items.moveToInventory(v.item,unit,0,0) then
             print("Could not put item:",k,v.item)
         end
-        v.is_fetching=0
+        v.flags.is_fetching=false
     end
 end
 function finish_item_assign(args)
@@ -832,7 +831,7 @@ function finish_item_assign(args)
         end
     else
         job.flags.fetching=true
-        uncollected[1].is_fetching=1
+        uncollected[1].flags.is_fetching=true
     end
 end
 function EnumItems_with_settings( args )
@@ -845,7 +844,7 @@ function EnumItems_with_settings( args )
     end
 end
 function find_suitable_items(job,items,job_items)
-    job_items=job_items or job.job_items
+    job_items=job_items or job.job_items.elements
 
     local item_counts={}
     for job_id, trg_job_item in ipairs(job_items) do
@@ -899,7 +898,7 @@ function AssignJobItems(args)
         job.items:erase(#job.items-1)
     end]]
 
-    if settings.gui_item_select and #job.job_items>0 then
+    if settings.gui_item_select and #job.job_items.elements>0 then
         if settings.quick then --TODO not so nice hack. instead of rewriting logic for job item filling i'm using one in gui dialog...
             local item_editor=advfort_items.jobitemEditor{
                 job = job,
@@ -925,7 +924,7 @@ function AssignJobItems(args)
         end
     else
         if not settings.build_by_items then
-            for job_id, trg_job_item in ipairs(job.job_items) do
+            for job_id, trg_job_item in ipairs(job.job_items.elements) do
                 if item_counts[job_id]>0 then
                     print("Not enough items for this job")
                     return false, "Not enough items for this job"
@@ -1001,7 +1000,7 @@ function ContinueJob(unit)
     --reset suspends...
     c_job.flags.suspend=false
     for k,v in pairs(c_job.items) do --try fetching missing items
-        if v.is_fetching==1 then
+        if v.flags.is_fetching then
             unit.path.dest:assign(v.item.pos)
             return
         end
@@ -1277,7 +1276,7 @@ function setFiltersUp(specific,args)
         --printall(v)
         local filter=v
         filter.new=true
-        job.job_items:insert("#",filter)
+        job.job_items.elements:insert("#",filter)
     end
     return true
 end
@@ -1421,20 +1420,20 @@ function track_stop_configure(bld) --TODO: dedicated widget with nice interface 
     local choices={"Friction","Dumping"}
     local function chosen(index,choice)
         if choice.text=="Friction" then
-            dialog.showInputPrompt("Choose friction","Friction",nil,tostring(bld.friction),function ( txt )
+            dialog.showInputPrompt("Choose friction","Friction",nil,tostring(bld.track_stop_info.friction),function ( txt )
                 local num=tonumber(txt) --TODO allow only vanilla friction settings
                 if num then
-                    bld.friction=num
+                    bld.track_stop_info.friction=num
                 end
             end)
         else
             dialog.showListPrompt("Dumping direction", "Choose dumping:",COLOR_WHITE,dump_choices,function ( index,choice)
                 if choice.x then
-                    bld.use_dump=1 --??
-                    bld.dump_x_shift=choice.x
-                    bld.dump_y_shift=choice.y
+                    bld.track_stop_info.track_flags.use_dump=true
+                    bld.track_stop_info.dump_x_shift=choice.x
+                    bld.track_stop_info.dump_y_shift=choice.y
                 else
-                    bld.use_dump=0
+                    bld.track_stop_info.track_flags.use_dump=false
                 end
             end)
         end

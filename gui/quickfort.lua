@@ -1,14 +1,15 @@
 -- A GUI front-end for quickfort
 --@ module = true
 
+-- reload changed transitive dependencies
+reqscript('quickfort').refresh_scripts()
+
 local quickfort_command = reqscript('internal/quickfort/command')
 local quickfort_list = reqscript('internal/quickfort/list')
-local quickfort_map = reqscript('internal/quickfort/map')
 local quickfort_parse = reqscript('internal/quickfort/parse')
 local quickfort_preview = reqscript('internal/quickfort/preview')
 local quickfort_transform = reqscript('internal/quickfort/transform')
 
-local argparse = require('argparse')
 local dialogs = require('gui.dialogs')
 local gui = require('gui')
 local guidm = require('gui.dwarfmode')
@@ -24,37 +25,12 @@ show_library = show_library == nil and true or show_library
 show_hidden = show_hidden or false
 filter_text = filter_text or ''
 selected_id = selected_id or 1
+marker_expanded = marker_expanded or false
+markers = markers or {blueprint=false, warm=false, damp=false}
 repeat_dir = repeat_dir or false
 repetitions = repetitions or 1
 transform = transform or false
 transformations = transformations or {}
-
---
--- BlueprintDetails
---
-
--- displays blueprint details, such as the full modeline and comment, that
--- otherwise might be truncated for length in the blueprint selection list
-local BlueprintDetails = defclass(BlueprintDetails, dialogs.MessageBox)
-BlueprintDetails.ATTRS{
-    focus_path='quickfort/dialog/details',
-    frame_title='Details',
-    frame_width=28, -- minimum width required for the bottom frame text
-}
-
--- adds hint about left arrow being a valid "exit" key for this dialog
-function BlueprintDetails:onRenderFrame(dc, rect)
-    BlueprintDetails.super.onRenderFrame(self, dc, rect)
-    dc:seek(rect.x1+2, rect.y2):string('Left arrow', dc.cur_key_pen):
-            string(': Back', COLOR_GREY)
-end
-
-function BlueprintDetails:onInput(keys)
-    if keys.KEYBOARD_CURSOR_LEFT or keys.SELECT
-            or keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
-        self:dismiss()
-    end
-end
 
 --
 -- BlueprintDialog
@@ -62,42 +38,118 @@ end
 
 -- blueprint selection dialog, shown when the script starts or when a user wants
 -- to load a new blueprint into the ui
-local BlueprintDialog = defclass(BlueprintDialog, dialogs.ListBox)
+BlueprintDialog = defclass(SelectDialog, gui.ZScreenModal)
 BlueprintDialog.ATTRS{
     focus_path='quickfort/dialog',
-    frame_title='Load quickfort blueprint',
-    with_filter=true,
-    frame_width=dialog_width,
-    row_height=2,
-    frame_inset={t=0,l=1,r=0,b=1},
-    list_frame_inset={t=1},
+    on_select=DEFAULT_NIL,
+    on_cancel=DEFAULT_NIL,
 }
 
 function BlueprintDialog:init()
+    local options={
+        {label='Show', value=true, pen=COLOR_GREEN},
+        {label='Hide', value=false}
+    }
+
     self:addviews{
-        widgets.Label{frame={t=0, l=1}, text='Filters:', text_pen=COLOR_GREY},
-        widgets.ToggleHotkeyLabel{frame={t=0, l=12}, label='Library',
-                key='CUSTOM_ALT_L', initial_option=show_library,
-                text_pen=COLOR_GREY,
-                on_change=self:callback('update_setting', 'show_library')},
-        widgets.ToggleHotkeyLabel{frame={t=0, l=34}, label='Hidden',
-                key='CUSTOM_ALT_H', initial_option=show_hidden,
-                text_pen=COLOR_GREY,
-                on_change=self:callback('update_setting', 'show_hidden')}
+        widgets.Window{
+            frame={w=80, h=35},
+            frame_title='Load quickfort blueprint',
+            resizable=true,
+            subviews={
+                widgets.Label{
+                    frame={t=0, l=1},
+                    text='Filters:',
+                    text_pen=COLOR_GREY,
+                },
+                widgets.ToggleHotkeyLabel{
+                    frame={t=0, l=12},
+                    key='CUSTOM_ALT_L',
+                    label='Library:',
+                    options=options,
+                    initial_option=show_library,
+                    text_pen=COLOR_GREY,
+                    on_change=self:callback('update_setting', 'show_library')
+                },
+                widgets.ToggleHotkeyLabel{
+                    frame={t=0, l=35},
+                    key='CUSTOM_ALT_H',
+                    label='Hidden:',
+                    options=options,
+                    initial_option=show_hidden,
+                    text_pen=COLOR_GREY,
+                    on_change=self:callback('update_setting', 'show_hidden')
+                },
+                widgets.FilteredList{
+                    view_id='list',
+                    frame={t=2, b=9},
+                    row_height=2,
+                    on_select=function()
+                        local desc = self.subviews.desc
+                        if desc.frame_body then desc:updateLayout() end
+                    end,
+                    on_double_click=self:callback('commit'),
+                    on_submit2=self:callback('delete_blueprint'),
+                    on_double_click2=self:callback('delete_blueprint'),
+                },
+                widgets.Panel{
+                    frame={b=3, h=5},
+                    frame_style=gui.FRAME_INTERIOR,
+                    subviews={
+                        widgets.WrappedLabel{
+                            frame={l=0, h=3},
+                            view_id='desc',
+                            auto_height=false,
+                            text_to_wrap=function()
+                                local list = self.subviews.list
+                                local _, choice = list:getSelected()
+                                return choice and choice.desc or ''
+                            end,
+                        },
+                    },
+                },
+                widgets.Label{
+                    frame={b=1, l=0},
+                    text='Double click or',
+                },
+                widgets.HotkeyLabel{
+                    frame={b=1, l=16},
+                    key='SELECT',
+                    label='Load selected blueprint',
+                    on_activate=self:callback('commit'),
+                    enabled=function()
+                        local list = self.subviews.list
+                        local _, choice = list:getSelected()
+                        return choice
+                    end,
+                },
+                widgets.Label{
+                    frame={b=0, l=0},
+                    text='Shift click or',
+                },
+                widgets.HotkeyLabel{
+                    frame={b=0, l=15},
+                    key='SELECT_ALL', -- TODO: change to SEC_SELECT once 51.01 is stable
+                    label='Delete selected blueprint',
+                    on_activate=self:callback('delete_blueprint'),
+                    enabled=function()
+                        local list = self.subviews.list
+                        local _, choice = list:getSelected()
+                        return choice and not choice.library
+                    end,
+                },
+            },
+        },
     }
 end
 
--- always keep our list big enough to display 10 items so we don't jarringly
--- resize when the filter is being edited and it suddenly matches no blueprints
-function BlueprintDialog:getWantedFrameSize()
-    local mw, mh = BlueprintDialog.super.getWantedFrameSize(self)
-    return mw, math.max(mh, 24)
-end
-
-function BlueprintDialog:onRenderFrame(dc, rect)
-    BlueprintDialog.super.onRenderFrame(self, dc, rect)
-    dc:seek(rect.x1+2, rect.y2):string('Ctrl+D', dc.cur_key_pen):
-            string(': Show details', COLOR_GREY)
+function BlueprintDialog:commit()
+    local list = self.subviews.list
+    local _, choice = list:getSelected()
+    if choice then
+        self:dismiss()
+        self.on_select(choice.id)
+    end
 end
 
 function BlueprintDialog:update_setting(setting, value)
@@ -105,32 +157,10 @@ function BlueprintDialog:update_setting(setting, value)
     self:refresh()
 end
 
--- ensures each newline-delimited sequence within text is no longer than
--- width characters long. also ensures that no more than max_lines lines are
--- returned in the truncated string.
-local more_marker = '...'
-local function truncate(text, width, max_lines)
-    local truncated_text = {}
-    for line in text:gmatch('[^'..NEWLINE..']*') do
-        if #line > width then
-            line = line:sub(1, width-#more_marker) .. more_marker
-        end
-        table.insert(truncated_text, line)
-        if #truncated_text >= max_lines then break end
-    end
-    return table.concat(truncated_text, NEWLINE)
-end
-
--- extracts the blueprint list id from a dialog list entry
-local function get_id(text)
-    local _, _, id = text:find('^(%d+)')
-    return tonumber(id)
-end
-
 local function save_selection(list)
-    local _, obj = list:getSelected()
-    if obj then
-        selected_id = get_id(obj.text)
+    local _, choice = list:getSelected()
+    if choice then
+        selected_id = choice.id
     end
 end
 
@@ -139,7 +169,7 @@ end
 local function restore_selection(list)
     local best_idx = 1
     for idx,v in ipairs(list:getVisibleChoices()) do
-        local cur_id = get_id(v.text)
+        local cur_id = v.id
         if selected_id >= cur_id then best_idx = idx end
         if selected_id <= cur_id then break end
     end
@@ -161,62 +191,74 @@ function BlueprintDialog:refresh()
         return false
     end
     for _,v in ipairs(results) do
-        local start_comment = ''
-        if v.start_comment then
-            start_comment = string.format(' cursor start: %s', v.start_comment)
-        end
         local sheet_spec = ''
         if v.section_name then
-            sheet_spec = string.format(
-                    ' -n %s',
-                    quickfort_parse.quote_if_has_spaces(v.section_name))
+            sheet_spec = (' -n %s'):format(quickfort_parse.quote_if_has_spaces(v.section_name))
         end
-        local main = ('%d) %s%s (%s)')
-                     :format(v.id, quickfort_parse.quote_if_has_spaces(v.path),
-                     sheet_spec, v.mode)
-        local text = ('%s%s'):format(main, start_comment)
+        local main = ('%d) %s%s (%s)'):format(
+            v.id, quickfort_parse.quote_if_has_spaces(v.path), sheet_spec, v.mode)
+
+        local comment = ''
         if v.comment then
-            text = text .. ('\n    %s'):format(v.comment)
+            comment = ('%s'):format(v.comment)
         end
-        local full_text = main
-        if #start_comment > 0 then
-            full_text = full_text .. '\n\n' .. start_comment
+        local start_comment = ''
+        if v.start_comment then
+            start_comment = ('%scursor on: %s'):format(#comment > 0 and '; ' or '', v.start_comment)
         end
-        if v.comment then
-            full_text = full_text .. '\n\n comment: ' .. v.comment
-        end
-        local truncated_text =
-                truncate(text, self.frame_body.width - 2, self.row_height)
+        local extra = #comment == 0 and #start_comment == 0 and 'No description' or ''
+        local desc = ('%s%s%s'):format(comment, start_comment, extra)
 
         -- search for the extra syntax shown in the list items in case someone
         -- is typing exactly what they see
-        table.insert(choices,
-                     {text=truncated_text,
-                      full_text=full_text,
-                      search_key=v.search_key .. main})
+        table.insert(choices, {
+            text=main,
+            desc=desc,
+            id=v.id,
+            library=v.library,
+            name=v.path,
+            search_key=v.search_key .. main,
+        })
     end
-    self.subviews.list:setChoices(choices)
-    self:updateLayout() -- allows the dialog to resize width to fit the content
-    self.subviews.list:setFilter(filter_text)
-    restore_selection(self.subviews.list)
+    local list = self.subviews.list
+    list:setFilter('')
+    list:setChoices(choices, list:getSelected())
+    list:setFilter(filter_text)
+    restore_selection(list)
     return true
 end
 
-function BlueprintDialog:onInput(keys)
-    local _, obj = self.subviews.list:getSelected()
-    if keys.CUSTOM_CTRL_D and obj then
-        local details = BlueprintDetails{
-                text=obj.full_text:wrap(self.frame_body.width)}
-        details:show()
-        -- for testing
-        self._details = details
-    elseif keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
-        self:dismiss()
-        if self.on_cancel then
-            self.on_cancel()
-        end
+function BlueprintDialog:delete_blueprint(idx, choice)
+    local list = self.subviews.list
+    if choice then
+        list.list:setSelected(idx)
+        save_selection(list)
     else
-        self:inputToSubviews(keys)
+        _, choice = list:getSelected()
+    end
+    if not choice or choice.library then return end
+
+    local function do_delete(pause_confirmations)
+        dfhack.run_script('quickfort', 'delete', choice.name)
+        self:refresh()
+        self.pause_confirmations = self.pause_confirmations or pause_confirmations
+    end
+
+    if self.pause_confirmations then
+        do_delete()
+    else
+        dialogs.showYesNoPrompt('Delete blueprint',
+            'Are you sure you want to delete this blueprint?\n'..choice.name,
+            COLOR_YELLOW, do_delete, nil, curry(do_delete, true))
+    end
+end
+
+function BlueprintDialog:onInput(keys)
+    if keys.LEAVESCREEN or keys._MOUSE_R then
+        self.on_cancel()
+        self:dismiss()
+        return true
+    elseif BlueprintDialog.super.onInput(self, keys) then
         local prev_filter_text = filter_text
         -- save the filter if it was updated so we always have the most recent
         -- text for the next invocation of the dialog
@@ -228,6 +270,7 @@ function BlueprintDialog:onInput(keys)
             -- otherwise, save the new selected item
             save_selection(self.subviews.list)
         end
+        return true
     end
 end
 
@@ -241,9 +284,9 @@ end
 Quickfort = defclass(Quickfort, widgets.Window)
 Quickfort.ATTRS {
     frame_title='Quickfort',
-    frame={w=34, h=30, r=2, t=18},
+    frame={w=34, h=42, r=2, t=18},
     resizable=true,
-    resize_min={h=26},
+    resize_min={h=32},
     autoarrange_subviews=true,
     autoarrange_gap=1,
     filter='',
@@ -288,10 +331,63 @@ function Quickfort:init()
             active=function() return self.blueprint_name end,
             enabled=function() return self.blueprint_name end,
             on_activate=self:callback('toggle_lock_cursor')},
+        widgets.Divider{frame={h=1},
+            frame_style=gui.FRAME_THIN,
+            frame_style_l=false,
+            frame_style_r=false},
+        widgets.CycleHotkeyLabel{key='CUSTOM_SHIFT_P',
+            key_back='CUSTOM_P',
+            view_id='priority',
+            label='Baseline dig priority:',
+            options={1, 2, 3, 4, 5, 6, 7},
+            initial_option=4,
+            active=function() return self.blueprint_name and self.has_dig end,
+            enabled=function() return self.blueprint_name and self.has_dig end},
+        widgets.ResizingPanel{subviews={
+            widgets.ToggleHotkeyLabel{key='CUSTOM_M',
+                frame={t=0, h=1},
+                view_id='marker',
+                label='Add marker:',
+                initial_option=marker_expanded,
+                active=function() return self.blueprint_name and self.has_dig end,
+                enabled=function() return self.blueprint_name and self.has_dig end,
+                on_change=function(val)
+                    marker_expanded = val
+                    self:updateLayout()
+                end,
+            },
+            widgets.Panel{
+                frame={t=0, h=4},
+                visible=function() return self.subviews.marker:getOptionValue() end,
+                subviews={
+                    widgets.ToggleHotkeyLabel{key='CUSTOM_CTRL_B',
+                        frame={t=1, l=0},
+                        view_id='marker_blueprint',
+                        label='Blueprint:',
+                        initial_option=markers.blueprint,
+                        on_change=function(val) markers.blueprint = val end,
+                    },
+                    widgets.ToggleHotkeyLabel{key='CUSTOM_CTRL_D',
+                        frame={t=2, l=0},
+                        view_id='marker_damp',
+                        label='Damp dig:',
+                        initial_option=markers.damp,
+                        on_change=function(val) markers.damp = val end,
+                    },
+                    widgets.ToggleHotkeyLabel{key='CUSTOM_CTRL_W',
+                        frame={t=3, l=0},
+                        view_id='marker_warm',
+                        label='Warm dig:',
+                        initial_option=markers.warm,
+                        on_change=function(val) markers.warm = val end,
+                    },
+                },
+            },
+        }},
         widgets.ResizingPanel{autoarrange_subviews=true, subviews={
             widgets.CycleHotkeyLabel{key='CUSTOM_R',
                 view_id='repeat_cycle',
-                label='Repeat',
+                label='Repeat:',
                 active=function() return self.blueprint_name end,
                 enabled=function() return self.blueprint_name end,
                 options={{label='No', value=false},
@@ -303,16 +399,16 @@ function Quickfort:init()
                     visible=function() return repeat_dir and self.blueprint_name end,
                     subviews={
                 widgets.HotkeyLabel{key='STRING_A045',
-                    frame={t=1, l=2}, key_sep='',
+                    frame={t=1, l=2, w=1}, key_sep='',
                     on_activate=self:callback('on_adjust_repetitions', -1)},
                 widgets.HotkeyLabel{key='STRING_A043',
-                    frame={t=1, l=3}, key_sep='',
+                    frame={t=1, l=3, w=1}, key_sep='',
                     on_activate=self:callback('on_adjust_repetitions', 1)},
                 widgets.HotkeyLabel{key='STRING_A047',
-                    frame={t=1, l=4}, key_sep='',
+                    frame={t=1, l=4, w=1}, key_sep='',
                     on_activate=self:callback('on_adjust_repetitions', -10)},
                 widgets.HotkeyLabel{key='STRING_A042',
-                    frame={t=1, l=5}, key_sep='',
+                    frame={t=1, l=5, w=1}, key_sep='',
                     on_activate=self:callback('on_adjust_repetitions', 10)},
                 widgets.EditField{key='CUSTOM_SHIFT_R',
                     view_id='repeat_times',
@@ -324,7 +420,7 @@ function Quickfort:init()
         widgets.ResizingPanel{autoarrange_subviews=true, subviews={
             widgets.ToggleHotkeyLabel{key='CUSTOM_T',
                 view_id='transform',
-                label='Transform',
+                label='Transform:',
                 active=function() return self.blueprint_name end,
                 enabled=function() return self.blueprint_name end,
                 initial_option=transform,
@@ -333,42 +429,47 @@ function Quickfort:init()
                     visible=function() return transform and self.blueprint_name end,
                     subviews={
                 widgets.HotkeyLabel{key='STRING_A040',
-                    frame={t=1, l=2}, key_sep='',
+                    frame={t=1, l=2, w=1}, key_sep='',
                     on_activate=self:callback('on_transform', 'ccw')},
                 widgets.HotkeyLabel{key='STRING_A041',
-                    frame={t=1, l=3}, key_sep='',
+                    frame={t=1, l=3, w=1}, key_sep='',
                     on_activate=self:callback('on_transform', 'cw')},
                 widgets.HotkeyLabel{key='STRING_A095',
-                    frame={t=1, l=4}, key_sep='',
+                    frame={t=1, l=4, w=1}, key_sep='',
                     on_activate=self:callback('on_transform', 'flipv')},
                 widgets.HotkeyLabel{key='STRING_A061',
-                    frame={t=1, l=5}, key_sep=':',
+                    frame={t=1, l=5, w=1}, key_sep=':',
                     on_activate=self:callback('on_transform', 'fliph')},
                 widgets.WrappedLabel{
                     frame={t=1, l=8},
                     text_to_wrap=function()
                             return #transformations == 0 and 'No transform'
                                 or table.concat(transformations, ', ') end}}}}},
+        widgets.Divider{frame={h=1},
+            frame_style=gui.FRAME_THIN,
+            frame_style_l=false,
+            frame_style_r=false},
         widgets.HotkeyLabel{key='CUSTOM_O', label='Generate manager orders',
-            active=function() return self.blueprint_name and false end,
-            enabled=function() return self.blueprint_name and false end,
+            active=function() return self.blueprint_name end,
+            enabled=function() return self.blueprint_name end,
             on_activate=self:callback('do_command', 'orders')},
         widgets.HotkeyLabel{key='CUSTOM_SHIFT_O',
             label='Preview manager orders',
-            active=function() return self.blueprint_name and false end,
-            enabled=function() return self.blueprint_name and false end,
+            active=function() return self.blueprint_name end,
+            enabled=function() return self.blueprint_name end,
             on_activate=self:callback('do_command', 'orders', true)},
         widgets.HotkeyLabel{key='CUSTOM_SHIFT_U', label='Undo blueprint',
             active=function() return self.blueprint_name end,
             enabled=function() return self.blueprint_name end,
             on_activate=self:callback('do_command', 'undo')},
+        widgets.WrappedLabel{
+            text_to_wrap='Build mode blueprints will use DFHack building planner material filter settings.',
+        },
     }
 end
 
 function Quickfort:get_summary_label()
-    if self.mode == 'config' then
-        return 'Blueprint configures game, not map.'
-    elseif self.mode == 'notes' then
+    if self.mode == 'notes' then
         return 'Blueprint shows help text.'
     end
     return 'Reposition with the mouse.'
@@ -386,12 +487,19 @@ function Quickfort:get_blueprint_name()
 end
 
 function Quickfort:get_lock_cursor_label()
+    if self.cursor_locked and self.saved_cursor.z ~= df.global.window_z then
+        return 'Zoom to locked position'
+    end
     return (self.cursor_locked and 'Unl' or 'L') .. 'ock blueprint position'
 end
 
 function Quickfort:toggle_lock_cursor()
     if self.cursor_locked then
-        quickfort_map.move_cursor(self.saved_cursor)
+        local was_on_different_zlevel = self.saved_cursor.z ~= df.global.window_z
+        dfhack.gui.revealInDwarfmodeMap(self.saved_cursor)
+        if was_on_different_zlevel then
+            return
+        end
     end
     self.cursor_locked = not self.cursor_locked
 end
@@ -470,8 +578,7 @@ function Quickfort:on_transform(val)
     self.dirty = true
 end
 
-function Quickfort:dialog_cb(text)
-    local id = get_id(text)
+function Quickfort:dialog_cb(id)
     local name, sec_name, mode = quickfort_list.get_blueprint_by_number(id)
     self.blueprint_name, self.section_name, self.mode = name, sec_name, mode
     self:updateLayout()
@@ -497,7 +604,7 @@ function Quickfort:show_dialog(initial)
     end
 
     local file_dialog = BlueprintDialog{
-        on_select=function(idx, obj) self:dialog_cb(obj.text) end,
+        on_select=self:callback('dialog_cb'),
         on_cancel=self:callback('dialog_cancel_cb')
     }
 
@@ -521,13 +628,15 @@ function Quickfort:show_dialog(initial)
     self._dialog = file_dialog
 end
 
-function Quickfort:run_quickfort_command(command, dry_run, preview)
+function Quickfort:run_quickfort_command(command, marker, priority, dry_run, preview)
     local ctx = quickfort_command.init_ctx{
         command=command,
         blueprint_name=self.blueprint_name,
         cursor=self.saved_cursor,
         aliases=quickfort_list.get_aliases(self.blueprint_name),
         quiet=true,
+        marker=marker,
+        priority=priority,
         dry_run=dry_run,
         preview=preview,
     }
@@ -551,11 +660,14 @@ function Quickfort:run_quickfort_command(command, dry_run, preview)
 end
 
 function Quickfort:refresh_preview()
-    local ctx = self:run_quickfort_command('run', true, true)
+    local ctx = self:run_quickfort_command('run', false, 4, true, true)
     self.saved_preview = ctx.preview
+    self.has_dig = ctx.stats.dig_designated
 end
 
 local to_pen = dfhack.pen.parse
+local CURSOR_PEN = to_pen{ch='o', fg=COLOR_BLUE,
+                         tile=dfhack.screen.findGraphicsTile('CURSORS', 5, 22)}
 local GOOD_PEN = to_pen{ch='x', fg=COLOR_GREEN,
                         tile=dfhack.screen.findGraphicsTile('CURSORS', 1, 2)}
 local BAD_PEN = to_pen{ch='X', fg=COLOR_RED,
@@ -584,6 +696,7 @@ function Quickfort:onRenderFrame(dc, rect)
     if not tiles[cursor.z] then return end
 
     local function get_overlay_pen(pos)
+        if same_xyz(pos, self.saved_cursor) then return CURSOR_PEN end
         local preview_tile = quickfort_preview.get_preview_tile(tiles, pos)
         if preview_tile == nil then return end
         return preview_tile and GOOD_PEN or BAD_PEN
@@ -597,17 +710,13 @@ function Quickfort:onInput(keys)
         return true
     end
 
-    if keys._MOUSE_L_DOWN and not self:getMouseFramePos() then
+    if keys._MOUSE_L and not self:getMouseFramePos() then
         local pos = dfhack.gui.getMousePos()
         if pos then
             self:commit()
             return true
         end
     end
-
-    -- send movement and cancel keys through, but otherwise we're a modal dialog
-    if keys.LEAVESCREEN or keys._MOUSE_R_DOWN then return false end
-    return not guidm.getMapKey(keys)
 end
 
 function Quickfort:commit()
@@ -616,15 +725,19 @@ function Quickfort:commit()
 end
 
 function Quickfort:do_command(command, dry_run, post_fn)
-    print(('executing via gui/quickfort: quickfort %s'):format(
+    self.dirty = true
+    print(('executing via gui/quickfort: quickfort %s --cursor=%d,%d,%d'):format(
                 quickfort_parse.format_command(
-                    command, self.blueprint_name, self.section_name, dry_run)))
-    local ctx = self:run_quickfort_command(command, dry_run, false)
-    quickfort_command.finish_command(ctx, self.section_name)
+                    command, self.blueprint_name, self.section_name, dry_run),
+                self.saved_cursor.x, self.saved_cursor.y, self.saved_cursor.z))
+    local marker = marker_expanded and markers or {}
+    local priority = self.subviews.priority:getOptionValue()
+    local ctx = self:run_quickfort_command(command, marker, priority, dry_run, false)
+    quickfort_command.finish_commands(ctx)
     if command == 'run' then
         if #ctx.messages > 0 then
             self._dialog = dialogs.showMessage(
-                    'Attention',
+                    'Blueprint messages',
                     table.concat(ctx.messages, '\n\n'):wrap(dialog_width),
                     nil,
                     post_fn)
@@ -660,17 +773,13 @@ end
 QuickfortScreen = defclass(QuickfortScreen, gui.ZScreen)
 QuickfortScreen.ATTRS {
     focus_path='quickfort',
-    force_pause=true,
-    pass_pause=false,
     pass_movement_keys=true,
     pass_mouse_clicks=false,
     filter=DEFAULT_NIL,
 }
 
 function QuickfortScreen:init()
-    self.saved_pause_state = df.global.pause_state
-    df.global.pause_state = true
-    self:addviews{Quickfort{filter=filter}}
+    self:addviews{Quickfort{filter=self.filter}}
 end
 
 function QuickfortScreen:onShow()
@@ -680,7 +789,6 @@ end
 
 function QuickfortScreen:onDismiss()
     view = nil
-    df.global.pause_state = self.saved_pause_state
 end
 
 if dfhack_flags.module then

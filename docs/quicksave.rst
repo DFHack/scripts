@@ -2,11 +2,11 @@ quicksave
 =========
 
 .. dfhack-tool::
-    :summary: Immediately save the game.
+    :summary: Immediately autosave the game.
     :tags: dfhack fort
 
-When called in dwarf mode, this tool makes DF immediately do an autosave. Note
-that the game only keeps the last 3 autosaves.
+When this tool is called with a fort loaded, DF will immediately do an
+autosave. Note that the game only keeps the last 3 autosaves.
 
 Usage
 -----

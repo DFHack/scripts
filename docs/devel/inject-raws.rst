@@ -3,7 +3,7 @@ devel/inject-raws
 
 .. dfhack-tool::
     :summary: Add objects and reactions into an existing world.
-    :tags: untested dev
+    :tags: unavailable
 
 WARNING: THIS SCRIPT CAN PERMANENTLY DAMAGE YOUR SAVE.
 

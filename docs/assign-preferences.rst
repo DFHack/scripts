@@ -32,9 +32,9 @@ Examples
 
     assign-preferences --reset --likecreature SPARROW
 
-* "prefers to consume dwarven wine and olives"::
+* "prefers to consume dwarven wine, olives and yak"::
 
-    assign-preferences --reset --likefood [ PLANT:MUSHROOM_HELMET_PLUMP:DRINK PLANT:OLIVE:FRUIT ]
+    assign-preferences --reset --likefood [ PLANT:MUSHROOM_HELMET_PLUMP:DRINK PLANT:OLIVE:FRUIT CREATURE_MAT:YAK:MUSCLE ]
 
 * "absolutely detests jumping spiders::
 

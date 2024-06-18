@@ -1,5 +1,5 @@
 -- Inspect and pull levers
-local argparse = require('argparse')
+--@ module = true
 
 function leverPullJob(lever, priority)
     local ref = df.general_ref_building_holderst:new()
@@ -18,8 +18,6 @@ function leverPullJob(lever, priority)
 
     dfhack.job.linkIntoWorld(job, true)
     dfhack.job.checkBuildingsNow()
-
-    print(leverDescribe(lever))
 end
 
 function leverPullInstant(lever)
@@ -35,8 +33,6 @@ function leverPullInstant(lever)
     else
         lever.state = 1
     end
-
-    print(leverDescribe(lever))
 end
 
 function leverDescribe(lever)
@@ -146,7 +142,14 @@ function PullLever(opts)
     else
         leverPullJob(lever, opts.priority)
     end
+    print(leverDescribe(lever))
 end
+
+if dfhack_flags.module then
+    return
+end
+
+local argparse = require('argparse')
 
 local function parse_commandline(args)
     local opts = {}

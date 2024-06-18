@@ -2,31 +2,28 @@ fix/protect-nicks
 =================
 
 .. dfhack-tool::
-    :summary: Restore nicknames when DF loses them.
+    :summary: Fix nicknames being erased or not displayed.
     :tags: fort bugfix units
 
-Due to a bug, units occasionally lose their nicknames, such as when killing a forgotten beast.
+Due to a bug, units nicknames are not displayed everywhere and are occasionally
+lost.
 
-`fix/protect-nicks` will save the nicknames of the units once an in-game day, and restore any removed
-nickname.
+`fix/protect-nicks` will save the nicknames of the units once an in-game day. It
+works by setting the same nickname to the unit's corresponding "historical
+figure", which was the behavior on pre-Steam releases.
 
-.. note::
-    It does not distinguish between a nickname removed by the player or by a bug. If you want
-    to remove a dwarf's nickname, please run ``fix/protect-nicks forget`` immediately after manually
-    removing the nickname to reset the tracking.
+After running it, the nicknames are properly displayed in locations such as
+legends or image descriptions. Additionally, they are no longer lost after
+killing a forgotten beast or retiring a fort.
 
 Usage
 -----
 
 ``enable fix/protect-nicks``
-    Enable daily restoring and saving of the nicknames.
+    Enable daily saving of the nicknames.
 
 ``disable fix/protect-nicks``
     Disable the daily check.
 
 ``fix/protect-nicks now``
-    Immediately restore lost nicknames. Note for this to work, ``fix/protect-nicks`` must have
-    already been enabled when the dwarf lost their nickname.
-
-``fix/protect-nicks forget``
-    Forget all the saved nicknames. Useful in order to actually remove nicknames.
+    Immediately save the nicknames.

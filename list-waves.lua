@@ -1,7 +1,7 @@
 -- displays migration wave information for citizens/units
--- Written by Josh Cooper(cppcooper) sometime around Decement 2019, last modified: 2020-02-19
-utils ={}
-utils = require('utils')
+
+local utils = require('utils')
+
 local validArgs = utils.invert({
     'unit',
     'all',
@@ -10,57 +10,17 @@ local validArgs = utils.invert({
     'help'
 })
 local args = utils.processArgs({...}, validArgs)
-local help = [====[
-
-list-waves
-==========
-This script displays information about migration waves of the specified citizen(s).
-
-Examples::
-
-  list-waves -all -showarrival -granularity days
-  list-waves -all -showarrival
-  list-waves -unit -granularity days
-  list-waves -unit
-  list-waves -unit -all -showarrival -granularity days
-
-**Selection options:**
-
-These options are used to specify what wave information to display
-
-``-unit``:
-    Displays the highlighted unit's arrival wave information
-
-``-all``:
-    Displays all citizens' arrival wave information
-
-**Other options:**
-
-``-granularity <value>``:
-    Specifies the granularity of wave enumeration: ``years``, ``seasons``, ``months``, ``days``
-    If omitted, the default granularity is ``seasons``, the same as Dwarf Therapist
-
-``-showarrival``:
-    Shows the arrival information for the selected unit.
-    If ``-all`` is specified the info displayed will be relative to the
-    granularity used. Note: this option is always used when ``-unit`` is used.
-
-]====]
+args.granularity = args.granularity or 'seasons'
 
 --[[
-The script must loop through all active units in df.global.world.units.active and build
-each wave one dwarf at a time. This requires calculating arrival information for each
-dwarf and combining this information into a sort of unique wave ID number. After this
-is finished these wave UIDs are loops through and normalized so they start at zero and
-incremented by one for each new wave UID.
-
-As you might surmise, this is a relatively dumb script and every execution has the
-worst case big O execution. I've taken the liberty of only counting citizen units,
-this should only include dwarves as far as I know.
-
+The script loops through all citizens on the map and builds each wave one dwarf
+at a time. This requires calculating arrival information for each dwarf and
+combining this information into a sort of unique wave ID number. After this is
+finished, these wave IDs are normalized so they start at zero and increment by
+one for each wave.
 ]]
 
-selected = dfhack.gui.getSelectedUnit()
+local selected = dfhack.gui.getSelectedUnit(true)
 local ticks_per_day = 1200
 local ticks_per_month = 28 * ticks_per_day
 local ticks_per_season = 3 * ticks_per_month
@@ -72,138 +32,104 @@ local seasons = {
     'autumn',
     'winter',
 }
-function TableLength(table)
-    local count = 0
-    for i,k in pairs(table) do
-        count = count + 1
-    end
-    return count
-end
+
 --sorted pairs
-function spairs(t, cmp)
+local function spairs(t, cmp)
     -- collect the keys
     local keys = {}
-    for k,v in pairs(t) do
-        table.insert(keys,k)
+    for k in pairs(t) do
+        table.insert(keys, k)
     end
-
     utils.sort_vector(keys, nil, cmp)
-
     -- return the iterator function
     local i = 0
     return function()
         i = i + 1
-        if keys[i] then
-            return keys[i], t[keys[i]]
+        local k = keys[i]
+        if k then
+            return k, t[k]
         end
     end
 end
-function isDwarfCitizen(dwf)
-    return dfhack.units.isCitizen(dwf)
-end
 
-
-
-waves={}
-function getWave(dwf)
+local waves = {}
+local function getWave(dwf)
     arrival_time = current_tick - dwf.curse.time_on_site
-    --print(string.format("Current year %s, arrival_time = %s, ticks_per_year = %s", df.global.cur_year, arrival_time, ticks_per_year))
     arrival_year = df.global.cur_year + (arrival_time // ticks_per_year)
     arrival_season = 1 + (arrival_time % ticks_per_year) // ticks_per_season
     arrival_month = 1 + (arrival_time % ticks_per_year) // ticks_per_month
     arrival_day = 1 + ((arrival_time % ticks_per_year) % ticks_per_month) // ticks_per_day
-    if args.granularity then
-        if args.granularity == "days" then
-            wave = arrival_day + (100 * arrival_month) + (10000 * arrival_year)
-        elseif args.granularity == "months" then
-            wave = arrival_month + (100 * arrival_year)
-        elseif args.granularity == "seasons" then
-            wave = arrival_season + (10 * arrival_year)
-        elseif args.granularity == "years" then
-            wave = arrival_year
-        else
-            error("Invalid granularity value. Omit the option if you want 'seasons'. Note: plurals only.")
-        end
+    local wave
+    if args.granularity == 'days' then
+        wave = arrival_day + (100 * arrival_month) + (10000 * arrival_year)
+    elseif args.granularity == 'months' then
+        wave = arrival_month + (100 * arrival_year)
+    elseif args.granularity == 'seasons' then
+        wave = arrival_season + (10 * arrival_year)
+    elseif args.granularity == 'years' then
+        wave = arrival_year
     else
-        wave = 10 * arrival_year + arrival_season
+        qerror('Invalid granularity value. Omit the option if you want "seasons".')
     end
-    if waves[wave] == nil then
-        waves[wave] = {}
-    end
-    table.insert(waves[wave],dwf)
+    table.insert(ensure_key(waves, wave), dwf)
     if args.unit and dwf == selected then
-        print(string.format("  Selected citizen arrived in the %s of year %d, month %d, day %d.",seasons[arrival_season],arrival_year,arrival_month,arrival_day))
+        print(('  Selected citizen arrived in the %s of year %d, month %d, day %d.'):format(
+            seasons[arrival_season], arrival_year, arrival_month, arrival_day))
     end
 end
 
-for _,v in ipairs(df.global.world.units.active) do
-    if isDwarfCitizen(v) then
-        getWave(v)
-    end
+for _,v in ipairs(dfhack.units.getCitizens(true, true)) do
+    getWave(v)
 end
 
 if args.help or (not args.all and not args.unit) then
-    print(help)
-else
-    zwaves = {}
-    i = 0
-    for k,v in spairs(waves, utils.compare) do
-        if args.showarrival then
-            season = nil
-            month = nil
-            day = nil
-            if args.granularity then
-                if args.granularity == "days" then
-                    year = k // 10000
-                    month = (k - (10000 * year)) // 100
-                    season = 1 + (month // 3)
-                    day = k - ((100 * month) + (10000 * year))
-                elseif args.granularity == "months" then
-                    year = k // 100
-                    month = k - (100 * year)
-                    season = 1 + (month // 3)
-                elseif args.granularity == "seasons" then
-                    year = k // 10
-                    season = k - (10 * year)
-                elseif args.granularity == "years" then
-                    year = k
-                end
-            else
-                year = k // 10
-                season = k - (10 * year)
-            end
+    print(dfhack.script_help())
+    return
+end
 
-            if season ~= nil then
-                season = string.format("the %s of",seasons[season])
-            else
-                season = ""
-            end
-            if month ~= nil then
-                month = string.format(", month %d", month)
-            else
-                month = ""
-            end
-            if day ~= nil then
-                day = string.format(", day %d", day)
-            else
-                day = ""
-            end
-            if args.all then
-                print(string.format("  Wave %d of citizens arrived in %s year %d%s%s.",i,season,year,month,day))
-            end
+local zwaves = {}
+i = 0
+for k,v in spairs(waves, utils.compare) do
+    if args.showarrival and args.all then
+        if args.granularity == 'days' then
+            local year = k // 10000
+            local month = (k - (10000 * year)) // 100
+            local season = 1 + ((month - 1) // 3)
+            local day = k - ((100 * month) + (10000 * year))
+            print(('  Wave %2d arrived in the %s of year %d, month %d, day %d.'):format(
+                i, seasons[season], year, month, day))
+        elseif args.granularity == 'months' then
+            local year = k // 100
+            local month = k - (100 * year)
+            local season = 1 + ((month - 1) // 3)
+            print(('  Wave %2d arrived in the %s of year %d, month %d.'):format(
+                i, seasons[season], year, month))
+        elseif args.granularity == 'seasons' then
+            local year = k // 10
+            local season = k - (10 * year)
+            print(('  Wave %2d arrived in the %s of year %d'):format(
+                i, seasons[season], year))
+        elseif args.granularity == 'years' then
+            local year = k
+            print(('  Wave %2d arrived in year %d.'):format(i, year))
         end
-        zwaves[i] = waves[k]
-        for _,dwf in spairs(v, utils.compare) do
-            if args.unit and dwf == selected then
-                print(string.format("  Selected citizen belongs to wave %d",i))
-            end
-        end
-        i = i + 1
     end
 
-    if args.all then
-        for i = 0, TableLength(zwaves)-1 do
-            print(string.format("  Wave %2s has %2d dwarf citizens.", i, #zwaves[i]))
+    zwaves[i] = waves[k]
+    for _,dwf in spairs(v, utils.compare) do
+        if args.unit and dwf == selected then
+            print(('  Selected citizen came with wave %d'):format(i))
         end
+    end
+    i = i + 1
+end
+
+if args.all then
+    if args.showarrival then
+        print()
+    end
+    for i = 0, #zwaves do
+        print(('  Wave %2d has %2d surviving member%s.'):format(
+            i, #zwaves[i], #zwaves[i] == 1 and '' or 's'))
     end
 end

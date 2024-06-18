@@ -305,7 +305,7 @@ local preference_functions = {
                 item_type = df.item_type.POWDER_MISC
             elseif food_mat_index.CookableSeed > -1 then
                 item_type = df.item_type.SEEDS
-            elseif food_mat_index.CookableLeaf > -1 then
+            elseif food_mat_index.CookablePlantGrowth > -1 then
                 --[[
                 In case of plant growths, "mat_info" stores the item type as a specific subtype ("FLOWER", or "FRUIT",
                 etc.) instead of the generic "PLANT_GROWTH" item type. Also, the IDs of the different types of growths

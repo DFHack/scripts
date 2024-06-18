@@ -3,7 +3,7 @@ devel/send-key
 
 .. dfhack-tool::
     :summary: Deliver key input to a viewscreen.
-    :tags: untested dev interface
+    :tags: dev interface
 
 This tool can send a key to the current screen or to a parent screen. Note that
 if you are trying to dismiss a screen, `devel/pop-screen` may be more useful,
