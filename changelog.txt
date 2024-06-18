@@ -678,8 +678,7 @@ Template for new versions:
 - `fix/protect-nicks`: restore nicknames when DF loses them
 - `forbid`: forbid and list forbidden items on the map
 - `gui/unit-syndromes`: browser for syndrome information
-- `all-unmet-needs`: list all unmet needs and with options add prefix with unmet needs to dwarves names
-
+- `all-unmet-needs`: list all unmet needs
 
 ## Fixes
 - `build-now`: now correctly avoids adjusting non-empty tiles above constructions that it builds
