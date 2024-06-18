@@ -22,4 +22,3 @@ Examples
 --------
 ``all-unmet-needs``
     Show the cumulative needs of all citizens and residents.
-
