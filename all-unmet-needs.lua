@@ -77,10 +77,7 @@ local convertNeeds = {
 }
 
 local fort_needs = {}
-for _, unit in pairs(df.global.world.units.all) do
-    if not dfhack.units.isCitizen(unit) or not dfhack.units.isAlive(unit) then --bugfound not consider (petitions) people that ask to reside in
-        goto skipunit
-    end
+for _, unit in pairs(df.global.getCitizens()) do
 
     local mind = unit.status.current_soul.personality.needs
     -- sum need_level and focus_level for each need
@@ -104,8 +101,6 @@ for _, unit in pairs(df.global.world.units.all) do
         dfhack.units.setNickname(unit, string.sub(unit_name, string.find(unit_name, "_NDS")+5))
     end
 
-
-    :: skipunit ::
 end
 
 local sorted_fort_needs = {}
