@@ -96,10 +96,10 @@ for _, unit in pairs(df.global.getCitizens()) do
         end
     end
 
-    unit_name=getNick(unit)
-    if opts.removenick and string.find(unit_name, "NDS_") then
-        dfhack.units.setNickname(unit, string.sub(unit_name, string.find(unit_name, "_NDS")+5))
-    end
+    -- unit_name=getNick(unit)
+    -- if opts.removenick and string.find(unit_name, "NDS_") then
+    --     dfhack.units.setNickname(unit, string.sub(unit_name, string.find(unit_name, "_NDS")+5))
+    -- end
 
 end
 
@@ -123,23 +123,23 @@ print(([[%20s %8s %8s %10s]]):format("Need", "Weight", "Focus", "# Dwarves"))
 for i, need in pairs(sorted_fort_needs) do
     local names = ""
     --if i < 4 then --CAN limit only the firsts #3 needs
-        for _, unit in pairs(need[5]) do
-            local modResult = ""
-            local nickMod = convertNeeds[need[1]]
-            unit_name=getNick(unit)
-            if opts.setnick and not string.find(unit_name, nickMod) then
-                if string.find(unit_name, "NDS_") then --arready mod
-                    local endString = string.find(unit_name, "_NDS")+4
-                    local nick = string.sub(unit_name, endString)
-                    local prevNeeds = string.sub(unit_name, string.find(unit_name, "NDS_"), endString-5)
-                    modResult = prevNeeds .. nickMod .. " _NDS" .. nick
-                else
-                    modResult = ("NDS_ %s _NDS %s"):format(nickMod, unit_name)
-                end
-                dfhack.units.setNickname(unit,modResult)
-            end
-            names = names .. modResult
-        end
+        -- for _, unit in pairs(need[5]) do
+        --     local modResult = ""
+        --     local nickMod = convertNeeds[need[1]]
+        --     unit_name=getNick(unit)
+        --     if opts.setnick and not string.find(unit_name, nickMod) then
+        --         if string.find(unit_name, "NDS_") then --arready mod
+        --             local endString = string.find(unit_name, "_NDS")+4
+        --             local nick = string.sub(unit_name, endString)
+        --             local prevNeeds = string.sub(unit_name, string.find(unit_name, "NDS_"), endString-5)
+        --             modResult = prevNeeds .. nickMod .. " _NDS" .. nick
+        --         else
+        --             modResult = ("NDS_ %s _NDS %s"):format(nickMod, unit_name)
+        --         end
+        --         dfhack.units.setNickname(unit,modResult)
+        --     end
+        --     names = names .. modResult
+        -- end
     --end
 
     --print(([[%20s %8.f %8.f %10d %20s]]):format(need[1] .. " ".. convertNeeds[need[1]], need[2], need[3], need[4],  names)) --DEBUG show units names
