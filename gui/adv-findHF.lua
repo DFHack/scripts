@@ -46,7 +46,7 @@ local function getPosFromHistFig(hf)
         return {type = "otherworld"}
     end
 
-    -- check if in same site 
+    -- check if in same site
     for _,unit in ipairs(df.global.world.units.all) do
         if unit.id == hf.unit_id then
             return {type = "local", pos = unit.pos}
@@ -179,7 +179,7 @@ function HFfindWindow:init()
             },
         }
     }
-    
+
     self.firstSelection = true
     repeatUtil.scheduleEvery('findHF', 10, 'frames', function()
         local advPos = getAdvRegionPos()
@@ -203,7 +203,7 @@ function HFfindWindow:on_submit_choice(_, choice) -- aban swlterdhame
     end
     self.choiceProfessionName = ""
 
-    if choice[4].profession ~= -1 then    
+    if choice[4].profession ~= -1 then
         self.choiceProfessionName = df.profession[choice[4].profession]
     end
 
@@ -235,8 +235,8 @@ function HFfindWindow:on_submit_choice(_, choice) -- aban swlterdhame
                     HFinfo5 =  "Same site as you"
                     HFinfo6 = string.format("local: X%d Y%d Z%d", histFigInfo["pos"].x, histFigInfo["pos"].y, histFigInfo["pos"].z)
                 end
-                
-                
+
+
             else
                 HFinfo5 = {{text='Not in this realm', pen=COLOR_MAGENTA}}
             end
@@ -260,7 +260,7 @@ end
 
 function HFfindWindow:on_edit_change(txt)
     self.subviews.selection:setChoices()
-    nonLocalHF = getHFnemesisFromName(txt)	
+    nonLocalHF = getHFnemesisFromName(txt)
     self.subviews.label2:setText(" ")
 
     if #nonLocalHF == 0 then
