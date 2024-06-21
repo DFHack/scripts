@@ -17,12 +17,15 @@ Usage
 
 If no specific unit id is specified, the target unit is the one selected in the
 user interface, such as by opening the unit's status screen or viewing its
-description.
+description. Otherwise, a valid list of units to bodyswap into will be shown.
+If bodyswapping into an entity that has no historical figure, a new historical figure is created for it.
+If said unit has no name, a new name is randomly generated for it, based on the unit's race.
+If no valid language is found for that race, it will use the DIVINE language.
 
 Examples
 --------
 
 ``bodyswap``
-    Takes control of the selected unit.
+    Takes control of the selected unit, or brings up a list of swappable units if no unit is selected.
 ``bodyswap --unit 42``
     Takes control of unit with id 42.
