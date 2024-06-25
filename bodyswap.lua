@@ -104,8 +104,7 @@ end
 
 -- shamelessly copy pasted from flashstep.lua
 local function reveal_tile(pos)
-    local block = dfhack.maps.getTileBlock(pos)
-    local des = block.designation[pos.x%16][pos.y%16]
+    local des = dfhack.maps.getTileFlags(pos)
     des.hidden = false
     des.pile = true  -- reveal the tile on the map
 end
