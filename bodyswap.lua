@@ -6,6 +6,7 @@ local makeown = reqscript('makeown')
 
 local validArgs = utils.invert({
     'unit',
+    'linger',
     'help'
 })
 local args = utils.processArgs({ ... }, validArgs)
@@ -109,7 +110,7 @@ local function reveal_tile(pos)
     des.pile = true  -- reveal the tile on the map
 end
 
-local function swapAdvUnit(newUnit)
+function swapAdvUnit(newUnit)
     if not newUnit then
         qerror('Target unit not specified!')
     end
@@ -178,6 +179,45 @@ local function swapAdvUnitPrompt()
         end, nil, nil, true)
 end
 
+function getHistoricalSlayer(unit)
+    local histFig = unit.hist_figure_id ~= -1 and df.historical_figure.find(unit.hist_figure_id)
+    if not histFig then
+        return
+    end
+
+    local deathEvents = df.global.world.history.events_death
+    for i = #deathEvents - 1, 0, -1 do
+        local event = deathEvents[i] --as:df.history_event_hist_figure_diedst
+        if event.victim_hf == unit.hist_figure_id then
+            return df.historical_figure.find(event.slayer_hf)
+        end
+    end
+end
+
+if args.linger then
+    local adventurer = dfhack.world.getAdventurer()
+    if not adventurer.flags2.killed then
+        qerror("Your adventurer hasn't died yet!")
+    end
+
+    local slayerHistFig = getHistoricalSlayer(adventurer)
+    local slayer = slayerHistFig and df.unit.find(slayerHistFig.unit_id)
+    if not slayer then
+        slayer = df.unit.find(adventurer.relationship_ids.LastAttacker)
+    end
+    if not slayer then
+        qerror("Killer not found!")
+    elseif slayer.flags2.killed then
+        local slayerName = ""
+        if slayer.name.has_name then
+            slayerName = ", " .. dfhack.TranslateName(slayer.name) .. ","
+        end
+        qerror("Your slayer" .. slayerName .. " is dead!")
+    end
+
+    swapAdvUnit(slayer)
+    return
+end
 
 if not dfhack_flags.module then
     if df.global.gamemode ~= df.game_mode.ADVENTURE then
