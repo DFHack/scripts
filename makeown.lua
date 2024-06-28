@@ -2,6 +2,11 @@
 
 local utils = require('utils')
 
+-- List of professions to convert From-To
+local convert_professions = {}
+convert_professions[df.profession.MERCHANT] = df.profession.TRADER
+convert_professions[df.profession.THIEF] = df.profession.STANDARD
+
 local function get_translation(race_id)
     local race_name = df.global.world.raws.creatures.all[race_id].creature_id
     for _,translation in ipairs(df.global.world.raws.language.translations) do
@@ -76,8 +81,41 @@ local function fix_unit(unit)
 
     unit.civ_id = df.global.plotinfo.civ_id;
 
-    if  unit.profession == df.profession.MERCHANT then  unit.profession = df.profession.TRADER end
-    if unit.profession2 == df.profession.MERCHANT then unit.profession2 = df.profession.TRADER end
+    if convert_professions[unit.profession] then unit.profession2 = df.profession.STANDARD end
+    if convert_professions[unit.profession2] then unit.profession2 = df.profession.STANDARD end
+end
+
+local function fix_army(unit)
+    -- Disassociate them from their army controller
+    if unit.enemy.army_controller then
+        if unit.enemy.army_controller.commander_hf == unit.hist_figure_id then
+            unit.enemy.army_controller.commander_hf = -1
+        end
+        unit.enemy.army_controller_id = -1
+        unit.enemy.army_controller = nil
+    end
+
+    if unit.enemy.enemy_status_slot ~= -1 then
+        local status_cache = df.global.world.enemy_status_cache
+        local status_slot = unit.enemy.enemy_status_slot
+
+        unit.enemy.enemy_status_slot = -1
+        status_cache.slot_used[status_slot] = false
+
+        for index, _ in pairs(status_cache.rel_map[status_slot]) do
+            status_cache.rel_map[status_slot][index] = -1
+        end
+
+        for index, _ in pairs(status_cache.rel_map) do
+            status_cache.rel_map[index][status_slot] = -1
+        end
+
+        -- TODO: what if there were status slots taken above status_slot?
+        -- does everything need to be moved down by one?
+        if status_cache.next_slot > status_slot then
+            status_cache.next_slot = status_slot
+        end
+    end
 end
 
 local function add_to_entity(hf, eid)
@@ -205,6 +243,7 @@ function make_own(unit)
     dfhack.units.makeown(unit)
 
     fix_unit(unit)
+    fix_army(unit)
     fix_histfig(unit)
     fix_clothing_ownership(unit)
 
