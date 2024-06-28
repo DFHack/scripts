@@ -262,6 +262,8 @@ function make_own(unit)
     else
         unit.flags1.tame = true
         unit.training_level = df.animal_training_level.Domesticated
+        -- No more "vengeful" spam when civilizing Giants!
+        unit.enemy.caste_flags.LARGE_PREDATOR = false;
     end
 end
 
