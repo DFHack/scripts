@@ -44,6 +44,7 @@ Template for new versions:
 - `buildingplan`: dimension tooltip is now displayed for constructions and buildings that are designated over an area, like bridges and farm plots
 - `gui/notify`: new notification type: injured citizens; click to zoom to injured units; also displays a warning if your hospital is not functional (or if you have no hospital)
 - `prioritize`: new info panel on under-construction buildings showing if the construction job has been taken and by whom. click to zoom to builder; toggle high priority status for job if it's not yet taken and you need it to be built ASAP
+- `gui/unit-info-viewer`: new overlay for displaying progress bars for skills on the unit info sheet
 - `gui/pathable`: new "Depot" mode that shows whether wagons can path to your trade depot
 - `gui/design`: all-new visually-driven UI for much improved usability
 
