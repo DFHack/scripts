@@ -43,6 +43,7 @@ Template for new versions:
 ## New Features
 - `buildingplan`: dimension tooltip is now displayed for constructions and buildings that are designated over an area, like bridges and farm plots
 - `gui/notify`: new notification type: injured citizens; click to zoom to injured units; also displays a warning if your hospital is not functional (or if you have no hospital)
+- `gui/notify`: new notification type: drowning and suffocation progress bars for adventure mode
 - `prioritize`: new info panel on under-construction buildings showing if the construction job has been taken and by whom. click to zoom to builder; toggle high priority status for job if it's not yet taken and you need it to be built ASAP
 - `gui/pathable`: new "Depot" mode that shows whether wagons can path to your trade depot
 - `advtools`: automatically add a conversation option to "ask whereabouts of" for all your relationships (before, you could only ask whereabouts of people involved in rumors)
