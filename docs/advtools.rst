@@ -3,25 +3,27 @@ advtools
 
 .. dfhack-tool::
     :summary: A collection of useful adventure mode tools.
-    :tags: adventure interface
+    :tags: adventure interface gameplay units
 
 Usage
 -----
 
 ::
 
-    advtools party add-core [<options>]
+    advtools party
 
 Examples
 --------
 
-``advtools party add-core``
-    Add the selected "extra" party member to your core party.
+``advtools party``
+    Shows a dialog prompt to promote your extra party members to your core (controllable) party.
 
-``party`` Options
+``party`` Command
 -----------------
 
-TBD
+When you run this command, it will show you a list of your extra party and let you choose
+who to promote into your "core party", aka let you control them in the tactics mode, not
+dissimilar to what you get if you create a group of adventurers during character creation.
 
 Overlays
 --------

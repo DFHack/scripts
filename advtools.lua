@@ -1,6 +1,7 @@
 --@ module=true
 
 local convo = reqscript('internal/advtools/convo')
+local party = reqscript('internal/advtools/party')
 
 OVERLAY_WIDGETS = {
     conversation=convo.AdvRumorsOverlay,
@@ -11,7 +12,7 @@ if dfhack_flags.module then
 end
 
 local commands = {
-    -- mycommand=mycommand.run,
+    party=party.run,
 }
 
 local args = {...}

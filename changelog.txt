@@ -28,6 +28,7 @@ Template for new versions:
 
 ## New Tools
 - `advtools`: collection of useful commands and overlays for adventure mode
+- `advtools`: advtools party - promotes one of your companions to become a controllable adventurer
 - `pop-control`: (reinstated) limit the maximum size of migrant waves
 - `bodyswap`: (reinstated) take control of another unit in adventure mode
 - `gui/sitemap`: list and zoom to people, locations, and artifacts
