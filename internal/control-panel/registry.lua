@@ -121,6 +121,7 @@ COMMANDS_BY_IDX = {
         desc='Displays percentages on partially-consumed items like hospital cloth.'},
     {command='pop-control', group='gameplay', mode='enable'},
     {command='starvingdead', group='gameplay', mode='enable'},
+    {command='timestream', group='gameplay', mode='enable'},
     {command='work-now', group='gameplay', mode='enable'},
 }
 

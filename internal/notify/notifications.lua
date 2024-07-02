@@ -153,12 +153,15 @@ local function for_wildlife(fn, reverse)
 end
 
 local function for_wildlife_adv(fn, reverse)
+    local adv_id = dfhack.world.getAdventurer().id
     for_iter(units.active, function(unit)
         return not dfhack.units.isDead(unit) and
             dfhack.units.isActive(unit) and
             not unit.flags1.caged and
             not unit.flags1.chained and
             not dfhack.units.isHidden(unit) and
+            unit.relationship_ids.GroupLeader ~= adv_id and
+            unit.relationship_ids.PetOwner ~= adv_id and
             is_adv_unhidden(unit) and
             unit.animal.population.population_idx >= 0
     end, fn, reverse)

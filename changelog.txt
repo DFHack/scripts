@@ -28,6 +28,7 @@ Template for new versions:
 
 ## New Tools
 - `advtools`: collection of useful commands and overlays for adventure mode
+- `advtools`: advtools party - promotes one of your companions to become a controllable adventurer
 - `pop-control`: (reinstated) limit the maximum size of migrant waves
 - `bodyswap`: (reinstated) take control of another unit in adventure mode
 - `gui/sitemap`: list and zoom to people, locations, and artifacts
@@ -36,39 +37,47 @@ Template for new versions:
 - `fix/population-cap`: fixes the situation where you continue to get migrant waves even when you are above your configured population cap
 - `fix/occupancy`: fixes issues where you can't build somewhere because the game tells you an item/unit/building is in the way but there's nothing there
 - `fix/sleepers`: (reinstated) fixes sleeping units belonging to a camp that never wake up.
+- `timestream`: (reinstated) keep the game running quickly even when there are large numbers of units on the map
+- `gui/journal`: fort journal with a multi-line text editor
+- `devel/luacov`: (reinstated) add Lua script coverage reporting for use in testing and performance analysis
 
 ## New Features
 - `buildingplan`: dimension tooltip is now displayed for constructions and buildings that are designated over an area, like bridges and farm plots
 - `gui/notify`: new notification type: injured citizens; click to zoom to injured units; also displays a warning if your hospital is not functional (or if you have no hospital)
 - `prioritize`: new info panel on under-construction buildings showing if the construction job has been taken and by whom. click to zoom to builder; toggle high priority status for job if it's not yet taken and you need it to be built ASAP
 - `gui/pathable`: new "Depot" mode that shows whether wagons can path to your trade depot
+- `advtools`: automatically add a conversation option to "ask whereabouts of" for all your relationships (before, you could only ask whereabouts of people involved in rumors)
+- `gui/design`: all-new visually-driven UI for much improved usability
 
 ## Fixes
-- `item`: don't match uncollected spider webs when you search for "silk"
 - `assign-profile`: fix handling of ``unit`` option for setting target unit id
 - `gui/gm-unit`: correctly display skill levels above Legendary+5
-- `quickfort`: fix incorrect splitting of disjoint stockpiles that are given the same label (indicating that they should be part of the same stockpile)
+- `quickfort`: fix incorrect handling of stockpiles that are split into multiple separate areas but are given the same label (indicating that they should be part of the same stockpile)
 - `makeown`: set animals to tame and domesticated
 - `gui/sandbox`: spawned citizens can now be useful military squad members
 - `gui/sandbox`: spawned undead now have a purple shade (only after save and reload, though)
 - `caravan`: fix errors in trade dialog if all fort items are traded away while the trade dialog is showing fort items and the `confirm` trade confirmation is shown
 - `control-panel`: restore non-default values of per-save enabled/disabled settings for repeat-based commands
 - `confirm`: fix confirmation prompt behavior when overwriting a hotkey zoom location
-- `quickfort`: allow farm plots to be built on muddy stone
+- `quickfort`: allow farm plots to be built on muddy stone (as per vanilla behavior)
 - `suspend`: remove broken ``--onlyblocking`` option; restore functionality to ``suspend all``
 - `gui/create-item`: allow creation of adamantine thread, wool, and yarn
-- `clear-smoke`: fix memory leak caused by the smoke flow not being deleted from memory
+- `gui/notify`: the notification panel no longer responds to the Enter key so Enter key is passed through to the vanilla UI
+- `clear-smoke`: properly tag smoke flows for garbage collection to avoid memory leak
+- `warn-stranded`: don't warn for babies carried by mothers who happen to be gathering fruit from trees
+- `prioritize`: also boost priority of already-claimed jobs when boosting priority of a job type so those jobs are not interrupted
 
 ## Misc Improvements
+- `item`: option for ignoring uncollected spider webs when you search for "silk"
 - `gui/launcher`: "space space to toggle pause" behavior is skipped if the game was paused when `gui/launcher` came up to prevent accidental unpausing
-- `gui/unit-info-viewer`: now displays a unit's weight, relative to either dwarves, elephants, or cats
-- `gui/unit-info-viewer`: shows a unit's relative size compared to its race's average.
+- `gui/unit-info-viewer`: add precise unit size in cc (cubic centimeters) for comparison against the wiki values. you can set your preferred number format for large numbers like this in the preferences of `control-panel` or `gui/control-panel`
+- `gui/unit-info-viewer`: now displays a unit's weight relative to a similarly-sized well-known creature (dwarves, elephants, or cats)
+- `gui/unit-info-viewer`: shows a unit's size compared to the average for the unit's race
 - `caravan`: optional overlay to hide vanilla "bring trade goods to depot" button (if you prefer to always use the DFHack version and don't want to accidentally click on the vanilla button). enable ``caravan.movegoods_hider`` in `gui/control-panel` UI Overlays tab to use.
 - `caravan`: bring goods to depot screen now shows (approximate) distance from item to depot
-- `gui/design`: significant redesign of UI for much improved usability
-- `gui/design`: circles are more circular (now matches behavior of ``digcircle``)
-- `gui/unit-info-viewer`: add precise unit size in cc (cubic centimeters) for comparison against the wiki values. you can set your preferred number format for large numbers like this in the preferences of `control-panel` or `gui/control-panel`
+- `gui/design`: circles are more circular (now matches more pleasing shape generated by ``digcircle``)
 - `gui/quickfort`: you can now delete your blueprints from the blueprint load dialog
+- `caravan`: remember filter settings for pedestal item assignment dialog
 - `quickfort`: new ``delete`` command for deleting player-owned blueprints (library and mod-added blueprints cannot be deleted)
 - `quickfort`: support enabling `logistics` features for autoforbid and autoclaim on stockpiles
 - `gui/quickfort`: allow farm plots, dirt roads, and paved roads to be designated around partial obstructions without callling it an error, matching vanilla behavior
@@ -77,12 +86,14 @@ Template for new versions:
 - `exterminate`: add ``all`` target for convenient scorched earth tactics
 - `empty-bin`: select a stockpile, tile, or building to empty all containers in the stockpile, tile, or building
 - `exterminate`: add ``--limit`` option to limit number of exterminated creatures
-- `exterminate`: add ``knockout`` and ``traumatize`` method for a non-lethal incapacitation
+- `exterminate`: add ``knockout`` and ``traumatize`` method for non-lethal incapacitation
 - `caravan`: add shortcut to the trade request screen for selecting item types by value (e.g. so you can quickly select expensive gems or cheap leather)
 - `gui/notify`: notification panel extended to apply to adventure mode
-- `gui/control-panel`: highlight prefrences that have been changed from the defaults
+- `gui/control-panel`: highlight preferences that have been changed from the defaults
 - `gui/quickfort`: buildings can now be constructed in a "high priority" state, giving them first dibs on `buildingplan` materials and setting their construction jobs to the highest priority
 - `prioritize`: add ``ButcherAnimal`` to the default prioritization list (``SlaughterAnimal`` was already there, but ``ButcherAnimal`` -- which is different -- was missing)
+- `prioritize`: list both unclaimed and total counts for current jobs when the --jobs option is specified
+- `prioritize`: boost performance of script by not tracking number of times a job type was prioritized
 - `gui/unit-syndromes`: make werecreature syndromes easier to search for
 
 ## Removed

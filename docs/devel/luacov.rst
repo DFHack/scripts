@@ -3,7 +3,7 @@ devel/luacov
 
 .. dfhack-tool::
     :summary: Lua script coverage report generator.
-    :tags: unavailable
+    :tags: dev
 
 This script generates a coverage report from collected statistics. By default it
 reports on every Lua file in all of DFHack. To filter filenames, specify one or
@@ -16,16 +16,17 @@ Statistics are cumulative across reports. That is, if you run a report, run a
 lua script, and then run another report, the report will include all activity
 from the first report plus the recently run lua script. Restarting DFHack will
 clear the statistics. You can also clear statistics after running a report by
-passing the --clear flag to this script.
+passing the ``--clear`` flag to this script.
 
 Note that the coverage report will be empty unless you have started DFHack with
 the "DFHACK_ENABLE_LUACOV=1" environment variable defined, which enables the
 coverage monitoring.
 
-Also note that enabling both coverage monitoring and lua profiling via the
-"profiler" module can produce strange results. Their interceptor hooks override
-each other. Usage of the "kill-lua" command will likewise override the luacov
-interceptor hook and may prevent coverage statistics from being collected.
+Also note that enabling coverage monitoring and lua profiling (via the
+"profiler" module) at the same time can produce strange results. Their
+interceptor hooks conflict with each other. Usage of the `kill-lua` command will
+likewise override the luacov interceptor hook and may prevent coverage
+statistics from being collected.
 
 Usage
 -----

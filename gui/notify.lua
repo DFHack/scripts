@@ -53,6 +53,12 @@ function NotifyOverlay:init()
     }
 end
 
+function NotifyOverlay:onInput(keys)
+    if keys.SELECT then return false end
+
+    return NotifyOverlay.super.onInput(self, keys)
+end
+
 local function get_fn(notification, is_adv)
     if not notification then return end
     if is_adv then

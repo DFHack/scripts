@@ -55,7 +55,8 @@ local DIRECTION_MAP_REVERSE = utils.invert(DIRECTION_MAP)
 TrackStopOverlay = defclass(TrackStopOverlay, overlay.OverlayWidget)
 TrackStopOverlay.ATTRS{
   desc='Adds widgets for reconfiguring trackstops after construction.',
-  default_pos={x=-73, y=29},
+  default_pos={x=-73, y=32},
+  version=2,
   default_enabled=true,
   viewscreens='dwarfmode/ViewSheets/BUILDING/Trap/TrackStop',
   frame={w=25, h=4},
@@ -161,7 +162,8 @@ end
 RollerOverlay = defclass(RollerOverlay, overlay.OverlayWidget)
 RollerOverlay.ATTRS{
   desc='Adds widgets for reconfiguring rollers after construction.',
-  default_pos={x=-71, y=29},
+  default_pos={x=-71, y=32},
+  version=2,
   default_enabled=true,
   viewscreens='dwarfmode/ViewSheets/BUILDING/Rollers',
   frame={w=27, h=4},

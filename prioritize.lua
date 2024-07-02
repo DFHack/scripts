@@ -34,9 +34,10 @@ local DEFAULT_JOB_TYPES = {
 }
 
 -- set of job types that we are watching. maps job_type (as a number) to
--- {num_prioritized=number,
---  hauler_matchers=map of type to num_prioritized,
---  reaction_matchers=map of string to num_prioritized}
+-- {
+--   hauler_matchers=map of type to num_prioritized,
+--   reaction_matchers=map of string to num_prioritized,
+-- }
 -- this needs to be global so we don't lose player-set state when the script is
 -- reparsed. Also a getter function that can be mocked out by unit tests.
 g_watched_job_matchers = g_watched_job_matchers or {}
@@ -51,7 +52,7 @@ end
 
 local function persist_state()
     local data_to_persist = {}
-    -- convert enum keys into strings so json doesn't get confused and think the map is a list
+    -- convert enum keys into strings so json doesn't get confused and think the map is a sparse list
     for k, v in pairs(get_watched_job_matchers()) do
         data_to_persist[tostring(k)] = v
     end
@@ -62,16 +63,16 @@ local function make_matcher_map(keys)
     if not keys then return nil end
     local t = {}
     for _,key in ipairs(keys) do
-        t[key] = 0
+        t[key] = true
     end
     return t
 end
 
 local function make_job_matcher(unit_labors, reaction_names)
-    local matcher = {num_prioritized=0}
-    matcher.hauler_matchers = make_matcher_map(unit_labors)
-    matcher.reaction_matchers = make_matcher_map(reaction_names)
-    return matcher
+    return {
+        hauler_matchers=make_matcher_map(unit_labors),
+        reaction_matchers=make_matcher_map(reaction_names),
+    }
 end
 
 local function matches(job_matcher, job)
@@ -87,9 +88,9 @@ local function matches(job_matcher, job)
     return true
 end
 
--- returns true if the job is matched and it is not already high priority
+-- returns true if the job is matched
 local function boost_job_if_matches(job, job_matchers)
-    if matches(job_matchers[job.job_type], job) and not job.flags.do_now then
+    if matches(job_matchers[job.job_type], job) then
         job.flags.do_now = true
         return true
     end
@@ -97,20 +98,7 @@ local function boost_job_if_matches(job, job_matchers)
 end
 
 local function on_new_job(job)
-    local watched_job_matchers = get_watched_job_matchers()
-    if boost_job_if_matches(job, watched_job_matchers) then
-        jm = watched_job_matchers[job.job_type]
-        jm.num_prioritized = jm.num_prioritized + 1
-        if jm.hauler_matchers then
-            local hms = jm.hauler_matchers
-            hms[job.item_subtype] = hms[job.item_subtype] + 1
-        end
-        if jm.reaction_matchers then
-            local rms = jm.reaction_matchers
-            rms[job.reaction_name] = rms[job.reaction_name] + 1
-        end
-        persist_state()
-    end
+    boost_job_if_matches(job, get_watched_job_matchers())
 end
 
 local function clear_watched_job_matchers()
@@ -123,8 +111,7 @@ local function clear_watched_job_matchers()
 end
 
 local function update_handlers()
-    local watched_job_matchers = get_watched_job_matchers()
-    if next(watched_job_matchers) then
+    if next(get_watched_job_matchers()) then
         eventful.onUnload.prioritize = clear_watched_job_matchers
         eventful.onJobInitiated.prioritize = on_new_job
     else
@@ -145,32 +132,47 @@ local function get_reaction_annotation_str(reaction)
     return (' --reaction-name %s'):format(reaction)
 end
 
-local function print_status_line(num_jobs, job_type, annotation)
+local function get_status_line(job_type, annotation)
     annotation = annotation or ''
-    print(('%6d %s%s'):format(num_jobs, df.job_type[job_type], annotation))
+    return ('  %s%s'):format(df.job_type[job_type], annotation)
 end
 
 local function status()
-    local first = true
+    local lines = {}
     local watched_job_matchers = get_watched_job_matchers()
     for k,v in pairs(watched_job_matchers) do
-        if first then
-            print('Automatically prioritized jobs:')
-            first = false
+        if type(k) ~= 'number' then
+            -- fix up any stringified numbers that made their way into this list
+            -- it is unclear how this happens, but fix it here if it does
+            local num_key = tonumber(k)
+            dfhack.printerr('autofixing non-numeric job type: ' .. tostring(k))
+            if num_key then
+                watched_job_matchers[num_key] = v
+            end
+            watched_job_matchers[k] = nil
+            k = num_key
         end
         if v.hauler_matchers then
-            for hk,hv in pairs(v.hauler_matchers) do
-                print_status_line(hv, k, get_unit_labor_annotation_str(hk))
+            for hk in pairs(v.hauler_matchers) do
+                table.insert(lines, get_status_line(k, get_unit_labor_annotation_str(hk)))
             end
         elseif v.reaction_matchers then
-            for rk,rv in pairs(v.reaction_matchers) do
-                print_status_line(rv, k, get_reaction_annotation_str(rk))
+            for rk in pairs(v.reaction_matchers) do
+                table.insert(lines, get_status_line(k, get_reaction_annotation_str(rk)))
             end
         else
-            print_status_line(v.num_prioritized, k)
+            table.insert(lines, get_status_line(k))
         end
     end
-    if first then print('Not automatically prioritizing any jobs.') end
+    if not next(lines) then
+        print('Not automatically prioritizing any jobs.')
+        return
+    end
+    table.sort(lines)
+    print('Automatically prioritized jobs:')
+    for _, line in ipairs(lines) do
+        print(line)
+    end
 end
 
 -- encapsulate df state in functions so unit tests can mock them out
@@ -179,6 +181,9 @@ function get_postings()
 end
 function get_reactions()
     return df.global.world.raws.reactions.reactions
+end
+function get_job_list()
+    return df.global.world.jobs.list
 end
 
 local function for_all_live_postings(cb)
@@ -189,11 +194,19 @@ local function for_all_live_postings(cb)
     end
 end
 
+local function for_all_jobs(cb)
+    for _,job in utils.listpairs(get_job_list()) do
+        if not job.flags.special then
+            cb(job)
+        end
+    end
+end
+
 local function boost(job_matchers, opts)
     local count = 0
-    for_all_live_postings(
-        function(posting)
-            if boost_job_if_matches(posting.job, job_matchers) then
+    for_all_jobs(
+        function(job)
+            if not job.flags.do_now and boost_job_if_matches(job, job_matchers) then
                 count = count + 1
             end
         end)
@@ -286,7 +299,7 @@ local JOB_TYPES_DENYLIST = utils.invert{
 }
 
 local DIG_SMOOTH_WARNING = {
-    'Priortizing current pending jobs, but skipping automatic boosting of dig and',
+    'Priortizing current jobs, but skipping automatic boosting of dig and',
     'smooth/engrave job types. Automatic priority boosting of these types of jobs',
     'will overwhelm the DF job scheduler. Instead, consider specializing units for',
     'mining and related work details, and using vanilla designation priorities.',
@@ -434,27 +447,27 @@ local function get_job_type_str(job)
 end
 
 local function print_current_jobs(job_matchers, opts)
-    local job_counts_by_type = {}
+    local all_jobs, unclaimed_jobs = {}, {}
     local filtered = next(job_matchers)
-    for_all_live_postings(
-        function(posting)
-            local job = posting.job
-            if filtered and not job_matchers[job.job_type] then return end
-            local job_type = get_job_type_str(job)
-            if not job_counts_by_type[job_type] then
-                job_counts_by_type[job_type] = 0
-            end
-            job_counts_by_type[job_type] = job_counts_by_type[job_type] + 1
-        end)
+    local function count_job(jobs, job)
+        if filtered and not job_matchers[job.job_type] then return end
+        local job_type = get_job_type_str(job)
+        jobs[job_type] = (jobs[job_type] or 0) + 1
+    end
+    for_all_jobs(curry(count_job, all_jobs))
+    for_all_live_postings(function(posting) count_job(unclaimed_jobs, posting.job) end)
     local first = true
-    for k,v in pairs(job_counts_by_type) do
+    for k,v in pairs(all_jobs) do
         if first then
-            print('Current unclaimed jobs:')
+            print('Current prioritizable jobs:')
+            print()
+            print(('unclaimed  total  job type'))
+            print(('---------  -----  --------'))
             first = false
         end
-        print(('%4d %s'):format(v, k))
+        print(('%9d  %5d  %s'):format(unclaimed_jobs[k] or 0, v, k))
     end
-    if first then print('No current unclaimed jobs.') end
+    if first then print('No current prioritizable jobs.') end
 end
 
 local function print_registry_section(header, t)
@@ -617,8 +630,11 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
     -- convert the string keys back into enum values
     for k,v in pairs(persisted_data) do
-        if type(k) == 'string' then
-            persisted_data[tonumber(k)] = v
+        if type(k) ~= 'number' then
+            local num = tonumber(k)
+            if num then
+                persisted_data[num] = v
+            end
             persisted_data[k] = nil
         end
     end
