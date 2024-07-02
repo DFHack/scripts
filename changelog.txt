@@ -39,6 +39,7 @@ Template for new versions:
 - `timestream`: (reinstated) keep the game running quickly even when there are large numbers of units on the map
 - `gui/journal`: fort journal with a multi-line text editor
 - `devel/luacov`: (reinstated) add Lua script coverage reporting for use in testing and performance analysis
+- `fix/gifted-pets`: fixes pets you gift in adventure mode.
 
 ## New Features
 - `buildingplan`: dimension tooltip is now displayed for constructions and buildings that are designated over an area, like bridges and farm plots
