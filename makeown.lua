@@ -95,7 +95,11 @@ local function fix_army(unit)
         unit.enemy.army_controller_id = -1
         unit.enemy.army_controller = nil
     end
+    fixUnitEnemyStatus(unit)
+end
 
+-- Also used by the script fix/loyaltycascade
+function fixUnitEnemyStatus(unit)
     if unit.enemy.enemy_status_slot ~= -1 then
         local status_cache = df.global.world.enemy_status_cache
         local status_slot = unit.enemy.enemy_status_slot

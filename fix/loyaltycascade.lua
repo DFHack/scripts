@@ -1,7 +1,10 @@
+--@module = true
 -- Prevents a "loyalty cascade" (intra-fort civil war) when a citizen is killed.
 
 -- Checks if a unit is a former member of a given entity as well as it's
 -- current enemy.
+local makeown = reqscript('makeown')
+
 local function getUnitRenegade(unit, entity_id)
     local unit_entity_links = df.historical_figure.find(unit.hist_figure_id).entity_links
     local former_index = nil
@@ -72,26 +75,8 @@ local function fixUnit(unit)
         fixed = true
     end
 
-    if fixed and unit.enemy.enemy_status_slot ~= -1 then
-        local status_cache = df.global.world.enemy_status_cache
-        local status_slot = unit.enemy.enemy_status_slot
-
-        unit.enemy.enemy_status_slot = -1
-        status_cache.slot_used[status_slot] = false
-
-        for index, _ in pairs(status_cache.rel_map[status_slot]) do
-            status_cache.rel_map[status_slot][index] = -1
-        end
-
-        for index, _ in pairs(status_cache.rel_map) do
-            status_cache.rel_map[index][status_slot] = -1
-        end
-
-        -- TODO: what if there were status slots taken above status_slot?
-        -- does everything need to be moved down by one?
-        if status_cache.next_slot > status_slot then
-            status_cache.next_slot = status_slot
-        end
+    if fixed then 
+        makeown.fixUnitEnemyStatus(unit)
     end
 
     return false
