@@ -245,36 +245,35 @@ function Ellipse:init()
     }
 end
 
+-- move the test point slightly closer to the circle center for a more pleasing curvature
+local bias = 0.4
+
 function Ellipse:has_point(x, y)
     local center_x, center_y = self.width / 2, self.height / 2
-    local point_x, point_y = x - center_x, y - center_y
-    local is_inside =
-    (point_x / (self.width / 2)) ^ 2 + (point_y / (self.height / 2)) ^ 2 <= 1
+    local point_x, point_y = math.abs(x-center_x)-bias, math.abs(y-center_y)-bias
+    local is_inside = 1 >= (point_x / center_x) ^ 2 + (point_y / center_y) ^ 2
 
-    if self.options.hollow.value and is_inside then
-        local all_points_inside = true
-        for dx = -self.options.thickness.value, self.options.thickness.value do
-            for dy = -self.options.thickness.value, self.options.thickness.value do
-                if dx ~= 0 or dy ~= 0 then
-                    local surrounding_x, surrounding_y = x + dx, y + dy
-                    local surrounding_point_x, surrounding_point_y =
-                    surrounding_x - center_x,
-                        surrounding_y - center_y
-                    if (surrounding_point_x / (self.width / 2)) ^ 2 + (surrounding_point_y / (self.height / 2)) ^ 2 >
-                        1 then
-                        all_points_inside = false
-                        break
-                    end
-                end
-            end
-            if not all_points_inside then
-                break
-            end
-        end
-        return not all_points_inside
-    else
+    if not self.options.hollow.value or not is_inside then
         return is_inside
     end
+
+    local all_points_inside = true
+    for dx = -self.options.thickness.value, self.options.thickness.value do
+        for dy = -self.options.thickness.value, self.options.thickness.value do
+            if dx ~= 0 or dy ~= 0 then
+                local surr_x, surr_y = x + dx, y + dy
+                local surr_point_x, surr_point_y = math.abs(surr_x-center_x)-bias, math.abs(surr_y-center_y)-bias
+                if 1 <= (surr_point_x / center_x) ^ 2 + (surr_point_y / center_y) ^ 2 then
+                    all_points_inside = false
+                    break
+                end
+            end
+        end
+        if not all_points_inside then
+            break
+        end
+    end
+    return not all_points_inside
 end
 
 Rectangle = defclass(Rectangle, Shape)

@@ -62,7 +62,7 @@ DimensionsOverlay.ATTRS{
     desc='Adds a tooltip that shows the selected dimensions when drawing boxes.',
     default_pos={x=1,y=1},
     default_enabled=true,
-    overlay_only=true, -- not player-repositionable
+    fullscreen=true, -- not player-repositionable
     viewscreens={
         'dwarfmode/Designate',
         'dwarfmode/Burrow/Paint',
@@ -448,14 +448,11 @@ function Design:init()
             key_back='CUSTOM_SHIFT_Z',
             label='Shape:',
             options=shape_options,
-            on_change=function(shape)
-                if shape.max_points and #self.marks > shape.max_points then
-                    -- pop marks until we're down to the max of the new shape
-                    for i = #self.marks, shape.max_points, -1 do
-                        table.remove(self.marks, i)
-                    end
-                end
+            on_change=function(shape, prev_shape)
                 self.needs_update = true
+                if shape.max_points ~= prev_shape.max_points then
+                    self:reset()
+                end
             end,
             button_specs=shape_button_specs,
             button_specs_selected=shape_button_specs_selected,
@@ -578,7 +575,7 @@ function Design:init()
                         return self.placing_mark.active and 'Stop placing points' or 'Start placing more points'
                     end,
                     visible=function() return not self.subviews.shape:getOptionValue().max_points end,
-                    enabled=function() return not self.prev_center and #self.marks > 2 end,
+                    enabled=function() return not self.prev_center end,
                     on_activate=function()
                         self.placing_mark.active = not self.placing_mark.active
                         self.placing_mark.index = self.placing_mark.active and #self.marks + 1 or nil
@@ -720,7 +717,7 @@ function Design:init()
                 widgets.HotkeyLabel {
                     key='CUSTOM_X',
                     label='Reset',
-                    enabled=function() return #self.marks > 1 or #self.extra_points > 0 end,
+                    enabled=function() return #self.marks > 0 or #self.extra_points > 0 end,
                     on_activate=self:callback('reset'),
                 },
             }
@@ -1242,7 +1239,8 @@ function Design:onInput(keys)
                     if pos == info.pos and shape.drag_corners[info.corner] then
                         self.marks[1] = Point { x = info.opposite_x, y = info.opposite_y, z = self.marks[1].z }
                         table.remove(self.marks, 2)
-                        self.placing_mark = { active = true, index = 2 }
+                        self.placing_mark.active = true
+                        self.placing_mark.index = 2
                         break
                     end
                 end

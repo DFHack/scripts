@@ -11,7 +11,7 @@ local buildings = df.global.world.buildings
 local caravans = df.global.plotinfo.caravans
 local units = df.global.world.units
 
-local function for_iter(vec, match_fn, action_fn, reverse)
+function for_iter(vec, match_fn, action_fn, reverse)
     local offset = type(vec) == 'table' and 1 or 0
     local idx1 = reverse and #vec-1+offset or offset
     local idx2 = reverse and offset or #vec-1+offset
@@ -33,6 +33,11 @@ local function get_active_depot()
             return bld
         end
     end
+end
+
+local function is_adv_unhidden(unit)
+    local flags = dfhack.maps.getTileFlags(dfhack.units.getPosition(unit))
+    return flags and not flags.hidden and flags.pile
 end
 
 local function for_agitated_creature(fn, reverse)
@@ -147,10 +152,18 @@ local function for_wildlife(fn, reverse)
     end, fn, reverse)
 end
 
-local function for_idle(fn, reverse)
-    for_iter(dfhack.units.getCitizens(true), function(unit)
-        local job = unit.job.current_job
-        return not job
+local function for_wildlife_adv(fn, reverse)
+    local adv_id = dfhack.world.getAdventurer().id
+    for_iter(units.active, function(unit)
+        return not dfhack.units.isDead(unit) and
+            dfhack.units.isActive(unit) and
+            not unit.flags1.caged and
+            not unit.flags1.chained and
+            not dfhack.units.isHidden(unit) and
+            unit.relationship_ids.GroupLeader ~= adv_id and
+            unit.relationship_ids.PetOwner ~= adv_id and
+            is_adv_unhidden(unit) and
+            unit.animal.population.population_idx >= 0
     end, fn, reverse)
 end
 
@@ -160,7 +173,7 @@ local function for_injured(fn, reverse)
     end, fn, reverse)
 end
 
-local function count_units(for_fn, which)
+function count_units(for_fn, which)
     local count = 0
     for_fn(function() count = count + 1 end)
     if count > 0 then
@@ -223,7 +236,7 @@ local function summarize_units(for_fn)
     return ('Wildlife: %s'):format(table.concat(strs, ', '))
 end
 
-local function zoom_to_next(for_fn, state, reverse)
+function zoom_to_next(for_fn, state, reverse)
     local first_found, ret
     for_fn(function(unit)
         if not first_found then
@@ -263,7 +276,7 @@ NOTIFICATIONS_BY_IDX = {
         name='traders_ready',
         desc='Notifies when traders are ready to trade at the depot.',
         default=true,
-        fn=function()
+        dwarf_fn=function()
             if #caravans == 0 then return end
             local num_ready = 0
             for _, car in ipairs(caravans) do
@@ -305,7 +318,7 @@ NOTIFICATIONS_BY_IDX = {
         name='mandates_expiring',
         desc='Notifies when a production mandate is within 1 month of expiring.',
         default=true,
-        fn=function()
+        dwarf_fn=function()
             local count = 0
             for _, mandate in ipairs(df.global.world.mandates) do
                 if mandate.mode == df.mandate.T_mode.Make and
@@ -329,7 +342,7 @@ NOTIFICATIONS_BY_IDX = {
         name='petitions_agreed',
         desc='Notifies when you have agreed to build (but have not yet built) a guildhall or temple.',
         default=true,
-        fn=function()
+        dwarf_fn=function()
             local t_agr, g_agr = list_agreements.get_fort_agreements(true)
             local sum = #t_agr + #g_agr
             if sum > 0 then
@@ -343,7 +356,7 @@ NOTIFICATIONS_BY_IDX = {
         name='moody_status',
         desc='Describes the status of the current moody dwarf: gathering materials, working, or stuck',
         default=true,
-        fn=function()
+        dwarf_fn=function()
             local message
             for_moody(function(unit)
                 local job = unit.job.current_job
@@ -373,64 +386,64 @@ NOTIFICATIONS_BY_IDX = {
         name='warn_starving',
         desc='Reports units that are dangerously hungry, thirsty, or drowsy.',
         default=true,
-        fn=curry(count_units, for_starving, 'starving, dehydrated, or drowsy unit'),
+        dwarf_fn=curry(count_units, for_starving, 'starving, dehydrated, or drowsy unit'),
         on_click=curry(zoom_to_next, for_starving),
     },
     {
         name='agitated_count',
         desc='Notifies when there are agitated animals on the map.',
         default=true,
-        fn=curry(count_units, for_agitated_creature, 'agitated animal'),
+        dwarf_fn=curry(count_units, for_agitated_creature, 'agitated animal'),
         on_click=curry(zoom_to_next, for_agitated_creature),
     },
     {
         name='invader_count',
         desc='Notifies when there are active invaders on the map.',
         default=true,
-        fn=curry(count_units, for_invader, 'invader'),
+        dwarf_fn=curry(count_units, for_invader, 'invader'),
         on_click=curry(zoom_to_next, for_invader),
     },
     {
         name='hostile_count',
         desc='Notifies when there are non-invader hostiles (e.g. megabeasts) on the map.',
         default=true,
-        fn=curry(count_units, for_hostile, 'non-invader hostile'),
+        dwarf_fn=curry(count_units, for_hostile, 'hostile'),
         on_click=curry(zoom_to_next, for_hostile),
     },
     {
         name='warn_nuisance',
         desc='Notifies when thieving or mischievous creatures are on the map.',
         default=true,
-        fn=curry(count_units, for_nuisance, 'thieving or mischievous creature'),
+        dwarf_fn=curry(count_units, for_nuisance, 'thieving or mischievous creature'),
         on_click=curry(zoom_to_next, for_nuisance),
     },
     {
         name='warn_stranded',
         desc='Notifies when units are stranded from the main group.',
         default=true,
-        fn=get_stranded_message,
+        dwarf_fn=get_stranded_message,
         on_click=function() dfhack.run_script('warn-stranded') end,
     },
     {
         name='wildlife',
         desc='Gives a summary of visible wildlife on the map.',
         default=false,
-        fn=curry(summarize_units, for_wildlife),
+        dwarf_fn=curry(summarize_units, for_wildlife),
         on_click=curry(zoom_to_next, for_wildlife),
+    },
+    {
+        name='wildlife_adv',
+        desc='Gives a summary of visible wildlife on the map.',
+        default=false,
+        adv_fn=curry(summarize_units, for_wildlife_adv),
+        on_click=curry(zoom_to_next, for_wildlife_adv),
     },
     {
         name='injured',
         desc='Shows number of injured citizens and a warning if there is no functional hospital.',
         default=true,
-        fn=curry(injured_units, for_injured, 'injured citizen'),
+        dwarf_fn=curry(injured_units, for_injured, 'injured citizen'),
         on_click=curry(zoom_to_next, for_injured),
-    },
-    {
-        name='idlers',
-        desc='Shows number of idle citizens.',
-        default=false,
-        fn=curry(count_units, for_idle, 'idle citizen'),
-        on_click=curry(zoom_to_next, for_idle),
     },
 }
 

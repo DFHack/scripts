@@ -34,8 +34,10 @@ local function get_squad_position(unit, unit_name)
     local squad = df.squad.find(unit.military.squad_id)
     if squad then
         if squad.entity_id ~= df.global.plotinfo.group_id then
-            print("WARNING: Unit " .. unit_name .. " is a member of a squad in another site!" ..
+            print("WARNING: Unit " .. unit_name .. " is a member of a squad from another site!" ..
+                " This may be preventing them from doing any useful work." ..
                 " You can fix this by assigning them to a local squad and then unassigning them.")
+            print()
             return
         end
     else
@@ -147,7 +149,7 @@ local function process(unit, args, need_newline)
 
     -- Now get info about which items have been assigned as part of the uniform
     local assigned_items = {} -- assigned item ids mapped to item objects
-    for _, specs in ipairs(squad_position.uniform) do
+    for _, specs in ipairs(squad_position.equipment.uniform) do
         for _, spec in ipairs(specs) do
             for _, assigned in ipairs(spec.assigned) do
                 -- Include weapon and shield so we can avoid dropping them, or pull them out of container/inventory later
@@ -172,7 +174,7 @@ local function process(unit, args, need_newline)
                 if args.free then
                     print("  Removing from uniform")
                     assigned_items[u_id] = nil
-                    for _, specs in ipairs(squad_position.uniform) do
+                    for _, specs in ipairs(squad_position.equipment.uniform) do
                         for _, spec in ipairs(specs) do
                             for idx, assigned in ipairs(spec.assigned) do
                                 if assigned == u_id then

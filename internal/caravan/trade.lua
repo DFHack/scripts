@@ -541,7 +541,10 @@ end
 function TradeScreen:onRenderFrame()
     if not df.global.game.main_interface.trade.open then
         if view then view:dismiss() end
-    elseif self.reset_pending then
+    elseif self.reset_pending and
+        (dfhack.gui.matchFocusString('dfhack/lua/caravan/trade') or
+         dfhack.gui.matchFocusString('dwarfmode/Trade/Default'))
+    then
         self.reset_pending = nil
         self.trade_window:reset_cache()
     end

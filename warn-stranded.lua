@@ -63,6 +63,7 @@ function getStrandedGroups()
     local unitsByWalkGroup, ignoredUnitsByWalkGroup = {}, {}
 
     for _, unit in ipairs(dfhack.units.getCitizens(true)) do
+        if unit.relationship_ids.RiderMount ~= -1 then goto skip end
         local unitPos = xyz2pos(dfhack.units.getPosition(unit))
         local walkGroup = getWalkGroup(unitPos)
 

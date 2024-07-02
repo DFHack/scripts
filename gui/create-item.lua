@@ -155,7 +155,7 @@ local function getMatFilter(itemtype, opts)
             return (mat.flags.WOOD)
         end,
         THREAD = function(mat, parent, typ, idx)
-            return (mat.flags.THREAD_PLANT)
+            return (mat.flags.THREAD_PLANT or mat.flags.SILK or mat.flags.YARN or mat.flags.STOCKPILE_THREAD_METAL)
         end,
         LEATHER = function(mat, parent, typ, idx)
             return (mat.flags.LEATHER)

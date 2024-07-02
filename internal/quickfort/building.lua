@@ -528,9 +528,11 @@ function check_tiles_and_extents(ctx, buildings)
                 local pos =
                         xyz2pos(b.pos.x+extent_x-1, b.pos.y+extent_y-1, b.pos.z)
                 local is_valid_tile = db_entry.is_valid_tile_fn(pos,db_entry,b)
+                -- don't mark individual invalid tiles in extent-based buildings
+                -- as invalid; the building can still build around it
                 owns_preview =
                         quickfort_preview.set_preview_tile(ctx, pos,
-                                                           is_valid_tile)
+                            is_valid_tile or db_entry.has_extents)
                 if not is_valid_tile then
                     log('tile not usable: (%d, %d, %d)', pos.x, pos.y, pos.z)
                     col[extent_y] = false
@@ -542,7 +544,7 @@ function check_tiles_and_extents(ctx, buildings)
         if not db_entry.is_valid_extent_fn(b) then
             log('no room for %s at (%d, %d, %d)',
                 db_entry.label, b.pos.x, b.pos.y, b.pos.z)
-            if owns_preview then
+            if owns_preview and not db_entry.ignore_extent_errors then
                 for x=b.pos.x,b.pos.x+b.width-1 do
                     for y=b.pos.y,b.pos.y+b.height-1 do
                         local p = xyz2pos(x, y, b.pos.z)

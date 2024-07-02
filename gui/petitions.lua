@@ -21,9 +21,9 @@ function Petitions:init()
         },
         widgets.ToggleHotkeyLabel{
             view_id='show_fulfilled',
-            frame={b=0, l=0},
+            frame={b=0, l=0, w=33},
             key='CUSTOM_CTRL_A',
-            label='Show fulfilled agreements:',
+            label='Show past agreements:',
             initial_option=false,
             on_change=function() self:refresh() end,
         },

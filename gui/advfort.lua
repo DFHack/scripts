@@ -1420,20 +1420,20 @@ function track_stop_configure(bld) --TODO: dedicated widget with nice interface 
     local choices={"Friction","Dumping"}
     local function chosen(index,choice)
         if choice.text=="Friction" then
-            dialog.showInputPrompt("Choose friction","Friction",nil,tostring(bld.friction),function ( txt )
+            dialog.showInputPrompt("Choose friction","Friction",nil,tostring(bld.track_stop_info.friction),function ( txt )
                 local num=tonumber(txt) --TODO allow only vanilla friction settings
                 if num then
-                    bld.friction=num
+                    bld.track_stop_info.friction=num
                 end
             end)
         else
             dialog.showListPrompt("Dumping direction", "Choose dumping:",COLOR_WHITE,dump_choices,function ( index,choice)
                 if choice.x then
-                    bld.track_flags.use_dump=true
-                    bld.dump_x_shift=choice.x
-                    bld.dump_y_shift=choice.y
+                    bld.track_stop_info.track_flags.use_dump=true
+                    bld.track_stop_info.dump_x_shift=choice.x
+                    bld.track_stop_info.dump_y_shift=choice.y
                 else
-                    bld.track_flags.use_dump=false
+                    bld.track_stop_info.track_flags.use_dump=false
                 end
             end)
         end

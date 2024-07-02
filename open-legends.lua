@@ -41,14 +41,19 @@ function LegendsManager:init()
 
     self:addviews{
         widgets.Panel{
-            view_id='done_mask',
-            frame={t=1, r=1, w=9, h=3},
+            frame=gui.get_interface_frame(),
+            subviews={
+                widgets.Panel{
+                    view_id='done_mask',
+                    frame={t=1, r=1, w=9, h=3},
+                },
+            },
         },
     }
 end
 
 function LegendsManager:onInput(keys)
-    if keys.LEAVESCREEN or (keys._MOUSE_L and self.subviews.done_mask:getMousePos()) then
+    if keys.LEAVESCREEN or keys._MOUSE_R or (keys._MOUSE_L and self.subviews.done_mask:getMousePos()) then
         if self.no_autoquit then
             self:dismiss()
         else

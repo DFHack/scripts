@@ -3,12 +3,13 @@ gui/notify
 
 .. dfhack-tool::
     :summary: Show notifications for important events.
-    :tags: fort interface
+    :tags: adventure fort interface
 
 This tool is the configuration interface for the provided overlay. It allows
 you to select which notifications to enable for the overlay display. See the
 descriptions in the `gui/notify` list for more details on what each
-notification is for.
+notification is for. Adventure mode and fort mode have different notifications
+that can be enabled.
 
 Usage
 -----

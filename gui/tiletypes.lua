@@ -7,7 +7,7 @@ local textures = require('gui.textures')
 local utils = require('utils')
 local widgets = require('gui.widgets')
 
-local UI_AREA = {r=2, t=18, w=38, h=35}
+local UI_AREA = {r=2, t=18, w=38, h=31}
 local POPUP_UI_AREA = {r=41, t=18, w=30, h=22}
 
 local CONFIG_BUTTON = {
@@ -44,20 +44,22 @@ local DEFAULT_OPTIONS = {
 }
 
 local MORE_OPTIONS = {
-    ["hidden"]       = { label= "Hidden", values= DEFAULT_OPTIONS },
-    ["light"]        = { label= "Light", values= DEFAULT_OPTIONS },
-    ["subterranean"] = { label= "Subterranean", values= DEFAULT_OPTIONS },
-    ["skyview"]      = { label= "Skyview", values= DEFAULT_OPTIONS },
-    ["aquifer"]      = { label= "Aquifer", values= {
-        { value= -1, char1= " ", char2= " ", offset=  97, pen = COLOR_GRAY },
-        { value=  1, char1= 173, char2= 173, offset= 109, pen = COLOR_LIGHTBLUE },
-        { value=  2, char1= 247, char2= 247, offset= 157, pen = COLOR_BLUE },
-        { value=  0, char1= "X", char2= "X", offset= 105, pen = COLOR_RED },
-    } },
-    ["surroundings"] = { label= "Surroundings", values= {
-        { value=  1, char1= "+", char2= "+", offset= 101, pen = COLOR_LIGHTGREEN },
-        { value=  0, char1= "X", char2= "X", offset= 105, pen = COLOR_RED },
-    } },
+    { key= "hidden",       label= "Hidden", values= DEFAULT_OPTIONS },
+    { key= "light",        label= "Light", values= DEFAULT_OPTIONS },
+    { key= "subterranean", label= "Subterranean", values= DEFAULT_OPTIONS },
+    { key= "skyview",      label= "Skyview", values= DEFAULT_OPTIONS },
+    { key= "aquifer",      label= "Aquifer", values= {
+            { value= -1, char1= " ", char2= " ", offset=  97, pen = COLOR_GRAY },
+            { value=  1, char1= 247, char2= " ", offset= 109, pen = COLOR_LIGHTBLUE },
+            { value=  2, char1= 247, char2= 247, offset= 157, pen = COLOR_BLUE },
+            { value=  0, char1= "X", char2= "X", offset= 105, pen = COLOR_RED },
+        }
+    },
+    { key= "autocorrect",  label= "Autocorrect", values= {
+            { value=  1, char1= "+", char2= "+", offset= 101, pen = COLOR_LIGHTGREEN },
+            { value=  0, char1= "X", char2= "X", offset= 105, pen = COLOR_RED },
+        }
+    },
 }
 
 local MODE_LIST = {
@@ -124,6 +126,34 @@ CYCLE_VALUES = {
     },
 }
 
+HIDDEN_VALUES = {
+    shape = {
+        [df.tiletype_shape.BRANCH] = true,
+        [df.tiletype_shape.TRUNK_BRANCH] = true,
+        [df.tiletype_shape.TWIG] = true,
+        [df.tiletype_shape.SAPLING] = true,
+        [df.tiletype_shape.SHRUB] = true,
+        [df.tiletype_shape.ENDLESS_PIT] = true
+    },
+    material = {
+        [df.tiletype_material.FEATURE] = true,
+        [df.tiletype_material.MINERAL] = true,
+        [df.tiletype_material.CONSTRUCTION] = true,
+        [df.tiletype_material.PLANT] = true,
+        [df.tiletype_material.TREE] = true,
+        [df.tiletype_material.MUSHROOM] = true,
+        [df.tiletype_material.ROOT] = true,
+        [df.tiletype_material.CAMPFIRE] = true,
+        [df.tiletype_material.DRIFTWOOD] = true,
+        [df.tiletype_material.UNDERWORLD_GATE] = true,
+        [df.tiletype_material.HFS] = true
+    },
+    special = {
+        [df.tiletype_special.DEAD] = true,
+        [df.tiletype_special.SMOOTH_DEAD] = true
+    }
+}
+
 ---@class TileType
 ---@field shape? df.tiletype_shape
 ---@field material? df.tiletype_material
@@ -135,7 +165,7 @@ CYCLE_VALUES = {
 ---@field subterranean? integer
 ---@field skyview? integer
 ---@field aquifer? integer
----@field surroundings? integer
+---@field autocorrect? integer
 ---@field stone_material? integer
 ---@field vein_type? df.inclusion_type
 
@@ -160,7 +190,7 @@ function setTile(pos, target)
         subterranean   = toValidOptionValue(target.subterranean),
         skyview        = toValidOptionValue(target.skyview),
         aquifer        = toValidOptionValue(target.aquifer),
-        surroundings   = target.surroundings == nil and 0 or target.surroundings,
+        autocorrect    = target.autocorrect == nil and 0 or target.autocorrect,
     }
     tiletype.stone_material = tiletype.material == df.tiletype_material.STONE and target.stone_material or -1
     tiletype.vein_type      = tiletype.material ~= df.tiletype_material.STONE and -1 or toValidEnumValue(target.vein_type,  df.inclusion_type,  df.inclusion_type.CLUSTER)
@@ -1089,8 +1119,8 @@ function OptionsPopup:init()
 
     self.values = {}
     local height_offset = 0
-    for key,option in pairs(MORE_OPTIONS) do
-        self.values[key] = option.values[1].value
+    for _,option in pairs(MORE_OPTIONS) do
+        self.values[option.key] = option.values[1].value
         local options = {}
 
         local addOption = function(value, pen, char1, char2, offset)
@@ -1124,7 +1154,7 @@ function OptionsPopup:init()
                 frame={l=1,t=height_offset},
                 initial_option=option.values[1].value,
                 options=options,
-                on_change=function(value) self.values[key] = value end
+                on_change=function(value) self.values[option.key] = value end
             }
         )
         height_offset = height_offset + 3
@@ -1144,7 +1174,6 @@ TileConfig.ATTRS {
     on_change_shape=DEFAULT_NIL,
     on_change_mat=DEFAULT_NIL,
     on_change_stone=DEFAULT_NIL,
-    on_change_vein_type=DEFAULT_NIL,
     on_change_special=DEFAULT_NIL,
     on_change_variant=DEFAULT_NIL,
 }
@@ -1217,20 +1246,10 @@ function TileConfig:init()
             enabled=function() return self.stone_enabled end,
             on_activate=function() self:openStonePopup() end
         },
-        CycleLabel {
-            view_id="vein_type_label",
-            frame={l=3, t=8},
-            key='CUSTOM_I',
-            base_label={ text= "Vein Type:", pen=function() return self.stone_enabled and UI_COLORS.HIGHLIGHTED or UI_COLORS.DESELECTED end },
-            enabled=function() return self.stone_enabled end,
-            initial_option=-1,
-            options=self.data_lists.vein_type_list,
-            on_change=self.on_change_vein_type,
-        },
-        widgets.Divider { frame={t=10}, frame_style_l=false, frame_style_r=false, },
+        widgets.Divider { frame={t=8}, frame_style_l=false, frame_style_r=false, },
         widgets.CycleHotkeyLabel {
             view_id="special_cycle",
-            frame={l=1, r=config_btn_width, t=12},
+            frame={l=1, r=config_btn_width, t=10},
             key_back='CUSTOM_SHIFT_K',
             key='CUSTOM_K',
             label='Special:',
@@ -1244,10 +1263,9 @@ function TileConfig:init()
             end,
             text_pen=getTextPen
         },
-        widgets.Divider { frame={t=14}, frame_style_l=false, frame_style_r=false, },
         widgets.CycleHotkeyLabel {
             view_id="variant_cycle",
-            frame={l=1, t=16},
+            frame={l=1, t=12},
             key_back='CUSTOM_SHIFT_L',
             key='CUSTOM_L',
             label='Variant:',
@@ -1261,7 +1279,7 @@ function TileConfig:init()
             end,
             text_pen=getTextPen
         },
-        widgets.Divider { frame={t=18}, frame_style_l=false, frame_style_r=false, },
+        widgets.Divider { frame={t=14}, frame_style_l=false, frame_style_r=false, },
     }
 
     -- Advanced config buttons
@@ -1280,7 +1298,7 @@ function TileConfig:init()
         },
         -- Special
         widgets.Label {
-            frame={l=config_btn_l, t=12},
+            frame={l=config_btn_l, t=10},
             text=CONFIG_BUTTON,
             on_click=function() self:openSpecialPopup() end,
         },
@@ -1365,14 +1383,12 @@ end
 function TileConfig:setStoneEnabled(bool)
     self.stone_enabled = bool
     if not bool then
-        self.subviews.vein_type_label:setOption(self.subviews.vein_type_label.initial_option)
         self:changeStone(nil)
     end
-    self.subviews.vein_type_label:updateOptionLabel()
 end
 
 function TileConfig:setVisibility(visibility)
-    self.frame = visibility and { h=19 } or { h=0 }
+    self.frame = visibility and { h=15 } or { h=0 }
     self.visible = visibility
 end
 
@@ -1389,7 +1405,7 @@ function TileConfig:updateValidity()
             local tile_attrs = df.tiletype.attrs[name]
             if (shape_value == df.tiletype_shape.NONE or tile_attrs.shape == shape_value)
                 and (mat_value == df.tiletype_material.NONE or tile_attrs.material == mat_value)
-                and (special_value == df.tiletype_special.NONE or tile_attrs.special == special_value or tile_attrs.special == df.tiletype_special.NONE)
+                and (special_value == df.tiletype_special.NONE or tile_attrs.special == special_value)
                 and (variant_value == df.tiletype_variant.NONE or tile_attrs.variant == variant_value or tile_attrs.variant == df.tiletype_variant.NONE)
             then
                 self.valid_combination = true
@@ -1550,9 +1566,6 @@ function TiletypeWindow:init()
                     on_change_stone=function(value)
                         self.cur_stone = value
                     end,
-                    on_change_vein_type=function(value)
-                        self.cur_vein_type = value
-                    end,
                     on_change_special=function(value)
                         self.cur_special = value
                     end,
@@ -1563,7 +1576,7 @@ function TiletypeWindow:init()
                 widgets.HotkeyLabel {
                     frame={l=1},
                     key='STRING_A059',
-                    label='More Options',
+                    label='More options',
                     on_activate=function()
                         self.options_popup.visible = not self.options_popup.visible
                     end
@@ -1603,15 +1616,14 @@ function TiletypeWindow:confirm()
                 subterranean   = option_values.subterranean,
                 skyview        = option_values.skyview,
                 aquifer        = option_values.aquifer,
-                surroundings   = option_values.surroundings,
+                autocorrect    = option_values.autocorrect,
             }
             box:iterate(function(pos)
                 if settings.validator(pos) then
                     setTile(pos, emptyTiletype)
                 end
             end)
-        else
-
+        elseif self.subviews.tile_config.valid_combination then
             ---@type TileType
             local tiletype = {
                 shape          = self.cur_shape,
@@ -1623,9 +1635,8 @@ function TiletypeWindow:confirm()
                 subterranean   = option_values.subterranean,
                 skyview        = option_values.skyview,
                 aquifer        = option_values.aquifer,
-                surroundings   = option_values.surroundings,
+                autocorrect    = option_values.autocorrect,
                 stone_material = self.cur_stone,
-                vein_type      = self.cur_vein_type,
             }
             box:iterate(function(pos)
                 if settings.validator(pos) then
@@ -1694,13 +1705,16 @@ function TiletypeScreen:generateDataLists()
         return name == "NONE" and UI_COLORS.VALUE_NONE or UI_COLORS.VALUE
     end
 
-    local function getEnumLists(enum, short_dict)
+    local function getEnumLists(enum, short_dict, hidden_dict)
         list = {}
         short_list = {}
 
         for i=enum._first_item, enum._last_item do
             local name = enum[i]
             if name then
+                if hidden_dict and hidden_dict[i] then
+                    goto continue
+                end
                 local item = { label= name, value= i, pen= itemColor(name) }
                 table.insert(list, { text=name, value=item })
                 if short_dict then
@@ -1711,15 +1725,16 @@ function TiletypeScreen:generateDataLists()
                     end
                 end
             end
+            ::continue::
         end
 
         return list, short_list
     end
 
     local data_lists = {}
-    data_lists.shape_list, data_lists.short_shape_list = getEnumLists(df.tiletype_shape, CYCLE_VALUES.shape)
-    data_lists.mat_list, data_lists.short_mat_list = getEnumLists(df.tiletype_material, CYCLE_VALUES.material)
-    data_lists.special_list, data_lists.short_special_list = getEnumLists(df.tiletype_special, CYCLE_VALUES.special)
+    data_lists.shape_list, data_lists.short_shape_list = getEnumLists(df.tiletype_shape, CYCLE_VALUES.shape, not self.unrestricted and HIDDEN_VALUES.shape)
+    data_lists.mat_list, data_lists.short_mat_list = getEnumLists(df.tiletype_material, CYCLE_VALUES.material, not self.unrestricted and HIDDEN_VALUES.material)
+    data_lists.special_list, data_lists.short_special_list = getEnumLists(df.tiletype_special, CYCLE_VALUES.special, not self.unrestricted and HIDDEN_VALUES.special)
     _, data_lists.variant_list = getEnumLists(df.tiletype_variant, { all = true})
 
     data_lists.stone_list = { { text = "none", value = -1 } }
@@ -1745,12 +1760,6 @@ function TiletypeScreen:generateDataLists()
         end
     end
 
-    _, data_lists.vein_type_list = getEnumLists(df.inclusion_type, { all = true})
-    table.insert(data_lists.vein_type_list, 1, { label= "NONE", value= -1, pen= itemColor("NONE") }) -- Equivalent to CLUSTER
-    for _, value in pairs(data_lists.vein_type_list) do
-        value.label = {{ text= value.label, pen= value.pen }}
-    end
-
     return data_lists
 end
 
@@ -1765,19 +1774,19 @@ end
 
 --#endregion
 
-function main(...)
-    local args = {...}
+function main(args)
+    local opts = {}
     local positionals = argparse.processArgsGetopt(args, {
-        { 'f', 'unrestricted', handler = function() args.unrestricted = true end },
+        { 'f', 'unrestricted', handler = function() opts.unrestricted = true end },
     })
 
     if not dfhack.isMapLoaded() then
-        qerror("This script requires a fortress map to be loaded")
+        qerror("This script requires a map to be loaded")
     end
 
-    view = view and view:raise() or TiletypeScreen{ unrestricted = args.unrestricted }:show()
+    view = view and view:raise() or TiletypeScreen{ unrestricted = opts.unrestricted }:show()
 end
 
 if not dfhack_flags.module then
-    main(...)
+    main({...})
 end

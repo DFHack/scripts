@@ -39,10 +39,11 @@ local function apply_fort_loaded_config()
         apply_autostart_config()
         dfhack.persistent.saveSiteData(GLOBAL_KEY, {autostart_done=true})
     end
+    local enabled_map = common.get_enabled_map()
     local enabled_repeats = dfhack.persistent.getSiteData(common.REPEATS_GLOBAL_KEY, {})
     for _, data in ipairs(registry.COMMANDS_BY_IDX) do
-        if data.mode == 'repeat' and enabled_repeats[data.command] ~= false then
-            common.apply_command(data)
+        if data.mode == 'repeat' then
+            common.apply_command(data, enabled_map, enabled_repeats[data.command])
         end
     end
 end

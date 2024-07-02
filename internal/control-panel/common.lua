@@ -53,6 +53,10 @@ end
 
 config = config or get_config()
 
+local function munge_repeat_name(name)
+    return 'control-panel/' .. name
+end
+
 local function unmunge_repeat_name(munged_name)
     if munged_name:startswith('control-panel/') then
         return munged_name:sub(15)
@@ -110,12 +114,15 @@ function get_description(data)
     return helpdb.is_entry(first_word) and helpdb.get_entry_short_help(first_word) or ''
 end
 
-local function persist_enabled_repeats()
+local function persist_repeats()
     local cp_repeats = {}
-    for munged_name in pairs(repeatUtil.repeating) do
-        local name = unmunge_repeat_name(munged_name)
-        if name then
-            cp_repeats[name] = true
+    for _, data in ipairs(registry.COMMANDS_BY_IDX) do
+        if data.mode == 'repeat' then
+            if repeatUtil.repeating[munge_repeat_name(data.command)] then
+                cp_repeats[data.command] = true
+            else
+                cp_repeats[data.command] = false
+            end
         end
     end
     dfhack.persistent.saveSiteData(REPEATS_GLOBAL_KEY, cp_repeats)
@@ -147,7 +154,7 @@ function apply_command(data, enabled_map, enabled)
             dfhack.run_command{enabled and 'enable' or 'disable', data.command}
         end
     elseif data.mode == 'repeat' then
-        local munged_name = 'control-panel/' .. data.command
+        local munged_name = munge_repeat_name(data.command)
         if enabled then
             local command_str = ('repeat --name %s %s\n'):
                     format(munged_name, table.concat(data.params, ' '))
@@ -155,7 +162,7 @@ function apply_command(data, enabled_map, enabled)
         else
             repeatUtil.cancel(munged_name)
         end
-        persist_enabled_repeats()
+        persist_repeats()
     elseif data.mode == 'run' then
         if enabled then
             dfhack.run_command(data.command)

@@ -449,7 +449,7 @@ local function export_more_legends_xml()
                 file:write("\t\t<occasion>\n")
                 file:write("\t\t\t<id>"..occasionV.id.."</id>\n")
                 file:write("\t\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(occasionV.name,1))).."</name>\n")
-                file:write("\t\t\t<event>"..occasionV.event.."</event>\n")
+                file:write("\t\t\t<event>"..occasionV.purpose_id.."</event>\n")
                 for scheduleK, scheduleV in pairs(occasionV.schedule) do
                     file:write("\t\t\t<schedule>\n")
                     file:write("\t\t\t\t<id>"..scheduleK.."</id>\n")

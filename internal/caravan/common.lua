@@ -67,7 +67,7 @@ end
 local function estimate(value, round_base, granularity)
     local rounded = ((value+round_base)//granularity)*granularity
     local clamped = math.max(rounded, granularity)
-    return clamped
+    return dfhack.formatInt(clamped)
 end
 
 -- If the item's value is below the threshold, it gets shown exactly as-is.
@@ -77,12 +77,12 @@ end
 -- Otherwise, it will display a guess equal to [threshold + 50] * 30 rounded up to the nearest multiple of 1000.
 function obfuscate_value(value)
     local threshold = get_threshold(get_broker_skill())
-    if value < threshold then return tostring(value) end
+    if value < threshold then return dfhack.formatInt(value) end
     threshold = threshold + 50
-    if value <= threshold then return ('~%d'):format(estimate(value, 5, 10)) end
-    if value <= threshold*3 then return ('~%d'):format(estimate(value, 50, 100)) end
-    if value <= threshold*30 then return ('~%d'):format(estimate(value, 500, 1000)) end
-    return ('%d?'):format(estimate(threshold*30, 999, 1000))
+    if value <= threshold then return ('~%s'):format(estimate(value, 5, 10)) end
+    if value <= threshold*3 then return ('~%s'):format(estimate(value, 50, 100)) end
+    if value <= threshold*30 then return ('~%s'):format(estimate(value, 500, 1000)) end
+    return ('%s?'):format(estimate(threshold*30, 999, 1000))
 end
 
 -- takes into account trade agreements

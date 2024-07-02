@@ -17,6 +17,7 @@ Usage
     exterminate
     exterminate this [<options>]
     exterminate undead [<options>]
+    exterminate all[:<caste>] [<options>]
     exterminate <race>[:<caste>] [<options>]
 
 Race and caste names are case insensitive.
@@ -32,6 +33,10 @@ Examples
     Kill the ravens flying around the map (but only the male ones).
 ``exterminate goblin --method magma --only-visible``
     Kill all visible, hostile goblins on the map by boiling them in magma.
+``exterminate all``
+    Kill all non-friendly creatures.
+``exterminate all:MALE``
+    Kill all non-friendly male creatures.
 
 Options
 -------
@@ -43,6 +48,8 @@ Options
     on the map.
 ``-f``, ``--include-friendly``
     Specifies the tool should also kill units friendly to the player.
+``-l``, ``--limit <num>``
+    Set the maximum number of units to exterminate.
 
 Methods
 -------
@@ -59,6 +66,8 @@ Methods
 :magma: Boil the unit in magma (not recommended for magma-safe creatures).
 :butcher: Will mark the units for butchering instead of killing them. This is
     more useful for pets than armed enemies.
+:knockout: Will put units into an unconscious state for 30k ticks (about a month).
+:traumatize: Traumatizes all units, forcing them to stare off into space (catatonic state).
 
 Technical details
 -----------------

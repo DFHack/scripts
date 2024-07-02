@@ -92,14 +92,37 @@ function search_relevance(search, candidate)
     return ret
 end
 
+local RESIZE_MIN = {w=30, h=20}
+
+local function sanitize_frame(frame)
+    local w, h = dfhack.screen.getWindowSize()
+    local min = RESIZE_MIN
+    if frame.t and h - frame.t - (frame.b or 0) < min.h then
+        frame.t = h - min.h
+        frame.b = 0
+    end
+    if frame.b and h - frame.b - (frame.t or 0) < min.h then
+        frame.b = h - min.h
+        frame.t = 0
+    end
+    if frame.l and w - frame.l - (frame.r or 0) < min.w then
+        frame.l = w - min.w
+        frame.r = 0
+    end
+    if frame.r and w - frame.r - (frame.l or 0) < min.w then
+        frame.r = w - min.w
+        frame.l = 0
+    end
+    return frame
+end
 
 GmEditorUi = defclass(GmEditorUi, widgets.Window)
 GmEditorUi.ATTRS{
-    frame=copyall(config.data.frame or {}),
+    frame=sanitize_frame(copyall(config.data.frame or {})),
     frame_title="GameMaster's editor",
     frame_inset=0,
     resizable=true,
-    resize_min={w=30, h=20},
+    resize_min=RESIZE_MIN,
     read_only=(config.data.read_only or false)
 }
 

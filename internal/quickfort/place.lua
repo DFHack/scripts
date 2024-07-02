@@ -163,6 +163,15 @@ local function make_db_entry(keys)
     return db_entry
 end
 
+local logistics_props = {
+    'automelt',
+    'autotrade',
+    'autodump',
+    'autotrain',
+    'autoforbid',
+    'autoclaim',
+}
+
 local function custom_stockpile(_, keys)
     local token_and_label, props, adjustments = parse_keys(keys)
     local db_entry = make_db_entry(token_and_label.token)
@@ -176,21 +185,11 @@ local function custom_stockpile(_, keys)
     end
 
     -- logistics properties
-    if props.automelt == 'true' then
-        db_entry.logistics.automelt = true
-        props.automelt = nil
-    end
-    if props.autotrade == 'true' then
-        db_entry.logistics.autotrade = true
-        props.autotrade = nil
-    end
-    if props.autodump == 'true' then
-        db_entry.logistics.autodump = true
-        props.autodump = nil
-    end
-    if props.autotrain == 'true' then
-        db_entry.logistics.autotrain = true
-        props.autotrain = nil
+    for _, logistics_prop in ipairs(logistics_props) do
+        if props[logistics_prop] == 'true' then
+            db_entry.logistics[logistics_prop] = true
+            props[logistics_prop] = nil
+        end
     end
 
     -- convert from older parsing style to properties
@@ -324,17 +323,8 @@ local function create_stockpile(s, link_data, dry_run)
     end
     if next(db_entry.logistics) then
         local logistics_command = {'logistics', 'add', '-s', tostring(bld.stockpile_number)}
-        if db_entry.logistics.automelt then
-            table.insert(logistics_command, 'melt')
-        end
-        if db_entry.logistics.autotrade then
-            table.insert(logistics_command, 'trade')
-        end
-        if db_entry.logistics.autodump then
-            table.insert(logistics_command, 'dump')
-        end
-        if db_entry.logistics.autotrain then
-            table.insert(logistics_command, 'train')
+        for logistics_prop in pairs(db_entry.logistics) do
+            table.insert(logistics_command, logistics_prop:sub(5))
         end
         log('running logistics command: "%s"', table.concat(logistics_command, ' '))
         dfhack.run_command(logistics_command)

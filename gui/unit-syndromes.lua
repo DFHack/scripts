@@ -23,18 +23,18 @@ end
 
 local function getEffectCreatureName(effect)
     if effect.race_str == "" then
-        return "UNKNOWN"
+        return "unknown"
     end
 
     local creature = df.global.world.raws.creatures.all[effect.race[0]]
 
     if effect.caste_str == "DEFAULT" then
-        return ("%s%s"):format(string.upper(creature.name[0]), (", %s"):format(effect.caste_str))
+        return creature.name[0]
     else
         -- TODO: Caste seems to be entirely unused.
         local caste = creature.caste[effect.caste[0]]
 
-        return ("%s%s"):format(string.upper(creature.name[0]), (", %s"):format(string.upper(caste.name[0])))
+        return ("%s%s"):format(creature.name[0], (", %s"):format(caste.name[0]))
     end
 end
 
@@ -178,11 +178,11 @@ local EffectFlagDescription = {
         return ("ABILITY: %s"):format(getEffectInteraction(effect))
     end,
     [df.creature_interaction_effect_type.SKILL_ROLL_ADJUST] = function(effect)
-        return ("MODIFIER=%s, CHANGE=%s"):format(effect.multiplier, effect.chance)
+        return ("MODIFIER=%s, CHANCE=%s"):format(effect.multiplier, effect.prob)
     end,
     [df.creature_interaction_effect_type.BODY_TRANSFORMATION] = function(effect)
-        if effect.chance > 0 then
-            return ("%s, CHANCE=%s%%"):format(getEffectCreatureName(effect), effect.chance)
+        if effect.prob > 0 then
+            return ("%s, CHANCE=%s%%"):format(getEffectCreatureName(effect), effect.prob)
         else
             return getEffectCreatureName(effect)
         end
@@ -235,11 +235,11 @@ local function getEffectDescription(effect)
 end
 
 local function getSyndromeName(syndrome_raw)
-    local is_transformation = false
+    local transform_creature_name
 
-    for _, effect in pairs(syndrome_raw.ce) do
+    for _, effect in ipairs(syndrome_raw.ce) do
         if df.creature_interaction_effect_body_transformationst:is_instance(effect) then
-            is_transformation = true
+            transform_creature_name = getEffectCreatureName(effect)
         elseif df.creature_interaction_effect_display_namest:is_instance(effect) then
             return effect.name:gsub("^%l", string.upper)
         end
@@ -247,8 +247,8 @@ local function getSyndromeName(syndrome_raw)
 
     if syndrome_raw.syn_name ~= "" then
         return syndrome_raw.syn_name:gsub("^%l", string.upper)
-    elseif is_transformation then
-        return "Body transformation"
+    elseif transform_creature_name then
+        return ("Body transformation: %s"):format(transform_creature_name)
     end
 
     return "Mystery"
@@ -258,7 +258,7 @@ local function getSyndromeEffects(syndrome_type)
     local syndrome_raw = df.global.world.raws.syndromes.all[syndrome_type]
     local syndrome_effects = {}
 
-    for _, effect in pairs(syndrome_raw.ce) do
+    for _, effect in ipairs(syndrome_raw.ce) do
         table.insert(syndrome_effects, effect)
     end
 
@@ -270,7 +270,7 @@ local function getSyndromeDescription(syndrome_raw, syndrome)
     local syndrome_min_duration = nil
     local syndrome_max_duration = nil
 
-    for _, effect in pairs(syndrome_raw.ce) do
+    for _, effect in ipairs(syndrome_raw.ce) do
         syndrome_min_duration = math.min(syndrome_min_duration or effect["end"], effect["end"])
         syndrome_max_duration = math.max(syndrome_max_duration or effect["end"], effect["end"])
     end
@@ -354,9 +354,9 @@ end
 UnitSyndromes = defclass(UnitSyndromes, widgets.Window)
 UnitSyndromes.ATTRS {
     frame_title='Unit Syndromes',
-    frame={w=50, h=30},
+    frame={w=54, h=30},
     resizable=true,
-    resize_min={h=20},
+    resize_min={w=30, h=20},
 }
 
 function UnitSyndromes:init()

@@ -165,7 +165,7 @@ function handler(data)
 
     if data.item.contaminants and #data.item.contaminants > 0 then --hint:df.item_actual
         for _, contaminant in ipairs(data.item.contaminants or {}) do --hint:df.item_actual
-            local contaminantMat = dfhack.matinfo.decode(contaminant.mat_type, contaminant.mat_index)
+            local contaminantMat = dfhack.matinfo.decode(contaminant.base.mat_type, contaminant.base.mat_index)
             data.contaminantMat = contaminantMat
             checkForTrigger(data)
             data.contaminantMat = nil

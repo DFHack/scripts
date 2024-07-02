@@ -84,9 +84,7 @@ eventful.onUnitDeath.invaderItemDestroyer = function(unitId)
   if item.pos.z ~= unit.pos.z then
    return
   end
-  item.flags.garbage_collect = true
-  item.flags.forbid = true
-  item.flags.hidden = true
+  dfhack.items.remove(item)
  end
 
  for _,item in ipairs(unit.inventory) do

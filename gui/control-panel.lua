@@ -664,8 +664,8 @@ end
 -- PreferencesTab
 --
 
-IntegerInputDialog = defclass(IntegerInputDialog, widgets.Window)
-IntegerInputDialog.ATTRS{
+PrefEditDialog = defclass(PrefEditDialog, widgets.Window)
+PrefEditDialog.ATTRS{
     visible=false,
     frame={w=50, h=11},
     frame_title='Edit setting',
@@ -673,12 +673,12 @@ IntegerInputDialog.ATTRS{
     on_hide=DEFAULT_NIL,
 }
 
-function IntegerInputDialog:init()
+function PrefEditDialog:init()
     self:addviews{
         widgets.Label{
             frame={t=0, l=0},
             text={
-                'Please enter a new value for ', NEWLINE,
+                'Please set a new value for ', NEWLINE,
                 {
                     gap=4,
                     text=function() return self.id or '' end,
@@ -691,25 +691,43 @@ function IntegerInputDialog:init()
             view_id='input_edit',
             frame={t=4, l=0},
             on_char=function(ch) return ch:match('%d') end,
+            visible=function() return not self.data.options end,
+        },
+        widgets.CycleHotkeyLabel{
+            view_id='input_cycle',
+            key='CUSTOM_CTRL_N',
+            frame={t=4, l=0},
+            options={'dummy'},  -- options set dynamically by show function
+            visible=function() return self.data.options end,
         },
         widgets.HotkeyLabel{
             frame={b=0, l=0},
             label='Save',
             key='SELECT',
             auto_width=true,
-            on_activate=function() self:hide(self.subviews.input_edit.text) end,
+            on_activate=function()
+                self:hide(self.data.options and
+                    self.subviews.input_cycle:getOptionValue() or
+                    self.subviews.input_edit.text)
+            end,
         },
         widgets.HotkeyLabel{
             frame={b=0, r=0},
             label='Reset to default',
             key='CUSTOM_CTRL_D',
             auto_width=true,
-            on_activate=function() self.subviews.input_edit:setText(tostring(self.data.default)) end,
+            on_activate=function()
+                if self.data.options then
+                    self.subviews.input_cycle:setOption(self.data.default)
+                else
+                    self.subviews.input_edit:setText(tostring(self.data.default))
+                end
+            end,
         },
     }
 end
 
-function IntegerInputDialog:get_spec_str()
+function PrefEditDialog:get_spec_str()
     local data = self.data
     local strs = {
         ('default: %d'):format(data.default),
@@ -723,22 +741,28 @@ function IntegerInputDialog:get_spec_str()
     return ('(%s)'):format(table.concat(strs, ', '))
 end
 
-function IntegerInputDialog:show(id, data, initial)
+function PrefEditDialog:show(id, data, initial)
     self.visible = true
     self.id, self.data = id, data
-    local edit = self.subviews.input_edit
-    edit:setText(tostring(initial))
-    edit:setFocus(true)
+    if data.options then
+        local cycle = self.subviews.input_cycle
+        cycle.options = data.options
+        cycle:setOption(initial)
+    else
+        local edit = self.subviews.input_edit
+        edit:setText(tostring(initial))
+        edit:setFocus(true)
+    end
     self:updateLayout()
 end
 
-function IntegerInputDialog:hide(val)
+function PrefEditDialog:hide(val)
     self.visible = false
     self.on_hide(tonumber(val))
 end
 
-function IntegerInputDialog:onInput(keys)
-    if IntegerInputDialog.super.onInput(self, keys) then
+function PrefEditDialog:onInput(keys)
+    if PrefEditDialog.super.onInput(self, keys) then
         return true
     end
     if keys.LEAVESCREEN or keys._MOUSE_R then
@@ -761,7 +785,7 @@ function PreferencesTab:init_main_panel(panel)
             on_double_click=self:callback('on_submit'),
             row_height=3,
         },
-        IntegerInputDialog{
+        PrefEditDialog{
             view_id='input_dlg',
             on_hide=self:callback('set_val'),
         },
@@ -807,15 +831,28 @@ local function make_preference_text(label, default, value)
         ' ',
         label,
         NEWLINE,
-        {gap=4, text=('(default: %s, current: %s)'):format(default, value)},
+        {gap=4, text=('(default: %s, '):format(default)},
+        {text=('current: %s'):format(value), pen=default ~= value and COLOR_YELLOW or nil},
+        ')',
     }
+end
+
+local function format_val(data, val)
+    if not data.options then return val end
+    for _, opt in ipairs(data.options) do
+        if opt.value == val then
+            return opt.label
+        end
+    end
+    return val
 end
 
 function PreferencesTab:refresh()
     if self.subviews.input_dlg.visible then return end
     local choices = {}
     for _, data in ipairs(registry.PREFERENCES_BY_IDX) do
-        local text = make_preference_text(data.label, data.default, data.get_fn())
+        local def, cur = data.default, data.get_fn()
+        local text = make_preference_text(data.label, format_val(data, def), format_val(data, cur))
         table.insert(choices, {
             text=text,
             search_key=data.label,
@@ -842,7 +879,9 @@ function PreferencesTab:on_submit()
     local data = choice.data
     local cur_val = data.get_fn()
     local data_type = type(data.default)
-    if data_type == 'boolean' then
+    if data.options then
+        self.subviews.input_dlg:show(data.label, data, cur_val)
+    elseif data_type == 'boolean' then
         preferences_set_and_save(self, data, not cur_val)
     elseif data_type == 'number' then
         self.subviews.input_dlg:show(data.label, data, cur_val)

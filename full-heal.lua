@@ -83,9 +83,7 @@ function heal(unit, resurrect, keep_corpse)
                 for i = #corpses-1,0,-1 do
                     local corpse = corpses[i] --as:df.item_body_component
                     if corpse.unit_id == unit.id then
-                        corpse.flags.garbage_collect = true
-                        corpse.flags.forbid = true
-                        corpse.flags.hidden = true
+                        dfhack.items.remove(corpse)
                     end
                 end
             end

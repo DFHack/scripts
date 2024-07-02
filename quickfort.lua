@@ -55,11 +55,6 @@ function apply_blueprint(params)
     return quickfort_api.clean_stats(ctx.stats)
 end
 
--- interactive script
-if dfhack_flags.module then
-    return
-end
-
 local function do_help()
     print(dfhack.script_help())
 end
@@ -77,6 +72,11 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     if sc == SC_WORLD_LOADED or sc == SC_WORLD_UNLOADED then
         do_reset()
     end
+end
+
+-- interactive script
+if dfhack_flags.module then
+    return
 end
 
 local action_switch = {

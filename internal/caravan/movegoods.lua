@@ -739,16 +739,6 @@ end
 -- MoveGoodsOverlay
 --
 
-MoveGoodsOverlay = defclass(MoveGoodsOverlay, overlay.OverlayWidget)
-MoveGoodsOverlay.ATTRS{
-    desc='Adds link to trade depot building to launch the DFHack trade goods UI.',
-    default_pos={x=-64, y=10},
-    default_enabled=true,
-    viewscreens='dwarfmode/ViewSheets/BUILDING/TradeDepot',
-    frame={w=33, h=1},
-    frame_background=gui.CLEAR_PEN,
-}
-
 local function has_trade_depot_and_caravan()
     local bld = dfhack.gui.getSelectedBuilding(true)
     if not bld or bld:getBuildStage() < bld:getMaxBuildStage() then
@@ -773,6 +763,17 @@ local function has_trade_depot_and_caravan()
     return false
 end
 
+MoveGoodsOverlay = defclass(MoveGoodsOverlay, overlay.OverlayWidget)
+MoveGoodsOverlay.ATTRS{
+    desc='Adds link to trade depot building to launch the DFHack trade goods UI.',
+    default_pos={x=-64, y=10},
+    default_enabled=true,
+    viewscreens='dwarfmode/ViewSheets/BUILDING/TradeDepot',
+    frame={w=33, h=1},
+    frame_background=gui.CLEAR_PEN,
+    visible=has_trade_depot_and_caravan,
+}
+
 function MoveGoodsOverlay:init()
     self:addviews{
         widgets.TextButton{
@@ -780,7 +781,6 @@ function MoveGoodsOverlay:init()
             label='DFHack move trade goods',
             key='CUSTOM_CTRL_T',
             on_activate=function() MoveGoodsModal{}:show() end,
-            enabled=has_trade_depot_and_caravan,
         },
     }
 end
@@ -796,6 +796,7 @@ MoveGoodsHiderOverlay.ATTRS{
     viewscreens='dwarfmode/ViewSheets/BUILDING/TradeDepot',
     frame={w=27, h=3},
     frame_background=gui.CLEAR_PEN,
+    visible=has_trade_depot_and_caravan,
 }
 
 function MoveGoodsHiderOverlay:onInput(keys)

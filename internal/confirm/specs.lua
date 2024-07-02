@@ -69,7 +69,7 @@ end
 
 local function trade_agreement_items_any_selected()
     local diplomacy = mi.diplomacy
-    for _, tab in ipairs(diplomacy.environment.meeting.sell_requests.priority) do
+    for _, tab in ipairs(diplomacy.environment.dipev.sell_requests.priority) do
         for _, priority in ipairs(tab) do
             if priority ~= 0 then
                 return true

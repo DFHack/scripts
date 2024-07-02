@@ -350,7 +350,6 @@ function Autodump:do_destroy()
     print(('destroying %d items'):format(#items))
     for _,item in ipairs(items) do
         table.insert(self.destroyed_items, {item=item, flags=copyall(item.flags)})
-        item.flags.garbage_collect = true
         item.flags.forbid = true
         item.flags.hidden = true
     end
@@ -363,7 +362,6 @@ function Autodump:undo_destroy()
     print(('undestroying %d items'):format(#self.destroyed_items))
     for _,item_spec in ipairs(self.destroyed_items) do
         local item = item_spec.item
-        item.flags.garbage_collect = false
         item.flags.forbid = item_spec.flags.forbid
         item.flags.hidden = item_spec.flags.hidden
     end
@@ -384,16 +382,19 @@ AutodumpScreen.ATTRS {
 }
 
 function AutodumpScreen:init()
-    local window = Autodump{}
+    self.window = Autodump{}
     self:addviews{
-        window,
+        self.window,
         widgets.DimensionsTooltip{
-            get_anchor_pos_fn=function() return window.mark end,
+            get_anchor_pos_fn=function() return self.window.mark end,
         },
     }
 end
 
 function AutodumpScreen:onDismiss()
+    for _,item_spec in ipairs(self.window.destroyed_items) do
+        dfhack.items.remove(item_spec.item)
+    end
     view = nil
 end
 

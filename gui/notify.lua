@@ -14,10 +14,7 @@ local LIST_MAX_HEIGHT = 5
 
 NotifyOverlay = defclass(NotifyOverlay, overlay.OverlayWidget)
 NotifyOverlay.ATTRS{
-    desc='Shows list of active notifications.',
-    default_pos={x=1,y=-8},
     default_enabled=true,
-    viewscreens='dwarfmode/Default',
     frame={w=30, h=LIST_MAX_HEIGHT+2},
 }
 
@@ -37,10 +34,12 @@ function NotifyOverlay:init()
                     -- have wasd mapped to the arrow keys
                     scroll_keys={},
                     on_submit=function(_, choice)
+                        if not choice.data.on_click then return end
                         local prev_state = self.state[choice.data.name]
                         self.state[choice.data.name] = choice.data.on_click(prev_state, false)
                     end,
                     on_submit2=function(_, choice)
+                        if not choice.data.on_click then return end
                         local prev_state = self.state[choice.data.name]
                         self.state[choice.data.name] = choice.data.on_click(prev_state, true)
                     end,
@@ -54,28 +53,35 @@ function NotifyOverlay:init()
     }
 end
 
+function NotifyOverlay:onInput(keys)
+    if keys.SELECT then return false end
+
+    return NotifyOverlay.super.onInput(self, keys)
+end
+
+local function get_fn(notification, is_adv)
+    if not notification then return end
+    if is_adv then
+        return notification.adv_fn or notification.fn
+    end
+    return notification.dwarf_fn or notification.fn
+end
+
 function NotifyOverlay:overlay_onupdate()
     local choices = {}
-    local max_width = 20
+    local is_adv = dfhack.world.isAdventureMode()
     for _, notification in ipairs(notifications.NOTIFICATIONS_BY_IDX) do
-        if notifications.config.data[notification.name].enabled then
-            local str = notification.fn()
-            if str then
-                max_width = math.max(max_width, #str)
-                table.insert(choices, {
-                    text=str,
-                    data=notification,
-                })
-            end
+        if not notifications.config.data[notification.name].enabled then goto continue end
+        local fn = get_fn(notification, is_adv)
+        if not fn then goto continue end
+        local str = fn()
+        if str then
+            table.insert(choices, {
+                text=str,
+                data=notification,
+            })
         end
-    end
-    -- +2 for the frame
-    self.frame.w = max_width + 2
-    if #choices <= LIST_MAX_HEIGHT then
-        self.frame.h = #choices + 2
-    else
-        self.frame.w = self.frame.w + 3 -- for the scrollbar
-        self.frame.h = LIST_MAX_HEIGHT + 2
+        ::continue::
     end
     local list = self.subviews.list
     local idx = 1
@@ -90,6 +96,24 @@ function NotifyOverlay:overlay_onupdate()
     end
     list:setChoices(choices, idx)
     self.visible = #choices > 0
+    if self.frame_parent_rect then
+        self:preUpdateLayout(self.frame_parent_rect)
+    end
+end
+
+function NotifyOverlay:preUpdateLayout(parent_rect)
+    local frame_rect = self.frame_rect
+    if not frame_rect then return end
+    local list = self.subviews.list
+    local list_width, num_choices = list:getContentWidth(), #list:getChoices()
+    -- +2 for the frame
+    self.frame.w = math.min(list_width + 2, parent_rect.width - (frame_rect.x1 + 3))
+    if num_choices <= LIST_MAX_HEIGHT then
+        self.frame.h = num_choices + 2
+    else
+        self.frame.w = self.frame.w + 3 -- for the scrollbar
+        self.frame.h = LIST_MAX_HEIGHT + 2
+    end
 end
 
 local CONFLICTING_TOOLTIPS = utils.invert{
@@ -111,8 +135,27 @@ function NotifyOverlay:render(dc)
     end
 end
 
+--
+-- DwarfNotifyOverlay, AdvNotifyOverlay
+--
+
+DwarfNotifyOverlay = defclass(DwarfNotifyOverlay, NotifyOverlay)
+DwarfNotifyOverlay.ATTRS{
+    desc='Shows list of active notifications in fort mode.',
+    default_pos={x=1,y=-8},
+    viewscreens='dwarfmode/Default',
+}
+
+AdvNotifyOverlay = defclass(AdvNotifyOverlay, NotifyOverlay)
+AdvNotifyOverlay.ATTRS{
+    desc='Shows list of active notifications in adventure mode.',
+    default_pos={x=18,y=-5},
+    viewscreens='dungeonmode/Default',
+}
+
 OVERLAY_WIDGETS = {
-    panel=NotifyOverlay,
+    panel=DwarfNotifyOverlay,
+    advpanel=AdvNotifyOverlay,
 }
 
 --
@@ -135,7 +178,7 @@ function Notify:init()
                     view_id='list',
                     on_submit=self:callback('toggle'),
                     on_select=function(_, choice)
-                        self.subviews.desc.text_to_wrap = choice.desc
+                        self.subviews.desc.text_to_wrap = choice and choice.desc or ''
                         if self.frame_parent_rect then
                             self:updateLayout()
                         end
@@ -174,10 +217,13 @@ end
 
 function Notify:refresh()
     local choices = {}
+    local is_adv = dfhack.world.isAdventureMode()
     for name, conf in pairs(notifications.config.data) do
+        local notification = notifications.NOTIFICATIONS_BY_NAME[name]
+        if not get_fn(notification, is_adv) then goto continue end
         table.insert(choices, {
             name=name,
-            desc=notifications.NOTIFICATIONS_BY_NAME[name].desc,
+            desc=notification.desc,
             enabled=conf.enabled,
             text={
                 ('%20s: '):format(name),
@@ -187,6 +233,7 @@ function Notify:refresh()
                 }
             }
         })
+        ::continue::
     end
     table.sort(choices, function(a, b) return a.name < b.name end)
     local list = self.subviews.list

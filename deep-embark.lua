@@ -128,7 +128,7 @@ function reveal(pos)
     barrier.pos:assign(pos)
     barriers:insert('#',barrier)
     local hfs = df.glowing_barrier:new()
-    hfs.triggered = true -- this prevents HFS events (which can otherwise be triggered by the barrier disappearing)
+    hfs.triggered = 1 -- this prevents HFS events (which can otherwise be triggered by the barrier disappearing)
     barriers:insert('#',hfs)
     dfhack.timeout(1,'ticks', function() -- barrier tiletype disappears after 1 tick
       block.tiletype[x%16][y%16] = tiletype -- restore old tiletype

@@ -128,31 +128,29 @@ local function get_filter_pen()
 end
 
 -- trims the history down to its maximum size, if needed
-local function trim_history(hist, hist_set)
-    if #hist <= HISTORY_SIZE then return end
-    -- we can only ever go over by one, so no need to loop
+local function trim_history(hist)
+    local hist_size = #hist
+    local overage = hist_size - HISTORY_SIZE
+    if overage <= 0 then return end
     -- This is O(N) in the HISTORY_SIZE. if we need to make this more efficient,
     -- we can use a ring buffer.
-    local line = table.remove(hist, 1)
-    -- since all lines are guaranteed to be unique, we can just remove the hash
-    -- from the set instead of, say, decrementing a counter
-    hist_set[line] = nil
-end
-
--- removes duplicate existing history lines and adds the given line to the front
-local function add_history(hist, hist_set, line)
-    line = line:trim()
-    if hist_set[line] then
-        for i,v in ipairs(hist) do
-            if v == line then
-                table.remove(hist, i)
-                break
-            end
+    for i=overage+1,hist_size do
+        hist[i-overage] = hist[i]
+        if i > HISTORY_SIZE then
+            hist[i] = nil
         end
     end
+end
+
+-- adds the given line to the front of the history as long as it is different from the previous command
+local function add_history(hist, line, defer_trim)
+    line = line:trim()
+    local hist_size = #hist
+    if line == hist[hist_size] then return end
     table.insert(hist, line)
-    hist_set[line] = true
-    trim_history(hist, hist_set)
+    if not defer_trim then
+        trim_history(hist)
+    end
 end
 
 local function file_exists(fname)
@@ -161,13 +159,15 @@ end
 
 -- history files are written with the most recent entry on *top*, which the
 -- opposite of what we want. add the file contents to our history in reverse.
-local function add_history_lines(lines, hist, hist_set)
+-- you must manually call trim_history() after this function
+local function add_history_lines(lines, hist)
     for i=#lines,1,-1 do
-        add_history(hist, hist_set, lines[i])
+        add_history(hist, lines[i], true)
     end
 end
 
-local function add_history_file(fname, hist, hist_set)
+-- you must manually call trim_history() after this function
+local function add_history_file(fname, hist)
     if not file_exists(fname) then
         return
     end
@@ -175,27 +175,27 @@ local function add_history_file(fname, hist, hist_set)
     for line in io.lines(fname) do
         table.insert(lines, line)
     end
-    add_history_lines(lines, hist, hist_set)
+    add_history_lines(lines, hist)
 end
 
 local function init_history()
-    local hist, hist_set = {}, {}
+    local hist = {}
     -- snarf the console history into our active history. it would be better if
     -- both the launcher and the console were using the same history object so
     -- the sharing would be "live", but we can address that later.
-    add_history_file(CONSOLE_HISTORY_FILE_OLD, hist, hist_set)
-    add_history_file(CONSOLE_HISTORY_FILE, hist, hist_set)
+    add_history_file(CONSOLE_HISTORY_FILE_OLD, hist)
+    add_history_file(CONSOLE_HISTORY_FILE, hist)
 
     -- read in our own command history
-    add_history_lines(dfhack.getCommandHistory(HISTORY_ID, HISTORY_FILE),
-                      hist, hist_set)
+    add_history_lines(dfhack.getCommandHistory(HISTORY_ID, HISTORY_FILE), hist)
 
-    return hist, hist_set
+    trim_history(hist)
+
+    return hist
 end
 
-if not history then
-    history, history_set = init_history()
-end
+-- history is a list of previously run commands, most recent at history[#history]
+history = history or init_history()
 
 local function get_first_word(text)
     local word = text:trim():split(' +')[1]
@@ -208,7 +208,7 @@ local function get_command_count(command)
 end
 
 local function record_command(line)
-    add_history(history, history_set, line)
+    add_history(history, line)
     local firstword = get_first_word(line)
     user_freq.data[firstword] = (user_freq.data[firstword] or 0) + 1
     user_freq:write()
@@ -470,6 +470,7 @@ EditPanel.ATTRS{
 
 function EditPanel:init()
     self.stack = {}
+    self.seen_search = {}
     self:reset_history_idx()
 
     self:addviews{
@@ -488,7 +489,10 @@ function EditPanel:init()
             -- to the commandline
             ignore_keys={'STRING_A096'},
             on_char=function(ch, text)
-                if ch == ' ' then return text:match('%S$') end
+                -- if game was not initially paused, then allow double-space to toggle pause
+                if ch == ' ' and not self.parent_view.parent_view.saved_pause_state then
+                    return text:sub(1, self.subviews.editfield.cursor - 1):match('%S$')
+                end
                 return true
             end,
             on_change=self.on_change,
@@ -576,16 +580,22 @@ function EditPanel:move_history(delta)
 end
 
 function EditPanel:on_search_text(search_str, next_match)
+    if not next_match then self.seen_search = {} end
     if not search_str or #search_str == 0 then return end
     local start_idx = math.min(self.history_idx - (next_match and 1 or 0),
                                #history)
     for history_idx = start_idx, 1, -1 do
-        if history[history_idx]:find(search_str, 1, true) then
+        local line = history[history_idx]
+        if line:find(search_str, 1, true) then
             self:move_history(history_idx - self.history_idx)
-            return
+            if not self.seen_search[line] then
+                self.seen_search[line] = true
+                return
+            end
         end
     end
     -- no matches. restart at the saved input buffer for the next search.
+    self.seen_search = {}
     self:move_history(#history + 1 - self.history_idx)
 end
 
@@ -906,6 +916,24 @@ function LauncherUI:init()
                     if v < 0 then
                         new_frame[k] = 0
                     end
+                end
+                local w, h = dfhack.screen.getWindowSize()
+                local min = MainPanel.ATTRS.resize_min
+                if new_frame.t and h - new_frame.t - (new_frame.b or 0) < min.h then
+                    new_frame.t = h - min.h
+                    new_frame.b = 0
+                end
+                if new_frame.b and h - new_frame.b - (new_frame.t or 0) < min.h then
+                    new_frame.b = h - min.h
+                    new_frame.t = 0
+                end
+                if new_frame.l and w - new_frame.l - (new_frame.r or 0) < min.w then
+                    new_frame.l = w - min.w
+                    new_frame.r = 0
+                end
+                if new_frame.r and w - new_frame.r - (new_frame.l or 0) < min.w then
+                    new_frame.r = w - min.w
+                    new_frame.l = 0
                 end
             end
         end

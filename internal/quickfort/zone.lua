@@ -16,7 +16,7 @@ local logfn = quickfort_common.logfn
 
 local function parse_pit_pond_props(zone_data, props)
     if props.pond == 'true' then
-        ensure_key(zone_data, 'zone_settings').pit_pond = df.building_civzonest.T_zone_settings.T_pit_pond.top_of_pond
+        ensure_keys(zone_data, 'zone_settings', 'pond', 'flag').keep_filled = true
         props.pond = nil
     end
 end
