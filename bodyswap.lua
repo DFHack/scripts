@@ -1,8 +1,12 @@
 --@ module = true
-
+local dialogs = require 'gui.dialogs'
 local utils = require 'utils'
+
+local makeown = reqscript('makeown')
+
 local validArgs = utils.invert({
     'unit',
+    'linger',
     'help'
 })
 local args = utils.processArgs({ ... }, validArgs)
@@ -12,16 +16,16 @@ if args.help then
     return
 end
 
-function setNewAdvNemFlags(nem)
+local function setNewAdvNemFlags(nem)
     nem.flags.ACTIVE_ADVENTURER = true
     nem.flags.ADVENTURER = true
 end
 
-function setOldAdvNemFlags(nem)
+local function setOldAdvNemFlags(nem)
     nem.flags.ACTIVE_ADVENTURER = false
 end
 
-function clearNemesisFromLinkedSites(nem)
+local function clearNemesisFromLinkedSites(nem)
     -- omitting this step results in duplication of the unit entry in df.global.world.units.active when the site to which the historical figure is linked is reloaded with said figure present as a member of the player party
     -- this can be observed as part of the normal recruitment process when the player adds a site-linked historical figure to their party
     if not nem.figure then
@@ -33,15 +37,15 @@ function clearNemesisFromLinkedSites(nem)
     end
 end
 
-function createNemesis(unit)
+local function createNemesis(unit)
     local nemesis = unit:create_nemesis(1, 1)
     nemesis.figure.flags.never_cull = true
     return nemesis
 end
 
-function isPet(nemesis)
+local function isPet(nemesis)
     if nemesis.unit then
-        if nemesis.unit.relationship_ids.Pet ~= -1 then
+        if nemesis.unit.relationship_ids.PetOwner ~= -1 then
             return true
         end
     elseif nemesis.figure then -- in case the unit is offloaded
@@ -54,7 +58,7 @@ function isPet(nemesis)
     return false
 end
 
-function processNemesisParty(nemesis, targetUnitID, alreadyProcessed)
+local function processNemesisParty(nemesis, targetUnitID, alreadyProcessed)
     -- configures the target and any leaders/companions to behave as cohesive adventure mode party members
     local alreadyProcessed = alreadyProcessed or {}
     alreadyProcessed[tostring(nemesis.id)] = true
@@ -66,8 +70,7 @@ function processNemesisParty(nemesis, targetUnitID, alreadyProcessed)
     elseif isPet(nemesis) then -- pets belonging to the target or to their companions
         df.global.adventure.interactions.party_pets:insert('#', nemesis.figure.id)
     else
-        df.global.adventure.interactions.party_core_members:insert('#', nemesis.figure.id) -- placing all non-pet companions into the core party list to enable tactical mode swapping
-        nemesis.flags.ADVENTURER = true
+        df.global.adventure.interactions.party_extra_members:insert('#', nemesis.figure.id) -- placing all non-pet companions into the extra party list
         if nemUnit then                                                                -- check in case the companion is offloaded
             nemUnit.relationship_ids.GroupLeader = targetUnitID
         end
@@ -92,12 +95,19 @@ function processNemesisParty(nemesis, targetUnitID, alreadyProcessed)
     end
 end
 
-function configureAdvParty(targetNemesis)
+local function configureAdvParty(targetNemesis)
     local party = df.global.adventure.interactions
     party.party_core_members:resize(0)
     party.party_pets:resize(0)
     party.party_extra_members:resize(0)
     processNemesisParty(targetNemesis, targetNemesis.unit_id)
+end
+
+-- shamelessly copy pasted from flashstep.lua
+local function reveal_tile(pos)
+    local des = dfhack.maps.getTileFlags(pos)
+    des.hidden = false
+    des.pile = true  -- reveal the tile on the map
 end
 
 function swapAdvUnit(newUnit)
@@ -111,6 +121,9 @@ function swapAdvUnit(newUnit)
         return
     end
 
+    -- Make sure the unit we're swapping into isn't nameless
+    makeown.name_unit(newUnit)
+
     local newNem = dfhack.units.getNemesis(newUnit) or createNemesis(newUnit)
     if not newNem then
         qerror("Failed to obtain target nemesis!")
@@ -122,8 +135,88 @@ function swapAdvUnit(newUnit)
     df.global.adventure.player_id = newNem.id
     df.global.world.units.adv_unit = newUnit
     oldUnit.idle_area:assign(oldUnit.pos)
+    local pos = xyz2pos(dfhack.units.getPosition(newUnit))
 
-    dfhack.gui.revealInDwarfmodeMap(xyz2pos(dfhack.units.getPosition(newUnit)), true)
+    -- reveal the tiles around the bodyswapped unit
+    reveal_tile(xyz2pos(pos.x-1, pos.y-1, pos.z))
+    reveal_tile(xyz2pos(pos.x,   pos.y-1, pos.z))
+    reveal_tile(xyz2pos(pos.x+1, pos.y-1, pos.z))
+    reveal_tile(xyz2pos(pos.x-1, pos.y,   pos.z))
+    reveal_tile(pos)
+    reveal_tile(xyz2pos(pos.x+1, pos.y,   pos.z))
+    reveal_tile(xyz2pos(pos.x-1, pos.y+1, pos.z))
+    reveal_tile(xyz2pos(pos.x,   pos.y+1, pos.z))
+    reveal_tile(xyz2pos(pos.x+1, pos.y+1, pos.z))
+
+    dfhack.gui.revealInDwarfmodeMap(pos, true)
+end
+
+-- shamelessly copy pasted from gui/sitemap.lua
+local function get_unit_choices()
+    local choices = {}
+    for _, unit in ipairs(df.global.world.units.active) do
+        if not dfhack.units.isActive(unit) or
+            dfhack.units.isHidden(unit)
+        then
+            goto continue
+        end
+        local name = dfhack.units.getReadableName(unit)
+        table.insert(choices, {
+            text=name,
+            unit=unit,
+            search_key=dfhack.toSearchNormalized(name),
+        })
+        ::continue::
+    end
+    return choices
+end
+
+local function swapAdvUnitPrompt()
+    local choices = get_unit_choices()
+    dialogs.showListPrompt('bodyswap', "Select a unit to bodyswap to:", COLOR_WHITE,
+        choices, function(id, choice)
+            swapAdvUnit(choice.unit)
+        end, nil, nil, true)
+end
+
+function getHistoricalSlayer(unit)
+    local histFig = unit.hist_figure_id ~= -1 and df.historical_figure.find(unit.hist_figure_id)
+    if not histFig then
+        return
+    end
+
+    local deathEvents = df.global.world.history.events_death
+    for i = #deathEvents - 1, 0, -1 do
+        local event = deathEvents[i] --as:df.history_event_hist_figure_diedst
+        if event.victim_hf == unit.hist_figure_id then
+            return df.historical_figure.find(event.slayer_hf)
+        end
+    end
+end
+
+if args.linger then
+    local adventurer = dfhack.world.getAdventurer()
+    if not adventurer.flags2.killed then
+        qerror("Your adventurer hasn't died yet!")
+    end
+
+    local slayerHistFig = getHistoricalSlayer(adventurer)
+    local slayer = slayerHistFig and df.unit.find(slayerHistFig.unit_id)
+    if not slayer then
+        slayer = df.unit.find(adventurer.relationship_ids.LastAttacker)
+    end
+    if not slayer then
+        qerror("Killer not found!")
+    elseif slayer.flags2.killed then
+        local slayerName = ""
+        if slayer.name.has_name then
+            slayerName = ", " .. dfhack.TranslateName(slayer.name) .. ","
+        end
+        qerror("Your slayer" .. slayerName .. " is dead!")
+    end
+
+    swapAdvUnit(slayer)
+    return
 end
 
 if not dfhack_flags.module then
@@ -137,7 +230,8 @@ if not dfhack_flags.module then
         if args.unit then
             qerror("Invalid unit id: " .. args.unit)
         else
-            qerror("Target unit not specified!")
+            swapAdvUnitPrompt()
+            return
         end
     end
     swapAdvUnit(unit)
