@@ -4,14 +4,10 @@ local utils = require 'utils'
 
 local makeown = reqscript('makeown')
 
-local validArgs = utils.invert({
-    'unit',
-    'linger',
-    'help'
-})
-local args = utils.processArgs({ ... }, validArgs)
+local args = {...}
+local command = table.remove(args, 1)
 
-if args.help then
+if command == 'help' then
     print(dfhack.script_help())
     return
 end
@@ -194,7 +190,7 @@ function getHistoricalSlayer(unit)
     end
 end
 
-if args.linger then
+if command == 'linger' then
     local adventurer = dfhack.world.getAdventurer()
     if not adventurer.flags2.killed then
         qerror("Your adventurer hasn't died yet!")
@@ -224,11 +220,11 @@ if not dfhack_flags.module then
         qerror("This script can only be used in adventure mode!")
     end
 
-    local unit = args.unit and df.unit.find(tonumber(args.unit)) or dfhack.gui.getSelectedUnit()
+    local unit = command == 'unit' and df.unit.find(tonumber(args[1])) or dfhack.gui.getSelectedUnit()
     if not unit then
         print("Enter the following if you require assistance: help bodyswap")
-        if args.unit then
-            qerror("Invalid unit id: " .. args.unit)
+        if command == 'unit' then
+            qerror("Invalid unit id: " .. tonumber(args[1]))
         else
             swapAdvUnitPrompt()
             return

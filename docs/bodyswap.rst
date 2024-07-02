@@ -13,8 +13,8 @@ Usage
 
 ::
 
-    bodyswap [--unit <id>]
-    bodyswap [--linger]
+    bodyswap unit <id>
+    bodyswap linger
 
 If no specific unit id is specified, the target unit is the one selected in the
 user interface, such as by opening the unit's status screen or viewing its
@@ -34,7 +34,7 @@ Examples
 
 ``bodyswap``
     Takes control of the selected unit, or brings up a list of swappable units if no unit is selected.
-``bodyswap --unit 42``
+``bodyswap unit 42``
     Takes control of unit with id 42.
-``bodyswap --linger``
+``bodyswap linger``
     Takes control of your killer when you die
