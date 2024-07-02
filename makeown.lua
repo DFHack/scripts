@@ -3,9 +3,10 @@
 local utils = require('utils')
 
 -- List of professions to convert From-To
-local convert_professions = {}
-convert_professions[df.profession.MERCHANT] = df.profession.TRADER
-convert_professions[df.profession.THIEF] = df.profession.STANDARD
+local convert_professions = {
+    [df.profession.MERCHANT]=df.profession.TRADER,
+    [df.profession.THIEF]=df.profession.STANDARD,
+}
 
 local function get_translation(race_id)
     local race_name = df.global.world.raws.creatures.all[race_id].creature_id
@@ -81,8 +82,8 @@ local function fix_unit(unit)
 
     unit.civ_id = df.global.plotinfo.civ_id;
 
-    if convert_professions[unit.profession] then unit.profession2 = df.profession.STANDARD end
-    if convert_professions[unit.profession2] then unit.profession2 = df.profession.STANDARD end
+    if convert_professions[unit.profession] then unit.profession = convert_professions[unit.profession] end
+    if convert_professions[unit.profession2] then unit.profession2 = convert_professions[unit.profession2] end
 end
 
 local function fix_army(unit)
