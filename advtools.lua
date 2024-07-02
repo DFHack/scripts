@@ -1,9 +1,11 @@
 --@ module=true
 
 local convo = reqscript('internal/advtools/convo')
+local shooting = reqscript('internal/advtools/shooting')
 
 OVERLAY_WIDGETS = {
     conversation=convo.AdvRumorsOverlay,
+    shooting=shooting.FixShootingOverlay,
 }
 
 if dfhack_flags.module then
