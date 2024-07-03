@@ -443,7 +443,7 @@ local function stacks_add_items(stockpile, stacks, items, container, ind)
 
         -- item type in list of included types?
         if stack_type and not item:isSand() and not item:isPlaster() and isValidPart(item) then
-            if not isRestrictedItem(item) and item.stack_size <= stack_type.max_stack_qty then
+            if not isRestrictedItem(item) and (item.stack_size <= stack_type.max_stack_qty) then
 
                 stacks_add_item(stockpile, stacks, stack_type, item, container)
 
@@ -701,6 +701,10 @@ local function merge_stacks(stacks)
                 if item.after_size == 0 then
                     log(4, '      removing')
                     dfhack.items.remove(item.item)
+                    if dfhack.world.isAdventureMode() and df.global.game.main_interface.adventure.inventory.open then
+                        -- refresh the inventory to prevent stale item references
+                        df.global.game.main_interface.adventure.inventory.open = false
+                    end
 
                 -- some items left in stack
                 elseif not typesThatUseMaterial[df.item_type[stack_type.type_id]] and item.before_size ~= item.after_size then
