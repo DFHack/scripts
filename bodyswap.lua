@@ -1,13 +1,21 @@
 --@ module = true
-local dialogs = require 'gui.dialogs'
-local utils = require 'utils'
-
+local dialogs = require('gui.dialogs')
+local utils = require('utils')
+local argparse = require('argparse')
 local makeown = reqscript('makeown')
 
-local args = {...}
-local command = table.remove(args, 1)
+local args = { ... }
+local options = {
+    help = false,
+    unit = -1,
+}
 
-if command == 'help' then
+local positionals = argparse.processArgsGetopt(args, {
+    {'h', 'help', handler = function() options.help = true end},
+    {'u', 'unit', handler = function(arg) options.unit = tonumber(arg) end, hasArg = true},
+})
+
+if positionals[1] == 'help' or options.help then
     print(dfhack.script_help())
     return
 end
@@ -106,6 +114,18 @@ local function reveal_tile(pos)
     des.pile = true  -- reveal the tile on the map
 end
 
+local function reveal_around(pos)
+    reveal_tile(xyz2pos(pos.x-1, pos.y-1, pos.z))
+    reveal_tile(xyz2pos(pos.x,   pos.y-1, pos.z))
+    reveal_tile(xyz2pos(pos.x+1, pos.y-1, pos.z))
+    reveal_tile(xyz2pos(pos.x-1, pos.y,   pos.z))
+    reveal_tile(pos)
+    reveal_tile(xyz2pos(pos.x+1, pos.y,   pos.z))
+    reveal_tile(xyz2pos(pos.x-1, pos.y+1, pos.z))
+    reveal_tile(xyz2pos(pos.x,   pos.y+1, pos.z))
+    reveal_tile(xyz2pos(pos.x+1, pos.y+1, pos.z))
+end
+
 function swapAdvUnit(newUnit)
     if not newUnit then
         qerror('Target unit not specified!')
@@ -132,18 +152,9 @@ function swapAdvUnit(newUnit)
     df.global.world.units.adv_unit = newUnit
     oldUnit.idle_area:assign(oldUnit.pos)
     local pos = xyz2pos(dfhack.units.getPosition(newUnit))
-
     -- reveal the tiles around the bodyswapped unit
-    reveal_tile(xyz2pos(pos.x-1, pos.y-1, pos.z))
-    reveal_tile(xyz2pos(pos.x,   pos.y-1, pos.z))
-    reveal_tile(xyz2pos(pos.x+1, pos.y-1, pos.z))
-    reveal_tile(xyz2pos(pos.x-1, pos.y,   pos.z))
-    reveal_tile(pos)
-    reveal_tile(xyz2pos(pos.x+1, pos.y,   pos.z))
-    reveal_tile(xyz2pos(pos.x-1, pos.y+1, pos.z))
-    reveal_tile(xyz2pos(pos.x,   pos.y+1, pos.z))
-    reveal_tile(xyz2pos(pos.x+1, pos.y+1, pos.z))
-
+    reveal_around(pos)
+    -- Focus on the revealed pos
     dfhack.gui.revealInDwarfmodeMap(pos, true)
 end
 
@@ -190,7 +201,7 @@ function getHistoricalSlayer(unit)
     end
 end
 
-if command == 'linger' then
+if positionals[1] == 'linger' then
     local adventurer = dfhack.world.getAdventurer()
     if not adventurer.flags2.killed then
         qerror("Your adventurer hasn't died yet!")
@@ -220,11 +231,11 @@ if not dfhack_flags.module then
         qerror("This script can only be used in adventure mode!")
     end
 
-    local unit = command == 'unit' and df.unit.find(tonumber(args[1])) or dfhack.gui.getSelectedUnit()
+    local unit = options.unit ~= -1 and df.unit.find(options.unit) or dfhack.gui.getSelectedUnit()
     if not unit then
         print("Enter the following if you require assistance: help bodyswap")
-        if command == 'unit' then
-            qerror("Invalid unit id: " .. tonumber(args[1]))
+        if options.unit ~= -1 then
+            qerror("Invalid unit id: " .. options.unit)
         else
             swapAdvUnitPrompt()
             return
