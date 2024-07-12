@@ -75,16 +75,21 @@ end
 local function showNemesisPrompt(advSetUpScreen)
     local choices = {}
     for i, nemesis in ipairs(df.global.world.nemesis.all) do
-        if nemesis.figure and not nemesis.flags.ADVENTURER then -- these are already available for unretiring
+        if nemesis.figure then
             local histFig = nemesis.figure
             if (histFig.died_year == -1 or histFig.flags.ghost or options.dead) and
                 not histFig.flags.deity and
                 not histFig.flags.force
             then
+                if histFig.died_year == -1 and nemesis.flags.ADVENTURER then
+                    -- already available for unretiring
+                    goto continue
+                end
                 local name = getHistfigShortSummary(histFig)
                 table.insert(choices, { text = name, nemesis = nemesis, search_key = name:lower(), idx = i })
             end
         end
+        ::continue::
     end
 
     dialogs.ListBox{
