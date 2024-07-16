@@ -88,6 +88,7 @@ end
 
 local function fix_army(unit)
     -- Disassociate them from their army controller
+    -- TODO: Check of there is a membership list in the army itself that we need to scrub
     if unit.enemy.army_controller then
         if unit.enemy.army_controller.commander_hf == unit.hist_figure_id then
             unit.enemy.army_controller.commander_hf = -1
@@ -95,11 +96,11 @@ local function fix_army(unit)
         unit.enemy.army_controller_id = -1
         unit.enemy.army_controller = nil
     end
-    fixUnitEnemyStatus(unit)
+    clearUnitEnemyStatus(unit)
 end
 
 -- Also used by the script fix/loyaltycascade
-function fixUnitEnemyStatus(unit)
+function clearUnitEnemyStatus(unit)
     if unit.enemy.enemy_status_slot ~= -1 then
         local status_cache = df.global.world.enemy_status_cache
         local status_slot = unit.enemy.enemy_status_slot

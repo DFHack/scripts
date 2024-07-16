@@ -76,7 +76,7 @@ local function fixUnit(unit)
     end
 
     if fixed then 
-        makeown.fixUnitEnemyStatus(unit)
+        makeown.clearUnitEnemyStatus(unit)
     end
 
     return false
