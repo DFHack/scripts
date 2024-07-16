@@ -12,7 +12,7 @@ local options = {
 
 local positionals = argparse.processArgsGetopt(args, {
     {'h', 'help', handler = function() options.help = true end},
-    {'u', 'unit', handler = function(arg) options.unit = tonumber(arg) end, hasArg = true},
+    {'u', 'unit', handler = function(arg) options.unit = argparse.nonnegativeInt(arg, 'unit') end, hasArg = true},
 })
 
 if positionals[1] == 'help' or options.help then
@@ -231,7 +231,7 @@ if not dfhack_flags.module then
         qerror("This script can only be used in adventure mode!")
     end
 
-    local unit = options.unit ~= -1 and df.unit.find(options.unit) or dfhack.gui.getSelectedUnit()
+    local unit = options.unit == -1 and dfhack.gui.getSelectedUnit(true) or df.unit.find(options.unit)
     if not unit then
         print("Enter the following if you require assistance: help bodyswap")
         if options.unit ~= -1 then

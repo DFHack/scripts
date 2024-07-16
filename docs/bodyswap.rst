@@ -13,7 +13,7 @@ Usage
 
 ::
 
-    bodyswap [unit <id>]
+    bodyswap [--unit <id>]
     bodyswap linger
 
 If no specific unit id is specified, the target unit is the one selected in the
