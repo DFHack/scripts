@@ -185,6 +185,28 @@ function getHistoricalSlayer(unit)
     end
 end
 
+function lingerAdvUnit(unit)
+    if not unit.flags2.killed then
+        qerror("Target unit hasn't died yet!")
+    end
+
+    local slayerHistFig = getHistoricalSlayer(unit)
+    local slayer = slayerHistFig and df.unit.find(slayerHistFig.unit_id)
+    if not slayer then
+        slayer = df.unit.find(unit.relationship_ids.LastAttacker)
+    end
+    if not slayer then
+        qerror("Slayer not found!")
+    elseif slayer.flags2.killed then
+        local slayerName = ""
+        if slayer.name.has_name then
+            slayerName = ", " .. dfhack.TranslateName(slayer.name) .. ","
+        end
+        qerror("The unit's slayer" .. slayerName .. " is dead!")
+    end
+
+    swapAdvUnit(slayer)
+end
 
 if not dfhack_flags.module then
     if df.global.gamemode ~= df.game_mode.ADVENTURE then
@@ -208,27 +230,7 @@ if not dfhack_flags.module then
     end
 
     if positionals[1] == 'linger' then
-        local adventurer = dfhack.world.getAdventurer()
-        if not adventurer.flags2.killed then
-            qerror("Your adventurer hasn't died yet!")
-        end
-
-        local slayerHistFig = getHistoricalSlayer(adventurer)
-        local slayer = slayerHistFig and df.unit.find(slayerHistFig.unit_id)
-        if not slayer then
-            slayer = df.unit.find(adventurer.relationship_ids.LastAttacker)
-        end
-        if not slayer then
-            qerror("Killer not found!")
-        elseif slayer.flags2.killed then
-            local slayerName = ""
-            if slayer.name.has_name then
-                slayerName = ", " .. dfhack.TranslateName(slayer.name) .. ","
-            end
-            qerror("Your slayer" .. slayerName .. " is dead!")
-        end
-
-        swapAdvUnit(slayer)
+        lingerAdvUnit(dfhack.world.getAdventurer())
         return
     end
 
