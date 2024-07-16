@@ -4,22 +4,6 @@ local utils = require('utils')
 local argparse = require('argparse')
 local makeown = reqscript('makeown')
 
-local args = { ... }
-local options = {
-    help = false,
-    unit = -1,
-}
-
-local positionals = argparse.processArgsGetopt(args, {
-    {'h', 'help', handler = function() options.help = true end},
-    {'u', 'unit', handler = function(arg) options.unit = argparse.nonnegativeInt(arg, 'unit') end, hasArg = true},
-})
-
-if positionals[1] == 'help' or options.help then
-    print(dfhack.script_help())
-    return
-end
-
 local function setNewAdvNemFlags(nem)
     nem.flags.ACTIVE_ADVENTURER = true
     nem.flags.ADVENTURER = true
@@ -201,34 +185,51 @@ function getHistoricalSlayer(unit)
     end
 end
 
-if positionals[1] == 'linger' then
-    local adventurer = dfhack.world.getAdventurer()
-    if not adventurer.flags2.killed then
-        qerror("Your adventurer hasn't died yet!")
-    end
-
-    local slayerHistFig = getHistoricalSlayer(adventurer)
-    local slayer = slayerHistFig and df.unit.find(slayerHistFig.unit_id)
-    if not slayer then
-        slayer = df.unit.find(adventurer.relationship_ids.LastAttacker)
-    end
-    if not slayer then
-        qerror("Killer not found!")
-    elseif slayer.flags2.killed then
-        local slayerName = ""
-        if slayer.name.has_name then
-            slayerName = ", " .. dfhack.TranslateName(slayer.name) .. ","
-        end
-        qerror("Your slayer" .. slayerName .. " is dead!")
-    end
-
-    swapAdvUnit(slayer)
-    return
-end
 
 if not dfhack_flags.module then
     if df.global.gamemode ~= df.game_mode.ADVENTURE then
         qerror("This script can only be used in adventure mode!")
+    end
+
+    local options = {
+        help = false,
+        unit = -1,
+    }
+
+    local args = { ... }
+    local positionals = argparse.processArgsGetopt(args, {
+        {'h', 'help', handler = function() options.help = true end},
+        {'u', 'unit', handler = function(arg) options.unit = argparse.nonnegativeInt(arg, 'unit') end, hasArg = true},
+    })
+
+    if positionals[1] == 'help' or options.help then
+        print(dfhack.script_help())
+        return
+    end
+
+    if positionals[1] == 'linger' then
+        local adventurer = dfhack.world.getAdventurer()
+        if not adventurer.flags2.killed then
+            qerror("Your adventurer hasn't died yet!")
+        end
+
+        local slayerHistFig = getHistoricalSlayer(adventurer)
+        local slayer = slayerHistFig and df.unit.find(slayerHistFig.unit_id)
+        if not slayer then
+            slayer = df.unit.find(adventurer.relationship_ids.LastAttacker)
+        end
+        if not slayer then
+            qerror("Killer not found!")
+        elseif slayer.flags2.killed then
+            local slayerName = ""
+            if slayer.name.has_name then
+                slayerName = ", " .. dfhack.TranslateName(slayer.name) .. ","
+            end
+            qerror("Your slayer" .. slayerName .. " is dead!")
+        end
+
+        swapAdvUnit(slayer)
+        return
     end
 
     local unit = options.unit == -1 and dfhack.gui.getSelectedUnit(true) or df.unit.find(options.unit)
