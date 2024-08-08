@@ -369,10 +369,7 @@ function TextEditorView:copy()
         local curr_line = self.text:sub(
             self:lineStartOffset(),
             self:lineEndOffset()
-        )
-        if curr_line:sub(-1,-1) ~= NEWLINE then
-            curr_line = curr_line .. NEWLINE
-        end
+        ):match('^(.-)\n*$')
 
         self:setClipboard(curr_line)
 
