@@ -28,6 +28,8 @@ Template for new versions:
 
 ## New Tools
 
+- `idle-crafting`: Allow dwarfs to automatically satisfy their need to craft objects.
+
 ## New Features
 
 ## Fixes
