@@ -20,7 +20,7 @@ For items, it exports:
 #. Decorated name (e.g., "☼«☼Chalk Statue of Dakas☼»☼").
 #. Full description from the item's view sheet.
 
-The script works for most items with in-game descriptions and names and for units in various states and roles. 
+The script works for most items with in-game descriptions and names and for units in various states and roles.
 
 Usage
 -----
@@ -70,7 +70,7 @@ Example output for a selected unit Lokum Alnisendok with ID 12345:
 Setting up custom keybindings
 -----------------------------
 
-You can create custom keybindings to run the script faster without typing the full command each time. 
+You can create custom keybindings to run the script faster without typing the full command each time.
 You can run a command like this in gui/launcher to make it active for the current session, or add it to "dfhack-config/init/dfhack.init" to register it at startup for future game sessions:
 
    keybinding add Ctrl-Shift-J@dwarfmode/ViewSheets/UNIT|dwarfmode/ViewSheets/ITEM "json"

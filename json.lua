@@ -67,9 +67,9 @@ local function clickAndLog(screen, windowSize, xOffset, y, logTitle, rawStringAc
     gps.mouse_x = windowSize - xOffset
     gps.mouse_y = y
     gui.simulateInput(screen, '_MOUSE_L')
-    
+
     local raw_data = rawStringAccessor()
-    
+
     data[logTitle] = {}
     if type(raw_data) == 'string' and raw_data ~= '' then
         data[logTitle] = reformat(dfhack.df2utf(raw_data))
@@ -104,7 +104,7 @@ local function getSexString(sex)
   end
 
   local function get_skill_rating_name(rating)
-    local rating_table = { 
+    local rating_table = {
         [0] = "Dabbling",
         [1] = "Novice",
         [2] = "Adequate",
@@ -242,7 +242,7 @@ elseif unit then
     data['isDemon'] = dfhack.units.isDemon(unit)
     data['isDanger'] = {}
     data['isDanger'] = dfhack.units.isDanger(unit)
-    
+
     data['isAnimal'] = {}
     data['isAnimal'] = dfhack.units.isAnimal(unit)
     if data['isAnimal'] then
@@ -295,17 +295,17 @@ elseif unit then
     clickAndLog(screen, windowSize, thoughts_x_offset, thoughts_y, 'thoughts', function()
         return mi.view_sheets.raw_thought_str
     end)
-    
+
     local memories_x_offset, memories_y = get_offsets(is_big_portrait, 'memories')
     clickAndLog(screen, windowSize, memories_x_offset, memories_y, 'memories', function()
         return mi.view_sheets.thoughts_raw_memory_str
     end)
-    
+
     local current_thought_x_offset, current_thought_y = get_offsets(is_big_portrait, 'current_thought')
     clickAndLog(screen, windowSize, current_thought_x_offset, current_thought_y, 'current_thought', function()
         return mi.view_sheets.raw_current_thought
     end)
-    
+
     filename = 'unit_' .. unit.id .. '.json'
 end
 
