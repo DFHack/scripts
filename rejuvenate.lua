@@ -34,7 +34,7 @@ function rejuvenate(unit, force, dry_run, age)
                 if not v.id == unit.id then
                     table.insert(leftoverUnits, v)
                 end
-            end            
+            end
             -- create a shifted table of the leftover units to make up for lua tables starting with index 1 and the game starting with index 0
             for i = 0, #leftoverUnits - 1, 1 do
                 local x = i+1
@@ -49,10 +49,9 @@ function rejuvenate(unit, force, dry_run, age)
             unit.profession2 = df.profession.STANDARD
             unit.idle_area_type = 26
             unit.mood = -1
-
             -- let the mom know she isn't carrying anyone anymore
             local motherUnitId = unit.relationship_ids.Mother
-            df.unit.find(motherUnitId).flags1.ridden = false                     
+            df.unit.find(motherUnitId).flags1.ridden = false
         end
         unit.profession = df.profession.STANDARD
     end
