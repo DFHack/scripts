@@ -24,6 +24,36 @@ function rejuvenate(unit, force, dry_run, age)
         unit.old_year = new_birth_year + 160
     end
     if unit.profession == df.profession.BABY or unit.profession == df.profession.CHILD then
+        if unit.profession == df.profession.BABY then
+            local leftoverUnits = {}
+            local shiftedLeftoverUnits = {}
+            -- create a copy
+            local babyUnits = df.global.world.units.other.ANY_BABY
+            -- create a new table with the units that aren't being removed in this iteration
+            for _, v in ipairs(babyUnits) do
+                if not v.id == unit.id then
+                    table.insert(leftoverUnits, v)
+                end
+            end            
+            -- create a shifted table of the leftover units to make up for lua tables starting with index 1 and the game starting with index 0
+            for i = 0, #leftoverUnits - 1, 1 do
+                local x = i+1
+                shiftedLeftoverUnits[i] = leftoverUnits[x]
+            end
+            -- copy the leftover units back to the game table
+            df.global.world.units.other.ANY_BABY = shiftedLeftoverUnits
+            -- set extra flags to defaults
+            unit.flags1.rider = false
+            unit.relationship_ids.RiderMount = -1
+            unit.mount_type = 0
+            unit.profession2 = df.profession.STANDARD
+            unit.idle_area_type = 26
+            unit.mood = -1
+
+            -- let the mom know she isn't carrying anyone anymore
+            local motherUnitId = unit.relationship_ids.Mother
+            df.unit.find(motherUnitId).flags1.ridden = false                     
+        end
         unit.profession = df.profession.STANDARD
     end
     print(name .. ' is now ' .. age .. ' years old and will live to at least 160')
