@@ -215,7 +215,15 @@ local function handle_eggs(eggs)
     local current_eggs = eggs.stack_size
 
     local total_count = current_eggs
-    total_count = total_count + count_forbidden_eggs_for_race_in_claimed_nestobxes(race_creature_id) + count_live_animals(race_creature_id)
+    total_count = total_count + count_forbidden_eggs_for_race_in_claimed_nestobxes(race_creature_id)
+
+    if total_count - current_eggs < max_eggs then
+        print_detalis(("Total count for %s only existing eggs is %s, about to count life animals if enabled"):format(race_creature_id, total_count - current_eggs))
+        total_count = total_count + count_live_animals(race_creature_id)
+    else
+        print_detalis(("Total count for %s eggs only is %s greater than maximum %s, no need to count life animals"):format(race_creature_id, total_count, max_eggs))
+        return
+    end
 
     print_detalis(("Total count for %s eggs is %s"):format(race_creature_id, total_count))
 
