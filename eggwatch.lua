@@ -7,7 +7,7 @@ local print_prefix = "eggwatch: "
 
 enabled = enabled or false
 default_table = {}
-default_table.DEFAULT = 10
+default_table.DEFAULT = {10, false, false}
 function isEnabled()
     return enabled
 end
@@ -35,12 +35,15 @@ end
 if dfhack_flags.module then
     return
 end
+
 local function print_local(text)
     print(print_prefix .. text)
 end
+
 local function handle_error(text)
     qerror(text)
 end
+
 local function print_status()
     print_local(("eggwatch is currently %s."):format(enabled and "enabled" or "disabled"))
     if verbose then
@@ -135,16 +138,71 @@ local function count_forbidden_eggs_for_race_in_claimed_nestobxes(race_creature_
     print_detalis(("end count_forbidden_eggs_for_race_in_claimed_nestobxes"))
     return eggs_count
 end
+
 local function get_max_eggs_for_race(race_creature_id)
     for k, v in pairs(target_eggs_count_per_race) do
         if k == race_creature_id then
-            return v
+            return v[1]
         end
     end
     target_eggs_count_per_race[race_creature_id] = target_eggs_count_per_race.DEFAULT
     persist_state()
-    return target_eggs_count_per_race[race_creature_id]
+    return target_eggs_count_per_race[race_creature_id][1]
 end
+
+local function count_children_for_race(race_creature_id)
+    for k, v in pairs(target_eggs_count_per_race) do
+        if k == race_creature_id then
+            return v[2]
+        end
+    end
+    target_eggs_count_per_race[race_creature_id] = target_eggs_count_per_race.DEFAULT
+    return target_eggs_count_per_race[race_creature_id][2]
+end
+
+local function count_adults_for_race(race_creature_id)
+    for k, v in pairs(target_eggs_count_per_race) do
+        if k == race_creature_id then
+            return v[3]
+        end
+    end
+    target_eggs_count_per_race[race_creature_id] = target_eggs_count_per_race.DEFAULT
+    return target_eggs_count_per_race[race_creature_id][3]
+end
+
+local function is_valid_animal(unit)
+    return unit and
+        dfhack.units.isActive(unit) and
+        dfhack.units.isAnimal(unit) and
+        dfhack.units.isFortControlled(unit) and
+        dfhack.units.isTame(unit) and
+        not dfhack.units.isDead(unit)
+end
+local function count_live_animals(race_creature_id)
+    local count_adults = count_adults_for_race(race_creature_id)
+    if count_adults then print_detalis(('we are counting adults for %s'):format(race_creature_id)) end     
+    local count_children = count_children_for_race(race_creature_id)
+    if count_children then print_detalis(('we are counting children and babies for %s'):format(race_creature_id)) end 
+    
+    local count = 0
+    if not count_adults and not count_children then
+        return count
+    end
+--dfhack.units.isAdult(unit)
+    for _,unit in ipairs(df.global.world.units.active) do
+        if race_creature_id ==  df.creature_raw.find(unit.race).creature_id
+        and is_valid_animal(unit)
+        and ( (count_adults and dfhack.units.isAdult(unit)) 
+            or (count_children and ( dfhack.units.isChild(unit) or dfhack.units.isBaby(unit)))
+            ) then
+            count = count + 1
+        end
+    end
+    print_detalis(('found %s life animals'):format(count))
+    return count
+end 
+
+
 local function handle_eggs(eggs)
     print_detalis(("start handle_eggs"))
     if not eggs.egg_flags.fertile then
@@ -157,7 +215,7 @@ local function handle_eggs(eggs)
     local current_eggs = eggs.stack_size
 
     local total_count = current_eggs
-    total_count = total_count + count_forbidden_eggs_for_race_in_claimed_nestobxes(race_creature_id)
+    total_count = total_count + count_forbidden_eggs_for_race_in_claimed_nestobxes(race_creature_id) + count_live_animals(race_creature_id)
 
     print_detalis(("Total count for %s eggs is %s"):format(race_creature_id, total_count))
 
@@ -201,6 +259,7 @@ local function check_item_created(item_id)
     end
     handle_eggs(item)
 end
+
 local function do_enable()
     enabled = true
     eventful.enableEvent(eventful.eventType.ITEM_CREATED, EVENT_FREQ)
@@ -221,7 +280,9 @@ local function validate_creature_id(creature_id)
     return false
 end
 
-local function set_target(target_race, target_count)
+local function set_target(target_race, target_count, count_children, count_adult)
+local stringtoboolean={ ["true"]=true, ["false"]=false, ["1"] = true , ["0"] =  false , ["Y"] = true , ["N"] =  false}
+
     if target_race == nil or target_race == "" then
         handle_error('must specify "DEFAULT" or valid creature_id')
     end
@@ -230,13 +291,14 @@ local function set_target(target_race, target_count)
         handle_error("No valid target count specified")
     end
     if target_race_upper == "DEFAULT" or validate_creature_id(target_race_upper) then
-        target_eggs_count_per_race[target_race_upper] = tonumber(target_count)
+        target_eggs_count_per_race[target_race_upper] = {tonumber(target_count), stringtoboolean[count_children] or false, stringtoboolean[count_adult] or false}
     else
         handle_error('must specify "DEFAULT" or valid creature_id')
     end
 
     print_local(dump(target_eggs_count_per_race))
 end
+
 function dump(o)
     if type(o) == "table" then
         local s = "{ "
@@ -284,7 +346,7 @@ elseif command == "disable" then
     do_disable()
     print_status()
 elseif command == "target" then
-    set_target(positionals[2], positionals[3])
+    set_target(positionals[2], positionals[3], positionals[4],  positionals[5])
     print_status()
 elseif command == "verbose" then
     verbose = not verbose
@@ -295,5 +357,7 @@ target_eggs_count_per_race = default_table
 elseif not command or command == "status" then
     print_status()
     print_local(dump(target_eggs_count_per_race))
+else 
+    handle_error(('Command "%s" is not recognized'):format(command))
 end
 persist_state()
