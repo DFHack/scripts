@@ -180,10 +180,10 @@ local function is_valid_animal(unit)
 end
 local function count_live_animals(race_creature_id)
     local count_adults = count_adults_for_race(race_creature_id)
-    if count_adults then print_detalis(('we are counting adults for %s'):format(race_creature_id)) end     
+    if count_adults then print_detalis(('we are counting adults for %s'):format(race_creature_id)) end
     local count_children = count_children_for_race(race_creature_id)
-    if count_children then print_detalis(('we are counting children and babies for %s'):format(race_creature_id)) end 
-    
+    if count_children then print_detalis(('we are counting children and babies for %s'):format(race_creature_id)) end
+
     local count = 0
     if not count_adults and not count_children then
         return count
@@ -192,7 +192,7 @@ local function count_live_animals(race_creature_id)
     for _,unit in ipairs(df.global.world.units.active) do
         if race_creature_id ==  df.creature_raw.find(unit.race).creature_id
         and is_valid_animal(unit)
-        and ( (count_adults and dfhack.units.isAdult(unit)) 
+        and ( (count_adults and dfhack.units.isAdult(unit))
             or (count_children and ( dfhack.units.isChild(unit) or dfhack.units.isBaby(unit)))
             ) then
             count = count + 1
@@ -200,7 +200,7 @@ local function count_live_animals(race_creature_id)
     end
     print_detalis(('found %s life animals'):format(count))
     return count
-end 
+end
 
 
 local function handle_eggs(eggs)
@@ -248,7 +248,7 @@ local function handle_eggs(eggs)
             )
         )
     end
-    
+
     print_detalis(("end handle_eggs"))
 end
 
@@ -357,7 +357,7 @@ target_eggs_count_per_race = default_table
 elseif not command or command == "status" then
     print_status()
     print_local(dump(target_eggs_count_per_race))
-else 
+else
     handle_error(('Command "%s" is not recognized'):format(command))
 end
 persist_state()
