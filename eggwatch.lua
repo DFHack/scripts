@@ -2,7 +2,7 @@ local argparse = require("argparse")
 local eventful = require("plugins.eventful")
 
 local GLOBAL_KEY = "eggwatch"
-local EVENT_FREQ = 5
+local EVENT_FREQ = 7
 local print_prefix = "eggwatch: "
 
 enabled = enabled or false
