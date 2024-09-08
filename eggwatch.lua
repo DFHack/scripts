@@ -7,15 +7,30 @@ local utils = require('utils')
 local GLOBAL_KEY = "eggwatch"
 local EVENT_FREQ = 7
 local print_prefix = "eggwatch: "
+local default_table = {10, false, false}
+local stringtoboolean={ ["true"]=true, ["false"]=false, ["1"] = true , ["0"] =  false , ["Y"] = true , ["N"] =  false}
 
-local default_table = {}
-default_table.DEFAULT = {10, false, false}
+function dump(o)
+    if type(o) == "table" then
+        local s = "{ "
+        for k, v in pairs(o) do
+            if type(k) ~= "number" then
+                k = '"' .. k .. '"'
+            end
+            s = s .. "[" .. k .. "] = " .. dump(v) .. ","
+        end
+        return s .. "} "
+    else
+        return tostring(o)
+    end
+end
 
 local function get_default_state()
     return {
         enabled = false,
         verbose = false,
-        target_eggs_count_per_race = default_table
+        default = default_table,
+        target_eggs_count_per_race = {}
     }
 end
 
@@ -32,9 +47,17 @@ end
 local function handle_error(text)
     qerror(text)
 end
-
+local function format_target_count_row (header, row)
+return header..': ' .. 'target count: ' .. row[1] .. '; count children: ' .. tostring(row[2]) .. '; count adults: ' .. tostring(row[3])
+end
 local function print_status()
     print_local(("eggwatch is currently %s."):format(state.enabled and "enabled" or "disabled"))
+    print_local(format_target_count_row('Default', state.default))
+    if state.target_eggs_count_per_race ~= nil then
+         for k, v in pairs(state.target_eggs_count_per_race) do
+         print_local(format_target_count_row(df.global.world.raws.creatures.all[k].creature_id, v))
+         end
+    end
     if state.verbose then
         print_local("eggwatch is in verbose mode")
     end
@@ -46,15 +69,39 @@ local function print_detalis(details)
     end
 end
 
+
 local function persist_state()
-    dfhack.persistent.saveSiteData(GLOBAL_KEY, state)
+local state_to_persist = {}
+state_to_persist.enabled = state.enabled
+state_to_persist.verbose = state.verbose
+state_to_persist.default = state.default
+state_to_persist.target_eggs_count_per_race = {}
+if state.target_eggs_count_per_race ~= nil then
+    for k, v in pairs(state.target_eggs_count_per_race) do
+        state_to_persist.target_eggs_count_per_race[tostring(k)]= v
+    end
+end
+dfhack.persistent.saveSiteData(GLOBAL_KEY, state_to_persist)
 end
 
 --- Load the saved state of the script
 local function load_state()
     -- load persistent data
-    state = get_default_state()
-    utils.assign(state, dfhack.persistent.getSiteData(GLOBAL_KEY, state))
+    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, persisted_data)
+    state = {}
+    if  persisted_data ~= nil then
+        state.enabled = persisted_data.enabled
+        state.verbose = persisted_data.verbose
+        state.default = persisted_data.default
+        state.target_eggs_count_per_race = {}
+        if persisted_data.target_eggs_count_per_race ~= nil then
+            for k, v in pairs(persisted_data.target_eggs_count_per_race) do
+                state.target_eggs_count_per_race[tonumber(k)]= v
+            end
+        end
+    else
+        state = get_default_state()
+    end
 end
 
 local function update_event_listener()
@@ -143,7 +190,7 @@ end
 -- dfhack.items.moveToContainer(created_egg_stack, find_current_nestbox(original_eggs))
 -- end
 
-local function count_forbidden_eggs_for_race_in_claimed_nestobxes(race_creature_id)
+local function count_forbidden_eggs_for_race_in_claimed_nestobxes(race)
     print_detalis(("start count_forbidden_eggs_for_race_in_claimed_nestobxes"))
     local eggs_count = 0
     for _, nestbox in ipairs(df.global.world.buildings.other.NEST_BOX) do
@@ -156,8 +203,8 @@ local function count_forbidden_eggs_for_race_in_claimed_nestobxes(race_creature_
                         print_detalis(("Found claimed nextbox containing items that are eggs"))
                         if nestbox_contained_item.item.egg_flags.fertile and nestbox_contained_item.item.flags.forbid then
                             print_detalis(("Eggs are fertile and forbidden"))
-                            if df.creature_raw.find(nestbox_contained_item.item.race).creature_id == race_creature_id then
-                                print_detalis(("Eggs belong to %s"):format(race_creature_id))
+                            if nestbox_contained_item.item.race == race then
+                                print_detalis(("Eggs belong to %s"):format(race))
                                 print_detalis(
                                     ("eggs_count %s + new %s"):format(
                                         eggs_count,
@@ -177,16 +224,16 @@ local function count_forbidden_eggs_for_race_in_claimed_nestobxes(race_creature_
     return eggs_count
 end
 
-local function get_config_for_race(race_creature_id)
-    print_detalis(("getting config for race %s "):format(race_creature_id))
+local function get_config_for_race(race)
+    print_detalis(("getting config for race %s "):format(race))
     for k, v in pairs(state.target_eggs_count_per_race) do
-        if k == race_creature_id then
+        if k == race then
             return v
         end
     end
-    state.target_eggs_count_per_race[race_creature_id] = state.target_eggs_count_per_race.DEFAULT
+    state.target_eggs_count_per_race[race] = state.default
     persist_state()
-    return state.target_eggs_count_per_race[race_creature_id]
+    return state.target_eggs_count_per_race[race]
 end
 
 local function is_valid_animal(unit)
@@ -198,9 +245,9 @@ local function is_valid_animal(unit)
         not dfhack.units.isDead(unit)
 end
 
-local function count_live_animals(race_creature_id, count_children, count_adults)
-    if count_adults then print_detalis(('we are counting adults for %s'):format(race_creature_id)) end
-    if count_children then print_detalis(('we are counting children and babies for %s'):format(race_creature_id)) end
+local function count_live_animals(race, count_children, count_adults)
+    if count_adults then print_detalis(('we are counting adults for %s'):format(race)) end
+    if count_children then print_detalis(('we are counting children and babies for %s'):format(race)) end
 
     local count = 0
     if not count_adults and not count_children then
@@ -208,7 +255,7 @@ local function count_live_animals(race_creature_id, count_children, count_adults
     end
 
     for _,unit in ipairs(df.global.world.units.active) do
-        if race_creature_id ==  df.creature_raw.find(unit.race).creature_id
+        if race ==  unit.race
         and is_valid_animal(unit)
         and ( (count_adults and dfhack.units.isAdult(unit))
             or (count_children and ( dfhack.units.isChild(unit) or dfhack.units.isBaby(unit)))
@@ -227,8 +274,8 @@ local function handle_eggs(eggs)
         return
     end
 
-    local race_creature_id = df.creature_raw.find(eggs.race).creature_id
-    local race_config = get_config_for_race(race_creature_id)
+    local race = eggs.race
+    local race_config = get_config_for_race(race)
     local max_eggs = race_config[1]
     local count_children = race_config[2]
     local count_adults = race_config[3]
@@ -240,17 +287,17 @@ local function handle_eggs(eggs)
     local current_eggs = eggs.stack_size
 
     local total_count = current_eggs
-    total_count = total_count + count_forbidden_eggs_for_race_in_claimed_nestobxes(race_creature_id)
+    total_count = total_count + count_forbidden_eggs_for_race_in_claimed_nestobxes(race)
 
     if total_count - current_eggs < max_eggs then
-        print_detalis(("Total count for %s only existing eggs is %s, about to count life animals if enabled"):format(race_creature_id, total_count - current_eggs))
-        total_count = total_count + count_live_animals(race_creature_id, count_children, count_adults)
+        print_detalis(("Total count for %s only existing eggs is %s, about to count life animals if enabled"):format(race, total_count - current_eggs))
+        total_count = total_count + count_live_animals(race, count_children, count_adults)
     else
-        print_detalis(("Total count for %s eggs only is %s greater than maximum %s, no need to count life animals"):format(race_creature_id, total_count, max_eggs))
+        print_detalis(("Total count for %s eggs only is %s greater than maximum %s, no need to count life animals"):format(race, total_count, max_eggs))
         return
     end
 
-    print_detalis(("Total count for %s eggs is %s"):format(race_creature_id, total_count))
+    print_detalis(("Total count for %s eggs is %s"):format(race, total_count))
 
     if total_count - current_eggs < max_eggs then
         -- ###if possible split egg stack to forbid only part below max change previous condition to total_count < max_eggs
@@ -261,11 +308,11 @@ local function handle_eggs(eggs)
         -- create_new_egg_stack(eggs, remaining_eggs, df.creature_raw.find(eggs.race), race_creature.caste[eggs.caste])
         -- eggs.stack_size = forbid_eggs
         -- eggs.flags.forbid = true
-        -- print(('Total count for %s eggs is %s over maximum %s , forbidden %s eggs out of clutch of %s.'):format(race_creature_id, total_count, max_eggs, forbid_eggs, current_eggs))
+        -- print(('Total count for %s eggs is %s over maximum %s , forbidden %s eggs out of clutch of %s.'):format(race, total_count, max_eggs, forbid_eggs, current_eggs))
         eggs.flags.forbid = true
         print_local(
             ("Previously existing  %s eggs is %s lower than maximum %s , forbidden %s new eggs."):format(
-                race_creature_id,
+                race,
                 total_count - current_eggs,
                 max_eggs,
                 current_eggs
@@ -274,7 +321,7 @@ local function handle_eggs(eggs)
     else
         print_local(
             ("Total count for %s eggs is %s over maximum %s, newly laid eggs %s , no action taken."):format(
-                race_creature_id,
+                race,
                 total_count,
                 max_eggs,
                 current_eggs
@@ -297,45 +344,34 @@ end
 local function validate_creature_id(creature_id)
     for i, c in ipairs(df.global.world.raws.creatures.all) do
         if c.creature_id == creature_id then
-            return true
+            return i
         end
     end
-    return false
+    return -1
 end
 
 local function set_target(target_race, target_count, count_children, count_adult)
-local stringtoboolean={ ["true"]=true, ["false"]=false, ["1"] = true , ["0"] =  false , ["Y"] = true , ["N"] =  false}
 
     if target_race == nil or target_race == "" then
         handle_error('must specify "DEFAULT" or valid creature_id')
     end
+
     local target_race_upper = string.upper(target_race)
+
     if tonumber(target_count) == nil or tonumber(target_count) < 0 then
         handle_error("No valid target count specified")
     end
-    if target_race_upper == "DEFAULT" or validate_creature_id(target_race_upper) then
-        state.target_eggs_count_per_race[target_race_upper] = {tonumber(target_count), stringtoboolean[count_children] or false, stringtoboolean[count_adult] or false}
+    local race = validate_creature_id(target_race_upper)
+    if target_race_upper == "DEFAULT" then
+        state.default = {tonumber(target_count), stringtoboolean[count_children] or false, stringtoboolean[count_adult] or false}
+    elseif race >= 0 then
+    print(race)
+        state.target_eggs_count_per_race[race] = {tonumber(target_count), stringtoboolean[count_children] or false, stringtoboolean[count_adult] or false}
     else
         handle_error('must specify "DEFAULT" or valid creature_id')
     end
-
-    print_local(dump(state.target_eggs_count_per_race))
 end
 
-function dump(o)
-    if type(o) == "table" then
-        local s = "{ "
-        for k, v in pairs(o) do
-            if type(k) ~= "number" then
-                k = '"' .. k .. '"'
-            end
-            s = s .. "[" .. k .. "] = " .. dump(v) .. ","
-        end
-        return s .. "} "
-    else
-        return tostring(o)
-    end
-end
 
 if df.global.gamemode ~= df.game_mode.DWARF or not dfhack.isMapLoaded() then
     dfhack.printerr("eggwatch needs a loaded fortress to work")
@@ -379,16 +415,10 @@ elseif command == "verbose" then
     state.verbose = not state.verbose
     print_status()
 elseif command == 'clear' then
-    state.target_eggs_count_per_race = default_table
-elseif command == 'hardreset' then
     state = get_default_state()
     update_event_listener()
 elseif not command or command == "status" then
     print_status()
-    -- print_local(dump(state.enabled))
-    -- print_local(dump(state.verbose))
-    -- print_local(dump(state))
-    print_local(dump(state.target_eggs_count_per_race))
 elseif (command ~= 'enable' or command ~= 'disable') and not dfhack_flags.enable then
     handle_error(('Command "%s" is not recognized'):format(command))
 end
