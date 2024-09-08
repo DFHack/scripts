@@ -139,35 +139,16 @@ local function count_forbidden_eggs_for_race_in_claimed_nestobxes(race_creature_
     return eggs_count
 end
 
-local function get_max_eggs_for_race(race_creature_id)
+local function get_config_for_race(race_creature_id)
+    print_detalis(("getting config for race %s "):format(race_creature_id))
     for k, v in pairs(target_eggs_count_per_race) do
         if k == race_creature_id then
-            return v[1]
+            return v
         end
     end
     target_eggs_count_per_race[race_creature_id] = target_eggs_count_per_race.DEFAULT
     persist_state()
-    return target_eggs_count_per_race[race_creature_id][1]
-end
-
-local function count_children_for_race(race_creature_id)
-    for k, v in pairs(target_eggs_count_per_race) do
-        if k == race_creature_id then
-            return v[2]
-        end
-    end
-    target_eggs_count_per_race[race_creature_id] = target_eggs_count_per_race.DEFAULT
-    return target_eggs_count_per_race[race_creature_id][2]
-end
-
-local function count_adults_for_race(race_creature_id)
-    for k, v in pairs(target_eggs_count_per_race) do
-        if k == race_creature_id then
-            return v[3]
-        end
-    end
-    target_eggs_count_per_race[race_creature_id] = target_eggs_count_per_race.DEFAULT
-    return target_eggs_count_per_race[race_creature_id][3]
+    return target_eggs_count_per_race[race_creature_id]
 end
 
 local function is_valid_animal(unit)
@@ -178,17 +159,16 @@ local function is_valid_animal(unit)
         dfhack.units.isTame(unit) and
         not dfhack.units.isDead(unit)
 end
-local function count_live_animals(race_creature_id)
-    local count_adults = count_adults_for_race(race_creature_id)
+
+local function count_live_animals(race_creature_id, count_children, count_adults)
     if count_adults then print_detalis(('we are counting adults for %s'):format(race_creature_id)) end
-    local count_children = count_children_for_race(race_creature_id)
     if count_children then print_detalis(('we are counting children and babies for %s'):format(race_creature_id)) end
 
     local count = 0
     if not count_adults and not count_children then
         return count
     end
---dfhack.units.isAdult(unit)
+
     for _,unit in ipairs(df.global.world.units.active) do
         if race_creature_id ==  df.creature_raw.find(unit.race).creature_id
         and is_valid_animal(unit)
@@ -202,7 +182,6 @@ local function count_live_animals(race_creature_id)
     return count
 end
 
-
 local function handle_eggs(eggs)
     print_detalis(("start handle_eggs"))
     if not eggs.egg_flags.fertile then
@@ -211,7 +190,15 @@ local function handle_eggs(eggs)
     end
 
     local race_creature_id = df.creature_raw.find(eggs.race).creature_id
-    local max_eggs = get_max_eggs_for_race(race_creature_id)
+    local race_config = get_config_for_race(race_creature_id)
+    local max_eggs = race_config[1]
+    local count_children = race_config[2]
+    local count_adults = race_config[3]
+
+    print_detalis(("max_eggs %s "):format(max_eggs))
+    print_detalis(("count_children %s "):format(count_children))
+    print_detalis(("count_adults %s "):format(count_adults))
+
     local current_eggs = eggs.stack_size
 
     local total_count = current_eggs
@@ -219,7 +206,7 @@ local function handle_eggs(eggs)
 
     if total_count - current_eggs < max_eggs then
         print_detalis(("Total count for %s only existing eggs is %s, about to count life animals if enabled"):format(race_creature_id, total_count - current_eggs))
-        total_count = total_count + count_live_animals(race_creature_id)
+        total_count = total_count + count_live_animals(race_creature_id, count_children, count_adults)
     else
         print_detalis(("Total count for %s eggs only is %s greater than maximum %s, no need to count life animals"):format(race_creature_id, total_count, max_eggs))
         return
