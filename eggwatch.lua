@@ -1,39 +1,28 @@
+--@enable = true
+--@module = true
 local argparse = require("argparse")
 local eventful = require("plugins.eventful")
+local utils = require('utils')
 
 local GLOBAL_KEY = "eggwatch"
 local EVENT_FREQ = 7
 local print_prefix = "eggwatch: "
 
-enabled = enabled or false
-default_table = {}
+local default_table = {}
 default_table.DEFAULT = {10, false, false}
+
+local function get_default_state()
+    return {
+        enabled = false,
+        verbose = false,
+        target_eggs_count_per_race = default_table
+    }
+end
+
+local state = state or get_default_state()
+
 function isEnabled()
-    return enabled
-end
-
-local function persist_state()
-    dfhack.persistent.saveSiteData(
-        GLOBAL_KEY,
-        {
-            enabled = enabled,
-            verbose = verbose,
-            target_eggs_count_per_race = target_eggs_count_per_race
-        }
-    )
-end
-
---- Load the saved state of the script
-local function load_state()
-    -- load persistent data
-    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
-    enabled = persisted_data.enabled or false
-    verbose = persisted_data.verbose or false
-    target_eggs_count_per_race = persisted_data.target_eggs_count_per_race or default_table
-end
-
-if dfhack_flags.module then
-    return
+    return state.enabled
 end
 
 local function print_local(text)
@@ -45,16 +34,65 @@ local function handle_error(text)
 end
 
 local function print_status()
-    print_local(("eggwatch is currently %s."):format(enabled and "enabled" or "disabled"))
-    if verbose then
+    print_local(("eggwatch is currently %s."):format(state.enabled and "enabled" or "disabled"))
+    if state.verbose then
         print_local("eggwatch is in verbose mode")
     end
 end
 
 local function print_detalis(details)
-    if verbose then
+    if state.verbose then
         print_local(details)
     end
+end
+
+local function persist_state()
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, state)
+end
+
+--- Load the saved state of the script
+local function load_state()
+    -- load persistent data
+    state = get_default_state()
+    utils.assign(state, dfhack.persistent.getSiteData(GLOBAL_KEY, state))
+end
+
+local function update_event_listener()
+    if isEnabled() then
+        eventful.enableEvent(eventful.eventType.ITEM_CREATED, EVENT_FREQ)
+        eventful.onItemCreated[GLOBAL_KEY] = check_item_created
+        print_local(("Subscribing in eventful for %s with frequency %s"):format("ITEM_CREATED", EVENT_FREQ))
+    else
+        eventful.onItemCreated[GLOBAL_KEY] = nil
+        print_local(("Unregistering from eventful for %s"):format("ITEM_CREATED"))
+    end
+end
+
+local function do_enable()
+    state.enabled = true
+    update_event_listener()
+end
+
+local function do_disable()
+    state.enabled = false
+    update_event_listener()
+end
+
+dfhack.onStateChange[GLOBAL_KEY] = function(sc)
+    if sc == SC_MAP_UNLOADED then
+        do_disable()
+        return
+    end
+    if sc ~= SC_MAP_LOADED or df.global.gamemode ~= df.game_mode.DWARF then
+        return
+    end
+    load_state()
+    print_status()
+    update_event_listener()
+end
+
+if dfhack_flags.module then
+    return
 end
 
 local function is_egg(item)
@@ -141,14 +179,14 @@ end
 
 local function get_config_for_race(race_creature_id)
     print_detalis(("getting config for race %s "):format(race_creature_id))
-    for k, v in pairs(target_eggs_count_per_race) do
+    for k, v in pairs(state.target_eggs_count_per_race) do
         if k == race_creature_id then
             return v
         end
     end
-    target_eggs_count_per_race[race_creature_id] = target_eggs_count_per_race.DEFAULT
+    state.target_eggs_count_per_race[race_creature_id] = state.target_eggs_count_per_race.DEFAULT
     persist_state()
-    return target_eggs_count_per_race[race_creature_id]
+    return state.target_eggs_count_per_race[race_creature_id]
 end
 
 local function is_valid_animal(unit)
@@ -247,23 +285,13 @@ local function handle_eggs(eggs)
     print_detalis(("end handle_eggs"))
 end
 
-local function check_item_created(item_id)
+function check_item_created(item_id)
+
     local item = df.item.find(item_id)
     if not item or not is_egg(item) then
         return
     end
     handle_eggs(item)
-end
-
-local function do_enable()
-    enabled = true
-    eventful.enableEvent(eventful.eventType.ITEM_CREATED, EVENT_FREQ)
-    eventful.onItemCreated[GLOBAL_KEY] = check_item_created
-end
-
-local function do_disable()
-    enabled = false
-    eventful.onItemCreated[GLOBAL_KEY] = nil
 end
 
 local function validate_creature_id(creature_id)
@@ -286,12 +314,12 @@ local stringtoboolean={ ["true"]=true, ["false"]=false, ["1"] = true , ["0"] =  
         handle_error("No valid target count specified")
     end
     if target_race_upper == "DEFAULT" or validate_creature_id(target_race_upper) then
-        target_eggs_count_per_race[target_race_upper] = {tonumber(target_count), stringtoboolean[count_children] or false, stringtoboolean[count_adult] or false}
+        state.target_eggs_count_per_race[target_race_upper] = {tonumber(target_count), stringtoboolean[count_children] or false, stringtoboolean[count_adult] or false}
     else
         handle_error('must specify "DEFAULT" or valid creature_id')
     end
 
-    print_local(dump(target_eggs_count_per_race))
+    print_local(dump(state.target_eggs_count_per_race))
 end
 
 function dump(o)
@@ -314,6 +342,7 @@ if df.global.gamemode ~= df.game_mode.DWARF or not dfhack.isMapLoaded() then
     return
 end
 
+load_state()
 local args, opts = {...}, {}
 if dfhack_flags and dfhack_flags.enable then
     args = {dfhack_flags.enable_state and "enable" or "disable"}
@@ -329,30 +358,38 @@ local positionals =
     }
 )
 
-load_state()
+if dfhack_flags.enable then
+    if dfhack_flags.enable_state then
+        do_enable()
+        print_status()
+        else
+        do_disable()
+        print_status()
+    end
+end
+
 local command = positionals[1]
 
 if command == "help" or opts.help then
     print(dfhack.script_help())
-elseif command == "enable" then
-    do_enable()
-    print_status()
-elseif command == "disable" then
-    do_disable()
-    print_status()
 elseif command == "target" then
     set_target(positionals[2], positionals[3], positionals[4],  positionals[5])
     print_status()
 elseif command == "verbose" then
-    verbose = not verbose
+    state.verbose = not state.verbose
     print_status()
 elseif command == 'clear' then
-target_eggs_count_per_race = default_table
-
+    state.target_eggs_count_per_race = default_table
+elseif command == 'hardreset' then
+    state = get_default_state()
+    update_event_listener()
 elseif not command or command == "status" then
     print_status()
-    print_local(dump(target_eggs_count_per_race))
-else
+    -- print_local(dump(state.enabled))
+    -- print_local(dump(state.verbose))
+    -- print_local(dump(state))
+    print_local(dump(state.target_eggs_count_per_race))
+elseif (command ~= 'enable' or command ~= 'disable') and not dfhack_flags.enable then
     handle_error(('Command "%s" is not recognized'):format(command))
 end
 persist_state()
