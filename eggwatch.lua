@@ -321,10 +321,33 @@ local function count_live_animals(race, count_children, count_adults)
     return count
 end
 
+local function validate_eggs(eggs)
+    if not eggs.egg_flags.fertile then
+        print_details("Newly laid eggs are not fertile, do nothing")
+        return false
+    end
+
+    local should_be_nestbox = dfhack.items.getHolderBuilding(eggs)
+    if should_be_nestbox ~= nil then
+        for _, nestbox in ipairs(df.global.world.buildings.other.NEST_BOX) do
+            if nestbox == should_be_nestbox then
+                print_details("Found nestbox, continue with egg handling")
+                return true
+            end
+        end
+        print_details("Newly laid eggs are in building different than nestbox, we were to late")
+        return false
+    else
+        print_details("Newly laid eggs are not in building, we were to late")
+        return false
+    end
+    return true
+end
+
 local function handle_eggs(eggs)
     print_details(("start handle_eggs"))
-    if not eggs.egg_flags.fertile then
-        print_local("Newly laid eggs are not fertile, do nothing")
+
+    if not validate_eggs(eggs) then
         return
     end
 
