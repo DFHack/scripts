@@ -503,6 +503,6 @@ elseif command == "split_stacks" then
 elseif not command or command == "status" then
     print_status()
 elseif (command ~= "enable" or command ~= "disable") and not dfhack_flags.enable then
-    handle_error(("Command " % s " is not recognized"):format(command))
+    handle_error(("Command '% s' is not recognized"):format(command))
 end
 persist_state()
