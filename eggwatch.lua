@@ -6,7 +6,7 @@ local utils = require("utils")
 
 local GLOBAL_KEY = "eggwatch"
 local default_table = {10, false, false}
-local stringtoboolean = {["true"] = true, ["false"] = false, ["1"] = true, ["0"] = false, ["Y"] = true, ["N"] = false}
+local string_or_int_to_boolean = {["true"] = true, ["false"] = false, ["1"] = true, ["0"] = false, ["Y"] = true, ["N"] = false, [1] = true, [0] = false}
 
 function dump(o)
     if type(o) == "table" then
@@ -30,6 +30,7 @@ local function get_default_state()
         default = default_table,
         EVENT_FREQ = 7,
         split_stacks = true,
+        migration_from_cpp_to_lua_done = false,
         target_eggs_count_per_race = {}
     }
 end
@@ -60,7 +61,7 @@ local function format_target_count_row(header, row)
                 row[1] .. "; count children: " .. tostring(row[2]) .. "; count adults: " .. tostring(row[3])
 end
 local function print_status()
-    print_local(("eggwatch is currently %s."):format(state.enabled and "enabled" or "disabled"))
+    print_local((GLOBAL_KEY .. " is currently %s."):format(state.enabled and "enabled" or "disabled"))
     print_local(("egg stack splitting is %s"):format(state.split_stacks and "enabled" or "disabled"))
     print_local(format_target_count_row("Default", state.default))
     if state.target_eggs_count_per_race ~= nil then
@@ -68,12 +69,12 @@ local function print_status()
             print_local(format_target_count_row(df.global.world.raws.creatures.all[k].creature_id, v))
         end
     end
-    print_details("eggwatch is in verbose mode")
+    print_details("verbose mode enabled")
     print_details(dump(state))
 end
 
 local function persist_state()
-    print_details(("start load_state"))
+    print_details(("start persist_state"))
     local state_to_persist = {}
     state_to_persist = utils.clone(state)
     state_to_persist.target_eggs_count_per_race = {}
@@ -83,7 +84,7 @@ local function persist_state()
         end
     end
     dfhack.persistent.saveSiteData(GLOBAL_KEY, state_to_persist)
-    print_details(("end load_state"))
+    print_details(("end persist_state"))
 end
 
 --- Load the saved state of the script
@@ -101,8 +102,25 @@ local function load_state()
             end
         end
     end
+
     state = get_default_state()
     utils.assign(state, processed_persisted_data)
+
+    if not state.migration_from_cpp_to_lua_done then
+        print_local("About to attempt migration from cpp to lua")
+        local nestboxes_status = dfhack.run_command_silent("nestboxes migrate_enabled_status")
+        if nestboxes_status ~= nil and string_or_int_to_boolean[nestboxes_status] then
+            print_local(("Migrating status %s from cpp nestboxes to lua"):format(string_or_int_to_boolean[nestboxes_status] and "enabled" or "disabled"))
+            state.enabled = string_or_int_to_boolean[nestboxes_status]
+            state.migration_from_cpp_to_lua_done = true
+            dfhack.persistent['deleteSiteData']("nestboxes/config")
+            persist_state()
+        else
+            print_local("Did not get valid response from cpp nestboxes")
+        end
+        print_local("Migrating from cpp to lua done")
+    end
+
     print_details(("end load_state"))
 end
 
@@ -456,15 +474,15 @@ local function set_target(target_race, target_count, count_children, count_adult
     if target_race_upper == "DEFAULT" then
         state.default = {
             tonumber(target_count),
-            stringtoboolean[count_children] or false,
-            stringtoboolean[count_adult] or false
+            string_or_int_to_boolean[count_children] or false,
+            string_or_int_to_boolean[count_adult] or false
         }
     elseif race >= 0 then
         print(race)
         state.target_eggs_count_per_race[race] = {
             tonumber(target_count),
-            stringtoboolean[count_children] or false,
-            stringtoboolean[count_adult] or false
+            string_or_int_to_boolean[count_children] or false,
+            string_or_int_to_boolean[count_adult] or false
         }
     else
         handle_error("must specify DEFAULT or valid creature_id")
@@ -473,16 +491,12 @@ local function set_target(target_race, target_count, count_children, count_adult
 end
 
 if df.global.gamemode ~= df.game_mode.DWARF or not dfhack.isMapLoaded() then
-    dfhack.printerr("eggwatch needs a loaded fortress to work")
+    dfhack.printerr(GLOBAL_KEY .. " needs a loaded fortress to work")
     return
 end
 
 load_state()
 local args, opts = {...}, {}
-if dfhack_flags and dfhack_flags.enable then
-    args = {dfhack_flags.enable_state and "enable" or "disable"}
-end
-
 local positionals =
     argparse.processArgsGetopt(
     args,
@@ -500,10 +514,8 @@ local positionals =
 if dfhack_flags.enable then
     if dfhack_flags.enable_state then
         do_enable()
-        print_status()
     else
         do_disable()
-        print_status()
     end
 end
 
@@ -515,17 +527,17 @@ elseif command == "target" then
     set_target(positionals[2], positionals[3], positionals[4], positionals[5])
     print_status()
 elseif command == "verbose" then
-    state.verbose = not state.verbose
+    state.verbose = string_or_int_to_boolean[positionals[2]]
     print_status()
 elseif command == "clear" then
     state = get_default_state()
     update_event_listener()
 elseif command == "split_stacks" then
-    state.split_stacks = stringtoboolean[positionals[2]]
+    state.split_stacks = string_or_int_to_boolean[positionals[2]]
     print_status()
 elseif not command or command == "status" then
     print_status()
-elseif (command ~= "enable" or command ~= "disable") and not dfhack_flags.enable then
+else
     handle_error(("Command '% s' is not recognized"):format(command))
 end
 persist_state()
