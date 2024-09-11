@@ -413,23 +413,35 @@ local function handle_eggs(eggs)
     print_details(("Total count for %s eggs is %s"):format(race, total_count))
 
     if total_count - current_eggs < max_eggs then
+    local egg_count_to_leave_in_source_stack = current_eggs
         if state.split_stacks and total_count > max_eggs then
-            local egg_count_to_leave_in_source_stack = max_eggs - total_count + current_eggs
+             egg_count_to_leave_in_source_stack = max_eggs - total_count + current_eggs
             split_egg_stack(eggs, egg_count_to_leave_in_source_stack)
         end
 
         eggs.flags.forbid = true
+
+        if eggs.flags.in_job then
+            local job_ref = dfhack.items.getSpecificRef(eggs, df.specific_ref_type.JOB)
+            if job_ref then
+                print_details(("About to remove job related to egg(s)"))
+                dfhack.job.removeJob(job_ref.data.job)
+                eggs.flags.in_job = false
+            end
+        end
+
         print_local(
-            ("Previously existing  %s eggs is %s lower than maximum %s , forbidden %s new eggs."):format(
+            ("Previously existing  %s egg(s) is %s lower than maximum %s , forbidden %s egg(s) out of %s new"):format(
                 race,
                 total_count - current_eggs,
                 max_eggs,
+                egg_count_to_leave_in_source_stack,
                 current_eggs
             )
         )
     else
         print_local(
-            ("Total count for %s eggs is %s over maximum %s, newly laid eggs %s , no action taken."):format(
+            ("Total count for %s egg(s) is %s over maximum %s, newly laid egg(s) %s , no action taken."):format(
                 race,
                 total_count,
                 max_eggs,
