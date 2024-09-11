@@ -1,27 +1,13 @@
+
 --@enable = true
 --@module = true
+
 local argparse = require("argparse")
 local eventful = require("plugins.eventful")
 local utils = require("utils")
 
-local GLOBAL_KEY = "eggwatch"
+local GLOBAL_KEY = "nestboxes"
 local default_table = {10, false, false}
-local string_or_int_to_boolean = {["true"] = true, ["false"] = false, ["1"] = true, ["0"] = false, ["Y"] = true, ["N"] = false, [1] = true, [0] = false}
-
-function dump(o)
-    if type(o) == "table" then
-        local s = "{ "
-        for k, v in pairs(o) do
-            if type(k) ~= "number" then
-                k = '"' .. k .. '"'
-            end
-            s = s .. "[" .. k .. "] = " .. dump(v) .. ","
-        end
-        return s .. "} "
-    else
-        return tostring(o)
-    end
-end
 
 local function get_default_state()
     return {
@@ -41,6 +27,24 @@ function isEnabled()
     return state.enabled
 end
 
+local function dump(o)
+    if type(o) == "table" then
+        local s = "{ "
+        for k, v in pairs(o) do
+            if type(k) ~= "number" then
+                k = '"' .. k .. '"'
+            end
+            s = s .. "[" .. k .. "] = " .. dump(v) .. ","
+        end
+        return s .. "} "
+    else
+        return tostring(o)
+    end
+end
+
+local string_or_int_to_boolean = {["true"] = true, ["false"] = false, ["1"] = true, ["0"] = false, ["Y"] = true, ["N"] = false, [1] = true, [0] = false}
+
+
 local function print_local(text)
     print(GLOBAL_KEY .. ": " .. text)
 end
@@ -54,12 +58,14 @@ local function print_details(details)
         print_local(details)
     end
 end
+
 local function format_target_count_row(header, row)
     return header ..
         ": " ..
             "target count: " ..
                 row[1] .. "; count children: " .. tostring(row[2]) .. "; count adults: " .. tostring(row[3])
 end
+
 local function print_status()
     print_local((GLOBAL_KEY .. " is currently %s."):format(state.enabled and "enabled" or "disabled"))
     print_local(("egg stack splitting is %s"):format(state.split_stacks and "enabled" or "disabled"))
@@ -91,7 +97,7 @@ local function read_persistent_config(key, index)
     return dfhack.internal.readPersistentSiteConfigInt(key, index)
 end
 
-local function migrate_enabled_status_from_ccp_nestboxes()
+local function migrate_enabled_status_from_cpp_nestboxes()
     print_local("About to attempt migration from cpp to lua")
     local nestboxes_status = read_persistent_config("nestboxes/config", "0")
     print_local(("Migrating status %s from cpp nestboxes to lua"):format(string_or_int_to_boolean[nestboxes_status] and "enabled" or "disabled"))
@@ -122,7 +128,7 @@ local function load_state()
     utils.assign(state, processed_persisted_data)
 
     if not state.migration_from_cpp_to_lua_done then
-        migrate_enabled_status_from_ccp_nestboxes()
+        migrate_enabled_status_from_cpp_nestboxes()
     end
 
     print_details(("end load_state"))
@@ -166,10 +172,6 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     load_state()
     print_status()
     update_event_listener()
-end
-
-if dfhack_flags.module then
-    return
 end
 
 local function is_egg(item)
@@ -499,8 +501,16 @@ if df.global.gamemode ~= df.game_mode.DWARF or not dfhack.isMapLoaded() then
     return
 end
 
+if dfhack_flags.module then
+    return
+end
+
 load_state()
+
 local args, opts = {...}, {}
+if dfhack_flags and dfhack_flags.enable then
+    args = {dfhack_flags.enable_state and "enable" or "disable"}
+end
 local positionals =
     argparse.processArgsGetopt(
     args,
@@ -515,18 +525,15 @@ local positionals =
     }
 )
 
-if dfhack_flags.enable then
-    if dfhack_flags.enable_state then
-        do_enable()
-    else
-        do_disable()
-    end
-end
 
 local command = positionals[1]
 
 if command == "help" or opts.help then
     print(dfhack.script_help())
+elseif command == "enable" then
+    do_enable()
+elseif command == "disable" then
+    do_disable()
 elseif command == "target" then
     set_target(positionals[2], positionals[3], positionals[4], positionals[5])
     print_status()
