@@ -87,6 +87,21 @@ local function persist_state()
     print_details(("end persist_state"))
 end
 
+local function read_persistent_config(key, index)
+    return dfhack.internal.readPersistentSiteConfigInt(key, index)
+end
+
+local function migrate_enabled_status_from_ccp_nestboxes()
+    print_local("About to attempt migration from cpp to lua")
+    local nestboxes_status = read_persistent_config("nestboxes/config", "0")
+    print_local(("Migrating status %s from cpp nestboxes to lua"):format(string_or_int_to_boolean[nestboxes_status] and "enabled" or "disabled"))
+    state.enabled = string_or_int_to_boolean[nestboxes_status] or false
+    state.migration_from_cpp_to_lua_done = true
+    dfhack.persistent['deleteSiteData']("nestboxes/config")
+    persist_state()
+    print_local("Migrating from cpp to lua done")
+end
+
 --- Load the saved state of the script
 local function load_state()
     print_details(("start load_state"))
@@ -107,18 +122,7 @@ local function load_state()
     utils.assign(state, processed_persisted_data)
 
     if not state.migration_from_cpp_to_lua_done then
-        print_local("About to attempt migration from cpp to lua")
-        local nestboxes_status = dfhack.run_command_silent("nestboxes migrate_enabled_status")
-        if nestboxes_status ~= nil and string_or_int_to_boolean[nestboxes_status] then
-            print_local(("Migrating status %s from cpp nestboxes to lua"):format(string_or_int_to_boolean[nestboxes_status] and "enabled" or "disabled"))
-            state.enabled = string_or_int_to_boolean[nestboxes_status]
-            state.migration_from_cpp_to_lua_done = true
-            dfhack.persistent['deleteSiteData']("nestboxes/config")
-            persist_state()
-        else
-            print_local("Did not get valid response from cpp nestboxes")
-        end
-        print_local("Migrating from cpp to lua done")
+        migrate_enabled_status_from_ccp_nestboxes()
     end
 
     print_details(("end load_state"))
