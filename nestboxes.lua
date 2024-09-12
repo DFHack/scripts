@@ -1,4 +1,3 @@
-
 --@enable = true
 --@module = true
 
@@ -21,7 +20,7 @@ local function get_default_state()
     }
 end
 
-local state = state or get_default_state()
+state = state or get_default_state()
 
 function isEnabled()
     return state.enabled
