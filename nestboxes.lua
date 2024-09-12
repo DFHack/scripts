@@ -62,7 +62,7 @@ local function format_target_count_row(header, row)
     return header ..
         ": " ..
             "target count: " ..
-                row[1] .. "; count children: " .. tostring(row[2]) .. "; count adults: " .. tostring(row[3])
+                row[1] .. "; count children: " .. tostring(row[2]) .. "; count adults: " .. tostring(row[3]) .. "; ignore race: " .. tostring(row[4])
 end
 
 local function print_status()
@@ -93,9 +93,9 @@ local function persist_state()
 end
 
 local function read_persistent_config(key, index)
-    if dfhack.internal.readPersistentSiteConfigInt ~= nil then 
-        return dfhack.internal.readPersistentSiteConfigInt(key, index) 
-    else 
+    if dfhack.internal.readPersistentSiteConfigInt ~= nil then
+        return dfhack.internal.readPersistentSiteConfigInt(key, index)
+    else
         return nil
     end
 end
@@ -122,7 +122,8 @@ local function load_state()
         processed_persisted_data.target_eggs_count_per_race = {}
         if persisted_data.target_eggs_count_per_race ~= nil then
             for k, v in pairs(persisted_data.target_eggs_count_per_race) do
-                processed_persisted_data.target_eggs_count_per_race[tonumber(k)] = v
+                local default = utils.clone(default_table)
+                processed_persisted_data.target_eggs_count_per_race[tonumber(k)] = utils.assign(default, v)
             end
         end
     end
