@@ -93,7 +93,11 @@ local function persist_state()
 end
 
 local function read_persistent_config(key, index)
-    return dfhack.internal.readPersistentSiteConfigInt(key, index)
+    if dfhack.internal.readPersistentSiteConfigInt ~= nil then 
+        return dfhack.internal.readPersistentSiteConfigInt(key, index) 
+    else 
+        return nil
+    end
 end
 
 local function migrate_enabled_status_from_cpp_nestboxes()
@@ -384,7 +388,7 @@ local function handle_eggs(eggs)
     if ignore then
         print_details(("race is ignored, nothing to do here"))
         return
-    end if;
+    end
 
     print_details(("max_eggs %s "):format(max_eggs))
     print_details(("count_children %s "):format(count_children))
