@@ -5,8 +5,8 @@ local argparse = require("argparse")
 local eventful = require("plugins.eventful")
 local utils = require("utils")
 
-local GLOBAL_KEY = "nestboxes"
-local default_table = {10, false, false}
+local GLOBAL_KEY = "eggwatch"
+local default_table = {10, false, false, false}
 
 local function get_default_state()
     return {
@@ -379,6 +379,12 @@ local function handle_eggs(eggs)
     local max_eggs = race_config[1]
     local count_children = race_config[2]
     local count_adults = race_config[3]
+    local ignore = race_config[4]
+
+    if ignore then
+        print_details(("race is ignored, nothing to do here"))
+        return
+    end if;
 
     print_details(("max_eggs %s "):format(max_eggs))
     print_details(("count_children %s "):format(count_children))
@@ -475,7 +481,7 @@ local function validate_creature_id(creature_id)
     return -1
 end
 
-local function set_target(target_race, target_count, count_children, count_adult)
+local function set_target(target_race, target_count, count_children, count_adult, ignore)
     print_details(("start set_target"))
 
     if target_race == nil or target_race == "" then
@@ -492,14 +498,16 @@ local function set_target(target_race, target_count, count_children, count_adult
         state.default = {
             tonumber(target_count),
             string_or_int_to_boolean[count_children] or false,
-            string_or_int_to_boolean[count_adult] or false
+            string_or_int_to_boolean[count_adult] or false,
+            string_or_int_to_boolean[ignore] or false
         }
     elseif race >= 0 then
         print(race)
         state.target_eggs_count_per_race[race] = {
             tonumber(target_count),
             string_or_int_to_boolean[count_children] or false,
-            string_or_int_to_boolean[count_adult] or false
+            string_or_int_to_boolean[count_adult] or false,
+            string_or_int_to_boolean[ignore] or false
         }
     else
         handle_error("must specify DEFAULT or valid creature_id")
@@ -546,7 +554,7 @@ elseif command == "enable" then
 elseif command == "disable" then
     do_disable()
 elseif command == "target" then
-    set_target(positionals[2], positionals[3], positionals[4], positionals[5])
+    set_target(positionals[2], positionals[3], positionals[4], positionals[5], positionals[6])
     print_status()
 elseif command == "verbose" then
     state.verbose = string_or_int_to_boolean[positionals[2]]
