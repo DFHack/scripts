@@ -9,6 +9,7 @@ local print_local = nestboxes_common.print_local
 local print_details = nestboxes_common.print_details
 local handle_error = nestboxes_common.handle_error
 local GLOBAL_KEY = "nestboxes"
+local EVENT_FREQ = 7
 local default_table = {10, false, false, false}
 local string_or_int_to_boolean = {
     ["true"] = true,
@@ -26,7 +27,6 @@ local function get_default_state()
         enabled = false,
         verbose = false,
         default = default_table,
-        EVENT_FREQ = 7,
         split_stacks = true,
         migration_from_cpp_to_lua_done = false,
         target_eggs_count_per_race = {}
@@ -114,9 +114,9 @@ end
 local function update_event_listener()
     print_details(("start update_event_listener"))
     if state.enabled then
-        eventful.enableEvent(eventful.eventType.ITEM_CREATED, state.EVENT_FREQ)
+        eventful.enableEvent(eventful.eventType.ITEM_CREATED, EVENT_FREQ)
         eventful.onItemCreated[GLOBAL_KEY] = check_item_created
-        print_local(("Subscribing in eventful for %s with frequency %s"):format("ITEM_CREATED", state.EVENT_FREQ))
+        print_local(("Subscribing in eventful for %s with frequency %s"):format("ITEM_CREATED", EVENT_FREQ))
     else
         eventful.onItemCreated[GLOBAL_KEY] = nil
         print_local(("Unregistering from eventful for %s"):format("ITEM_CREATED"))
