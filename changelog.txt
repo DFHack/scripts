@@ -31,6 +31,7 @@ Template for new versions:
 - `idle-crafting`: allow dwarves to independently satisfy their need to craft objects
 - `gui/family-affairs`: (reinstated) inspect or meddle with pregnancies, marriages, or lover relationships
 - `notes`: manage map-specific notes
+- `immortal-cravings`: allow immortals to satisfy their cravings for food and drink
 
 ## New Features
 - `caravan`: DFHack dialogs for trade screens (both ``Bring goods to depot`` and the ``Trade`` barter screen) can now filter by item origins (foreign vs. fort-made) and can filter bins by whether they have a mix of ethically acceptable and unacceptable items in them
