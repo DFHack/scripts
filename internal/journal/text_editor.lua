@@ -94,6 +94,8 @@ TextEditor.ATTRS{
     select_pen = COLOR_CYAN,
     on_text_change = DEFAULT_NIL,
     on_cursor_change = DEFAULT_NIL,
+    -- called on submit, only in one line mode
+    on_submit = DEFAULT_NIL,
     one_line_mode = false,
     debug = false
 }
@@ -112,6 +114,7 @@ function TextEditor:init()
             select_pen=self.select_pen,
             debug=self.debug,
             one_line_mode=self.one_line_mode,
+            on_submit=self.on_submit,
 
             on_text_change=function (val)
                 self:updateLayout()
@@ -232,12 +235,16 @@ function TextEditor:renderSubviews(dc)
 end
 
 function TextEditor:onInput(keys)
-    if (self.subviews.scrollbar.is_dragging) then
-        return self.subviews.scrollbar:onInput(keys)
-    end
-
     if keys._MOUSE_L and self:getMousePos() then
         self:setFocus(true)
+    end
+
+    if not self.focus then
+        return false
+    end
+
+    if (self.subviews.scrollbar.is_dragging) then
+        return self.subviews.scrollbar:onInput(keys)
     end
 
     return TextEditor.super.onInput(self, keys)
@@ -255,6 +262,7 @@ TextEditorView.ATTRS{
     enable_cursor_blink = true,
     debug = false,
     one_line_mode = false,
+    on_submit = DEFAULT_NIL,
     history_size = 10,
 }
 
@@ -744,6 +752,9 @@ function TextEditorView:onCursorInput(keys)
         self:setCursor(self.cursor + 1)
         return true
     elseif keys.KEYBOARD_CURSOR_UP then
+        if self.one_line_mode then
+            return false
+        end
         local x, y = self.wrapped_text:indexToCoords(self.cursor)
         local last_cursor_x = self.last_cursor_x or x
         local offset = y > 1 and
@@ -753,6 +764,10 @@ function TextEditorView:onCursorInput(keys)
         self.last_cursor_x = last_cursor_x
         return true
     elseif keys.KEYBOARD_CURSOR_DOWN then
+        if self.one_line_mode then
+            return false
+        end
+
         local x, y = self.wrapped_text:indexToCoords(self.cursor)
         local last_cursor_x = self.last_cursor_x or x
         local offset = y < #self.wrapped_text.lines and
@@ -778,13 +793,13 @@ function TextEditorView:onCursorInput(keys)
         local word_end = self:wordEndOffset()
         self:setCursor(word_end)
         return true
-    elseif keys.CUSTOM_CTRL_H then
+    elseif keys.CUSTOM_HOME then
         -- line start
         self:setCursor(
             self:lineStartOffset()
         )
         return true
-    elseif keys.CUSTOM_CTRL_E then
+    elseif keys.CUSTOM_END then
         -- line end
         self:setCursor(
             self:lineEndOffset()
@@ -796,7 +811,11 @@ end
 function TextEditorView:onTextManipulationInput(keys)
     if keys.SELECT then
         -- handle enter
-        if not self.one_line_mode then
+        if self.one_line_mode then
+            if self.on_submit then
+                self:on_submit()
+            end
+        else
             self.history:store(
                 HISTORY_ENTRY.WHITESPACE_BLOCK,
                 self.text,
@@ -878,7 +897,7 @@ function TextEditorView:onTextManipulationInput(keys)
         self:eraseSelection()
 
         return true
-    elseif keys.CUSTOM_CTRL_D then
+    elseif keys.CUSTOM_DELETE then
         -- delete char, there is no support for `Delete` key
         self.history:store(HISTORY_ENTRY.DELETE, self.text, self.cursor)
 

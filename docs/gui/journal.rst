@@ -26,8 +26,8 @@ Supported Features
 - New Lines: Easily insert new lines using the :kbd:`Enter` key, supporting multiline text input.
 - Text Wrapping: Text automatically wraps within the editor, ensuring lines fit within the display without manual adjustments.
 - Backspace Support: Use the backspace key to delete characters to the left of the cursor.
-- Delete Character: :kbd:`Ctrl` + :kbd:`D` deletes the character under the cursor.
-- Line Navigation: :kbd:`Ctrl` + :kbd:`H` (like "Home") moves the cursor to the beginning of the current line, and :kbd:`Ctrl` + :kbd:`E` (like "End") moves it to the end.
+- Delete Character: :kbd:`Delete` deletes the character under the cursor.
+- Line Navigation: :kbd:`Home` moves the cursor to the beginning of the current line, and :kbd:`End` moves it to the end.
 - Delete Current Line: :kbd:`Ctrl` + :kbd:`U` deletes the entire current line where the cursor is located.
 - Delete Rest of Line: :kbd:`Ctrl` + :kbd:`K` deletes text from the cursor to the end of the line.
 - Delete Last Word: :kbd:`Ctrl` + :kbd:`W` removes the word immediately before the cursor.
