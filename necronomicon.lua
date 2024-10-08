@@ -79,11 +79,37 @@ function necronomicon(include_slabs)
     end
 end
 
+function necronomicon_world(include_slabs)
+	if include_slabs then
+		print("Slabs:")
+		print()
+		for _,rec in ipairs(df.global.world.artifacts.all) do
+			if df.item_slabst:is_instance(rec.item) and check_slab_secrets(rec.item) then
+				print(dfhack.TranslateName(rec.name))
+			end
+		end
+		print()	
+	end
+	print("Books and Scrolls:")
+    print()
+    for _,rec in ipairs(df.global.world.artifacts.all) do
+		if df.item_bookst:is_instance(rec.item) or df.item_toolst:is_instance(rec.item) then
+			local title, interactions = get_book_interactions(rec.item)
+			
+			if next(interactions) then
+				print("  " .. dfhack.df2console(title))
+				print_interactions(interactions)
+				print()
+			end
+		end	
+	end
+end
 
 local help = false
-local include_slabs = false
+local include_slabs, scan_world = false, false
 local args = argparse.processArgsGetopt({...}, {
     {"s", "include-slabs", handler=function() include_slabs = true end},
+    {"w", "world", handler=function() scan_world = true end},
     {"h", "help", handler=function() help = true end}
 })
 
@@ -91,8 +117,12 @@ local cmd = args[1]
 
 if help or cmd == "help" then
     print(dfhack.script_help())
-elseif cmd == nil or cmd == "" then
-    necronomicon(include_slabs)
+elseif not cmd then
+    if scan_world then
+        necronomicon_world(include_slabs)
+    else
+        necronomicon(include_slabs)
+    end
 else
     print(('necronomicon: Invalid argument: "%s"'):format(cmd))
 end
