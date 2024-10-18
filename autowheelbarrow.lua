@@ -101,8 +101,8 @@ local function event_loop()
     if enabled then
         dfhack.println("Running autowheelbarrow.lua ")
         auto_wheelbarrows()
-        -- Check again in 1 days
-        repeatutil.scheduleUnlessAlreadyScheduled(GLOBAL_KEY, 1, "days", event_loop)
+        -- Check again in 7 days
+        repeatutil.scheduleUnlessAlreadyScheduled(GLOBAL_KEY, 7, "days", event_loop)
     end
 end
 
