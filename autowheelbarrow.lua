@@ -37,7 +37,7 @@ local function set_wheelbarrows_for_all_stockpiles()
                                     #food_settings.powder_creature > 0 or #food_settings.glob > 0 or #food_settings.glob_paste > 0 or
                                     #food_settings.glob_pressed > 0 or #food_settings.liquid_plant > 0 or #food_settings.liquid_animal > 0 or
                                     #food_settings.liquid_misc > 0
-					--dfhack.println("Skipping stockpile due to food items" .. tostring(building))
+                    --dfhack.println("Skipping stockpile due to food items" .. tostring(building))
 
             end
 
@@ -99,7 +99,7 @@ end
 -- Event loop function to call periodically
 local function event_loop()
     if enabled then
-	    dfhack.println("Running autowheelbarrow.lua ")
+        dfhack.println("Running autowheelbarrow.lua ")
         auto_wheelbarrows()
         -- Check again in 1 days
         repeatutil.scheduleUnlessAlreadyScheduled(GLOBAL_KEY, 1, "days", event_loop)
