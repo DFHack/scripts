@@ -5,7 +5,6 @@ local gui = require 'gui'
 local widgets = require 'gui.widgets'
 local utils = require 'utils'
 local json = require 'json'
-local text_editor = reqscript('internal/journal/text_editor')
 local shifter = reqscript('internal/journal/shifter')
 local table_of_contents = reqscript('internal/journal/table_of_contents')
 
@@ -113,7 +112,7 @@ function JournalWindow:init()
             interior_b=true,
             frame_style_t=false,
         },
-        text_editor.TextEditor{
+        widgets.TextArea{
             view_id='journal_editor',
             frame={t=1, b=3, l=25, r=0},
             resize_min={w=30, h=10},
