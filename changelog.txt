@@ -29,6 +29,7 @@ Template for new versions:
 ## New Tools
 - `fix/wildlife`: prevent wildlife from getting stuck when trying to exit the map. This fix needs to be enabled manually in `gui/control-panel` on the Bug Fixes tab since not all players want this bug to be fixed.
 - `immortal-cravings`: allow immortals to satisfy their cravings for food and drink
+- `justice`: various functions pertaining to the justice system, currently with a command to pardon a unit's prison sentence.
 
 ## New Features
 - `force`: support the ``Wildlife`` event to allow additional wildlife to enter the map
