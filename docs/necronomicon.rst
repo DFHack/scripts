@@ -23,3 +23,7 @@ Options
 ``-s``, ``--include-slabs``
     Also list slabs that contain the secrets of life and death. Note that
     dwarves cannot read the secrets from a slab in fort mode.
+
+``-w``, ``-world``
+    Lists ALL secret containing books and scrolls across the entire world,
+    not just your fortress.
