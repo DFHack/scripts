@@ -40,6 +40,7 @@ Template for new versions:
 - `fix/loyaltycascade`: allow the fix to work on non-dwarven citizens
 - `control-panel`: fix setting numeric preferences from the commandline
 - `gui/quickfort`: fix build mode evluation rules to allow placement of various furniture and constructions on tiles with stair shapes or without orthagonal floor.
+- `emigration`: save-and-reload no longer resets the emigration cycle timeout, making gameplay more consistent
 
 ## Misc Improvements
 - `control-panel`: Add realistic-melting tweak to control-panel registry

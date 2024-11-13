@@ -1,17 +1,26 @@
 --@module = true
 --@enable = true
 
+local utils = require('utils')
+
 local GLOBAL_KEY = 'emigration' -- used for state change hooks and persistence
 
-enabled = enabled or false
+local function get_default_state()
+    return {enabled=false, last_cycle_tick=0}
+end
+
+state = state or get_default_state()
 
 function isEnabled()
-    return enabled
+    return state.enabled
 end
 
 local function persist_state()
-    dfhack.persistent.saveSiteData(GLOBAL_KEY, {enabled=enabled})
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, state)
 end
+
+local TICKS_PER_MONTH = 33600
+local TICKS_PER_YEAR = 12 * TICKS_PER_MONTH
 
 function desireToStay(unit,method,civ_id)
     -- on a percentage scale
@@ -191,18 +200,26 @@ function checkmigrationnow()
     else
         for _, civ_id in pairs(merchant_civ_ids) do checkForDeserters('merchant', civ_id) end
     end
+
+    state.last_cycle_tick = dfhack.world.ReadCurrentTick() + TICKS_PER_YEAR * dfhack.world.ReadCurrentYear()
 end
 
 local function event_loop()
-    if enabled then
-        checkmigrationnow()
-        dfhack.timeout(1, 'months', event_loop)
+    if state.enabled then
+        local current_tick = dfhack.world.ReadCurrentTick() + TICKS_PER_YEAR * dfhack.world.ReadCurrentYear()
+        if current_tick - state.last_cycle_tick < TICKS_PER_MONTH then
+            local timeout_ticks = state.last_cycle_tick - current_tick + TICKS_PER_MONTH
+            dfhack.timeout(timeout_ticks, 'ticks', event_loop)
+        else
+            checkmigrationnow()
+            dfhack.timeout(1, 'months', event_loop)
+        end
     end
 end
 
 dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     if sc == SC_MAP_UNLOADED then
-        enabled = false
+        state.enabled = false
         return
     end
 
@@ -210,8 +227,9 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
         return
     end
 
-    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {enabled=false})
-    enabled = persisted_data.enabled
+    state = get_default_state()
+    utils.assign(state, dfhack.persistent.getSiteData(GLOBAL_KEY, state))
+
     event_loop()
 end
 
@@ -230,11 +248,11 @@ if dfhack_flags and dfhack_flags.enable then
 end
 
 if args[1] == "enable" then
-    enabled = true
+    state.enabled = true
 elseif args[1] == "disable" then
-    enabled = false
+    state.enabled = false
 else
-    print('emigration is ' .. (enabled and 'enabled' or 'not enabled'))
+    print('emigration is ' .. (state.enabled and 'enabled' or 'not enabled'))
     return
 end
 
