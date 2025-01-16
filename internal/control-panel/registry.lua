@@ -18,6 +18,8 @@ COMMANDS_BY_IDX = {
     {command='autobutcher target 10 10 14 2 BIRD_PEAFOWL_BLUE', group='automation', mode='run',
         desc='Enable if you usually want to raise peafowl.'},
     {command='autochop', group='automation', mode='enable'},
+    {command='autocheese', group='automation', mode='repeat',
+        params={'--time', '14', '--timeUnits', 'days', '--command', '[', 'autocheese', ']'}},
     {command='autoclothing', group='automation', mode='enable'},
     {command='autofarm', group='automation', mode='enable'},
     {command='autofarm threshold 150 grass_tail_pig', group='automation', mode='run',
