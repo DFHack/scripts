@@ -62,6 +62,7 @@ Template for new versions:
 - `caravan`: add filter for written works in display furniture assignment dialog
 - `fix/wildlife`: don't vaporize stuck wildlife that is onscreen -- kill them instead (as if they died from old age)
 - `gui/sitemap`: show primary group affiliation for visitors and invaders (e.g. civilization name or performance troupe)
+- `pref-assign`: updated to allow users to run `pref-assign show` to get a list of units current preferences
 
 # 50.15-r1
 
