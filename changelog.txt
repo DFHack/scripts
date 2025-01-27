@@ -42,6 +42,7 @@ Template for new versions:
 - `hide-tutorials`: new ``reset`` command that will re-enable popups in the current game
 
 ## Removed
+- `linger`: merged into `bodyswap` as ``bodyswap linger``
 
 # 51.02-r1
 
@@ -259,7 +260,6 @@ Template for new versions:
 - `max-wave`: merged into `pop-control`
 - `devel/find-offsets`, `devel/find-twbt`, `devel/prepare-save`: remove development scripts that are no longer useful
 - `fix/item-occupancy`, `fix/tile-occupancy`: merged into `fix/occupancy`
-- `linger`: merged into `bodyswap` as ``bodyswap linger``
 - `adv-fix-sleepers`: renamed to `fix/sleepers`
 - `adv-rumors`: merged into `advtools`
 

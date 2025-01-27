@@ -186,7 +186,7 @@ function getHistoricalSlayer(unit)
 end
 
 function lingerAdvUnit(unit)
-    if not unit.flags2.killed then
+    if not dfhack.units.isKilled(unit) then
         qerror("Target unit hasn't died yet!")
     end
 
@@ -197,10 +197,10 @@ function lingerAdvUnit(unit)
     end
     if not slayer then
         qerror("Slayer not found!")
-    elseif slayer.flags2.killed then
+    elseif dfhack.units.isKilled(slayer) then
         local slayerName = ""
         if slayer.name.has_name then
-            slayerName = ", " .. dfhack.TranslateName(slayer.name) .. ","
+            slayerName = ", " .. dfhack.units.getReadableName(slayer) .. ","
         end
         qerror("The unit's slayer" .. slayerName .. " is dead!")
     end
