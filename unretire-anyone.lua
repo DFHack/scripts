@@ -61,10 +61,10 @@ function getHistfigShortSummary(histFig)
         name = name .. ' (' .. sym .. ')'
     end
     name = name ..
-            '\n' .. dfhack.units.getReadableName(histFig.name)
+            '\n' .. dfhack.units.getReadableName(histFig)
     if histFig.name.has_name then
         name = name ..
-                '\n"' .. dfhack.translation.TranslateName(histFig.name, true) .. '"'
+                '\n"' .. dfhack.translation.translateName(histFig.name, true) .. '"'
     else
         name = name ..
             '\nUnnamed'
@@ -95,7 +95,7 @@ local function showNemesisPrompt(advSetUpScreen)
 
     dialogs.ListBox{
         frame_title = 'unretire-anyone',
-        text = 'Select someone to add to the "Specific Person" list:',
+        text = 'Select someone to add to the "Specific Person" list (' .. #choices .. ' entries)',
         text_pen = COLOR_WHITE,
         choices = choices,
         on_select = function(id, choice) addNemesisToUnretireList(advSetUpScreen, choice.nemesis, choice.idx) end,
