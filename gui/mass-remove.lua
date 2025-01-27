@@ -58,13 +58,6 @@ end
 -- DimsPanel
 --
 
-local function get_dims(pos1, pos2)
-    local width, height, depth = math.abs(pos1.x - pos2.x) + 1,
-            math.abs(pos1.y - pos2.y) + 1,
-            math.abs(pos1.z - pos2.z) + 1
-    return width, height, depth
-end
-
 DimsPanel = defclass(DimsPanel, widgets.ResizingPanel)
 DimsPanel.ATTRS{
     get_mark_fn=DEFAULT_NIL,

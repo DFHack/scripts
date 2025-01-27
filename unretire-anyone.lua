@@ -13,7 +13,7 @@ if viewscreen._type ~= df.viewscreen_setupadventurest then
 end
 
 --luacheck: in=df.viewscreen_setupadventurest,df.nemesis_record
-function addNemesisToUnretireList(advSetUpScreen, nemesis)
+function addNemesisToUnretireList(advSetUpScreen, nemesis, index)
     local unretireOption = false
     for i = #advSetUpScreen.valid_race - 1, 0, -1 do
         if advSetUpScreen.valid_race[i] == -2 then -- this is the "Specific Person" option on the menu
@@ -26,14 +26,23 @@ function addNemesisToUnretireList(advSetUpScreen, nemesis)
         advSetUpScreen.valid_race:insert('#', -2)
     end
 
+    -- Revive the historical figure
+    local histFig = nemesis.figure
+    if histFig.died_year >= -1 then
+        histFig.died_year = -1
+        histFig.died_seconds = -1
+    end
+
     nemesis.flags.ADVENTURER = true
-    advSetUpScreen.nemesis_index:insert('#', nemesis.id)
+    -- nemesis.id and df.global.world.nemesis.all index should *usually* align but there may be bugged scenarios where they don't.
+    -- This is a workaround for the issue by using the vector index rather than nemesis.id
+    advSetUpScreen.nemesis_index:insert('#', index)
 end
 
 --luacheck: in=table
 function showNemesisPrompt(advSetUpScreen)
     local choices = {}
-    for _, nemesis in ipairs(df.global.world.nemesis.all) do
+    for i, nemesis in ipairs(df.global.world.nemesis.all) do
         if nemesis.figure and not nemesis.flags.ADVENTURER then -- these are already available for unretiring
             local histFig = nemesis.figure
             local histFlags = histFig.flags
@@ -41,12 +50,8 @@ function showNemesisPrompt(advSetUpScreen)
                 not histFlags.deity and
                 not histFlags.force
             then
-                local creature = df.creature_raw.find(histFig.race).caste[histFig.caste]
+                local creature = dfhack.units.getCasteRaw(histFig.race, histFig.caste)
                 local name = creature.caste_name[0]
-                if histFig.died_year >= -1 then
-                    histFig.died_year = -1
-                    histFig.died_seconds = -1
-                end
                 if histFig.info and histFig.info.curse then
                     local curse = histFig.info.curse
                     if curse.name ~= '' then
@@ -64,17 +69,29 @@ function showNemesisPrompt(advSetUpScreen)
                     name = name .. ' (' .. sym .. ')'
                 end
                 if histFig.name.has_name then
-                    name = dfhack.TranslateName(histFig.name) ..
-                        " - (" .. dfhack.TranslateName(histFig.name, true) .. ") - " .. name
+                    name = name ..
+                         '\n' .. dfhack.translation.translateName(histFig.name) ..
+                         '\n"' .. dfhack.translation.translateName(histFig.name, true) .. '"'
+                else
+                    name = name ..
+                     '\nUnnamed'
                 end
-                table.insert(choices, { text = name, nemesis = nemesis, search_key = name:lower() })
+                table.insert(choices, { text = name, nemesis = nemesis, search_key = name:lower(), idx = i })
             end
         end
     end
-    dialogs.showListPrompt('unretire-anyone', "Select someone to add to the \"Specific Person\" list:", COLOR_WHITE,
-        choices, function(id, choice)
-            addNemesisToUnretireList(advSetUpScreen, choice.nemesis)
-        end, nil, nil, true)
+
+    dialogs.ListBox{
+        frame_title = 'unretire-anyone',
+        text = 'Select someone to add to the "Specific Person" list:',
+        text_pen = COLOR_WHITE,
+        choices = choices,
+        on_select = function(id, choice)
+            addNemesisToUnretireList(advSetUpScreen, choice.nemesis, choice.idx)
+        end,
+        with_filter = true,
+        row_height = 3,
+    }:show()
 end
 
 showNemesisPrompt(viewscreen)

@@ -455,7 +455,7 @@ end
 
 -- Print unit's needs, levels, and focus into dfhack console
 function printUnitNeeds(unit)
-  print("Needs for " .. dfhack.TranslateName(unit.name) .. ":")
+  print("Needs for " .. dfhack.df2console(dfhack.units.getReadableName(unit)) .. ":")
   for index, needInstance in ipairs(unit.status.current_soul.personality.needs)  do
     local name = df.need_type[needInstance.id]
     local level = needInstance.need_level

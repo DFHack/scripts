@@ -1,14 +1,9 @@
 --@ module=true
 
-local dialogs = require 'gui.dialogs'
-local utils = require 'utils'
+local dialogs = require('gui.dialogs')
+local utils = require('utils')
 
 local makeown = reqscript('makeown')
-
-local viewscreen = dfhack.gui.getDFViewscreen(true)
-if viewscreen._type ~= df.viewscreen_dungeonmodest then
-    qerror("This script can only be used during adventure mode!")
-end
 
 local function addToCoreParty(nemesis)
     -- Adds them to the party core members list
@@ -45,7 +40,7 @@ local function showExtraPartyPrompt()
         table.insert(choices, {text=name, nemesis=nemesis, search_key=dfhack.toSearchNormalized(name)})
         ::continue::
     end
-    dialogs.showListPrompt('party', "Select someone to add to your \"Core Party\" (able to assume control, able to unretire):", COLOR_WHITE,
+    dialogs.showListPrompt('party', 'Select someone to add to your "Core Party" (able to assume control, able to unretire):', COLOR_WHITE,
         choices, function(id, choice)
             addToCoreParty(choice.nemesis)
         end, nil, nil, true)

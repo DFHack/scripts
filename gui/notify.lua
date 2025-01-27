@@ -132,14 +132,14 @@ DwarfNotifyOverlay.ATTRS{
 }
 
 local DWARFMODE_CONFLICTING_TOOLTIPS = utils.invert{
-    df.main_hover_instruction.InfoUnits,
-    df.main_hover_instruction.InfoJobs,
-    df.main_hover_instruction.InfoPlaces,
-    df.main_hover_instruction.InfoLabors,
-    df.main_hover_instruction.InfoWorkOrders,
-    df.main_hover_instruction.InfoNobles,
-    df.main_hover_instruction.InfoObjects,
-    df.main_hover_instruction.InfoJustice,
+    df.main_hover_instruction.MAIN_OPEN_CREATURES,
+    df.main_hover_instruction.MAIN_OPEN_TASKS,
+    df.main_hover_instruction.MAIN_OPEN_PLACES,
+    df.main_hover_instruction.MAIN_OPEN_LABOR,
+    df.main_hover_instruction.MAIN_OPEN_WORK_ORDERS,
+    df.main_hover_instruction.MAIN_OPEN_NOBLES,
+    df.main_hover_instruction.MAIN_OPEN_OBJECTS,
+    df.main_hover_instruction.MAIN_OPEN_JUSTICE,
 }
 
 local mi = df.global.game.main_interface
@@ -155,6 +155,7 @@ AdvNotifyOverlay.ATTRS{
     desc='Shows list of active notifications in adventure mode.',
     default_pos={x=18,y=-5},
     viewscreens='dungeonmode/Default',
+    overlay_onupdate_max_freq_seconds=1,
     right_offset=13,
 }
 

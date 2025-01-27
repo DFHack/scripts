@@ -79,7 +79,7 @@ smooth. Note that when creating walls, they will inherit the smoothness
 property of whatever was there before unless you specifically set the Special
 selector to ``NORMAL`` (for rough walls) or ``SMOOTH`` (for smooth walls).
 
-Extended special properties are avaialable via the gear button.
+Extended special properties are available via the gear button.
 
 Variant
 ~~~~~~~

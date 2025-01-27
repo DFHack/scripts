@@ -77,7 +77,7 @@ end
 
 local function nameOrSpeciesAndNumber(unit)
  if unit.name.has_name then
-  return dfhack.TranslateName(dfhack.units.getVisibleName(unit))..' '..getSexString(unit.sex),true
+  return dfhack.translation.translateName(dfhack.units.getVisibleName(unit))..' '..getSexString(unit.sex),true
  else
   return 'Unit #'..unit.id..' ('..df.creature_raw.find(unit.race).caste[unit.caste].caste_name[0]..' '..getSexString(unit.sex)..')',false
  end

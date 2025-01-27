@@ -46,12 +46,16 @@ end
 
 local function scrub_burrows()
     for _, burrow in ipairs(df.global.plotinfo.burrows.list) do
+        local units_to_remove = {}
         for _, unit_id in ipairs(burrow.units) do
             local unit = df.unit.find(unit_id)
             if unit and dfhack.units.isDead(unit) then
-                count = count + 1
-                dfhack.burrows.setAssignedUnit(burrow, unit, false)
+                table.insert(units_to_remove, unit)
             end
+        end
+        count = count + #units_to_remove
+        for _, unit in ipairs(units_to_remove) do
+            dfhack.burrows.setAssignedUnit(burrow, unit, false)
         end
     end
 end

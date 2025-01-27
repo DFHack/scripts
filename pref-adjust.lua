@@ -6,7 +6,6 @@ pss_counter = pss_counter or 31415926
 
 -- ---------------------------------------------------------------------------
 function insert_preference(unit, preftype, val1)
-
     if preftype == df.unit_preference.T_type.LikeMaterial then
         utils.insert_or_update(unit.status.current_soul.preferences, {
             new = true,
@@ -236,7 +235,7 @@ function build_all_lists(printflag)
     list_of_poems_string = ""
     vec=df.global.world.poetic_forms.all
     for k=0,#vec-1 do
-        name=dfhack.TranslateName(vec[k].name,true)
+        name=dfhack.translation.translateName(vec[k].name,true)
         list_of_poems[name]=k
         list_of_poems_string=list_of_poems_string..k..":"..name..","
     end
@@ -248,7 +247,7 @@ function build_all_lists(printflag)
     list_of_music_string = ""
     vec=df.global.world.musical_forms.all
     for k=0,#vec-1 do
-        name=dfhack.TranslateName(vec[k].name,true)
+        name=dfhack.translation.translateName(vec[k].name,true)
         list_of_music[name]=k
         list_of_music_string=list_of_music_string..k..":"..name..","
     end
@@ -260,7 +259,7 @@ function build_all_lists(printflag)
     list_of_dances_string = ""
     vec=df.global.world.dance_forms.all
     for k=0,#vec-1 do
-        name=dfhack.TranslateName(vec[k].name,true)
+        name=dfhack.translation.translateName(vec[k].name,true)
         list_of_dances[name]=k
         list_of_dances_string=list_of_dances_string..k..":"..name..","
     end
@@ -269,8 +268,53 @@ function build_all_lists(printflag)
     end
 end -- end func build_all_lists
 -- ---------------------------------------------------------------------------
+function get_preferences(unit)
+    if not unit then
+        print("No unit selected!")
+        return
+    end
+
+    local preferences = unit.status.current_soul.preferences
+    if #preferences == 0 then
+        print("Unit " .. unit_name_to_console(unit) .. " has no preferences.")
+        return
+    end
+
+    print("Preferences for " .. unit_name_to_console(unit) .. ":")
+    for _, pref in ipairs(preferences) do
+        local pref_type = df.unit_preference.T_type[pref.type]
+        local description = ""
+
+        if pref_type == "LikeMaterial" then
+            description = "Likes material: " .. dfhack.matinfo.getToken(pref.mattype, pref.matindex)
+        elseif pref_type == "LikeFood" then
+            description = "Likes food: " .. dfhack.matinfo.getToken(pref.mattype, pref.matindex)
+        elseif pref_type == "LikeItem" then
+            description = "Likes item type: " .. tostring(pref.item_type)
+        elseif pref_type == "LikePlant" then
+            description = "Likes plant: " .. dfhack.matinfo.getToken(pref.mattype, pref.matindex)
+        elseif pref_type == "HateCreature" then
+            description = "Hates creature: " .. df.global.world.raws.creatures.all[pref.creature_id].creature_id
+        elseif pref_type == "LikeColor" then
+            description = "Likes color: " .. df.global.world.raws.descriptors.colors[pref.color_id].id
+        elseif pref_type == "LikeShape" then
+            description = "Likes shape: " .. df.global.world.raws.descriptors.shapes[pref.shape_id].id
+        elseif pref_type == "LikePoeticForm" then
+            description = "Likes poetic form: " .. dfhack.translation.translateName(df.global.world.poetic_forms.all[pref.poetic_form_id].name, true)
+        elseif pref_type == "LikeMusicalForm" then
+            description = "Likes musical form: " .. dfhack.translation.translateName(df.global.world.musical_forms.all[pref.musical_form_id].name, true)
+        elseif pref_type == "LikeDanceForm" then
+            description = "Likes dance form: " .. dfhack.translation.translateName(df.global.world.dance_forms.all[pref.dance_form_id].name, true)
+        else
+            description = "Unknown preference type: " .. tostring(pref.type)
+        end
+
+        print(description)
+    end
+end -- end function: get_preferences
+-- ---------------------------------------------------------------------------
 function unit_name_to_console(unit)
-    return dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(unit)))
+    return dfhack.df2console(dfhack.units.getReadableName(unit))
 end
 
 
@@ -282,7 +326,7 @@ build_all_lists(false)
 local opt = ({...})[1]
 
 function handle_one(profile)
-    local unit = dfhack.gui.getSelectedUnit()
+    local unit = dfhack.gui.getSelectedUnit(true)
     if unit == nil then
         print ("No unit available!  Aborting with extreme prejudice.")
         return
@@ -299,7 +343,7 @@ end
 if opt == "list" then
     build_all_lists(true)
 elseif opt == "clear" then
-    local unit = dfhack.gui.getSelectedUnit()
+    local unit = dfhack.gui.getSelectedUnit(true)
     if unit==nil then
         print ("No unit available!  Aborting with extreme prejudice.")
         return
@@ -317,16 +361,11 @@ elseif opt == "all" then
     handle_all("IDEAL")
 elseif opt == "goth_all" then
     handle_all("GOTH")
+elseif opt == "show" then
+    local unit = dfhack.gui.getSelectedUnit(true)
+    get_preferences(unit)
 else
-    print ("Sets preferences of one dwarf, or of all dwarves, using profiles.")
-    print ("Valid options:")
-    print ("list       -- show available preference type lists")
-    print ("clear      -- clear preferences of selected unit")
-    print ("clear_all  -- clear preferences of all units")
-    print ("goth       -- alter current dwarf preferences to Goth")
-    print ("goth_all   -- alter all dwarf preferences to Goth")
-    print ("one        -- alter current dwarf preferences to Ideal")
-    print ("all        -- alter all dwarf preferences to Ideal")
+    print(dfhack.script_help())
     if opt and opt ~= "help" then
         qerror("Unrecognized option: " .. opt)
     end

@@ -445,8 +445,10 @@ function Line:plot_bresenham(x0, y0, x1, y1, thickness)
         while true do
             for j = -math.floor(thickness / 2), math.ceil(thickness / 2) - 1 do
                 if not self.arr[x + j] then self.arr[x + j] = {} end
-                self.arr[x + j][y] = true
-                self.num_tiles = self.num_tiles + 1
+                if not self.arr[x + j][y] then
+                    self.arr[x + j][y] = true
+                    self.num_tiles = self.num_tiles + 1
+                end
             end
 
             if x == x1 and y == y1 + i then
@@ -641,8 +643,10 @@ function FreeForm:update(points, extra_points)
         for x, y_row in pairs(line_class.arr) do
             for y, _ in pairs(y_row) do
                 if not self.arr[x] then self.arr[x] = {} end
-                self.arr[x][y] = true
-                self.num_tiles = self.num_tiles + 1
+                if not self.arr[x][y] then
+                    self.arr[x][y] = true
+                    self.num_tiles = self.num_tiles + 1
+                end
             end
         end
     end

@@ -2,10 +2,11 @@
 --luacheck-flags: strictsubtype
 --@ module=true
 
-local gui = require('gui')
-local overlay = require('plugins.overlay')
+local asyncexport = reqscript('internal/exportlegends/asyncexport')
+local racefilter = reqscript('internal/exportlegends/racefilter')
 local script = require('gui.script')
-local widgets = require('gui.widgets')
+
+local GLOBAL_KEY = 'exportlegends'
 
 -- Get the date of the world as a string
 -- Format: "YYYYY-MM-DD"
@@ -42,10 +43,7 @@ local function table_containskey(self, key)
     return false
 end
 
-progress_item = progress_item or ''
-num_done = num_done or -1
-num_total = num_total or -1
-last_update_ms = 0
+local last_update_ms = 0
 
 -- should be frequent enough so that user can still effectively use
 -- the vanilla legends UI to browse while export is in progress
@@ -62,12 +60,12 @@ end
 --luacheck: skip
 local function progress_ipairs(vector, desc, skip_count, interval)
     desc = desc or 'item'
-    progress_item = desc
+    asyncexport.progress_item = desc
     interval = interval or 10000
     local cb = ipairs(vector)
     return function(vector, k, ...)
         if not skip_count then
-            num_done = num_done + 1
+            asyncexport.num_done = asyncexport.num_done + 1
         end
         if k then
             if #vector >= interval and (k % interval == 0 or k == #vector - 1) then
@@ -80,7 +78,7 @@ local function progress_ipairs(vector, desc, skip_count, interval)
 end
 
 local function make_chunk(name, vector, fn)
-    num_total = num_total + #vector
+    asyncexport.num_total = asyncexport.num_total + #vector
     return {
         name=name,
         vector=vector,
@@ -138,8 +136,8 @@ local function export_more_legends_xml()
 
     file:write("<?xml version=\"1.0\" encoding='UTF-8'?>\n")
     file:write("<df_world>\n")
-    file:write("<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(world.world_data.name))).."</name>\n")
-    file:write("<altname>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(world.world_data.name,1))).."</altname>\n")
+    file:write("<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(world.world_data.name))).."</name>\n")
+    file:write("<altname>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(world.world_data.name,1))).."</altname>\n")
 
     local chunks = {}
 
@@ -147,7 +145,7 @@ local function export_more_legends_xml()
     for landmassK, landmassV in progress_ipairs(vector, 'landmasses') do
         file:write("\t<landmass>\n")
         file:write("\t\t<id>"..landmassV.index.."</id>\n")
-        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(landmassV.name,1))).."</name>\n")
+        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(landmassV.name,1))).."</name>\n")
         file:write("\t\t<coord_1>"..landmassV.min_x..","..landmassV.min_y.."</coord_1>\n")
         file:write("\t\t<coord_2>"..landmassV.max_x..","..landmassV.max_y.."</coord_2>\n")
         file:write("\t</landmass>\n")
@@ -158,7 +156,7 @@ local function export_more_legends_xml()
     for mountainK, mountainV in progress_ipairs(vector, 'mountains') do
         file:write("\t<mountain_peak>\n")
         file:write("\t\t<id>"..mountainK.."</id>\n")
-        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(mountainV.name,1))).."</name>\n")
+        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(mountainV.name,1))).."</name>\n")
         file:write("\t\t<coords>"..mountainV.pos.x..","..mountainV.pos.y.."</coords>\n")
         file:write("\t\t<height>"..mountainV.height.."</height>\n")
         if mountainV.flags.is_volcano then
@@ -207,7 +205,7 @@ local function export_more_legends_xml()
     table.insert(chunks, make_chunk('rivers', world.world_data.rivers, function(vector)
     for riverK, riverV in progress_ipairs(vector, 'rivers') do
         file:write("\t<river>\n")
-        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(riverV.name, 1))).."</name>\n")
+        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(riverV.name, 1))).."</name>\n")
         file:write("\t\t<path>")
         for pathK, pathV in progress_ipairs(riverV.path.x, 'river section', true) do
             file:write(pathV..","..riverV.path.y[pathK]..",")
@@ -251,8 +249,8 @@ local function export_more_legends_xml()
                         file:write("\t\t\t\t<id>"..buildingV.id.."</id>\n")
                         file:write("\t\t\t\t<type>"..df_enums.abstract_building_type[buildingV:getType()]:lower().."</type>\n")
                         if table_containskey(buildingV,"name") then
-                            file:write("\t\t\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(buildingV.name, 1))).."</name>\n")
-                            file:write("\t\t\t\t<name2>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(buildingV.name))).."</name2>\n")
+                            file:write("\t\t\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(buildingV.name, 1))).."</name>\n")
+                            file:write("\t\t\t\t<name2>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(buildingV.name))).."</name2>\n")
                         end
                         if df.abstract_building_templest:is_instance(buildingV) then
                             file:write("\t\t\t\t<deity_type>"..buildingV.deity_type.."</deity_type>\n")
@@ -282,7 +280,7 @@ local function export_more_legends_xml()
     for wcK, wcV in progress_ipairs(vector, 'constructions') do
         file:write("\t<world_construction>\n")
         file:write("\t\t<id>"..wcV.id.."</id>\n")
-        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(wcV.name,1))).."</name>\n")
+        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(wcV.name,1))).."</name>\n")
         file:write("\t\t<type>"..(df_enums.world_construction_type[wcV:getType()]):lower().."</type>\n")
         file:write("\t\t<coords>")
         for xK, xVal in ipairs(wcV.square_pos.x) do
@@ -340,7 +338,7 @@ local function export_more_legends_xml()
     for idK, idV in progress_ipairs(vector, 'identities') do
         file:write("\t<identity>\n")
         file:write("\t\t<id>"..idV.id.."</id>\n")
-        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(idV.name,1))).."</name>\n")
+        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(idV.name,1))).."</name>\n")
         local id_tag = df.identity_type.attrs[idV.type].id_tag
         if id_tag then
             file:write("\t\t<"..id_tag..">"..idV[id_tag].."</"..id_tag..">\n")
@@ -448,7 +446,7 @@ local function export_more_legends_xml()
             for occasionK, occasionV in pairs(entityV.occasion_info.occasions) do
                 file:write("\t\t<occasion>\n")
                 file:write("\t\t\t<id>"..occasionV.id.."</id>\n")
-                file:write("\t\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(occasionV.name,1))).."</name>\n")
+                file:write("\t\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(occasionV.name,1))).."</name>\n")
                 file:write("\t\t\t<event>"..occasionV.purpose_id.."</event>\n")
                 for scheduleK, scheduleV in pairs(occasionV.schedule) do
                     file:write("\t\t\t<schedule>\n")
@@ -762,7 +760,7 @@ local function export_more_legends_xml()
                         else
                             dfhack.printerr ("Unknown df.identity_type value encountered:"..tostring (identity.type)..". Please report to DFHack team.")
                         end
-                        file:write("\t\t<identity_name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(identity.name))).."</identity_name>\n")
+                        file:write("\t\t<identity_name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(identity.name))).."</identity_name>\n")
                         local craw = df.creature_raw.find(identity.race)
                         if craw then
                             file:write("\t\t<identity_race>"..(craw.creature_id):lower().."</identity_race>\n")
@@ -969,7 +967,7 @@ local function export_more_legends_xml()
     for formK, formV in progress_ipairs(vector, 'poetic forms') do
         file:write("\t<poetic_form>\n")
         file:write("\t\t<id>"..formV.id.."</id>\n")
-        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(formV.name,1))).."</name>\n")
+        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(formV.name,1))).."</name>\n")
         file:write("\t</poetic_form>\n")
     end
     end))
@@ -978,7 +976,7 @@ local function export_more_legends_xml()
     for formK, formV in progress_ipairs(vector, 'musical forms') do
         file:write("\t<musical_form>\n")
         file:write("\t\t<id>"..formV.id.."</id>\n")
-        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(formV.name,1))).."</name>\n")
+        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(formV.name,1))).."</name>\n")
         file:write("\t</musical_form>\n")
     end
     end))
@@ -987,7 +985,7 @@ local function export_more_legends_xml()
     for formK, formV in progress_ipairs(vector, 'dance forms') do
         file:write("\t<dance_form>\n")
         file:write("\t\t<id>"..formV.id.."</id>\n")
-        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(formV.name,1))).."</name>\n")
+        file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.translation.translateName(formV.name,1))).."</name>\n")
         file:write("\t</dance_form>\n")
     end
     end))
@@ -1016,112 +1014,36 @@ local function export_more_legends_xml()
 end
 
 local function wrap_export()
-    if num_total >= 0 then
+    if asyncexport.num_total >= 0 then
         qerror('exportlegends already in progress')
     end
-    num_total = 0
-    num_done = 0
-    progress_item = 'basic info'
+    asyncexport.num_total = 0
+    asyncexport.num_done = 0
+    asyncexport.progress_item = 'basic info'
     yield_if_timeout()
     local ok, err = pcall(export_more_legends_xml)
     if not ok then
         dfhack.printerr(err)
     end
-    num_total = -1
-    num_done = -1
-    progress_item = ''
-end
-
--- -------------------
--- LegendsOverlay
---
-
-LegendsOverlay = defclass(LegendsOverlay, overlay.OverlayWidget)
-LegendsOverlay.ATTRS{
-    desc='Adds extended export progress bar to the legends main screen.',
-    default_pos={x=2, y=2},
-    default_enabled=true,
-    viewscreens='legends/Default',
-    frame={w=55, h=5},
-}
-
-function LegendsOverlay:init()
-    self:addviews{
-        widgets.Panel{
-            view_id='button_mask',
-            frame={t=0, l=0, w=15, h=3},
-        },
-        widgets.BannerPanel{
-            frame={b=0, l=0, r=0, h=1},
-            subviews={
-                widgets.ToggleHotkeyLabel{
-                    view_id='do_export',
-                    frame={t=0, l=1, r=1},
-                    label='Also export DFHack extended legends data:',
-                    key='CUSTOM_CTRL_D',
-                    visible=function() return num_total < 0 end,
-                },
-                widgets.Label{
-                    frame={t=0, l=1},
-                    text={
-                        'Exporting ',
-                        {width=27, text=function() return progress_item end},
-                        ' ',
-                        {text=function() return ('%.2f'):format((num_done * 100) / num_total) end, pen=COLOR_YELLOW},
-                        '% complete'
-                    },
-                    visible=function() return num_total >= 0 end,
-                },
-            },
-        },
-    }
-end
-
-function LegendsOverlay:onInput(keys)
-    if keys._MOUSE_L and num_total < 0 and
-        self.subviews.button_mask:getMousePos() and
-        self.subviews.do_export:getOptionValue()
-    then
-        script.start(wrap_export)
-    end
-    return LegendsOverlay.super.onInput(self, keys)
-end
-
--- -------------------
--- DoneMaskOverlay
---
-
-DoneMaskOverlay = defclass(DoneMaskOverlay, overlay.OverlayWidget)
-DoneMaskOverlay.ATTRS{
-    desc='Prevents legends mode from being exited while an export is in progress.',
-    default_pos={x=-2, y=2},
-    default_enabled=true,
-    viewscreens='legends',
-    frame={w=9, h=3},
-}
-
-function DoneMaskOverlay:init()
-    self:addviews{
-        widgets.Panel{
-            frame_background=gui.CLEAR_PEN,
-            visible=function() return num_total >= 0 end,
-        }
-    }
-end
-
-function DoneMaskOverlay:onInput(keys)
-    if num_total >= 0 then
-        if keys.LEAVESCREEN or (keys._MOUSE_L and self:getMousePos()) then
-            return true
-        end
-    end
-    return DoneMaskOverlay.super.onInput(self, keys)
+    asyncexport.reset_state()
 end
 
 OVERLAY_WIDGETS = {
-    export=LegendsOverlay,
-    mask=DoneMaskOverlay,
+    export=asyncexport.LegendsOverlay,
+    mask=asyncexport.DoneMaskOverlay,
+    histfigfilter=racefilter.RaceFilterOverlay,
 }
+
+dfhack.onStateChange[GLOBAL_KEY] = function(sc)
+    if sc == SC_VIEWSCREEN_CHANGED and df.viewscreen_choose_game_typest:is_instance(dfhack.gui.getDFViewscreen(true)) then
+        asyncexport.reset_state()
+    end
+
+    -- Reset state when a world or map is loaded to ensure data remains current
+    if sc == SC_WORLD_LOADED then
+        racefilter.reset_state()
+    end
+end
 
 if dfhack_flags.module then
     return

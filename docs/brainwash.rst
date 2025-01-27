@@ -12,6 +12,7 @@ Usage
 -----
 
 ::
+
     brainwash <type>
 
 Examples

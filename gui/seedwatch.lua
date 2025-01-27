@@ -1,270 +1,290 @@
--- config ui for seedwatch
-
+local dlg = require('gui.dialogs')
 local gui = require('gui')
-local widgets = require('gui.widgets')
 local plugin = require('plugins.seedwatch')
+local widgets = require('gui.widgets')
 
-local PROPERTIES_HEADER = '   Quantity     Target   '
-local REFRESH_MS = 10000
-local MAX_TARGET = 2147483647
---
--- SeedSettings
---
-SeedSettings = defclass(SeedSettings, widgets.Window)
-SeedSettings.ATTRS{
-    frame={l=5, t=5, w=35, h=9},
+local CH_UP = string.char(30)
+local CH_DN = string.char(31)
+
+Seedwatch = defclass(Seedwatch, widgets.Window)
+Seedwatch.ATTRS{
+    frame_title='Seedwatch',
+    frame={w=58, h=25},
+    frame_inset={t=1},
+    resizable=true,
 }
 
-function SeedSettings:init()
+local function sort_noop(a, b)
+    -- this function is used as a marker and never actually gets called
+    error('sort_noop should not be called')
+end
+
+local function sort_by_name_desc(a, b)
+    return a.data.name < b.data.name
+end
+
+local function sort_by_name_asc(a, b)
+    return a.data.name > b.data.name
+end
+
+local function sort_by_quantity_desc(a, b)
+    if a.data.quantity == b.data.quantity then
+        return sort_by_name_desc(a, b)
+    end
+    return a.data.quantity > b.data.quantity
+end
+
+local function sort_by_quantity_asc(a, b)
+    if a.data.quantity == b.data.quantity then
+        return sort_by_name_desc(a, b)
+    end
+    return a.data.quantity < b.data.quantity
+end
+
+local function sort_by_target_desc(a, b)
+    if a.data.target == b.data.target then
+        return sort_by_name_desc(a, b)
+    end
+    return a.data.target > b.data.target
+end
+
+local function sort_by_target_asc(a, b)
+    if a.data.target == b.data.target then
+        return sort_by_name_desc(a, b)
+    end
+    return a.data.target < b.data.target
+end
+
+function Seedwatch:init()
     self:addviews{
-        widgets.Label{
-            frame={t=0, l=0},
-            text='Seed: ',
+        widgets.CycleHotkeyLabel{
+            view_id='sort',
+            frame={l=1, t=0, w=31},
+            label='Sort by:',
+            key='CUSTOM_SHIFT_S',
+            options={
+                {label='Name'..CH_DN, value=sort_by_name_desc},
+                {label='Name'..CH_UP, value=sort_by_name_asc},
+                {label='Quantity'..CH_DN, value=sort_by_quantity_desc},
+                {label='Quantity'..CH_UP, value=sort_by_quantity_asc},
+                {label='Target'..CH_DN, value=sort_by_target_desc},
+                {label='Target'..CH_UP, value=sort_by_target_asc},
+            },
+            initial_option=sort_by_name_desc,
+            on_change=self:callback('refresh', 'sort'),
         },
-        widgets.Label{
-            view_id='name',
-            frame={t=0, l=6},
-            text_pen=COLOR_GREEN,
+        widgets.ToggleHotkeyLabel{
+            view_id='hide_nostock',
+            frame={t=0, l=24, w=31},
+            key='CUSTOM_CTRL_H',
+            label='Show only in stock:',
+            on_change=self:callback('refresh', 'sort'),
         },
-        widgets.Label{
-            frame={t=1, l=0},
-            text='Quantity: ',
+        widgets.Panel{
+            view_id='list_panel',
+            frame={t=2, l=0, r=0, b=4},
+            frame_style=gui.FRAME_INTERIOR,
+            subviews={
+                widgets.CycleHotkeyLabel{
+                    view_id='sort_name',
+                    frame={t=0, l=0, w=5},
+                    options={
+                        {label='Name', value=sort_noop},
+                        {label='Name'..CH_DN, value=sort_by_name_desc},
+                        {label='Name'..CH_UP, value=sort_by_name_asc},
+                    },
+                    initial_option=sort_by_name_desc,
+                    option_gap=0,
+                    on_change=self:callback('refresh', 'sort_name'),
+                },
+                widgets.CycleHotkeyLabel{
+                    view_id='sort_quantity',
+                    frame={t=0, r=12, w=9},
+                    options={
+                        {label='Quantity', value=sort_noop},
+                        {label='Quantity'..CH_DN, value=sort_by_quantity_desc},
+                        {label='Quantity'..CH_UP, value=sort_by_quantity_asc},
+                    },
+                    option_gap=0,
+                    on_change=self:callback('refresh', 'sort_quantity'),
+                },
+                widgets.CycleHotkeyLabel{
+                    view_id='sort_target',
+                    frame={t=0, r=3, w=7},
+                    options={
+                        {label='Target', value=sort_noop},
+                        {label='Target'..CH_DN, value=sort_by_target_desc},
+                        {label='Target'..CH_UP, value=sort_by_target_asc},
+                    },
+                    option_gap=0,
+                    on_change=self:callback('refresh', 'sort_target'),
+                },
+                widgets.Label{
+                    view_id='disabled_warning',
+                    visible=function() return not plugin.isEnabled() end,
+                    frame={t=3, h=1},
+                    auto_width=true,
+                    text={"Please enable seedwatch to change settings"},
+                    text_pen=COLOR_YELLOW
+                },
+                widgets.List{
+                    view_id='list',
+                    frame={t=2, b=0},
+                    visible=plugin.isEnabled,
+                    on_double_click=self:callback('prompt_for_new_target'),
+                },
+            },
         },
-        widgets.Label{
-            view_id='quantity',
-            frame={t=1, l=10},
-            text_pen=COLOR_GREEN,
-        },
-        widgets.EditField{
-            view_id='target',
-            frame={t=2, l=0},
-            label_text='Target: ',
-            key='CUSTOM_CTRL_T',
-            on_char=function(ch) return ch:match('%d') end,
-            on_submit=self:callback('commit'),
-        },
-        widgets.HotkeyLabel{
-            frame={t=4, l=0},
-            key='SELECT',
-            label='Apply',
-            on_activate=self:callback('commit'),
+        widgets.Panel{
+            view_id='footer',
+            frame={l=1, r=1, b=0, h=3},
+            subviews={
+                widgets.Label{
+                    frame={t=0, l=0},
+                    text={
+                        'Double click on a row or hit ',
+                        {text='Enter', pen=COLOR_LIGHTGREEN},
+                        ' to set the target.'
+                    },
+                },
+                widgets.ToggleHotkeyLabel{
+                    view_id='enable_toggle',
+                    frame={t=2, l=0, w=29},
+                    label='Seedwatch is',
+                    key='CUSTOM_CTRL_E',
+                    options={{value=true, label='Enabled', pen=COLOR_GREEN},
+                             {value=false, label='Disabled', pen=COLOR_RED}},
+                    on_change=function(val)
+                        plugin.setEnabled(val)
+                        self:refresh()
+                    end,
+                },
+                widgets.HotkeyLabel{
+                    frame={t=2, l=31},
+                    label='Set all targets',
+                    key='CUSTOM_CTRL_A',
+                    auto_width=true,
+                    on_activate=self:callback('prompt_for_all_targets'),
+                },
+            },
         },
     }
 end
 
-function SeedSettings:show(choice, on_commit)
-    self.data = choice.data
-    self.on_commit = on_commit
-    self.subviews.name:setText(self.data.name)
-    self.subviews.quantity:setText(tostring(self.data.quantity))
-    self.subviews.target:setText(tostring(self.data.target))
-    self.visible = true
-    self:setFocus(true)
-    self:updateLayout()
+function Seedwatch:render(dc)
+    self.subviews.enable_toggle:setOption(plugin.isEnabled())
+    Seedwatch.super.render(self, dc)
 end
 
-function SeedSettings:hide()
-    self:setFocus(false)
-    self.visible = false
-end
-
-function SeedSettings:commit()
-    local target = math.tointeger(self.subviews.target.text) or 0
-    target = math.min(MAX_TARGET, math.max(0, target))
-
-    plugin.seedwatch_setTarget(self.data.id, target)
-    self:hide()
-    self.on_commit()
-end
-
-function SeedSettings:onInput(keys)
-    if keys.LEAVESCREEN or keys._MOUSE_R then
-        self:hide()
-        return true
+function Seedwatch:onInput(keys)
+    if keys.SELECT then
+        self:prompt_for_new_target(self.subviews.list:getSelected())
     end
-    SeedSettings.super.onInput(self, keys)
+    return Seedwatch.super.onInput(self, keys)
+end
+
+function Seedwatch:postUpdateLayout()
+    self:refresh()
+end
+
+local SORT_WIDGETS = {
+    'sort',
+    'sort_name',
+    'sort_quantity',
+    'sort_target',
+}
+
+local function make_row_text(name, quantity, target, row_width)
+    return {
+        {text=name, width=row_width-22, pad_char=' '},
+        '  ', {text=quantity, width=7, rjustify=true, pad_char=' '},
+        '  ', {text=target, width=7, rjustify=true, pad_char=' '},
+    }
+end
+
+local plants_all = df.global.world.raws.plants.all
+
+function Seedwatch:refresh(sort_widget, sort_fn)
+    sort_widget = sort_widget or 'sort'
+    sort_fn = sort_fn or self.subviews.sort:getOptionValue()
+    if sort_fn == sort_noop then
+        self.subviews[sort_widget]:cycle()
+        return
+    end
+    for _,widget_name in ipairs(SORT_WIDGETS) do
+        self.subviews[widget_name]:setOption(sort_fn)
+    end
+
+    local watch_map, seed_counts = plugin.seedwatch_getData()
+    local hide_nostock = self.subviews.hide_nostock:getOptionValue()
+
+    local list = self.subviews.list
+    local row_width = list.frame_body.width
+    local choices = {}
+
+    for idx,target in pairs(watch_map) do
+        if hide_nostock and not seed_counts[idx] then goto continue end
+        local name = plants_all[idx].seed_singular
+        local quantity = seed_counts[idx] or 0
+        table.insert(choices, {
+            text=make_row_text(name, quantity, target, row_width),
+            data={
+                id=plants_all[idx].id,
+                name=name,
+                quantity=quantity,
+                target=target,
+            },
+        })
+        ::continue::
+    end
+
+    table.sort(choices, self.subviews.sort:getOptionValue())
+    local selected = list:getSelected()
+    list:setChoices(choices, selected)
+end
+
+local function check_number(target, text)
+    if not target then
+        dlg.showMessage('Invalid Number', 'This is not a number: '..text..NEWLINE..'(for zero enter a 0)', COLOR_LIGHTRED)
+        return false
+    end
+    if target < 0 then
+        dlg.showMessage('Invalid Number', 'Negative numbers make no sense!', COLOR_LIGHTRED)
+        return false
+    end
     return true
 end
 
---
--- Seedwatch
---
-Seedwatch = defclass(Seedwatch, widgets.Window)
-Seedwatch.ATTRS {
-    frame_title='Seedwatch',
-    frame={w=60, h=27},
-    resizable=true,
-    resize_min={h=25},
-}
-
-function Seedwatch:init()
-    local minimal = false
-    local saved_frame = {w=50, h=6, r=2, t=18}
-    local saved_resize_min = {w=saved_frame.w, h=saved_frame.h}
-    local function toggle_minimal()
-        minimal = not minimal
-        local swap = self.frame
-        self.frame = saved_frame
-        saved_frame = swap
-        swap = self.resize_min
-        self.resize_min = saved_resize_min
-        saved_resize_min = swap
-        self:updateLayout()
-        self:refresh_data()
-    end
-    local function is_minimal()
-        return minimal
-    end
-    local function is_not_minimal()
-        return not minimal
-    end
-
-    self:addviews{
-        widgets.ToggleHotkeyLabel{
-            view_id='enable_toggle',
-            frame={t=0, l=0, w=31},
-            label='Seedwatch is',
-            key='CUSTOM_CTRL_E',
-            options={{value=true, label='Enabled', pen=COLOR_GREEN},
-                     {value=false, label='Disabled', pen=COLOR_RED}},
-            on_change=function(val) plugin.setEnabled(val) end,
-        },
-        widgets.EditField{
-            view_id='all',
-            frame={t=1, l=0},
-            label_text='Target for all: ',
-            key='CUSTOM_CTRL_A',
-            on_char=function(ch) return ch:match('%d') end,
-            on_submit=function(text)
-                local target = math.tointeger(text)
-                if not target or target == '' then
-                    target = 0
-                elseif target > MAX_TARGET then
-                    target = MAX_TARGET
-                end
-                plugin.seedwatch_setTarget('all', target)
-                self.subviews.list:setFilter('')
-                self:refresh_data()
-                self:update_choices()
-            end,
-            visible=is_not_minimal,
-            text='30',
-        },
-
-        widgets.HotkeyLabel{
-            frame={r=0, t=0, w=10},
-            key='CUSTOM_ALT_M',
-            label=string.char(31)..string.char(30),
-            on_activate=toggle_minimal},
-        widgets.Label{
-            view_id='minimal_summary',
-            frame={t=1, l=0, h=1},
-            auto_height=false,
-            visible=is_minimal,
-        },
-        widgets.Label{
-            frame={t=3, l=0},
-            text='Seed',
-            auto_width=true,
-            visible=is_not_minimal,
-        },
-        widgets.Label{
-            frame={t=3, r=0},
-            text=PROPERTIES_HEADER,
-            auto_width=true,
-            visible=is_not_minimal,
-        },
-        widgets.FilteredList{
-            view_id='list',
-            frame={t=5, l=0, r=0, b=3},
-            on_submit=self:callback('configure_seed'),
-            visible=is_not_minimal,
-            edit_key = 'CUSTOM_S',
-        },
-        widgets.Label{
-            view_id='summary',
-            frame={b=0, l=0},
-            visible=is_not_minimal,
-        },
-        SeedSettings{
-            view_id='seed_settings',
-            visible=false,
-        },
-
-    }
-
-    self:refresh_data()
-end
-
-function Seedwatch:configure_seed(idx, choice)
-    self.subviews.seed_settings:show(choice, function()
-                self:refresh_data()
-                self:update_choices()
-            end)
-end
-
-function Seedwatch:update_choices()
-    local list = self.subviews.list
-    local name_width = list.frame_body.width - #PROPERTIES_HEADER
-    local fmt = '%-'..tostring(name_width)..'s %10d %10d  '
-    local choices = {}
-    local prior_search=self.subviews.list.edit.text
-    for k, v in pairs(self.data.seeds) do
-        local text = (fmt):format(v.name:sub(1,name_width), v.quantity or 0, v.target or 0)
-        table.insert(choices, {text=text, data=v})
-    end
-
-    self.subviews.list:setChoices(choices)
-    if prior_search then self.subviews.list:setFilter(prior_search) end
-    self.subviews.list:updateLayout()
-end
-
-function Seedwatch:refresh_data()
-    self.subviews.enable_toggle:setOption(plugin.isEnabled())
-    local watch_map, seed_counts = plugin.seedwatch_getData()
-    self.data = {}
-    self.data.sum = 0
-    self.data.seeds_qty = 0
-    self.data.seeds_watched = 0
-    self.data.seeds = {}
-    for k,v in pairs(seed_counts) do
-        local seed = {}
-        seed.id = df.global.world.raws.plants.all[k].id
-        seed.name = df.global.world.raws.plants.all[k].seed_singular
-        seed.quantity = v
-        seed.target = watch_map[k] or 0
-        self.data.seeds[k] = seed
-        if self.data.seeds[k].target > 0 then
-            self.data.seeds_watched = self.data.seeds_watched + 1
+function Seedwatch:prompt_for_new_target(_, choice)
+    dlg.showInputPrompt(
+        'Set target',
+        ('Enter desired target for %s:'):format(choice.data.name),
+        COLOR_WHITE,
+        tostring(choice.data.target),
+        function(text)
+            local target = tonumber(text)
+            if check_number(target, text) then
+                plugin.seedwatch_setTarget(choice.data.id, target)
+                self:refresh()
+            end
         end
-        self.data.seeds_qty = self.data.seeds_qty + v
-    end
-    if self.subviews.all.text == '' then
-        self.subviews.all:setText('0')
-    end
-    local summary_text = ('Seeds quantity: %d  watched: %d\n'):format(tostring(self.data.seeds_qty),tostring(self.data.seeds_watched))
-    self.subviews.summary:setText(summary_text)
-    local minimal_summary_text = summary_text
-    self.subviews.minimal_summary:setText(minimal_summary_text)
-
-    self.next_refresh_ms = dfhack.getTickCount() + REFRESH_MS
-
+    )
 end
 
-
-function Seedwatch:postUpdateLayout()
-    self:update_choices()
-end
-
--- refreshes data every 10 seconds or so
-function Seedwatch:onRenderBody()
-    if self.next_refresh_ms <= dfhack.getTickCount()
-    and self.subviews.seed_settings.visible == false
-    and not self.subviews.all.focus
-    and not self.subviews.list.edit.focus then
-        self:refresh_data()
-        self:update_choices()
-    end
+function Seedwatch:prompt_for_all_targets()
+    dlg.showInputPrompt(
+        'Set all targets',
+        'Enter desired target for all seed types',
+        COLOR_WHITE,
+        '',
+        function(text)
+            local target = tonumber(text)
+            if check_number(target, text) then
+                plugin.seedwatch_setTarget('all', target)
+                self:refresh()
+            end
+        end
+    )
 end
 
 --
@@ -272,7 +292,7 @@ end
 --
 
 SeedwatchScreen = defclass(SeedwatchScreen, gui.ZScreen)
-SeedwatchScreen.ATTRS {
+SeedwatchScreen.ATTRS{
     focus_path='seedwatch',
 }
 
@@ -284,8 +304,8 @@ function SeedwatchScreen:onDismiss()
     view = nil
 end
 
-if not dfhack.isMapLoaded() then
-    qerror('seedwatch requires a map to be loaded')
+if not dfhack.isMapLoaded() or not dfhack.world.isFortressMode() then
+    qerror('seedwatch requires a fort map to be loaded')
 end
 
 view = view and view:raise() or SeedwatchScreen{}:show()

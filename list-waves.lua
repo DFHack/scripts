@@ -1,47 +1,159 @@
--- displays migration wave information for citizens/units
+-- displays migration wave information for citizens
 
+local argparse = require('argparse')
 local utils = require('utils')
 
-local validArgs = utils.invert({
-    'unit',
-    'all',
-    'granularity',
-    'showarrival',
-    'help'
-})
-local args = utils.processArgs({...}, validArgs)
-args.granularity = args.granularity or 'seasons'
+local TICKS_PER_DAY = 1200
+local TICKS_PER_MONTH = 28 * TICKS_PER_DAY
+local TICKS_PER_SEASON = 3 * TICKS_PER_MONTH
 
---[[
-The script loops through all citizens on the map and builds each wave one dwarf
-at a time. This requires calculating arrival information for each dwarf and
-combining this information into a sort of unique wave ID number. After this is
-finished, these wave IDs are normalized so they start at zero and increment by
-one for each wave.
-]]
+local function get_season(year_ticks)
+    local seasons = {
+        'spring',
+        'summer',
+        'autumn',
+        'winter',
+    }
 
-local selected = dfhack.gui.getSelectedUnit(true)
-local ticks_per_day = 1200
-local ticks_per_month = 28 * ticks_per_day
-local ticks_per_season = 3 * ticks_per_month
-local ticks_per_year = 12 * ticks_per_month
-local current_tick = df.global.cur_year_tick
-local seasons = {
-    'spring',
-    'summer',
-    'autumn',
-    'winter',
+    return tostring(seasons[year_ticks // TICKS_PER_SEASON + 1])
+end
+
+local granularities = {
+    days={
+        to_wave_fn=function(elink) return elink.year * 28 * 12 + elink.seconds // TICKS_PER_DAY end,
+        to_string_fn=function(elink) return ('year %d, month %d (%s), day %d'):format(
+            elink.year, elink.seconds // TICKS_PER_MONTH + 1, get_season(elink.seconds), elink.seconds // TICKS_PER_DAY + 1) end,
+    },
+    months={
+        to_wave_fn=function(elink) return elink.year * 12 + elink.seconds // TICKS_PER_MONTH end,
+        to_string_fn=function(elink) return ('year %d, month %d (%s)'):format(
+            elink.year, elink.seconds // TICKS_PER_MONTH + 1, get_season(elink.seconds)) end,
+    },
+    seasons={
+        to_wave_fn=function(elink) return elink.year * 4 + elink.seconds // TICKS_PER_SEASON end,
+        to_string_fn=function(elink) return ('the %s of year %d'):format(get_season(elink.seconds), elink.year) end,
+    },
+    years={
+        to_wave_fn=function(elink) return elink.year end,
+        to_string_fn=function(elink) return ('year %d'):format(elink.year) end,
+    },
 }
 
---sorted pairs
-local function spairs(t, cmp)
-    -- collect the keys
+local plotinfo = df.global.plotinfo
+
+local function match_unit_id(unit_id, hf)
+    if not unit_id or hf.unit_id < 0 then return false end
+    return hf.unit_id == unit_id
+end
+
+local function add_hfdata(opts, hfs, ev, hfid)
+    local hf = df.historical_figure.find(hfid)
+    if not hf or
+        dfhack.units.casteFlagSet(hf.race, hf.caste, df.caste_raw_flags.PET) or
+        dfhack.units.casteFlagSet(hf.race, hf.caste, df.caste_raw_flags.PET_EXOTIC)
+    then
+        return
+    end
+    hfs[hfid] = hfs[hfid] or {
+        hf=hf,
+        year=ev.year,
+        seconds=ev.seconds,
+        dead=false,
+        petitioned=false,
+        highlight=match_unit_id(opts.unit_id, hf),
+    }
+end
+
+local function record_histfig_residency(opts, hfs, ev, enid, hfid)
+    if enid == plotinfo.group_id then
+        add_hfdata(opts, hfs, ev, hfid)
+        hfs[hfid].petitioned = true
+    end
+end
+
+local function record_residency_agreement(opts, hfs, ev)
+    local agreement = df.agreement.find(ev.agreement_id)
+    if not agreement then return end
+    local found = false
+    for _,details in ipairs(agreement.details) do
+        if details.type == df.agreement_details_type.Residency and details.data.Residency.site == plotinfo.site_id then
+            found = true
+            break
+        end
+    end
+    if not found then return end
+    if #agreement.parties ~= 2 or #agreement.parties[1].entity_ids ~= 1 then return end
+    local enid = agreement.parties[1].entity_ids[0]
+    if #agreement.parties[0].histfig_ids == 1 then
+        local hfid = agreement.parties[0].histfig_ids[0]
+        record_histfig_residency(opts, hfs, ev, enid, hfid)
+    elseif #agreement.parties[0].entity_ids == 1 then
+        local troupe = df.historical_entity.find(agreement.parties[0].entity_ids[0])
+        if troupe and troupe.type == df.historical_entity_type.PerformanceTroupe then
+            for _,hfid in ipairs(troupe.histfig_ids) do
+                record_histfig_residency(opts, hfs, ev, enid, hfid)
+            end
+        end
+    end
+end
+
+-- returns map of histfig id to {hf=df.historical_figure, year=int, seconds=int, dead=bool, petitioned=bool, highlight=bool}
+local function get_histfigs(opts)
+    local hfs = {}
+    for _,ev in ipairs(df.global.world.history.events) do
+        local evtype = ev:getType()
+        if evtype == df.history_event_type.CHANGE_HF_STATE then
+            if ev.site == plotinfo.site_id and ev.state == df.whereabouts_type.settler then
+                add_hfdata(opts, hfs, ev, ev.hfid)
+            end
+        elseif evtype == df.history_event_type.AGREEMENT_FORMED then
+            record_residency_agreement(opts, hfs, ev)
+        elseif evtype == df.history_event_type.HIST_FIGURE_DIED then
+            if hfs[ev.victim_hf] then
+                hfs[ev.victim_hf].dead = true
+            end
+        elseif evtype == df.history_event_type.HIST_FIGURE_REVIVED then
+            if hfs[ev.histfig] then
+                hfs[ev.histfig].dead = false
+            end
+        end
+    end
+    return hfs
+end
+
+local function cull_histfigs(opts, hfs)
+    for hfid,hfdata in pairs(hfs) do
+        if not opts.petitioners and hfdata.petitioned or
+            not opts.dead and hfdata.dead
+        then
+            hfs[hfid] = nil
+        end
+    end
+    return hfs
+end
+
+local function get_waves(opts)
+    local waves = {}
+    for _,hfdata in pairs(cull_histfigs(opts, get_histfigs(opts))) do
+        local waveid = granularities[opts.granularity].to_wave_fn(hfdata)
+        if not waveid then goto continue end
+        table.insert(ensure_keys(waves, waveid, hfdata.petitioned and 'petitioners' or 'migrants'), hfdata)
+        if not waves[waveid].desc then
+            waves[waveid].desc = granularities[opts.granularity].to_string_fn(hfdata)
+        end
+        waves[waveid].highlight = waves[waveid].highlight or hfdata.highlight
+        waves[waveid].size = (waves[waveid].size or 0) + 1
+        ::continue::
+    end
+    return waves
+end
+
+local function spairs(t)
     local keys = {}
     for k in pairs(t) do
         table.insert(keys, k)
     end
-    utils.sort_vector(keys, nil, cmp)
-    -- return the iterator function
+    utils.sort_vector(keys)
     local i = 0
     return function()
         i = i + 1
@@ -52,84 +164,80 @@ local function spairs(t, cmp)
     end
 end
 
-local waves = {}
-local function getWave(dwf)
-    arrival_time = current_tick - dwf.curse.time_on_site
-    arrival_year = df.global.cur_year + (arrival_time // ticks_per_year)
-    arrival_season = 1 + (arrival_time % ticks_per_year) // ticks_per_season
-    arrival_month = 1 + (arrival_time % ticks_per_year) // ticks_per_month
-    arrival_day = 1 + ((arrival_time % ticks_per_year) % ticks_per_month) // ticks_per_day
-    local wave
-    if args.granularity == 'days' then
-        wave = arrival_day + (100 * arrival_month) + (10000 * arrival_year)
-    elseif args.granularity == 'months' then
-        wave = arrival_month + (100 * arrival_year)
-    elseif args.granularity == 'seasons' then
-        wave = arrival_season + (10 * arrival_year)
-    elseif args.granularity == 'years' then
-        wave = arrival_year
-    else
-        qerror('Invalid granularity value. Omit the option if you want "seasons".')
-    end
-    table.insert(ensure_key(waves, wave), dwf)
-    if args.unit and dwf == selected then
-        print(('  Selected citizen arrived in the %s of year %d, month %d, day %d.'):format(
-            seasons[arrival_season], arrival_year, arrival_month, arrival_day))
+local function print_units(header, hfs)
+    print()
+    print(('  %s:'):format(header))
+    for _,hfdata in ipairs(hfs) do
+        local deceased = hfdata.dead and ' (deceased)' or ''
+        local highlight = hfdata.highlight and ' (selected unit)' or ''
+        local unit = df.unit.find(hfdata.hf.unit_id)
+        local name = unit and dfhack.units.getReadableName(unit) or dfhack.units.getReadableName(hfdata.hf)
+        print(('    %s%s%s'):format(dfhack.df2console(name), deceased, highlight))
     end
 end
 
-for _,v in ipairs(dfhack.units.getCitizens(true, true)) do
-    getWave(v)
+local function print_waves(opts, waves)
+    local wave_num = 0
+    for _,wave in spairs(waves) do
+        wave_num = wave_num + 1
+        if opts.wave_filter and not opts.wave_filter[wave_num-1] then goto continue end
+        local highlight = wave.highlight and ' (includes selected unit)' or ''
+        print(('Wave %2d consisted of %2d unit(s) and arrived in %s%s'):format(wave_num-1, wave.size, wave.desc, highlight))
+        if opts.names then
+            if wave.migrants and #wave.migrants > 0 then
+                print_units('Migrants', wave.migrants)
+            end
+            if wave.petitioners and #wave.petitioners > 0 then
+                print_units('Units who joined via petition', wave.petitioners)
+            end
+            print()
+        end
+        ::continue::
+    end
 end
 
-if args.help or (not args.all and not args.unit) then
+local opts = {
+    granularity='seasons',
+    dead=true,
+    names=true,
+    petitioners=true,
+    unit_id=nil,
+    wave_filter=nil,
+}
+local help = false
+local positionals = argparse.processArgsGetopt({...}, {
+        {'d', 'no-dead', handler=function() opts.dead = false end},
+        {'g', 'granularity', hasArg=true, handler=function(arg) opts.granularity = arg end},
+        {'h', 'help', handler=function() help = true end},
+        {'n', 'no-names', handler=function() opts.names = false end},
+        {'p', 'no-petitioners', handler=function() opts.petitioners = false end},
+        {'u', 'unit', hasArg=true, handler=function(arg) opts.unit_id = tonumber(arg) end},
+    })
+
+if positionals[1] == 'help' or help == true then
     print(dfhack.script_help())
     return
 end
 
-local zwaves = {}
-i = 0
-for k,v in spairs(waves, utils.compare) do
-    if args.showarrival and args.all then
-        if args.granularity == 'days' then
-            local year = k // 10000
-            local month = (k - (10000 * year)) // 100
-            local season = 1 + ((month - 1) // 3)
-            local day = k - ((100 * month) + (10000 * year))
-            print(('  Wave %2d arrived in the %s of year %d, month %d, day %d.'):format(
-                i, seasons[season], year, month, day))
-        elseif args.granularity == 'months' then
-            local year = k // 100
-            local month = k - (100 * year)
-            local season = 1 + ((month - 1) // 3)
-            print(('  Wave %2d arrived in the %s of year %d, month %d.'):format(
-                i, seasons[season], year, month))
-        elseif args.granularity == 'seasons' then
-            local year = k // 10
-            local season = k - (10 * year)
-            print(('  Wave %2d arrived in the %s of year %d'):format(
-                i, seasons[season], year))
-        elseif args.granularity == 'years' then
-            local year = k
-            print(('  Wave %2d arrived in year %d.'):format(i, year))
-        end
-    end
-
-    zwaves[i] = waves[k]
-    for _,dwf in spairs(v, utils.compare) do
-        if args.unit and dwf == selected then
-            print(('  Selected citizen came with wave %d'):format(i))
-        end
-    end
-    i = i + 1
+if not dfhack.world.isFortressMode() or not dfhack.isMapLoaded() then
+    qerror('please load a fortress')
 end
 
-if args.all then
-    if args.showarrival then
-        print()
-    end
-    for i = 0, #zwaves do
-        print(('  Wave %2d has %2d surviving member%s.'):format(
-            i, #zwaves[i], #zwaves[i] == 1 and '' or 's'))
+if not granularities[opts.granularity] then
+    qerror(('Invalid granularity value: "%s". Omit the option if you want "seasons".'):format(opts.granularity))
+end
+
+for _,wavenum in ipairs(positionals) do
+    local wavenumnum = tonumber(wavenum)
+    if wavenumnum then
+        opts.wave_filter = opts.wave_filter or {}
+        opts.wave_filter[wavenumnum] = true
     end
 end
+
+if not opts.unit_id then
+    local selected_unit = dfhack.gui.getSelectedUnit(true)
+    opts.unit_id = selected_unit and selected_unit.id
+end
+
+print_waves(opts, get_waves(opts))

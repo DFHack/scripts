@@ -63,7 +63,7 @@ function BlueprintDialog:init()
                     text_pen=COLOR_GREY,
                 },
                 widgets.ToggleHotkeyLabel{
-                    frame={t=0, l=12},
+                    frame={t=0, l=12, w=20},
                     key='CUSTOM_ALT_L',
                     label='Library:',
                     options=options,
@@ -72,7 +72,7 @@ function BlueprintDialog:init()
                     on_change=self:callback('update_setting', 'show_library')
                 },
                 widgets.ToggleHotkeyLabel{
-                    frame={t=0, l=35},
+                    frame={t=0, l=35, w=19},
                     key='CUSTOM_ALT_H',
                     label='Hidden:',
                     options=options,
@@ -314,7 +314,7 @@ function Quickfort:init()
         widgets.ResizingPanel{autoarrange_subviews=true, subviews={
             widgets.Label{text='Current blueprint:'},
             widgets.WrappedLabel{
-                text_pen=COLOR_GREY,
+                text_pen=COLOR_CYAN,
                 text_to_wrap=self:callback('get_blueprint_name')}
             }},
         widgets.ResizingPanel{autoarrange_subviews=true, subviews={

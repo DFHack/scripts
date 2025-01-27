@@ -29,7 +29,7 @@ for fnUnitCount,fnUnit in ipairs(dfhack.units.getCitizens()) do
         end
         if fixed then
             total_fixed = total_fixed + 1
-            print(total_fixed, total_removed, dfhack.TranslateName(dfhack.units.getVisibleName(fnUnit)))
+            print(total_fixed, total_removed, dfhack.df2console(dfhack.units.getReadableName(fnUnit)))
         end
     end
 end

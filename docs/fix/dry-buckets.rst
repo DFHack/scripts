@@ -12,9 +12,14 @@ water from them.
 
 This tool also fixes over-full buckets that are blocking well operations.
 
+If enabled in `gui/control-panel` (it is enabled by default), this fix is
+periodically run automaticaly, so you should not normally need to run it
+manually.
+
 Usage
 -----
 
-::
-
-    fix/dry-buckets
+``fix/dry-buckets``
+    Empty water buckets not currently used in jobs.
+``fix/dry-buckets -q``, ``fix/dry-buckets --quiet``
+    Empty water buckets not currently used in jobs. Don't print to the console.

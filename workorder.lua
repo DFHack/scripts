@@ -594,10 +594,7 @@ end
 
 -- true/false or nil if no shearable_tissue_layer with length > 0.
 local function canShearCreature(u)
-    local stls = world.raws.creatures
-            .all[u.race]
-            .caste[u.caste]
-            .shearable_tissue_layer
+    local stls = dfhack.units.getCasteRaw(u).shearable_tissue_layer
 
     local any
     for _, stl in ipairs(stls) do

@@ -32,6 +32,10 @@ function name_unit(unit)
     unit.name.parts_of_speech.RearCompound = df.part_of_speech.Verb3rdPerson
     unit.name.type = df.language_name_type.Figure
     unit.name.has_name = true
+
+    local hf = df.historical_figure.find(unit.hist_figure_id)
+    if not hf then return end
+    hf.name:assign(unit.name)
 end
 
 local function fix_clothing_ownership(unit)
@@ -55,6 +59,58 @@ local function fix_clothing_ownership(unit)
     unit.uniform.uniform_drop:resize(0)
 end
 
+function clear_enemy_status(unit)
+    if unit.enemy.enemy_status_slot <= -1 then return end
+
+    local status_cache = df.global.world.enemy_status_cache
+    local status_slot = unit.enemy.enemy_status_slot
+
+    unit.enemy.enemy_status_slot = -1
+    status_cache.slot_used[status_slot] = false
+
+    for index in ipairs(status_cache.rel_map[status_slot]) do
+        status_cache.rel_map[status_slot][index] = -1
+    end
+
+    for index in ipairs(status_cache.rel_map) do
+        status_cache.rel_map[index][status_slot] = -1
+    end
+
+    -- TODO: what if there were status slots taken above status_slot?
+    -- does everything need to be moved down by one to fill the gap?
+    if status_cache.next_slot > status_slot then
+        status_cache.next_slot = status_slot
+    end
+end
+
+local prof_map = {
+    [df.profession.MERCHANT]=df.profession.TRADER,
+    [df.profession.THIEF]=df.profession.STANDARD,
+    [df.profession.MASTER_THIEF]=df.profession.STANDARD,
+    [df.profession.CRIMINAL]=df.profession.STANDARD,
+    [df.profession.DRUNK]=df.profession.STANDARD,
+    [df.profession.MONSTER_SLAYER]=df.profession.STANDARD,
+    [df.profession.SCOUT]=df.profession.STANDARD,
+    [df.profession.BEAST_HUNTER]=df.profession.STANDARD,
+    [df.profession.SNATCHER]=df.profession.STANDARD,
+    [df.profession.MERCENARY]=df.profession.STANDARD,
+}
+
+local function sanitize_profession(prof)
+    return prof_map[prof] or prof
+end
+
+local hostile_jobs = utils.invert{
+    df.job_type.Kidnap,
+    df.job_type.HeistItem,
+    df.job_type.AcceptHeistItem,
+}
+
+local function cancel_hostile_jobs(job)
+    if not job or not hostile_jobs[job.job_type] then return end
+    dfhack.job.removeJob(job)
+end
+
 local function fix_unit(unit)
     unit.flags1.marauder = false;
     unit.flags1.merchant = false;
@@ -76,8 +132,38 @@ local function fix_unit(unit)
 
     unit.civ_id = df.global.plotinfo.civ_id;
 
-    if  unit.profession == df.profession.MERCHANT then  unit.profession = df.profession.TRADER end
-    if unit.profession2 == df.profession.MERCHANT then unit.profession2 = df.profession.TRADER end
+    unit.profession = sanitize_profession(unit.profession)
+    unit.profession2 = sanitize_profession(unit.profession2)
+
+    unit.invasion_id = -1
+    unit.enemy.army_controller_id = -1
+    unit.enemy.army_controller = nil
+
+    unit.relationship_ids.GroupLeader = -1
+    for _,other in ipairs(df.global.world.units.active) do
+        if other.relationship_ids.GroupLeader == unit.id then
+            other.relationship_ids.GroupLeader = -1
+        end
+    end
+
+    -- remove unit from all current conflicts
+    unit.activities:resize(0)
+    for _,act in ipairs(df.global.world.activities.all) do
+        if act.type ~= df.activity_entry_type.Conflict then goto continue end
+        for _,ev in ipairs(act.events) do
+            if ev:getType() ~= df.activity_event_type.Conflict then goto next_ev end
+            for _,side in ipairs(ev.sides) do
+                utils.erase_sorted(side.histfig_ids, unit.hist_figure_id)
+                utils.erase_sorted(side.unit_ids, unit.id)
+            end
+            ::next_ev::
+        end
+        ::continue::
+    end
+
+    clear_enemy_status(unit)
+
+    cancel_hostile_jobs(unit.job.current_job)
 end
 
 local function add_to_entity(hf, eid)
@@ -198,6 +284,8 @@ local function fix_histfig(unit)
     -- add them to our civ/site if they aren't already
     if not found_civlink  then entity_link(hf, civ_id)   end
     if not found_fortlink then entity_link(hf, group_id) end
+
+    hf.profession = sanitize_profession(unit.profession)
 end
 
 ---@param unit df.unit

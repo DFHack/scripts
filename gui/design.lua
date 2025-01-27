@@ -67,6 +67,7 @@ DimensionsOverlay.ATTRS{
         'dwarfmode/Designate',
         'dwarfmode/Burrow/Paint',
         'dwarfmode/Stockpile/Paint',
+        'dwarfmode/Zone/Paint',
         'dwarfmode/Building/Placement',
     },
 }
@@ -101,10 +102,11 @@ function DimensionsOverlay:init()
     }
 end
 
--- don't imply that stockpiles will be 3d
+-- don't imply that stockpiles or zones will be 3d
 local function check_stockpile_dims()
-    if main_interface.bottom_mode_selected == df.main_bottom_mode_type.STOCKPILE_PAINT and
-        selection_rect.start_x > 0
+    if selection_rect.start_x > 0 and
+        (main_interface.bottom_mode_selected == df.main_bottom_mode_type.STOCKPILE_PAINT or
+         main_interface.bottom_mode_selected == df.main_bottom_mode_type.ZONE_PAINT)
     then
         selection_rect.start_z = df.global.window_z
     end
@@ -120,8 +122,47 @@ function DimensionsOverlay:preUpdateLayout(parent_rect)
     self.frame.h = parent_rect.height
 end
 
+---
+--- RightClickOverlay
+---
+
+RightClickOverlay = defclass(RightClickOverlay, overlay.OverlayWidget)
+RightClickOverlay.ATTRS{
+    desc='When drawing boxes, makes right click cancel selection instead of exiting.',
+    default_enabled=true,
+    fullscreen=true,
+    viewscreens={
+        'dwarfmode/Designate',
+        'dwarfmode/Burrow/Paint',
+        'dwarfmode/Stockpile/Paint',
+        'dwarfmode/Zone/Paint',
+        'dwarfmode/Building/Placement'
+        },
+}
+
+function RightClickOverlay:onInput(keys)
+    if keys._MOUSE_R or keys.LEAVESCREEN then
+        -- building mode
+        if dfhack.gui.matchFocusString('dwarfmode/Building/Placement',
+            dfhack.gui.getDFViewscreen(true))
+        then
+            if uibs.selection_pos.x >= 0 then
+                uibs.selection_pos:clear()
+                return true
+            end
+        -- all other modes
+        elseif selection_rect.start_x >= 0 then
+            selection_rect.start_x = -30000
+            selection_rect.start_y = -30000
+            selection_rect.start_z = -30000
+            return true
+        end
+    end
+end
+
 OVERLAY_WIDGETS = {
     dimensions=DimensionsOverlay,
+    rightclick=RightClickOverlay,
 }
 
 ---

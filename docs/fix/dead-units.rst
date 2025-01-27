@@ -32,4 +32,4 @@ Options
 ``--burrow``
     Scrub dead units from burrow membership lists.
 ``-q``, ``--quiet``
-    Surpress console output (final status update is still printed if at least one item was affected).
+    Suppress console output (final status update is still printed if at least one item was affected).

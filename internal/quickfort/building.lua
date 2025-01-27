@@ -532,7 +532,7 @@ function check_tiles_and_extents(ctx, buildings)
                 -- as invalid; the building can still build around it
                 owns_preview =
                         quickfort_preview.set_preview_tile(ctx, pos,
-                            is_valid_tile or db_entry.has_extents)
+                            is_valid_tile or db_entry.has_extents or false)
                 if not is_valid_tile then
                     log('tile not usable: (%d, %d, %d)', pos.x, pos.y, pos.z)
                     col[extent_y] = false

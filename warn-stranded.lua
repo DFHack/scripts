@@ -132,7 +132,7 @@ end
 local function getUnitDescription(unit)
     return ('[%s] %s %s'):format(
         dfhack.units.getProfessionName(unit),
-        dfhack.TranslateName(dfhack.units.getVisibleName(unit)),
+        dfhack.translation.translateName(dfhack.units.getVisibleName(unit)),
         getSexString(unit.sex))
 end
 
