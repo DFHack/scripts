@@ -6,7 +6,7 @@ local gui = require('gui')
 local argparse = require('argparse')
 
 -- Get world name for default filename
-local worldName = dfhack.df2utf(dfhack.TranslateName(df.global.world.world_data.name)):gsub(" ", "_")
+local worldName = dfhack.df2utf(dfhack.translation.translateName(df.global.world.world_data.name)):gsub(" ", "_")
 
 local help, overwrite, filenameArg = false, false, nil
 local positionals = argparse.processArgsGetopt({ ... }, {

@@ -2,7 +2,7 @@ assign-preferences
 ==================
 
 .. dfhack-tool::
-    :summary: Adjust a unit's preferences.
+    :summary: View or adjust a unit's preferences.
     :tags: fort armok units
 
 You will need to know the token of the object you want your dwarf to like.
@@ -71,6 +71,8 @@ brackets can be omitted.
 ``--unit <id>``
     The target unit ID. If not present, the currently selected unit will be the
     target.
+``--show``
+    Print the list of current likes/dislikes for the selected unit
 ``--likematerial [ <token> [<token> ...] ]``
     This is usually set to three tokens: a type of stone, a type of metal, and a
     type of gem. It can also be a type of wood, glass, leather, horn, pearl,

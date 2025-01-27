@@ -263,7 +263,7 @@ end
 
 -- Print unit's beliefs into the dfhack console. Cultural beliefs are marked with a *
 function printUnitBeliefs(unit)
-  print("Beliefs for " .. dfhack.TranslateName(unit.name) .. ":")
+  print("Beliefs for " .. dfhack.df2console(dfhack.units.getReadableName(unit)) .. ":")
   for id, name in ipairs(df.value_type) do
     if name ~= 'NONE' then
       local strength = getUnitBelief(unit, id)

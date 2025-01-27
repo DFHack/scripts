@@ -50,7 +50,7 @@ end
 
 local function bodyparts_that_can_wear(unit, item)
     local bodyparts = {}
-    local unitparts = df.creature_raw.find(unit.race).caste[unit.caste].body_info.body_parts
+    local unitparts = dfhack.units.getCasteRaw(unit).body_info.body_parts
 
     if item._type == df.item_helmst then
         for index, part in ipairs(unitparts) do
@@ -106,7 +106,7 @@ end
 -- Will figure out which items need to be moved to the floor, returns an item_id:item map
 local function process(unit, args, need_newline)
     local silent = args.all -- Don't print details if we're iterating through all dwarves
-    local unit_name = dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(unit)))
+    local unit_name = dfhack.df2console(dfhack.units.getReadableName(unit))
 
     if not silent then
         need_newline = print_line("Processing unit " .. unit_name, need_newline)
@@ -283,34 +283,47 @@ end
 ReportWindow = defclass(ReportWindow, widgets.Window)
 ReportWindow.ATTRS {
     frame_title='Equipment conflict report',
-    frame={w=100, h=45},
-    resizable=true, -- if resizing makes sense for your dialog
-    resize_min={w=50, h=20}, -- try to allow users to shrink your windows
-    autoarrange_subviews=1,
-    autoarrange_gap=1,
+    frame={w=100, h=35},
+    resizable=true,
+    resize_min={w=60, h=20},
     report=DEFAULT_NIL,
 }
 
 function ReportWindow:init()
     self:addviews{
-        widgets.HotkeyLabel{
-            frame={t=0, l=0, r=0},
-            label='Try to resolve conflicts',
-            key='CUSTOM_CTRL_T',
-            auto_width=true,
-            on_activate=function()
-                dfhack.run_script('uniform-unstick', '--all', '--drop', '--free')
-                self.parent_view:dismiss()
-            end,
+        widgets.Label{
+            frame={t=0, l=0},
+            text_pen=COLOR_YELLOW,
+            text='Equipment conflict report:',
+        },
+        widgets.Panel{
+            frame={t=2, b=7},
+            subviews={
+                widgets.WrappedLabel{
+                    frame={t=0},
+                    text_to_wrap=self.report,
+                },
+            },
         },
         widgets.WrappedLabel{
-            frame={t=2, l=0, r=0},
+            frame={b=4, h=2, l=0},
             text_pen=COLOR_LIGHTRED,
             text_to_wrap='After resolving conflicts, be sure to click the "Update equipment" button to reassign new equipment!',
+            auto_height=false,
         },
-        widgets.WrappedLabel{
-            frame={t=4, l=0, r=0},
-            text_to_wrap=self.report,
+        widgets.Panel{
+            frame={b=0, w=34, h=3},
+            frame_style=gui.FRAME_THIN,
+            subviews={
+                widgets.HotkeyLabel{
+                    label='Try to resolve conflicts',
+                    key='CUSTOM_CTRL_T',
+                    on_activate=function()
+                        dfhack.run_script('uniform-unstick', '--all', '--drop', '--free')
+                        self.parent_view:dismiss()
+                    end,
+                },
+            },
         },
     }
 end
@@ -332,7 +345,7 @@ EquipOverlay.ATTRS{
     desc='Adds a link to the equip screen to fix equipment conflicts.',
     default_pos={x=7,y=21},
     default_enabled=true,
-    viewscreens='dwarfmode/SquadEquipment/Default',
+    viewscreens='dwarfmode/Squads/Equipment/Default',
     frame={w=MIN_WIDTH, h=1},
 }
 

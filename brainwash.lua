@@ -27,7 +27,7 @@ function brainwash_unit(profile)
         return
     end
 
-    unit_name=dfhack.TranslateName(dfhack.units.getVisibleName(unit))
+    unit_name = dfhack.df2console(dfhack.units.getReadableName(unit))
 
     print("Previous personality values for "..unit_name)
     printall(unit.status.current_soul.personality.traits)

@@ -71,7 +71,8 @@ function scan_ranges(g_src)
             if demangled_name and
                 not demangled_name:match('[<>]') and
                 not demangled_name:match('^std::') and
-                not names[demangled_name]
+                not names[demangled_name] and
+                (g_src or demangled_name ~= 'widgets::widget')  -- the widget in g_src takes precedence
             then
                 local base_str = ''
                 if g_src then

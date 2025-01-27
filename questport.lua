@@ -34,7 +34,7 @@ advmode.message = '' -- clear messages like "You cannot travel until you leave t
 
 if advmode.menu == df.ui_advmode_menu.Default then
     advmode.menu = df.ui_advmode_menu.Travel
-    advmode.travel_not_moved = true
+    advmode.travel_not_moved = 1
     processTravelNoArmy(advmode, advScreen, target_x, target_y)
 
 elseif advmode.menu == df.ui_advmode_menu.Travel then

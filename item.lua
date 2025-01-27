@@ -293,7 +293,7 @@ function execute(action, conditions, options, return_items)
     end
     table.sort(desc_list)
     for _, desc in ipairs(desc_list) do
-        print(('%4d %s'):format(descriptions[desc], desc))
+        print(('%4d %s'):format(descriptions[desc], dfhack.df2console(desc)))
     end
 
     return count, items, types

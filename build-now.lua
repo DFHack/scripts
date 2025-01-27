@@ -2,6 +2,7 @@
 
 local argparse = require('argparse')
 local gui = require('gui')
+local suspendmanager = require('plugins.suspendmanager')
 local utils = require('utils')
 
 local ok, buildingplan = pcall(require, 'plugins.buildingplan')
@@ -283,7 +284,6 @@ local function build_building(bld)
         -- unlike "natural" builds, we don't set the architect or builder unit
         -- id. however, this doesn't seem to have any in-game effect.
         local design = bld.design
-        design.flags.designed = true
         design.flags.built = true
         design.hitpoints = 80640
         design.max_hitpoints = 80640
@@ -307,6 +307,10 @@ if opts.help then print(dfhack.script_help()) return end
 -- buildingplan hasn't scanned them yet
 if buildingplan then
     buildingplan.doCycle()
+end
+
+if suspendmanager.isEnabled() then
+    dfhack.run_command('unsuspend')
 end
 
 local num_jobs = 0

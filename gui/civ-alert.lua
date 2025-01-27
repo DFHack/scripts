@@ -18,21 +18,22 @@ local function get_civ_alert()
     return list[1]
 end
 
-local function can_sound_alarm()
+-- public API section
+function can_sound_alarm()
     return df.global.plotinfo.alerts.civ_alert_idx == 0 and
             #get_civ_alert().burrows > 0
 end
 
-local function sound_alarm()
+function sound_alarm()
     if not can_sound_alarm() then return end
     df.global.plotinfo.alerts.civ_alert_idx = 1
 end
 
-local function can_clear_alarm()
+function can_clear_alarm()
     return df.global.plotinfo.alerts.civ_alert_idx ~= 0
 end
 
-local function clear_alarm()
+function clear_alarm()
     df.global.plotinfo.alerts.civ_alert_idx = 0
 end
 
@@ -118,14 +119,17 @@ CivalertOverlay.ATTRS{
     frame={w=20, h=5},
 }
 
+local function is_squads_panel_open()
+    return dfhack.gui.matchFocusString('dwarfmode/Squads/Default',
+        dfhack.gui.getDFViewscreen(true))
+end
+
 local function should_show_alert_button()
-    return can_clear_alarm() or
-            (df.global.game.main_interface.squads.open and can_sound_alarm())
+    return can_clear_alarm() or (is_squads_panel_open() and can_sound_alarm())
 end
 
 local function should_show_configure_button()
-    return df.global.game.main_interface.squads.open
-            and not can_sound_alarm() and not can_clear_alarm()
+    return is_squads_panel_open() and not can_sound_alarm() and not can_clear_alarm()
 end
 
 local function launch_config()

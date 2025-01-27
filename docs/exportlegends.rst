@@ -11,7 +11,10 @@ about your world so that it can be browsed with external programs like
 get with vanilla export functionality, and many external tools depend on this
 extra information.
 
-By default, ``exportlegends`` hooks into the standard vanilla ``Export XML`` button and runs in the background when you click it, allowing both the vanilla export and the extended data export to execute simultaneously. You can continue to browse legends mode via the vanilla UI while the export is running.
+By default, ``exportlegends`` hooks into the standard vanilla ``Export XML``
+button and runs in the background when you click it, allowing both the vanilla
+export and the extended data export to execute simultaneously. You can continue
+to browse legends mode via the vanilla UI while the export is running.
 
 To use:
 
@@ -35,7 +38,11 @@ Usage
 Overlay
 -------
 
-This script also provides an overlay that is managed by the `overlay` framework.
+This script also provides several overlays that are managed by the `overlay`
+framework.
+
+**exportlegends.export**
+
 When the overlay is enabled, a toggle for exporting extended legends data will
 appear below the vanilla "Export XML" button. If the toggle is enabled when the
 "Export XML" button is clicked, then ``exportlegends`` will run alongside the
@@ -45,6 +52,13 @@ While the extended data is being exported, a status line will appear in place
 of the toggle, reporting the current export target and the overall percent
 complete.
 
-There is an additional overlay that masks out the "Done" button while the
-extended export is running. This prevents the player from exiting legends mode
-before the export is complete.
+**exportlegends.mask**
+
+This overlay masks out the "Done" button while the extended export is running.
+This prevents the player from accidentally exiting legends mode before the
+export is complete.
+
+**exportlegends.histfigfilter**
+
+This overlay adds a filter widget to the Historical Figures legends page.
+Clicking the widget allows you to filter the list of historical figures by race.

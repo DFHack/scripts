@@ -83,7 +83,7 @@ godFig.caste = 0
 godFig.sex = gender
 godFig.name.first_name = args.name
 for _,sphere in ipairs(args.spheres) do
- godFig.info.spheres.spheres:insert('#',df.sphere_type[sphere])
+ godFig.info.metaphysical.spheres:insert('#',df.sphere_type[sphere])
 end
 df.global.world.history.figures:insert('#',godFig)
 

@@ -2,6 +2,7 @@
 
 local argparse = require('argparse')
 local control_panel = reqscript('control-panel')
+local dialogs = require('gui.dialogs')
 local gui = require('gui')
 local json = require('json')
 local overlay = require('plugins.overlay')
@@ -173,13 +174,13 @@ DifficultyEmbarkNotificationOverlay.ATTRS {
     default_pos={x=75, y=18},
     viewscreens='setupdwarfgame/Default',
     default_enabled=true,
-    frame={w=23, h=3},
+    frame={w=25, h=3},
 }
 
 function DifficultyEmbarkNotificationOverlay:init()
     self:addviews{
         widgets.Panel{
-            frame={t=0, w=25},
+            frame={h=3, b=0, w=25},
             frame_style=gui.FRAME_MEDIUM,
             frame_background=gui.CLEAR_PEN,
             subviews={
@@ -195,6 +196,12 @@ end
 
 function DifficultyEmbarkNotificationOverlay:preUpdateLayout(parent_rect)
     self.frame.w = parent_rect.width - (self.frame.l or (self.default_pos.x - 1))
+end
+
+function DifficultyEmbarkNotificationOverlay:render(dc)
+    local scr = dfhack.gui.getDFViewscreen(true)
+    self.frame.h = #scr.embark_profile == 0 and 11 or 3
+    DifficultyEmbarkNotificationOverlay.super.render(self, dc)
 end
 
 local last_scr_type
@@ -370,7 +377,9 @@ end
 -- StandingOrdersOverlay
 --
 
-local li = df.global.plotinfo.labor_info
+local plotinfo = df.global.plotinfo
+local li = plotinfo.labor_info
+local ps = plotinfo.stockpile
 
 local function save_standing_orders()
     local standing_orders = {}
@@ -384,6 +393,7 @@ local function save_standing_orders()
     chores.enabled = li.flags.children_do_chores
     chores.labors = utils.clone(li.chores)
     config.data.chores = chores
+    config.data.stockpile = {reserved_barrels=ps.reserved_barrels}
     config:write()
 end
 
@@ -394,6 +404,10 @@ local function load_standing_orders()
     li.flags.children_do_chores = not not safe_index(config.data.chores, 'enabled')
     for i, val in ipairs(safe_index(config.data.chores, 'labors') or {}) do
         li.chores[i-1] = val
+    end
+    local reserved_barrels = safe_index(config.data.stockpile, 'reserved_barrels')
+    if reserved_barrels then
+        ps.reserved_barrels = reserved_barrels
     end
 end
 
@@ -415,6 +429,65 @@ StandingOrdersOverlay.ATTRS {
     has_data_fn=has_saved_standing_orders,
     autostart_command='gui/settings-manager load-standing-orders',
 }
+
+------------------------------
+-- ReservedBarrelsOverlay
+--
+
+ReservedBarrelsOverlay = defclass(ReservedBarrelsOverlay, overlay.OverlayWidget)
+ReservedBarrelsOverlay.ATTRS {
+    desc='Exposes the setting for reserved barrels on the standing orders screen.',
+    default_pos={x=59, y=18},
+    default_enabled=true,
+    viewscreens='dwarfmode/Info/LABOR/STANDING_ORDERS/AUTOMATED_WORKSHOPS',
+    frame={w=26, h=6},
+    frame_style=gui.MEDIUM_FRAME,
+    frame_background=gui.CLEAR_PEN,
+}
+
+function ReservedBarrelsOverlay:init()
+    self:addviews{
+        widgets.Label{
+            frame={t=0, l=0},
+            text={
+                'Barrels reserved for use', NEWLINE,
+                'by workshop jobs: ',
+                {
+                    text=function() return ps.reserved_barrels end,
+                    pen=function() return ps.reserved_barrels == 0 and COLOR_YELLOW or COLOR_GREEN end,
+                },
+            },
+        },
+        widgets.HotkeyLabel{
+            frame={t=3, l=0},
+            key='CUSTOM_CTRL_B',
+            label='Set num reserved',
+            on_activate=function()
+                dialogs.InputBox{
+                    frame_title='Set reserved barrels',
+                    text={
+                        'You can ensure a number of barrels are reserved, preventing', NEWLINE,
+                        'them from being claimed by stockpiles as container storage.', NEWLINE,
+                        'For example, if there are 5 reserved barrels, no stockpile', NEWLINE,
+                        'will claim an empty barrel for storing items until you have', NEWLINE,
+                        'at least 6 barrels lying around.', NEWLINE, NEWLINE,
+                        'This feature is most often used to ensure that a fortress has', NEWLINE,
+                        'ample empty barrels for the production of alcohol, although', NEWLINE,
+                        'empty barrels are also necessary for other jobs.',
+                    },
+                    text_pen=COLOR_YELLOW,
+                    label_text='Number of barrels to reserve: ',
+                    input=tostring(ps.reserved_barrels),
+                    on_input=function(input)
+                        input = tonumber(input)
+                        if not input or input < 0 then return end
+                        ps.reserved_barrels = math.floor(input)
+                    end,
+                }:show()
+            end,
+        },
+    }
+end
 
 ------------------------------
 -- WorkDetailsOverlay
@@ -504,6 +577,7 @@ OVERLAY_WIDGETS = {
     embark_notification=DifficultyEmbarkNotificationOverlay,
     settings_difficulty=DifficultySettingsOverlay,
     standing_orders=StandingOrdersOverlay,
+    reserved_barrels=ReservedBarrelsOverlay,
     work_details=WorkDetailsOverlay,
 }
 

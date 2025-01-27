@@ -66,7 +66,7 @@ function civ_name(id,format_name,format_no_name,name_other,name_invalid)
             return name_invalid or "<invalid>"
         end
     end
-    local t={NAME=dfhack.TranslateName(civ.name),ENGLISH=dfhack.TranslateName(civ.name,true),ID=civ.id} --TODO race?, maybe something from raws?
+    local t={NAME=dfhack.translation.translateName(civ.name),ENGLISH=dfhack.translation.translateName(civ.name,true),ID=civ.id} --TODO race?, maybe something from raws?
     if t.NAME=="" then
         return string.gsub(format_no_name or "<unnamed> ($ID)", "%$(%w+)", t)
     end

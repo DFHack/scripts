@@ -27,7 +27,6 @@ SkillProgressOverlay.ATTRS {
         'dwarfmode/ViewSheets/UNIT/Skills/Combat',
         'dwarfmode/ViewSheets/UNIT/Skills/Social',
         'dwarfmode/ViewSheets/UNIT/Skills/Other',
-
         'dungeonmode/ViewSheets/UNIT/Skills/Labor',
         'dungeonmode/ViewSheets/UNIT/Skills/Combat',
         'dungeonmode/ViewSheets/UNIT/Skills/Social',
@@ -79,6 +78,10 @@ function SkillProgressOverlay:preUpdateLayout(parent_rect)
     self.frame.h = parent_rect.height - 21
 end
 
+local function get_threshold(lvl)
+    return 500 + lvl * 100
+end
+
 function SkillProgressOverlay:onRenderFrame(dc, rect)
     local annotations = {}
     local current_unit = df.unit.find(view_sheets.active_id)
@@ -104,14 +107,14 @@ function SkillProgressOverlay:onRenderFrame(dc, rect)
             table.insert(annotations, "\n\n\n\n")
             goto continue
         end
-        local rating = df.skill_rating.attrs[math.max(df.skill_rating.Dabbling, math.min(skill.rating, df.skill_rating.Legendary5))]
+        local xp_threshold = get_threshold(skill.rating)
         if experience then
             if not progress_bar then
                 table.insert(annotations, NEWLINE)
             end
             local level_color = COLOR_WHITE
-            local rating_val = math.max(0, skill.rating - skill.demotion_counter)
-            if skill.demotion_counter > 0 then
+            local rating_val = math.max(0, skill.rating - skill.rusty)
+            if skill.rusty > 0 then
                 level_color = COLOR_LIGHTRED
             elseif skill.rating >= df.skill_rating.Legendary then
                 level_color = COLOR_LIGHTCYAN
@@ -122,7 +125,7 @@ function SkillProgressOverlay:onRenderFrame(dc, rect)
                 pen=level_color,
             })
             table.insert(annotations, {
-                text=('%4d/%4d'):format(skill.experience, rating.xp_threshold),
+                text=('%4d/%4d'):format(skill.experience, xp_threshold),
                 pen=level_color,
                 width=9,
                 rjustify=true,
@@ -134,7 +137,7 @@ function SkillProgressOverlay:onRenderFrame(dc, rect)
         -- Progress Bar
         if progress_bar then
             table.insert(annotations, NEWLINE)
-            local percentage = skill.experience / rating.xp_threshold
+            local percentage = skill.experience / xp_threshold
             local barstop = math.floor((margin * percentage) + 0.5)
             for i = 0, margin-1 do
                 local color = COLOR_LIGHTCYAN

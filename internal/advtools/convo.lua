@@ -77,11 +77,11 @@ local function new_choice(choice_type, title, keywords)
 end
 
 local function addWhereaboutsChoice(race, name, target_id, heard_of)
-    local title = "Ask for the whereabouts of the " .. race .. " " .. dfhack.TranslateName(name, true)
+    local title = "Ask for the whereabouts of the " .. race .. " " .. dfhack.translation.translateName(name, true)
     if heard_of then
         title = title .. " (Heard of)"
     end
-    local choice = new_choice(df.talk_choice_type.AskWhereabouts, title, dfhack.TranslateName(name):split())
+    local choice = new_choice(df.talk_choice_type.AskForDirectionsToHF, title, dfhack.translation.translateName(name):split())
     -- insert before the last choice, which is usually "back"
     adventure.conversation.conv_choice_info:insert(#adventure.conversation.conv_choice_info-1, choice)
     choice.choice.invocation_target_hfid = target_id

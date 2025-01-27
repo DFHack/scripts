@@ -2,15 +2,11 @@
 
 local argparse = require('argparse')
 
-local tile_attrs = df.tiletype.attrs
-
 local function extractKeys(target_table)
     local keyset = {}
-
     for k, _ in pairs(target_table) do
         table.insert(keyset, k)
     end
-
     return keyset
 end
 
@@ -40,24 +36,6 @@ local function getRandomFromTable(target_table)
     return target_table[key]
 end
 
-local function randomSort(target_table)
-    local rnd = {}
-    table.sort( target_table,
-        function ( a, b)
-            rnd[a] = rnd[a] or math.random()
-            rnd[b] = rnd[b] or math.random()
-            return rnd[a] > rnd[b]
-        end )
-end
-
-local function sequence(min, max)
-    local tbl = {}
-    for i=min,max do
-        table.insert(tbl, i)
-    end
-    return tbl
-end
-
 local function sortTableBy(tbl, sort_func)
     local sorted = {}
     for _, value in pairs(tbl) do
@@ -80,14 +58,21 @@ local function matchesMetalOreById(mat_indices, target_ore)
     return false
 end
 
-local function findOreVeins(target_ore, show_undiscovered)
-    if target_ore then
-        target_ore = string.lower(target_ore)
-    end
+local tile_attrs = df.tiletype.attrs
 
-    local ore_veins = {}
-    for _, block in pairs(df.global.world.map.map_blocks) do
-        for _, bevent in pairs(block.block_events) do
+local function isValidMineralTile(opts, pos, check_designation)
+    if not opts.all and not dfhack.maps.isTileVisible(pos) then return false end
+    local tt = dfhack.maps.getTileType(pos)
+    if not tt then return false end
+    return tile_attrs[tt].material == df.tiletype_material.MINERAL and
+        (not check_designation or dfhack.maps.getTileFlags(pos).dig == df.tile_dig_designation.No) and
+        tile_attrs[tt].shape == df.tiletype_shape.WALL
+end
+
+local function findOres(opts, check_designation, target_ore)
+    local ore_types = {}
+    for _, block in ipairs(df.global.world.map.map_blocks) do
+        for _, bevent in ipairs(block.block_events) do
             if bevent:getType() ~= df.block_square_event_type.mineral then
                 goto skipevent
             end
@@ -97,130 +82,99 @@ local function findOreVeins(target_ore, show_undiscovered)
                 goto skipevent
             end
 
-            if not show_undiscovered and not bevent.flags.discovered then
+            if not opts.all and not bevent.flags.discovered then
                 goto skipevent
             end
 
             local lower_raw = string.lower(ino_raw.id)
             if not target_ore or lower_raw == target_ore or matchesMetalOreById(ino_raw.metal_ore.mat_index, target_ore) then
-                if not ore_veins[bevent.inorganic_mat] then
-                    local vein_info = {
+                local positions = ensure_key(ore_types, bevent.inorganic_mat, {
                         inorganic_id = ino_raw.id,
                         inorganic_mat = bevent.inorganic_mat,
                         metal_ore = ino_raw.metal_ore,
                         positions = {}
-                    }
-                    ore_veins[bevent.inorganic_mat] = vein_info
+                    }).positions
+                local block_pos = block.map_pos
+                for y=0,15 do
+                    local row = bevent.tile_bitmask.bits[y]
+                    for x=0,15 do
+                        if row & (1 << x) == 1 then
+                            local pos = xyz2pos(block_pos.x + x, block_pos.y + y, block_pos.z)
+                            if isValidMineralTile(opts, pos, check_designation) then
+                                table.insert(positions, pos)
+                            end
+                        end
+                    end
                 end
-
-                table.insert(ore_veins[bevent.inorganic_mat].positions, block.map_pos)
             end
-
             :: skipevent ::
         end
     end
 
-    return ore_veins
+    -- trim veins with zero valid tiles
+    for key,vein in pairs(ore_types) do
+        if #vein.positions == 0 then
+            ore_types[key] = nil
+        end
+    end
+
+    return ore_types
 end
 
 local function designateDig(pos)
     local designation = dfhack.maps.getTileFlags(pos)
     designation.dig = df.tile_dig_designation.Default
+    dfhack.maps.getTileBlock(pos).flags.designated = true
 end
 
-local function getOreDescription(ore)
-    local str = ("%s ("):format(string.lower(tostring(ore.inorganic_id)))
-    for _, mat_index in ipairs(ore.metal_ore.mat_index) do
+local function getOreDescription(opts, vein)
+    local visible = opts.all and '' or 'visible '
+    local str = ('%5d %stile(s) of %s ('):format(#vein.positions, visible, tostring(vein.inorganic_id):lower())
+    for _, mat_index in ipairs(vein.metal_ore.mat_index) do
         local metal_raw = df.global.world.raws.inorganics[mat_index]
-        str = ("%s%s, "):format(str, string.lower(metal_raw.id))
+        str = ('%s%s, '):format(str, string.lower(metal_raw.id))
     end
 
-    str = str:gsub(", %s*$", "") .. ')'
+    str = str:gsub(', %s*$', '') .. ')'
     return str
 end
 
-local options, args = {
-    help = false,
-    show_undiscovered = false
-}, {...}
+local function selectOreTile(opts, target_ore)
+    local ore_types = findOres(opts, true, target_ore)
+    local target_vein = getRandomFromTable(ore_types)
+    if target_vein == nil then
+        local visible = opts.all and '' or 'visible '
+        qerror('Cannot find any undesignated ' .. visible .. target_ore)
+    end
+    local target_pos = target_vein.positions[math.random(#target_vein.positions)]
+    dfhack.gui.revealInDwarfmodeMap(target_pos, true, true)
+    designateDig(target_pos)
+    print(('Here is some %s'):format(target_vein.inorganic_id))
+end
 
-local positionals = argparse.processArgsGetopt(args, {
-    {'h', 'help', handler=function() options.help = true end},
-    {'a', 'all', handler=function() options.show_undiscovered = true end},
+local opts = {
+    all=false,
+    help=false,
+}
+
+local positionals = argparse.processArgsGetopt({...}, {
+    {'a', 'all', handler=function() opts.all = true end},
+    {'h', 'help', handler=function() opts.help = true end},
 })
 
-if positionals[1] == "help" or options.help then
+local target_ore = positionals[1]
+if target_ore == 'help' or opts.help then
     print(dfhack.script_help())
     return
 end
 
-if positionals[1] == nil or positionals[1] == "list" then
-    print(dfhack.script_help())
-    local veins = findOreVeins(nil, options.show_undiscovered)
-    local sorted = sortTableBy(veins, function(a, b) return #a.positions < #b.positions end)
+if not target_ore or target_ore == 'list' then
+    local ore_types = findOres(opts, false)
+    local sorted = sortTableBy(ore_types, function(a, b) return #a.positions < #b.positions end)
 
-    for _, vein in ipairs(sorted) do
-        print("  " .. getOreDescription(vein))
+    for _,ore_type in ipairs(sorted) do
+        print('  ' .. getOreDescription(opts, ore_type))
     end
-    return
 else
-    local veins = findOreVeins(positionals[1], options.show_undiscovered)
-    local vein_keys = extractKeys(veins)
-
-    if #vein_keys == 0 then
-        qerror("Cannot find unmined " .. positionals[1])
-    end
-
-    local target_vein = getRandomFromTable(veins)
-    if target_vein == nil then
-        -- really shouldn't happen at this point
-        qerror("Failed to choose vein from available choices")
-    end
-
-    local pos_keyset = extractKeys(target_vein.positions)
-    local dxs = sequence(0, 15)
-    local dys = sequence(0, 15)
-
-    randomSort(pos_keyset)
-    randomSort(dxs)
-    randomSort(dys)
-
-    local target_pos = nil
-    for _, k in pairs(pos_keyset) do
-        local block_pos = target_vein.positions[k]
-        for _, dx in pairs(dxs) do
-            for _, dy in pairs(dys) do
-                local pos = { x = block_pos.x + dx, y = block_pos.y + dy, z = block_pos.z }
-                -- Enforce world boundaries
-                if pos.x <= 0 or pos.x >= df.global.world.map.x_count or pos.y <= 0 or pos.y >= df.global.world.map.y_count then
-                    goto skip_pos
-                end
-
-                if not options.show_undiscovered and not dfhack.maps.isTileVisible(pos) then
-                    goto skip_pos
-                end
-
-                local tile_type = dfhack.maps.getTileType(pos)
-                local tile_mat = tile_attrs[tile_type].material
-                local shape = tile_attrs[tile_type].shape
-                local designation = dfhack.maps.getTileFlags(pos)
-                if tile_mat == df.tiletype_material.MINERAL and designation.dig == df.tile_dig_designation.No and shape == df.tiletype_shape.WALL then
-                    target_pos = pos
-                    goto complete
-                end
-
-                :: skip_pos ::
-            end
-        end
-    end
-
-    :: complete ::
-
-    if target_pos ~= nil then
-        dfhack.gui.pauseRecenter(target_pos)
-        designateDig(target_pos)
-        print(("Here is some %s at (%d, %d, %d)"):format(target_vein.inorganic_id, target_pos.x, target_pos.y, target_pos.z))
-    else
-        qerror("Cannot find unmined " .. positionals[1])
-    end
+    selectOreTile(opts, positionals[1]:lower())
 end

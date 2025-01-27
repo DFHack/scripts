@@ -64,7 +64,7 @@ end
 
 function Editor_Colors:random()
   local featureChoiceIndex, featureChoice = self.subviews.features:getSelected() -- This is the part / feature that's selected
-  local caste = df.creature_raw.find(self.target_unit.race).caste[self.target_unit.caste]
+  local caste = dfhack.units.getCasteRaw(self.target_unit)
 
   -- Nil check in case there are no features
   if featureChoiceIndex == nil then
@@ -136,7 +136,7 @@ function Editor_Colors:featureSelected(index, choice)
 end
 
 function Editor_Colors:updateChoices()
-  local caste = df.creature_raw.find(self.target_unit.race).caste[self.target_unit.caste]
+  local caste = dfhack.units.getCasteRaw(self.target_unit)
   local choices = {}
   for index, colorMod in ipairs(caste.color_modifiers) do
     table.insert(choices, {text = colorMod.part:gsub("^%l", string.upper), mod = colorMod, index = index})

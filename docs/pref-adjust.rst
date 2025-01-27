@@ -2,7 +2,7 @@ pref-adjust
 ===========
 
 .. dfhack-tool::
-    :summary: Set the preferences of a dwarf to an ideal.
+    :summary: See the preferences of a dwarf or set them to a designated profile.
     :tags: fort armok units
 
 This tool replaces a dwarf's preferences with an "ideal" set which is easy to
@@ -16,19 +16,21 @@ satisfy::
 Usage
 -----
 
+``pref-adjust list``
+    List all types of preferences. No changes will be made to any units.
+``pref-adjust show``
+    Show the preferences of the selected unit.
 ``pref-adjust all|goth_all|clear_all``
-    Changes/clears preferences for all dwarves.
+    Changes/clears preferences for all citizens.
 ``pref-adjust one|goth|clear``
     Changes/clears preferences for the currently selected dwarf.
-``pref-adjust list``
-    List all types of preferences. No changes will be made to any dwarves.
 
 
 Examples
 --------
 
 ``pref-adjust all``
-    Change preferences for all dwarves to an ideal.
+    Change preferences for all citizens to an ideal.
 
 Goth mode
 ---------

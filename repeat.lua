@@ -46,8 +46,8 @@ elseif args.command then
 end
 
 if args.list then
- for k in pairs(repeatUtil.repeating) do
-  print(k)
+ for _,name in ipairs(repeatUtil.listScheduled()) do
+  print(name)
  end
  return
 end

@@ -31,7 +31,11 @@ function do_run(_, grid, ctx)
     if #line > 0 then
         table.insert(lines, table.concat(line, '    '))
     end
-    table.insert(ctx.messages, table.concat(lines, '\n'))
+    local message = table.concat(lines, '\n')
+    if not ctx.messages_set[message] then
+        table.insert(ctx.messages, message)
+        ctx.messages_set[message] = true
+    end
 end
 
 function do_orders()

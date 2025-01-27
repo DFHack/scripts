@@ -6,16 +6,6 @@ local function print_help()
     print(dfhack.script_help())
 end
 
-local function getUnitName(unit)
-    local language_name = dfhack.units.getVisibleName(unit)
-    if language_name.has_name then
-        return dfhack.df2console(dfhack.TranslateName( language_name ))
-    end
-
-    -- animals
-    return dfhack.units.getProfessionName(unit)
-end
-
 local function doJobNow(job)
     local job_str = dfhack.job.getName(job)
     if not job.flags.do_now then
@@ -30,7 +20,7 @@ local function doJobNow(job)
     end
     local unit = dfhack.job.getWorker(job)
     if unit then
-        print("... by " .. getUnitName(unit) )
+        print("... by " .. dfhack.df2console(dfhack.units.getReadableName(unit)))
     end
 end
 
@@ -64,7 +54,6 @@ end
 
 local function doUnitJobNow(unit)
     if dfhack.units.isCitizen(unit) then
-        --print('This will attempt to make a job of ' .. getUnitName(unit) .. ' a top priority')
         local t_job = unit.job
         if t_job then
             local job = t_job.current_job
@@ -73,10 +62,8 @@ local function doUnitJobNow(unit)
                 return
             end
         end
-        print("Couldn't find any job for " .. getUnitName(unit) )
+        print("Couldn't find any job for " .. dfhack.df2console(dfhack.units.getReadableName(unit)))
     else
-        --print('This will attempt to make a job with ' .. getUnitName(unit) .. ' a top priority')
-
         local needle = unit.id
         for _link, job in utils.listpairs(df.global.world.jobs.list) do
             if #job.general_refs > 0 then
@@ -92,7 +79,7 @@ local function doUnitJobNow(unit)
             end
         end
 
-        print("Couldn't find any job involving " .. getUnitName(unit) )
+        print("Couldn't find any job involving " .. dfhack.df2console(dfhack.units.getReadableName(unit)))
     end
 end
 
