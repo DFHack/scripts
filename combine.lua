@@ -703,6 +703,7 @@ local function merge_stacks(stacks)
                     dfhack.items.remove(item.item)
                     if dfhack.world.isAdventureMode() and df.global.game.main_interface.adventure.inventory.open then
                         -- refresh the inventory to prevent stale item references
+                        print('!! closed adventure mode inventory screen to prevent stale item references !!')
                         df.global.game.main_interface.adventure.inventory.open = false
                     end
 
@@ -824,7 +825,7 @@ end
 local function main()
 
     if not dfhack.isMapLoaded() then
-        qerror('combine needs a loaded fortress map to work')
+        qerror('combine can only be used in-game!')
     end
 
     parse_commandline(opts, args)
