@@ -1,12 +1,9 @@
---@module = true
 -- Prevents a "loyalty cascade" (intra-fort civil war) when a citizen is killed.
 
 local makeown = reqscript('makeown')
 
 -- Checks if a unit is a former member of a given entity as well as it's
 -- current enemy.
-local makeown = reqscript('makeown')
-
 local function getUnitRenegade(unit, entity_id)
     local unit_entity_links = df.historical_figure.find(unit.hist_figure_id).entity_links
     local former_index = nil
