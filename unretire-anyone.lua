@@ -60,10 +60,11 @@ function getHistfigShortSummary(histFig)
     if sym then
         name = name .. ' (' .. sym .. ')'
     end
+    name = name ..
+            '\n' .. dfhack.units.getReadableName(histFig.name)
     if histFig.name.has_name then
         name = name ..
-                '\n' .. dfhack.TranslateName(histFig.name) ..
-                '\n"' .. dfhack.TranslateName(histFig.name, true) .. '"'
+                '\n"' .. dfhack.translation.TranslateName(histFig.name, true) .. '"'
     else
         name = name ..
             '\nUnnamed'
