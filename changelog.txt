@@ -34,6 +34,7 @@ Template for new versions:
 ## Fixes
 - `advtools`: fix dfhack-added conversation options not appearing in the ask whereabouts conversation tree
 - `gui/rename`: fix error when changing the language of a unit's name
+- `makeown`: fix makeown-ing an enemy of your civilization (such as a giant) constantly giving everyone else vengeful thoughts about them
 
 ## Misc Improvements
 - `assign-preferences`: new ``--show`` option to display the preferences of the selected unit
@@ -205,7 +206,6 @@ Template for new versions:
 - `gui/pathable`: new "Depot" mode that shows whether wagons can path to your trade depot
 - `advtools`: automatically add a conversation option to "ask whereabouts of" for all your relationships (before, you could only ask whereabouts of people involved in rumors)
 - `gui/design`: all-new visually-driven UI for much improved usability
-- `makeown`: goblin snatchers and giants can now be makeown-ed more reliably
 
 ## Fixes
 - `assign-profile`: fix handling of ``unit`` option for setting target unit id

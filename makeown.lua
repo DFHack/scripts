@@ -2,12 +2,6 @@
 
 local utils = require('utils')
 
--- List of professions to convert From-To
-local convert_professions = {
-    [df.profession.MERCHANT]=df.profession.TRADER,
-    [df.profession.THIEF]=df.profession.STANDARD,
-}
-
 local function get_translation(race_id)
     local race_name = df.global.world.raws.creatures.all[race_id].creature_id
     for _,translation in ipairs(df.global.world.raws.language.translations) do
