@@ -3,6 +3,8 @@
 local gui = require('gui')
 local widgets = require('gui.widgets')
 
+local skills_progress = reqscript('internal/unit-info-viewer/skills-progress')
+
 --------------------------------------------------
 ---------------------- Time ----------------------
 --------------------------------------------------
@@ -166,10 +168,6 @@ local function get_death_type(death_cause)
     return DEATH_TYPES[death_cause] or ' died of unknown causes'
 end
 
-local function get_caste_data(unit)
-    return df.global.world.raws.creatures.all[unit.race].caste[unit.caste]
-end
-
 local function get_creature_data(unit)
     return df.global.world.raws.creatures.all[unit.race]
 end
@@ -182,13 +180,13 @@ local function get_name_chunk(unit)
 end
 
 local function get_translated_name_chunk(unit)
-    local tname = dfhack.TranslateName(dfhack.units.getVisibleName(unit), true)
+    local tname = dfhack.translation.translateName(dfhack.units.getVisibleName(unit), true)
     if #tname == 0 then return '' end
     return ('"%s"'):format(tname)
 end
 
 local function get_description_chunk(unit)
-    local desc = get_caste_data(unit).description
+    local desc = dfhack.units.getCasteRaw(unit).description
     if #desc == 0 then return end
     return {text=desc, pen=COLOR_WHITE}
 end
@@ -269,7 +267,7 @@ end
 
 local function get_max_age_chunk(unit)
     if not dfhack.units.isAlive(unit) then return end
-    local caste = get_caste_data(unit)
+    local caste = dfhack.units.getCasteRaw(unit)
     local blurb
     if caste.misc.maxage_min == -1 then
         blurb = ' only die of unnatural causes.'
@@ -393,7 +391,7 @@ end
 
 local function get_grazer_chunk(unit)
     if not dfhack.units.isGrazer(unit) then return end
-    local caste = get_caste_data(unit)
+    local caste = dfhack.units.getCasteRaw(unit)
     local blurb = 'Grazing satisfies ' .. tostring(caste.misc.grazer) .. ' units of hunger.'
     return {text=blurb, pen=COLOR_LIGHTGREEN}
 end
@@ -401,7 +399,7 @@ end
 local function get_milkable_chunk(unit)
     if not dfhack.units.isAlive(unit) or not dfhack.units.isMilkable(unit) then return end
     if not dfhack.units.isAnimal(unit) then return end
-    local caste = get_caste_data(unit)
+    local caste = dfhack.units.getCasteRaw(unit)
     local milk = dfhack.matinfo.decode(caste.extracts.milkable_mat, caste.extracts.milkable_matidx)
     if not milk then return end
     local days, seconds = math.modf(caste.misc.milkable / TU_PER_DAY)
@@ -417,7 +415,7 @@ end
 local function get_shearable_chunk(unit)
     if not dfhack.units.isAlive(unit) then return end
     if not dfhack.units.isAnimal(unit) then return end
-    local caste = get_caste_data(unit)
+    local caste = dfhack.units.getCasteRaw(unit)
     local mat_types = caste.body_info.materials.mat_type
     local mat_idxs = caste.body_info.materials.mat_index
     for idx, mat_type in ipairs(mat_types) do
@@ -436,7 +434,7 @@ end
 
 local function get_egg_layer_chunk(unit)
     if not dfhack.units.isAlive(unit) or not dfhack.units.isEggLayer(unit) then return end
-    local caste = get_caste_data(unit)
+    local caste = dfhack.units.getCasteRaw(unit)
     local clutch = (caste.misc.clutch_size_max + caste.misc.clutch_size_min) // 2
     local blurb = ('She lays clutches of about %d egg%s.'):format(clutch, clutch == 1 and '' or 's')
     return {text=blurb, pen=COLOR_GREEN}
@@ -546,6 +544,10 @@ end
 function UnitInfoScreen:onDismiss()
     view = nil
 end
+
+OVERLAY_WIDGETS = {
+    skillprogress=skills_progress.SkillProgressOverlay,
+}
 
 if dfhack_flags.module then
     return

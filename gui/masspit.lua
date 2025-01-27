@@ -73,16 +73,16 @@ function Masspit:showStockpiles()
     for _, zone in pairs(df.global.world.buildings.other.STOCKPILE) do
         if (#zone.settings.animals.enabled > 0) then
             if #getCagedUnits(zone) > 0 then
-                local zone_name = zone.name.length and dfhack.TranslateName(zone.name) or "Animal stockpile #" .. zone.stockpile_number
+                local zone_name = #zone.name > 0 and zone.name or ("Animal stockpile #" .. zone.stockpile_number)
                 local zone_position = df.coord:new()
                 zone_position.x = zone.centerx
                 zone_position.y = zone.centery
                 zone_position.z = zone.z
 
                 table.insert(choices, {
-                    text = ([[%s: %s x:%s y:%s]]):format(zone.id, zone_name, zone.centerx, zone.centery),
+                    text = zone_name,
                     zone_position = zone_position,
-                    zone_id = zone.id
+                    zone_id = zone.id,
                 })
             end
         end
@@ -97,6 +97,10 @@ function Masspit:showStockpiles()
     end
 end
 
+local function getElevation()
+    return df.global.world.map.region_z + df.global.window_z - 100
+end
+
 function Masspit:showPondPits()
     self.subviews.pages:setSelected('pits')
 
@@ -104,14 +108,14 @@ function Masspit:showPondPits()
 
     for _, zone in pairs(df.global.world.buildings.other.ACTIVITY_ZONE) do
         if (zone.type == df.civzone_type.Pond) then
-            local zone_name = zone.name.length and dfhack.TranslateName(zone.name) or "Unnamed pit/pond"
+            local zone_name = #zone.name > 0 and zone.name or ("Unnamed pit/pond on elevation "..getElevation())
             local zone_position = df.coord:new()
             zone_position.x = zone.centerx
             zone_position.y = zone.centery
             zone_position.z = zone.z
 
             table.insert(choices, {
-                text = ([[%s: %s x:%s y:%s]]):format(zone.id, zone_name, zone.centerx, zone.centery),
+                text = zone_name,
                 zone_position = zone_position,
                 zone_id = zone.id
             })
@@ -161,7 +165,7 @@ function Masspit:setPit(_, choice)
 
     for _, unit_id in pairs(self.caged_units) do
         local unit = df.unit.find(unit_id)
-        local unit_name = unit.name.has_name and dfhack.TranslateName(unit.name) or dfhack.units.getRaceNameById(unit.race)
+        local unit_name = dfhack.units.getReadableName(unit)
 
         -- Prevents duplicate units in assignments, which can cause crashes.
         local duplicate = false
@@ -171,7 +175,7 @@ function Masspit:setPit(_, choice)
             end
         end
 
-        table.insert(choices, { text = ([[%s: %s %s]]):format(unit.id, unit_name, duplicate and "(ALREADY ASSIGNED)" or "") })
+        table.insert(choices, { text = ([[%s: %s%s]]):format(unit.id, unit_name, duplicate and " (ALREADY ASSIGNED)" or "") })
 
         if not duplicate then
             unit.general_refs:insert("#", { new = df.general_ref_building_civzone_assignedst, building_id=self.pit.id })
@@ -220,7 +224,7 @@ function MasspitScreen:onDismiss()
     view = nil
 end
 
-if not dfhack.isMapLoaded() then
+if not dfhack.world.isFortressMode() or not dfhack.isMapLoaded() then
     qerror('This script requires a fortress map to be loaded')
 end
 

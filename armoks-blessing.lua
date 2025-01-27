@@ -1,24 +1,9 @@
 -- Adjust all attributes of all dwarves to an ideal
 -- by vjek
 
+local rejuvenate = reqscript('rejuvenate')
 local utils = require('utils')
 
-function rejuvenate(unit)
-    if unit==nil then
-        print ("No unit available!  Aborting with extreme prejudice.")
-        return
-    end
-
-    local current_year=df.global.cur_year
-    local newbirthyear=current_year - 20
-    if unit.birth_year < newbirthyear then
-        unit.birth_year=newbirthyear
-    end
-    if unit.old_year < current_year+100 then
-        unit.old_year=current_year+100
-    end
-
-end
 -- ---------------------------------------------------------------------------
 function brainwash_unit(unit)
     if unit==nil then
@@ -248,10 +233,10 @@ end
 -- ---------------------------------------------------------------------------
 function adjust_all_dwarves(skillname)
     for _,v in ipairs(dfhack.units.getCitizens()) do
-        print("Adjusting "..dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(v))))
+        print("Adjusting "..dfhack.df2console(dfhack.units.getReadableName(v)))
         brainwash_unit(v)
         elevate_attributes(v)
-        rejuvenate(v)
+        rejuvenate.rejuvenate(v, true)
         if skillname then
             if df.job_skill_class[skillname] then
                 LegendaryByClass(skillname,v)

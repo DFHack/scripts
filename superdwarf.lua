@@ -21,12 +21,7 @@ local function getUnit(obj)
 end
 
 local function getName(unit)
-    local name = dfhack.TranslateName(unit.name)
-    -- Animals will have a profession name if they aren't named
-    if name == '' then
-        name = dfhack.units.getProfessionName(unit)
-    end
-    return name
+    return dfhack.df2console(dfhack.units.getReadableName(unit))
 end
 
 local function onTimer()

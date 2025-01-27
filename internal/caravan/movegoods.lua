@@ -14,10 +14,10 @@ local widgets = require('gui.widgets')
 MoveGoods = defclass(MoveGoods, widgets.Window)
 MoveGoods.ATTRS {
     frame_title='Move goods to/from depot',
-    frame={w=85, h=46},
+    frame={w=86, h=46},
     resizable=true,
-    resize_min={h=35},
-    frame_inset={l=1, t=1, b=1, r=0},
+    resize_min={h=40},
+    frame_inset={l=0, t=1, b=1, r=0},
     pending_item_ids=DEFAULT_NIL,
     depot=DEFAULT_NIL,
 }
@@ -155,7 +155,7 @@ function MoveGoods:init()
     self:addviews{
         widgets.CycleHotkeyLabel{
             view_id='sort',
-            frame={l=0, t=0, w=21},
+            frame={l=1, t=0, w=21},
             label='Sort by:',
             key='CUSTOM_SHIFT_S',
             options={
@@ -173,32 +173,38 @@ function MoveGoods:init()
         },
         widgets.EditField{
             view_id='search',
-            frame={l=26, t=0},
+            frame={l=27, t=0, r=1},
             label_text='Search: ',
             on_char=function(ch) return ch:match('[%l -]') end,
         },
         widgets.Panel{
-            frame={t=2, l=0, w=38, h=14},
-            subviews=common.get_slider_widgets(self),
-        },
-        widgets.ToggleHotkeyLabel{
-            view_id='hide_forbidden',
-            frame={t=2, l=40, w=28},
-            label='Hide forbidden items:',
-            key='CUSTOM_SHIFT_F',
-            options={
-                {label='Yes', value=true, pen=COLOR_GREEN},
-                {label='No', value=false}
+            frame={t=2, l=0, r=0, h=18},
+            frame_style=gui.FRAME_INTERIOR,
+            subviews={
+                widgets.Panel{
+                    frame={t=0, l=0, w=38},
+                    subviews=common.get_slider_widgets(self),
+                },
+                widgets.ToggleHotkeyLabel{
+                    view_id='hide_forbidden',
+                    frame={t=0, l=40, w=28},
+                    label='Hide forbidden items:',
+                    key='CUSTOM_SHIFT_F',
+                    options={
+                        {label='Yes', value=true, pen=COLOR_GREEN},
+                        {label='No', value=false}
+                    },
+                   initial_option=false,
+                    on_change=function() self:refresh_list() end,
+                },
+                widgets.Panel{
+                    frame={t=1, l=40, r=0},
+                    subviews=common.get_info_widgets(self, get_export_agreements(), false, self.predicate_context),
+                },
             },
-           initial_option=false,
-            on_change=function() self:refresh_list() end,
         },
         widgets.Panel{
-            frame={t=4, l=40, r=1, h=12},
-            subviews=common.get_info_widgets(self, get_export_agreements(), self.predicate_context),
-        },
-        widgets.Panel{
-            frame={t=17, l=0, r=0, b=6},
+            frame={t=21, l=0, r=0, b=7},
             subviews={
                 widgets.CycleHotkeyLabel{
                     view_id='sort_dist',
@@ -255,48 +261,60 @@ function MoveGoods:init()
                 },
             }
         },
-        widgets.Label{
-            frame={l=0, b=4, h=1, r=0},
-            text={
-                'Total value of items marked for trade:',
-                {gap=1,
-                 text=function() return common.obfuscate_value(self.value_pending) end},
+        widgets.Divider{
+            frame={b=6, h=1},
+            frame_style=gui.FRAME_INTERIOR,
+            frame_style_l=false,
+            frame_style_r=false,
+        },
+        widgets.Panel{
+            frame={l=1, r=1, b=0, h=5},
+            subviews={
+                widgets.Label{
+                    frame={l=0, t=0},
+                    text={
+                        'Total value of items marked for trade:',
+                        {gap=1,
+                         text=function() return common.obfuscate_value(self.value_pending) end,
+                         pen=COLOR_GREEN},
+                    },
+                },
+                widgets.Label{
+                    frame={l=0, t=2},
+                    text='Click to mark/unmark for trade. Shift click to mark/unmark a range of items.',
+                },
+                widgets.HotkeyLabel{
+                    frame={l=0, b=0},
+                    label='Select all/none',
+                    key='CUSTOM_CTRL_A',
+                    on_activate=self:callback('toggle_visible'),
+                    auto_width=true,
+                },
+                widgets.ToggleHotkeyLabel{
+                    view_id='group_items',
+                    frame={l=25, b=0, w=24},
+                    label='Group items:',
+                    key='CUSTOM_CTRL_G',
+                    options={
+                        {label='Yes', value=true, pen=COLOR_GREEN},
+                        {label='No', value=false}
+                    },
+                    initial_option=true,
+                    on_change=function() self:refresh_list() end,
+                },
+                widgets.ToggleHotkeyLabel{
+                    view_id='inside_containers',
+                    frame={l=51, b=0, w=30},
+                    label='Inside containers:',
+                    key='CUSTOM_CTRL_I',
+                    options={
+                        {label='Yes', value=true, pen=COLOR_GREEN},
+                        {label='No', value=false}
+                    },
+                    initial_option=false,
+                    on_change=function() self:refresh_list() end,
+                },
             },
-        },
-        widgets.HotkeyLabel{
-            frame={l=0, b=2},
-            label='Select all/none',
-            key='CUSTOM_CTRL_A',
-            on_activate=self:callback('toggle_visible'),
-            auto_width=true,
-        },
-        widgets.ToggleHotkeyLabel{
-            view_id='group_items',
-            frame={l=25, b=2, w=24},
-            label='Group items:',
-            key='CUSTOM_CTRL_G',
-            options={
-                {label='Yes', value=true, pen=COLOR_GREEN},
-                {label='No', value=false}
-            },
-            initial_option=true,
-            on_change=function() self:refresh_list() end,
-        },
-        widgets.ToggleHotkeyLabel{
-            view_id='inside_containers',
-            frame={l=51, b=2, w=30},
-            label='Inside containers:',
-            key='CUSTOM_CTRL_I',
-            options={
-                {label='Yes', value=true, pen=COLOR_GREEN},
-                {label='No', value=false}
-            },
-            initial_option=false,
-            on_change=function() self:refresh_list() end,
-        },
-        widgets.WrappedLabel{
-            frame={b=0, l=0, r=0},
-            text_to_wrap='Click to mark/unmark for trade. Shift click to mark/unmark a range of items.',
         },
     }
 
@@ -390,41 +408,50 @@ local function make_choice_text(at_depot, dist, value, quantity, desc)
     }
 end
 
+local function is_ethical_item(item, animal_ethics, wood_ethics)
+    return (not animal_ethics or not item:isAnimalProduct()) and
+        (not wood_ethics or not common.has_wood(item))
+end
+
 local function is_ethical_product(item, animal_ethics, wood_ethics)
     if not animal_ethics and not wood_ethics then return true end
-    if item.flags.container then
-        local contained_items = dfhack.items.getContainedItems(item)
-        if df.item_binst:is_instance(item) then
-            -- ignore the safety of the bin itself (unless the bin is empty)
-            -- so items inside can still be traded
-            local has_items = false
-            for _, contained_item in ipairs(contained_items) do
-                has_items = true
-                if (not animal_ethics or not contained_item:isAnimalProduct()) and
-                    (not wood_ethics or not common.has_wood(contained_item))
-                then
-                    -- bin passes if at least one contained item is safe
-                    return true
+
+    -- if item is not a container or is an empty container, then the ethics is not mixed
+    -- and the ethicality of the item speaks for itself
+    local has_ethical = is_ethical_item(item, animal_ethics, wood_ethics)
+    local is_mixed = false
+    if not item.flags.container then
+        return has_ethical, is_mixed
+    end
+    local contained_items = dfhack.items.getContainedItems(item)
+    if #contained_items == 0 then
+        return has_ethical, is_mixed
+    end
+
+    if df.item_binst:is_instance(item) then
+        for _, contained_item in ipairs(contained_items) do
+            if is_ethical_item(contained_item, animal_ethics, wood_ethics) then
+                if not has_ethical then
+                    has_ethical, is_mixed = true, true
+                    break
                 end
+            elseif has_ethical then
+                is_mixed = true
+                break
             end
-            if has_items then
-                -- no contained items are safe
-                return false
-            end
-        else
-            -- for other types of containers, any contamination makes it untradeable
-            for _, contained_item in ipairs(contained_items) do
-                if (animal_ethics and contained_item:isAnimalProduct()) or
-                    (wood_ethics and common.has_wood(contained_item))
-                then
-                    return false
-                end
+        end
+    elseif has_ethical then
+        -- for other types of containers, any contamination makes it unethical since contained
+        -- items cannot be individually selected in the barter screen
+        for _, contained_item in ipairs(contained_items) do
+            if not is_ethical_item(contained_item, animal_ethics, wood_ethics) then
+                has_ethical = false
+                break
             end
         end
     end
 
-    return (not animal_ethics or not item:isAnimalProduct()) and
-        (not wood_ethics or not common.has_wood(item))
+    return has_ethical, is_mixed
 end
 
 local function make_container_search_key(item, desc)
@@ -492,7 +519,7 @@ function MoveGoods:cache_choices()
             group.data.has_risky = group.data.has_risky or is_risky
             group.data.has_requested = group.data.has_requested or is_requested
         else
-            local is_ethical = is_ethical_product(item, self.animal_ethics, self.wood_ethics)
+            local has_ethical, is_ethical_mixed = is_ethical_product(item, self.animal_ethics, self.wood_ethics)
             local data = {
                 desc=desc,
                 per_item_value=value,
@@ -507,10 +534,12 @@ function MoveGoods:cache_choices()
                 selected=is_pending and 1 or 0,
                 num_at_depot=item.flags.in_building and 1 or 0,
                 has_forbidden=is_forbidden,
+                has_foreign=item.flags.foreign,
                 has_banned=is_banned,
                 has_risky=is_risky,
                 has_requested=is_requested,
-                ethical=is_ethical,
+                has_ethical=has_ethical,
+                ethical_mixed=is_ethical_mixed,
                 dirty=false,
             }
             local search_key
@@ -555,9 +584,11 @@ function MoveGoods:get_choices()
     local raw_choices = self:cache_choices()
     local choices = {}
     local include_forbidden = not self.subviews.hide_forbidden:getOptionValue()
+    local provenance = self.subviews.provenance:getOptionValue()
     local banned = self.subviews.banned:getOptionValue()
     local only_agreement = self.subviews.only_agreement:getOptionValue()
     local ethical = self.subviews.ethical:getOptionValue()
+    local strict_ethical_bins = self.subviews.strict_ethical_bins:getOptionValue()
     local min_condition = self.subviews.min_condition:getOptionValue()
     local max_condition = self.subviews.max_condition:getOptionValue()
     local min_quality = self.subviews.min_quality:getOptionValue()
@@ -567,8 +598,9 @@ function MoveGoods:get_choices()
     for _,choice in ipairs(raw_choices) do
         local data = choice.data
         if ethical ~= 'show' then
-            if ethical == 'hide' and data.ethical then goto continue end
-            if ethical == 'only' and not data.ethical then goto continue end
+            if strict_ethical_bins and data.ethical_mixed then goto continue end
+            if ethical == 'hide' and data.has_ethical then goto continue end
+            if ethical == 'only' and not data.has_ethical then goto continue end
         end
         if not include_forbidden then
             if choice.item_id then
@@ -576,6 +608,13 @@ function MoveGoods:get_choices()
                     goto continue
                 end
             elseif data.has_forbidden then
+                goto continue
+            end
+        end
+        if provenance ~= 'all' then
+            if (provenance == 'local' and data.has_foreign) or
+                (provenance == 'foreign' and not data.has_foreign)
+            then
                 goto continue
             end
         end
@@ -717,6 +756,10 @@ function MoveGoodsModal:onDismiss()
                 if dfhack.items.getHolderBuilding(item) == depot then
                     item.flags.in_building = true
                 else
+                    -- TODO: if there is just one (ethical, if filtered) item inside of a bin, mark the item for
+                    -- trade instead of the bin
+                    -- TODO: give containers that have some items inside of them marked for trade a ":" marker in the UI
+                    -- TODO: correlate items inside containers marked for trade across the cached choices so no choices are lost
                     dfhack.items.markForTrade(item, depot)
                 end
             elseif not item_data.pending and pending[item_id] then
@@ -724,7 +767,7 @@ function MoveGoodsModal:onDismiss()
                 if spec_ref then
                     dfhack.job.removeJob(spec_ref.data.job)
                 end
-            elseif not item_data.pending and item.flags.in_building then
+            elseif not item_data.pending and item.flags.in_building and dfhack.items.getHolderBuilding(item) == depot then
                 item.flags.in_building = false
             end
         end

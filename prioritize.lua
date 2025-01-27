@@ -141,17 +141,6 @@ local function status()
     local lines = {}
     local watched_job_matchers = get_watched_job_matchers()
     for k,v in pairs(watched_job_matchers) do
-        if type(k) ~= 'number' then
-            -- fix up any stringified numbers that made their way into this list
-            -- it is unclear how this happens, but fix it here if it does
-            local num_key = tonumber(k)
-            dfhack.printerr('autofixing non-numeric job type: ' .. tostring(k))
-            if num_key then
-                watched_job_matchers[num_key] = v
-            end
-            watched_job_matchers[k] = nil
-            k = num_key
-        end
         if v.hauler_matchers then
             for hk in pairs(v.hauler_matchers) do
                 table.insert(lines, get_status_line(k, get_unit_labor_annotation_str(hk)))
@@ -629,16 +618,16 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     end
     local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
     -- convert the string keys back into enum values
+    g_watched_job_matchers = {}
     for k,v in pairs(persisted_data) do
+        -- very old saves may still have numbers in the persisted table
         if type(k) ~= 'number' then
-            local num = tonumber(k)
-            if num then
-                persisted_data[num] = v
-            end
-            persisted_data[k] = nil
+            k = tonumber(k)
+        end
+        if k then
+            g_watched_job_matchers[k] = v
         end
     end
-    g_watched_job_matchers = persisted_data
     update_handlers()
 end
 

@@ -5,7 +5,7 @@ confirm
     :summary: Adds confirmation dialogs for destructive actions.
     :tags: fort interface
 
-In the base game, it is frightenly easy to destroy hours of work with a single
+In the base game, it is frighteningly easy to destroy hours of work with a single
 misclick. Now you can avoid the consequences of accidentally disbanding a squad
 (for example), or deleting a hauling route.
 

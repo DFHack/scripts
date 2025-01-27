@@ -1,13 +1,4 @@
--- troubleshoot-item.lua
 --@ module = true
---[====[
-
-troubleshoot-item
-=================
-Print various properties of the selected item. Sometimes useful for
-troubleshooting issues such as why dwarves won't pick up a certain item.
-
-]====]
 
 local function coord_to_str(coord)
     local out = {}
@@ -45,8 +36,7 @@ function troubleshoot_item(item, out)
         if unit_holder.unit_id then
             local unit = df.unit.find(unit_holder.unit_id)
             if unit then
-                local unit_details = string.format("%s - %s", dfhack.TranslateName(dfhack.units.getVisibleName(unit)), dfhack.units.getProfessionName(unit))
-                out('Held by unit: ' .. unit_details)
+                out('Held by unit: ' .. dfhack.units.getReadableName(unit))
             else
                 warn('Could not find unit with unit_id: ' .. unit_holder.unit_id)
             end

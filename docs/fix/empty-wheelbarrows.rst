@@ -26,12 +26,12 @@ Examples
 ``fix/empty-wheelbarrows --dry-run``
     Lists all wheelbarrows that would be emptied and their contents without performing the action.
 ``fix/empty-wheelbarrows --quiet``
-    Does the action while surpressing output to console.
+    Does the action while suppressing output to console.
 
 Options
 -------
 
 ``-q``, ``--quiet``
-    Surpress console output (final status update is still printed if at least one item was affected).
+    Suppress console output (final status update is still printed if at least one item was affected).
 ``-d``, ``--dry-run``
     Dry run, don't commit changes.

@@ -139,7 +139,7 @@ local function is_valid_tile_bridge(pos, db_entry, b)
             (dir == T_direction.Right and pos.x == b.pos.x+b.width-1) then
         return is_valid_tile_has_space(pos)
     end
-    return is_valid_tile_has_space_or_is_ramp(pos)
+    return is_valid_tile_machine(pos)
 end
 
 -- although vanilla allows constructions to be built on top of constructed
@@ -213,7 +213,7 @@ local function is_tile_coverable(pos)
              shape ~= df.tiletype_shape.STAIR_DOWN) then
         return false
     end
-    return is_tile_floor_adjacent(pos)
+    return true
 end
 
 --

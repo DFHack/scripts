@@ -45,7 +45,7 @@ Valid types are:
 - ``milk``
 - ``mill`` (millable plants)
 - ``oil``
-- ``seeds`` (plantable seeds)
+- ``seeds`` (plantable seeds and items producing seeds)
 - ``tallow``
 - ``thread``
 

@@ -1197,7 +1197,7 @@ function usetool:update_site()
     local site_label=self.subviews.siteLabel --as:wid.Label
     if site then
 
-        site_label:itemById("site").text=dfhack.TranslateName(site.name)
+        site_label:itemById("site").text=dfhack.translation.translateName(site.name)
     else
         if settings.safe then
             site_label:itemById("site").text="<none, advfort disabled>"

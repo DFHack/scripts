@@ -11,10 +11,12 @@ pathable from the tile that the mouse cursor is hovering over, and Depot, which
 shows which tiles a wagon can traverse on the way to your trade depot.
 
 If graphics are enabled, then tiles show a yellow box if they are pathable and
-a red X if not.
+a red X if not, and the target tiles (the tile under the mouse or the map edge
+tiles where wagons can enter the map, depending on which mode you're in) show a
+yellow box with a dot in them.
 
 In ASCII mode, the tiles are highlighted in green if pathing is possible and red
-if not.
+if not. Target tiles are highlighted in cyan.
 
 .. note::
     This tool uses a cache used by DF, which currently does *not* account for

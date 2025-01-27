@@ -3,7 +3,7 @@
 local utils = require('utils')
 
 function getName(unit)
-    return dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(unit)))
+    return dfhack.df2console(dfhack.units.getReadableName(unit))
 end
 
 function legendize(unit, skill_idx)

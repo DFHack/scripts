@@ -85,7 +85,7 @@ function fix_equipment ()
 
   for i, squad in ipairs (df.global.world.squads.all) do
     if squad.entity_id == df.global.plotinfo.group_id then
-      local squad_name = dfhack.TranslateName(squad.name, true)
+      local squad_name = dfhack.translation.translateName(squad.name, true)
       if squad.alias ~= "" then
         squad_name = squad.alias
       end

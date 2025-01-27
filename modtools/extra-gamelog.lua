@@ -35,7 +35,7 @@ function log_on_load(op)
     local fort_ent = df.global.plotinfo.main.fortress_entity
     local civ_ent = df.historical_entity.find(df.global.plotinfo.civ_id)
     local function fullname(item)
-        return dfhack.TranslateName(item.name)..' ('..dfhack.TranslateName(item.name ,true)..')'
+        return dfhack.translation.translateName(item.name)..' ('..dfhack.translation.translateName(item.name ,true)..')'
     end
     msg('Loaded '..df.global.world.cur_savegame.save_dir..', '..fullname(df.global.world.world_data)..
         ' at coordinates ('..site.pos.x..','..site.pos.y..')')
@@ -71,7 +71,7 @@ function log_nobles()
         if expedition_leader == nil then
             msg("Expedition leader position is now vacant.")
         else
-            msg(dfhack.TranslateName(dfhack.units.getVisibleName(expedition_leader)).." became expedition leader.")
+            msg(dfhack.translation.translateName(dfhack.units.getVisibleName(expedition_leader)).." became expedition leader.")
         end
     end
 
@@ -79,7 +79,7 @@ function log_nobles()
         if mayor == nil then
             msg("Mayor position is now vacant.")
         else
-            msg(dfhack.TranslateName(dfhack.units.getVisibleName(mayor)).." became mayor.")
+            msg(dfhack.translation.translateName(dfhack.units.getVisibleName(mayor)).." became mayor.")
         end
     end
     old_mayor = mayor

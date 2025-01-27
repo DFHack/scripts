@@ -155,7 +155,7 @@ function randomiseOrientation(unit, sex)
     return
   end
 
-  local caste = df.creature_raw.find(unit.race).caste[unit.caste]
+  local caste = dfhack.units.getCasteRaw(unit)
 
   -- Build a weighted table for use in the weighted roll function
   local sexname = getSexString(sex)
@@ -214,7 +214,7 @@ function main(...)
 
   -- View
   if args.view then
-    print("Orientation of " .. dfhack.TranslateName(unit.name) .. ":")
+    print("Orientation of " .. dfhack.df2console(dfhack.units.getReadableName(unit)) .. ":")
     print("Male: " .. getInterestString(getInterest(unit, "male")))
     print("Female: " .. getInterestString(getInterest(unit, "female")))
     return

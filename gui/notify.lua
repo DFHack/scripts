@@ -16,6 +16,7 @@ NotifyOverlay = defclass(NotifyOverlay, overlay.OverlayWidget)
 NotifyOverlay.ATTRS{
     default_enabled=true,
     frame={w=30, h=LIST_MAX_HEIGHT+2},
+    right_offset=DEFAULT_NIL,
 }
 
 function NotifyOverlay:init()
@@ -70,6 +71,7 @@ end
 function NotifyOverlay:overlay_onupdate()
     local choices = {}
     local is_adv = dfhack.world.isAdventureMode()
+    self.critical = false
     for _, notification in ipairs(notifications.NOTIFICATIONS_BY_IDX) do
         if not notifications.config.data[notification.name].enabled then goto continue end
         local fn = get_fn(notification, is_adv)
@@ -80,6 +82,7 @@ function NotifyOverlay:overlay_onupdate()
                 text=str,
                 data=notification,
             })
+            self.critical = self.critical or notification.critical
         end
         ::continue::
     end
@@ -107,31 +110,12 @@ function NotifyOverlay:preUpdateLayout(parent_rect)
     local list = self.subviews.list
     local list_width, num_choices = list:getContentWidth(), #list:getChoices()
     -- +2 for the frame
-    self.frame.w = math.min(list_width + 2, parent_rect.width - (frame_rect.x1 + 3))
+    self.frame.w = math.min(list_width + 2, parent_rect.width - (frame_rect.x1 + self.right_offset))
     if num_choices <= LIST_MAX_HEIGHT then
         self.frame.h = num_choices + 2
     else
         self.frame.w = self.frame.w + 3 -- for the scrollbar
         self.frame.h = LIST_MAX_HEIGHT + 2
-    end
-end
-
-local CONFLICTING_TOOLTIPS = utils.invert{
-    df.main_hover_instruction.InfoUnits,
-    df.main_hover_instruction.InfoJobs,
-    df.main_hover_instruction.InfoPlaces,
-    df.main_hover_instruction.InfoLabors,
-    df.main_hover_instruction.InfoWorkOrders,
-    df.main_hover_instruction.InfoNobles,
-    df.main_hover_instruction.InfoObjects,
-    df.main_hover_instruction.InfoJustice,
-}
-
-local mi = df.global.game.main_interface
-
-function NotifyOverlay:render(dc)
-    if not CONFLICTING_TOOLTIPS[mi.current_hover] then
-        NotifyOverlay.super.render(self, dc)
     end
 end
 
@@ -144,14 +128,59 @@ DwarfNotifyOverlay.ATTRS{
     desc='Shows list of active notifications in fort mode.',
     default_pos={x=1,y=-8},
     viewscreens='dwarfmode/Default',
+    right_offset=3,
 }
+
+local DWARFMODE_CONFLICTING_TOOLTIPS = utils.invert{
+    df.main_hover_instruction.MAIN_OPEN_CREATURES,
+    df.main_hover_instruction.MAIN_OPEN_TASKS,
+    df.main_hover_instruction.MAIN_OPEN_PLACES,
+    df.main_hover_instruction.MAIN_OPEN_LABOR,
+    df.main_hover_instruction.MAIN_OPEN_WORK_ORDERS,
+    df.main_hover_instruction.MAIN_OPEN_NOBLES,
+    df.main_hover_instruction.MAIN_OPEN_OBJECTS,
+    df.main_hover_instruction.MAIN_OPEN_JUSTICE,
+}
+
+local mi = df.global.game.main_interface
+
+function DwarfNotifyOverlay:render(dc)
+    if not DWARFMODE_CONFLICTING_TOOLTIPS[mi.current_hover] then
+        NotifyOverlay.super.render(self, dc)
+    end
+end
 
 AdvNotifyOverlay = defclass(AdvNotifyOverlay, NotifyOverlay)
 AdvNotifyOverlay.ATTRS{
     desc='Shows list of active notifications in adventure mode.',
     default_pos={x=18,y=-5},
     viewscreens='dungeonmode/Default',
+    overlay_onupdate_max_freq_seconds=1,
+    right_offset=13,
 }
+
+function AdvNotifyOverlay:set_width()
+    local desired_width = 13
+    if df.global.adventure.player_control_state ~= df.adventurest.T_player_control_state.TAKING_INPUT then
+        local offset = self.frame_parent_rect.width > 137 and 26 or
+            (self.frame_parent_rect.width+1) // 2 - 43
+        desired_width = self.frame_parent_rect.width // 2 + offset
+    end
+    if self.right_offset ~= desired_width then
+        self.right_offset = desired_width
+        self:updateLayout()
+    end
+end
+
+function AdvNotifyOverlay:render(dc)
+    if mi.current_hover > -1 then return end
+    self:set_width()
+    if self.critical and self.prev_tick_counter ~= df.global.adventure.tick_counter then
+        self.prev_tick_counter = df.global.adventure.tick_counter
+        self:overlay_onupdate()
+    end
+    AdvNotifyOverlay.super.render(self, dc)
+end
 
 OVERLAY_WIDGETS = {
     panel=DwarfNotifyOverlay,

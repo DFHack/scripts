@@ -130,7 +130,7 @@ Irritation counters are saved with the cavern layer in the world region, which
 extends beyond the boundaries of your current fort. If you retire a fort and
 start another one nearby, the caverns will retain any irritation added by the
 first fort. This means that new forts may start with already-irritated caverns
-and meet with immediate resistence.
+and meet with immediate resistance.
 
 The settings
 ~~~~~~~~~~~~
@@ -182,7 +182,7 @@ When enabled, this mod makes the following changes:
 
 When agitated wildlife enters the map on the surface, the surface irritation
 counter is set to the value of ``Wilderness irritation minimum``, ensuring
-that the *next* group of widlife that enters the map will *not* be agitated.
+that the *next* group of wildlife that enters the map will *not* be agitated.
 This means that the incursions act more like a warning shot than an open
 floodgate. You will not be attacked again unless you continue your activities
 on the surface that raise the chance of a subsequent attack.
@@ -211,7 +211,7 @@ attacks can still be controlled independently of this mod.
 
 Finally, if you have walled yourself off from the danger in the caverns, yet you
 continue to irritate nature down there, this mod will ensure that the number of
-active cavern invaders, cumulative across all cavern levels, never exeeds the
+active cavern invaders, cumulative across all cavern levels, never exceeds the
 value set for ``Cavern dweller maximum attackers``. This prevents excessive FPS
 loss during gameplay and keeps the number of creatures milling around outside
 your gates (or hidden in the shadows) to a reasonable number.
