@@ -32,11 +32,7 @@ end
 if not slayer then
     qerror("Killer not found!")
 elseif slayer.flags2.killed then
-    local slayerName = ""
-    if slayer.name.has_name then
-        slayerName = ", " .. dfhack.TranslateName(slayer.name) .. ","
-    end
-    qerror("Your slayer" .. slayerName .. " is dead!")
+    qerror("Your slayer, " .. dfhack.df2console(dfhack.units.getReadableName(slayer)) .. " is dead!")
 end
 
 bodyswap.swapAdvUnit(slayer)

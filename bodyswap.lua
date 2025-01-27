@@ -41,7 +41,7 @@ end
 
 function isPet(nemesis)
     if nemesis.unit then
-        if nemesis.unit.relationship_ids.Pet ~= -1 then
+        if nemesis.unit.relationship_ids.PetOwner ~= -1 then
             return true
         end
     elseif nemesis.figure then -- in case the unit is offloaded

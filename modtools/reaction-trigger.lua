@@ -181,7 +181,7 @@ local validArgs = utils.invert({
  'allowMultipleTargets',
  'range',
  'ignoreWorker',
- 'dontSkipInactive',
+ 'dontSkipInactive', --TODO: positions for inactive units are meaningless!
  'resetPolicy'
 })
 

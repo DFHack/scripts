@@ -1,8 +1,11 @@
 --@module = true
 
+local dlg = require('gui.dialogs')
 local gui = require('gui')
 local json = require('json')
 local list_agreements = reqscript('list-agreements')
+local repeat_util = require('repeat-util')
+local stuck_squad = reqscript('fix/stuck-squad')
 local warn_stranded = reqscript('warn-stranded')
 
 local CONFIG_FILE = 'dfhack-config/notify.json'
@@ -46,7 +49,7 @@ local function for_agitated_creature(fn, reverse)
             dfhack.units.isActive(unit) and
             not unit.flags1.caged and
             not unit.flags1.chained and
-            unit.flags4.agitated_wilderness_creature
+            dfhack.units.isAgitated(unit)
     end, fn, reverse)
 end
 
@@ -61,13 +64,6 @@ local function for_invader(fn, reverse)
     end, fn, reverse)
 end
 
-local function is_likely_hostile(unit)
-    return dfhack.units.isCrazed(unit) or
-        dfhack.units.isOpposedToLife(unit) or
-        dfhack.units.isSemiMegabeast(unit) or
-        dfhack.units.isGreatDanger(unit)
-end
-
 local function for_hostile(fn, reverse)
     for_iter(units.active, function(unit)
         return not dfhack.units.isDead(unit) and
@@ -77,8 +73,8 @@ local function for_hostile(fn, reverse)
             not dfhack.units.isInvader(unit) and
             not dfhack.units.isFortControlled(unit) and
             not dfhack.units.isHidden(unit) and
-            not unit.flags4.agitated_wilderness_creature and
-            is_likely_hostile(unit)
+            not dfhack.units.isAgitated(unit) and
+            dfhack.units.isDanger(unit)
     end, fn, reverse)
 end
 
@@ -105,10 +101,8 @@ local function for_moody(fn, reverse)
     end, fn, reverse)
 end
 
-local races = df.global.world.raws.creatures.all
-
 local function is_stealer(unit)
-    local casteFlags = races[unit.race].caste[unit.caste].flags
+    local casteFlags = dfhack.units.getCasteRaw(unit).flags
     if casteFlags.CURIOUS_BEAST_EATER or
         casteFlags.CURIOUS_BEAST_GUZZLER or
         casteFlags.CURIOUS_BEAST_ITEM
@@ -121,14 +115,14 @@ local function for_nuisance(fn, reverse)
     for_iter(units.active, function(unit)
         return not dfhack.units.isDead(unit) and
             dfhack.units.isActive(unit) and
+            (is_stealer(unit) or dfhack.units.isMischievous(unit)) and
             not unit.flags1.caged and
             not unit.flags1.chained and
             not dfhack.units.isHidden(unit) and
             not dfhack.units.isFortControlled(unit) and
             not dfhack.units.isInvader(unit) and
-            not unit.flags4.agitated_wilderness_creature and
-            not is_likely_hostile(unit) and
-            (is_stealer(unit) or dfhack.units.isMischievous(unit))
+            not dfhack.units.isAgitated(unit) and
+            not dfhack.units.isDanger(unit)
     end, fn, reverse)
 end
 
@@ -136,19 +130,14 @@ local function for_wildlife(fn, reverse)
     for_iter(units.active, function(unit)
         return not dfhack.units.isDead(unit) and
             dfhack.units.isActive(unit) and
+            dfhack.units.isWildlife(unit) and
             not unit.flags1.caged and
             not unit.flags1.chained and
             not dfhack.units.isHidden(unit) and
-            not dfhack.units.isFortControlled(unit) and
-            not dfhack.units.isInvader(unit) and
-            not unit.flags4.agitated_wilderness_creature and
-            not is_likely_hostile(unit) and
+            not dfhack.units.isDanger(unit) and
             not is_stealer(unit) and
             not dfhack.units.isMischievous(unit) and
-            not dfhack.units.isMerchant(unit) and
-            not dfhack.units.isForest(unit) and
-            not dfhack.units.isVisitor(unit) and
-            unit.animal.population.population_idx >= 0
+            not dfhack.units.isVisitor(unit)
     end, fn, reverse)
 end
 
@@ -157,13 +146,13 @@ local function for_wildlife_adv(fn, reverse)
     for_iter(units.active, function(unit)
         return not dfhack.units.isDead(unit) and
             dfhack.units.isActive(unit) and
+            dfhack.units.isWildlife(unit) and
             not unit.flags1.caged and
             not unit.flags1.chained and
             not dfhack.units.isHidden(unit) and
             unit.relationship_ids.GroupLeader ~= adv_id and
             unit.relationship_ids.PetOwner ~= adv_id and
-            is_adv_unhidden(unit) and
-            unit.animal.population.population_idx >= 0
+            is_adv_unhidden(unit)
     end, fn, reverse)
 end
 
@@ -224,7 +213,7 @@ end
 local function summarize_units(for_fn)
     local counts = {}
     for_fn(function(unit)
-        local names = races[unit.race].caste[unit.caste].caste_name
+        local names = dfhack.units.getCasteRaw(unit).caste_name
         local record = ensure_key(counts, names[0], {count=0, plural=names[1]})
         record.count = record.count + 1
     end)
@@ -270,8 +259,82 @@ local function get_stranded_message()
     end
 end
 
+local function get_blood()
+    return dfhack.world.getAdventurer().body.blood_count
+end
+
+local function get_max_blood()
+    return dfhack.world.getAdventurer().body.blood_max
+end
+
+local function get_max_breath()
+    local adventurer = dfhack.world.getAdventurer()
+    local toughness = dfhack.units.getPhysicalAttrValue(adventurer, df.physical_attribute_type.TOUGHNESS)
+    local endurance = dfhack.units.getPhysicalAttrValue(adventurer, df.physical_attribute_type.ENDURANCE)
+    local base_ticks = 200
+
+    return math.floor((endurance + toughness) / 4) + base_ticks
+end
+
+local function get_breath()
+    return get_max_breath() - dfhack.world.getAdventurer().counters.suffocation
+end
+
+local function get_bar(get_fn, get_max_fn, text, color)
+    if get_fn() < get_max_fn() then
+        local label_text = {}
+        table.insert(label_text, {text=text, pen=color, width=6})
+
+        local bar_width = 16
+        local percentage = get_fn() / get_max_fn()
+        local barstop = math.floor((bar_width * percentage) + 0.5)
+        for idx = 0, bar_width-1 do
+            local bar_color = color
+            local char = 219
+            if idx >= barstop then
+                -- offset it to the hollow graphic
+                bar_color = COLOR_DARKGRAY
+                char = 177
+            end
+            table.insert(label_text, {width=1, tile={ch=char, fg=bar_color}})
+        end
+        return label_text
+    end
+    return nil
+end
+
 -- the order of this list controls the order the notifications will appear in the overlay
 NOTIFICATIONS_BY_IDX = {
+    {
+        name='stuck_squad',
+        desc='Notifies when a squad is stuck on the world map.',
+        default=true,
+        dwarf_fn=function()
+            local stuck_armies, outbound_army, returning_army = stuck_squad.scan_fort_armies()
+            if #stuck_armies == 0 then return end
+            if repeat_util.isScheduled('control-panel/fix/stuck-squad') and (outbound_army or returning_army) then
+                return
+            end
+            return ('%d squad%s need%s rescue'):format(
+                #stuck_armies,
+                #stuck_armies == 1 and '' or 's',
+                #stuck_armies == 1 and 's' or ''
+            )
+        end,
+        on_click=function()
+            local message = 'A squad is lost on the world map and needs rescue!\n\n' ..
+                'Please send a messenger to a holding or a squad out on a mission\n' ..
+                'that will return to the fort (e.g. a Demand one-time tribute mission,\n' ..
+                'but not a Conquer and occupy mission). They will rescue the stuck\n' ..
+                'squad on their way home.'
+            if not repeat_util.isScheduled('control-panel/fix/stuck-squad') then
+                message = message .. '\n\n' ..
+                    'Please enable fix/stuck-squad in the DFHack control panel to enable\n'..
+                    'missions to rescue stuck squads.'
+            end
+            dlg.showMessage('Rescue stuck squads', message, COLOR_WHITE)
+        end,
+    },
     {
         name='traders_ready',
         desc='Notifies when traders are ready to trade at the depot.',
@@ -444,6 +507,39 @@ NOTIFICATIONS_BY_IDX = {
         default=true,
         dwarf_fn=curry(injured_units, for_injured, 'injured citizen'),
         on_click=curry(zoom_to_next, for_injured),
+    },
+    {
+        name='suffocation_adv',
+        desc='Shows a suffocation bar when you are drowning or breathless.',
+        default=true,
+        critical=true,
+        adv_fn=curry(get_bar, get_breath, get_max_breath, "Air", COLOR_LIGHTCYAN),
+        on_click=nil,
+    },
+    {
+        name='bleeding_adv',
+        desc='Shows a bleeding bar when you are losing blood.',
+        default=true,
+        critical=true,
+        adv_fn=curry(get_bar, get_blood, get_max_blood, "Blood", COLOR_RED),
+        on_click=nil,
+    },
+    {
+        name='save-reminder',
+        desc='Shows a reminder if it has been more than 15 minutes since your last save.',
+        default=true,
+        dwarf_fn=function ()
+            local minsSinceSave = dfhack.persistent.getUnsavedSeconds()//60
+            if minsSinceSave >= 15 then
+                return "Last save: ".. (dfhack.formatInt(minsSinceSave)) ..' mins ago'
+            end
+        end,
+        on_click=function()
+            local minsSinceSave = dfhack.persistent.getUnsavedSeconds()//60
+            local message = 'It has been ' .. dfhack.formatInt(minsSinceSave) .. ' minutes since your last save. \n\nWould you like to save now?\n\n' ..
+            'You can also close this reminder and save manually.'
+            dlg.showYesNoPrompt('Save now?', message, nil, function() dfhack.run_script('quicksave') end)
+        end,
     },
 }
 

@@ -34,9 +34,9 @@ local trade = df.global.game.main_interface.trade
 Trade = defclass(Trade, widgets.Window)
 Trade.ATTRS {
     frame_title='Select trade goods',
-    frame={w=84, h=47},
+    frame={w=86, h=47},
     resizable=true,
-    resize_min={w=48, h=27},
+    resize_min={w=48, h=40},
 }
 
 local TOGGLE_MAP = {
@@ -139,7 +139,7 @@ end
 
 local STATUS_COL_WIDTH = 7
 local VALUE_COL_WIDTH = 6
-local FILTER_HEIGHT = 15
+local FILTER_HEIGHT = 18
 
 function Trade:init()
     self.cur_page = 1
@@ -174,8 +174,8 @@ function Trade:init()
             label='Bins:',
             key='CUSTOM_SHIFT_B',
             options={
-                {label='trade bin with contents', value=true},
-                {label='trade contents only', value=false},
+                {label='Trade bin with contents', value=true, pen=COLOR_YELLOW},
+                {label='Trade contents only', value=false, pen=COLOR_GREEN},
             },
             initial_option=false,
             on_change=function() self:refresh_list() end,
@@ -215,23 +215,24 @@ function Trade:init()
         },
         widgets.Panel{
             frame={t=7, l=0, r=0, h=FILTER_HEIGHT},
+            frame_style=gui.FRAME_INTERIOR,
             visible=function() return self.subviews.filters:getOptionValue() end,
             on_layout=function()
                 local panel_frame = self.subviews.list_panel.frame
                 if self.subviews.filters:getOptionValue() then
-                    panel_frame.t = 7 + FILTER_HEIGHT
+                    panel_frame.t = 7 + FILTER_HEIGHT + 1
                 else
                     panel_frame.t = 7
                 end
             end,
             subviews={
                 widgets.Panel{
-                    frame={t=0, l=0, w=38, h=FILTER_HEIGHT},
+                    frame={t=0, l=0, w=38},
                     visible=function() return self.cur_page == 1 end,
                     subviews=common.get_slider_widgets(self, '1'),
                 },
                 widgets.Panel{
-                    frame={t=0, l=0, w=38, h=FILTER_HEIGHT},
+                    frame={t=0, l=0, w=38},
                     visible=function() return self.cur_page == 2 end,
                     subviews=common.get_slider_widgets(self, '2'),
                 },
@@ -241,15 +242,15 @@ function Trade:init()
                     subviews=common.get_advanced_filter_widgets(self, self.predicate_contexts[1]),
                 },
                 widgets.Panel{
-                    frame={t=2, l=40, r=0, h=FILTER_HEIGHT-2},
+                    frame={t=1, l=40, r=0},
                     visible=function() return self.cur_page == 2 end,
-                    subviews=common.get_info_widgets(self, {trade.mer.buy_prices}, self.predicate_contexts[2]),
+                    subviews=common.get_info_widgets(self, {trade.mer.buy_prices}, true, self.predicate_contexts[2]),
                 },
             },
         },
         widgets.Panel{
             view_id='list_panel',
-            frame={t=7, l=0, r=0, b=4},
+            frame={t=7, l=0, r=0, b=5},
             subviews={
                 widgets.CycleHotkeyLabel{
                     view_id='sort_status',
@@ -295,16 +296,22 @@ function Trade:init()
                 },
             }
         },
+        widgets.Divider{
+            frame={b=4, h=1},
+            frame_style=gui.FRAME_INTERIOR,
+            frame_style_l=false,
+            frame_style_r=false,
+        },
+        widgets.Label{
+            frame={b=2, l=0, r=0},
+            text='Click to mark/unmark for trade. Shift click to mark/unmark a range of items.',
+        },
         widgets.HotkeyLabel{
-            frame={l=0, b=2},
+            frame={l=0, b=0},
             label='Select all/none',
             key='CUSTOM_CTRL_A',
             on_activate=self:callback('toggle_visible'),
             auto_width=true,
-        },
-        widgets.WrappedLabel{
-            frame={b=0, l=0, r=0},
-            text_to_wrap='Click to mark/unmark for trade. Shift click to mark/unmark a range of items.',
         },
     }
 
@@ -384,10 +391,12 @@ function Trade:cache_choices(list_idx, trade_bins)
             item_idx=item_idx,
             quality=item.flags.artifact and 6 or item:getQuality(),
             wear=wear_level,
+            has_foreign=item.flags.foreign,
             has_banned=is_banned,
             has_risky=is_risky,
             has_requested=is_requested,
-            ethical=is_ethical,
+            has_ethical=is_ethical,
+            ethical_mixed=false,
         }
         if parent_data then
             data.update_container_fn = function(from, to)
@@ -396,7 +405,8 @@ function Trade:cache_choices(list_idx, trade_bins)
             parent_data.has_banned = parent_data.has_banned or is_banned
             parent_data.has_risky = parent_data.has_risky or is_risky
             parent_data.has_requested = parent_data.has_requested or is_requested
-            parent_data.ethical = parent_data.ethical and is_ethical
+            parent_data.ethical_mixed = parent_data.ethical_mixed or (parent_data.has_ethical ~= is_ethical)
+            parent_data.has_ethical = parent_data.has_ethical or is_ethical
         end
         local is_container = df.item_binst:is_instance(item)
         local search_key
@@ -427,9 +437,11 @@ end
 
 function Trade:get_choices()
     local raw_choices = self:cache_choices(self.cur_page-1, self.subviews.trade_bins:getOptionValue())
+    local provenance = self.subviews.provenance:getOptionValue()
     local banned = self.cur_page == 1 and 'ignore' or self.subviews.banned:getOptionValue()
     local only_agreement = self.cur_page == 2 and self.subviews.only_agreement:getOptionValue() or false
     local ethical = self.cur_page == 1 and 'show' or self.subviews.ethical:getOptionValue()
+    local strict_ethical_bins = self.subviews.strict_ethical_bins:getOptionValue()
     local min_condition = self.subviews['min_condition'..self.cur_page]:getOptionValue()
     local max_condition = self.subviews['max_condition'..self.cur_page]:getOptionValue()
     local min_quality = self.subviews['min_quality'..self.cur_page]:getOptionValue()
@@ -440,8 +452,16 @@ function Trade:get_choices()
     for _,choice in ipairs(raw_choices) do
         local data = choice.data
         if ethical ~= 'show' then
-            if ethical == 'hide' and data.ethical then goto continue end
-            if ethical == 'only' and not data.ethical then goto continue end
+            if strict_ethical_bins and data.ethical_mixed then goto continue end
+            if ethical == 'hide' and data.has_ethical then goto continue end
+            if ethical == 'only' and not data.has_ethical then goto continue end
+        end
+        if provenance ~= 'all' then
+            if (provenance == 'local' and data.has_foreign) or
+                (provenance == 'foreign' and not data.has_foreign)
+            then
+                goto continue
+            end
         end
         if min_condition < data.wear then goto continue end
         if max_condition > data.wear then goto continue end
@@ -516,7 +536,7 @@ end
 -- TradeScreen
 --
 
-view = view or nil
+trade_view = trade_view or nil
 
 TradeScreen = defclass(TradeScreen, gui.ZScreen)
 TradeScreen.ATTRS {
@@ -540,7 +560,7 @@ end
 
 function TradeScreen:onRenderFrame()
     if not df.global.game.main_interface.trade.open then
-        if view then view:dismiss() end
+        if trade_view then trade_view:dismiss() end
     elseif self.reset_pending and
         (dfhack.gui.matchFocusString('dfhack/lua/caravan/trade') or
          dfhack.gui.matchFocusString('dwarfmode/Trade/Default'))
@@ -551,7 +571,7 @@ function TradeScreen:onRenderFrame()
 end
 
 function TradeScreen:onDismiss()
-    view = nil
+    trade_view = nil
 end
 
 -- -------------------
@@ -822,7 +842,7 @@ function TradeBannerOverlay:init()
             label='DFHack trade UI',
             key='CUSTOM_CTRL_T',
             enabled=function() return trade.stillunloading == 0 and trade.havetalker == 1 end,
-            on_activate=function() view = view and view:raise() or TradeScreen{}:show() end,
+            on_activate=function() trade_view = trade_view and trade_view:raise() or TradeScreen{}:show() end,
         },
     }
 end
@@ -831,8 +851,213 @@ function TradeBannerOverlay:onInput(keys)
     if TradeBannerOverlay.super.onInput(self, keys) then return true end
 
     if keys._MOUSE_R or keys.LEAVESCREEN then
-        if view then
-            view:dismiss()
+        if trade_view then
+            trade_view:dismiss()
+        end
+    end
+end
+
+-- -------------------
+-- Ethics
+--
+
+Ethics = defclass(Ethics, widgets.Window)
+Ethics.ATTRS {
+    frame_title='Ethical transgressions',
+    frame={w=45, h=30},
+    resizable=true,
+}
+
+function Ethics:init()
+    self.choices = {}
+    self.animal_ethics = common.is_animal_lover_caravan(trade.mer)
+    self.wood_ethics = common.is_tree_lover_caravan(trade.mer)
+
+    self:addviews{
+        widgets.Label{
+            frame={l=0, t=0},
+            text={
+                'You have ',
+                {text=self:callback('get_transgression_count'), pen=self:callback('get_transgression_color')},
+                ' item',
+                {text=function() return self:get_transgression_count() == 1 and '' or 's' end},
+                ' selected for trade', NEWLINE,
+                'that would offend the merchants:',
+            },
+        },
+        widgets.List{
+            view_id='list',
+            frame={l=0, r=0, t=3, b=2},
+        },
+        widgets.HotkeyLabel{
+            frame={l=0, b=0},
+            key='CUSTOM_CTRL_A',
+            label='Deselect items in trade list',
+            auto_width=true,
+            on_activate=self:callback('deselect_transgressions'),
+        },
+    }
+
+    self:rescan()
+end
+
+function Ethics:get_transgression_count()
+    return #self.choices
+end
+
+function Ethics:get_transgression_color()
+    return next(self.choices) and COLOR_LIGHTRED or COLOR_LIGHTGREEN
+end
+
+-- also used by confirm
+function for_selected_item(list_idx, fn)
+    local goodflags = trade.goodflag[list_idx]
+    local in_selected_container = false
+    for item_idx, item in ipairs(trade.good[list_idx]) do
+        local goodflag = goodflags[item_idx]
+        if goodflag == GOODFLAG.UNCONTAINED_SELECTED or goodflag == GOODFLAG.CONTAINER_COLLAPSED_SELECTED then
+            in_selected_container = true
+        elseif goodflag == GOODFLAG.UNCONTAINED_UNSELECTED or goodflag == GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED then
+            in_selected_container = false
+        end
+        if in_selected_container or TARGET_REVMAP[goodflag] then
+            if fn(item_idx, item) then
+                return
+            end
+        end
+    end
+end
+
+local function for_ethics_violation(fn, animal_ethics, wood_ethics)
+    if not animal_ethics and not wood_ethics then return end
+    for_selected_item(1, function(item_idx, item)
+        if not is_ethical_product(item, animal_ethics, wood_ethics) then
+            if fn(item_idx, item) then return true end
+        end
+    end)
+end
+
+function Ethics:rescan()
+    local choices = {}
+    for_ethics_violation(function(item_idx, item)
+        local choice = {
+            text=dfhack.items.getReadableDescription(item),
+            data={item_idx=item_idx},
+        }
+        table.insert(choices, choice)
+    end, self.animal_ethics, self.wood_ethics)
+
+    self.subviews.list:setChoices(choices)
+    self.choices = choices
+end
+
+function Ethics:deselect_transgressions()
+    local goodflags = trade.goodflag[1]
+    for _,choice in ipairs(self.choices) do
+        local goodflag = goodflags[choice.data.item_idx]
+        if TARGET_REVMAP[goodflag] then
+            goodflags[choice.data.item_idx] = TOGGLE_MAP[goodflag]
+        end
+    end
+    self:rescan()
+end
+
+-- -------------------
+-- EthicsScreen
+--
+
+ethics_view = ethics_view or nil
+
+EthicsScreen = defclass(EthicsScreen, gui.ZScreen)
+EthicsScreen.ATTRS {
+    focus_path='caravan/trade/ethics',
+}
+
+function EthicsScreen:init()
+    self.ethics_window = Ethics{}
+    self:addviews{self.ethics_window}
+end
+
+function EthicsScreen:onInput(keys)
+    if self.reset_pending then return false end
+    local handled = EthicsScreen.super.onInput(self, keys)
+    if keys._MOUSE_L and not self.ethics_window:getMouseFramePos() then
+        -- check for modified selection
+        self.reset_pending = true
+    end
+    return handled
+end
+
+function EthicsScreen:onRenderFrame()
+    if not df.global.game.main_interface.trade.open then
+        if ethics_view then ethics_view:dismiss() end
+    elseif self.reset_pending and
+        (dfhack.gui.matchFocusString('dfhack/lua/caravan/trade') or
+         dfhack.gui.matchFocusString('dwarfmode/Trade/Default'))
+    then
+        self.reset_pending = nil
+        self.ethics_window:rescan()
+    end
+end
+
+function EthicsScreen:onDismiss()
+    ethics_view = nil
+end
+
+-- --------------------------
+-- TradeEthicsWarningOverlay
+--
+
+-- also called by confirm
+function has_ethics_violation()
+    local violated = false
+    for_ethics_violation(function()
+        violated = true
+        return true
+    end, common.is_animal_lover_caravan(trade.mer), common.is_tree_lover_caravan(trade.mer))
+    return violated
+end
+
+TradeEthicsWarningOverlay = defclass(TradeEthicsWarningOverlay, overlay.OverlayWidget)
+TradeEthicsWarningOverlay.ATTRS{
+    desc='Adds warning to the trade screen when you are about to offend the elves.',
+    default_pos={x=-54,y=-5},
+    default_enabled=true,
+    viewscreens='dwarfmode/Trade/Default',
+    frame={w=9, h=2},
+    visible=has_ethics_violation,
+}
+
+function TradeEthicsWarningOverlay:init()
+    self:addviews{
+        widgets.BannerPanel{
+            frame={l=0, w=9},
+            subviews={
+                widgets.Label{
+                    frame={l=1, r=1},
+                    text={
+                        'Ethics', NEWLINE,
+                        'warning',
+                    },
+                    on_click=function() ethics_view = ethics_view and ethics_view:raise() or EthicsScreen{}:show() end,
+                    text_pen=COLOR_LIGHTRED,
+                    auto_width=false,
+                },
+            },
+        },
+    }
+end
+
+function TradeEthicsWarningOverlay:preUpdateLayout(rect)
+    self.frame.w = (rect.width - 95) // 2
+end
+
+function TradeEthicsWarningOverlay:onInput(keys)
+    if TradeEthicsWarningOverlay.super.onInput(self, keys) then return true end
+
+    if keys._MOUSE_R or keys.LEAVESCREEN then
+        if ethics_view then
+            ethics_view:dismiss()
         end
     end
 end

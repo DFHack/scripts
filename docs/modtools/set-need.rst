@@ -28,9 +28,9 @@ Valid need targets:
 
 :need <ID>:
     ID of the need to target. For example 0 or DrinkAlcohol.
-    If the need is PrayOrMedidate, a -deity argument is also required.
+    If the need is PrayOrMeditate, a -deity argument is also required.
 :deity <HISTFIG ID>:
-    Required when using PrayOrMedidate needs. This value should be the historical figure ID of the deity in question.
+    Required when using PrayOrMeditate needs. This value should be the historical figure ID of the deity in question.
 :all:
     All of the target's needs will be affected.
 

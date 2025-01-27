@@ -61,13 +61,13 @@ local function print_list()
 
         local building_tag = instrument.flags.PLACED_AS_BUILDING and " (building, " or " (handheld, "
         local reaction = getAssemblyReaction(instrument.id)
-        dfhack.print(instrument.name .. building_tag)
+        dfhack.print(dfhack.df2console(instrument.name .. building_tag))
         if #instrument.pieces == 0 then
-            print(describeReaction(reaction) .. ")")
+            print(dfhack.df2console(describeReaction(reaction) .. ")"))
         else
-            print(df.job_skill[reaction.skill] .. "/assemble)")
+            print(dfhack.df2console(df.job_skill[reaction.skill] .. "/assemble)"))
             for _, str in pairs(instruments[instrument.name]) do
-                print("  " .. str)
+                print(dfhack.df2console("  " .. str))
             end
         end
         print()

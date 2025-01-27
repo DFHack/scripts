@@ -6,10 +6,11 @@ if not dfhack_flags.module then
 end
 
 require('dfhack.buildings') -- loads additional functions into dfhack.buildings
-local utils = require('utils')
+local preserve_rooms = require('plugins.preserve-rooms')
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_parse = reqscript('internal/quickfort/parse')
+local utils = require('utils')
 
 local log = quickfort_common.log
 local logfn = quickfort_common.logfn
@@ -227,12 +228,6 @@ local function parse_location_props(props)
     return location_data
 end
 
-local function get_noble_unit(noble)
-    local unit = dfhack.units.getUnitByNobleRole(noble)
-    if not unit then log('could not find a noble position for: "%s"', noble) end
-    return unit
-end
-
 local function parse_zone_config(c, props)
     if not rawget(zone_db_raw, c) then
         return 'Invalid', nil
@@ -250,13 +245,7 @@ local function parse_zone_config(c, props)
         props.name = nil
     end
     if props.assigned_unit then
-        zone_data.assigned_unit = get_noble_unit(props.assigned_unit)
-        if not zone_data.assigned_unit and props.assigned_unit:lower() == 'sheriff' then
-            zone_data.assigned_unit = get_noble_unit('captain_of_the_guard')
-        end
-        if not zone_data.assigned_unit then
-            log('could not find a unit assigned to noble position: "%s"', props.assigned_unit)
-        end
+        zone_data.assigned_unit = props.assigned_unit
         props.assigned_unit = nil
     end
     if db_entry.props_fn then db_entry.props_fn(zone_data, props) end
@@ -387,11 +376,12 @@ local function create_zone(zone, data, ctx)
         set_location(bld, data.location, ctx)
         data.location = nil
     end
-    if data.assigned_unit then
-        dfhack.buildings.setOwner(bld, data.assigned_unit)
-        data.assigned_unit = nil
-    end
+    local assigned_unit = data.assigned_unit
+    data.assigned_unit = nil
     utils.assign(bld, data)
+    if assigned_unit then
+        preserve_rooms.assignToRole(assigned_unit, bld)
+    end
     return ntiles
 end
 

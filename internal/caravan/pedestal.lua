@@ -25,6 +25,7 @@ local filters = {
     max_quality=6,
     hide_unreachable=true,
     hide_forbidden=false,
+    hide_written=false,
     inside_containers=true,
 }
 
@@ -288,7 +289,7 @@ function AssignItems:init()
                 },
                 widgets.ToggleHotkeyLabel{
                     view_id='hide_forbidden',
-                    frame={t=2, l=40, w=28},
+                    frame={t=1, l=40, w=30},
                     label='Hide forbidden items:',
                     key='CUSTOM_SHIFT_F',
                     options={
@@ -299,6 +300,22 @@ function AssignItems:init()
                     initial_option=filters.hide_forbidden,
                     on_change=function(val)
                         filters.hide_forbidden = val
+                        self:refresh_list()
+                    end,
+                },
+                widgets.ToggleHotkeyLabel{
+                    view_id='hide_written',
+                    frame={t=3, l=40, w=30},
+                    label='Hide written items:',
+                    key='CUSTOM_SHIFT_W',
+                    options={
+                        {label='Yes', value=true, pen=COLOR_GREEN},
+                        {label='No', value=false}
+                    },
+                    option_gap=5,
+                    initial_option=filters.hide_written,
+                    on_change=function(val)
+                        filters.hide_written = val
                         self:refresh_list()
                     end,
                 },
@@ -553,17 +570,24 @@ function AssignItems:cache_choices(inside_containers, display_bld)
     return choices
 end
 
+local function is_written_work(item)
+    if df.item_bookst:is_instance(item) then return true end
+    return df.item_toolst:is_instance(item) and item:hasToolUse(df.tool_uses.CONTAIN_WRITING)
+end
+
 function AssignItems:get_choices()
     local raw_choices = self:cache_choices(self.subviews.inside_containers:getOptionValue(), self.bld)
     local choices = {}
     local include_unreachable = not self.subviews.hide_unreachable:getOptionValue()
     local include_forbidden = not self.subviews.hide_forbidden:getOptionValue()
+    local include_written = not self.subviews.hide_written:getOptionValue()
     local min_quality = self.subviews.min_quality:getOptionValue()
     local max_quality = self.subviews.max_quality:getOptionValue()
     for _,choice in ipairs(raw_choices) do
         local data = choice.data
         if not include_unreachable and not data.reachable then goto continue end
         if not include_forbidden and data.item.flags.forbid then goto continue end
+        if not include_written and is_written_work(data.item) then goto continue end
         if min_quality > data.quality then goto continue end
         if max_quality < data.quality then goto continue end
         table.insert(choices, choice)

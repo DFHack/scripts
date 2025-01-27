@@ -66,7 +66,7 @@ end
 function get_agr_party_name(agr)
     --assume party 0 is guild/order, 1 is local government as siteid = playerfortid
     local party_id = agr.parties[0].entity_ids[0]
-    local party_name = dfhack.TranslateName(df.global.world.entities.all[party_id].name, true)
+    local party_name = dfhack.translation.translateName(df.global.world.entities.all[party_id].name, true)
     if not party_name then
         party_name = 'An Unknown Entity or Group'
     end
@@ -77,7 +77,7 @@ function get_deity_name(agr)
     local religion_id = agr.details[0].data.Location.deity_data.Religion
     local deities = df.global.world.entities.all[religion_id].relations.deities
     if #deities == 0 then return 'An Unknown Deity' end
-    return dfhack.TranslateName(df.global.world.history.figures[deities[0]].name,true)
+    return dfhack.translation.translateName(df.global.world.history.figures[deities[0]].name,true)
 end
 
 --get resolution status, and string

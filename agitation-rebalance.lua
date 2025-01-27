@@ -106,10 +106,6 @@ local function persist_state()
     dfhack.persistent.saveSiteData(GLOBAL_KEY, state)
 end
 
-local function is_agitated(unit)
-    return unit and unit.flags4.agitated_wilderness_creature
-end
-
 local world = df.global.world
 local map_features = world.features.map_features
 local plotinfo = df.global.plotinfo
@@ -237,7 +233,7 @@ end
 local function get_agitated_units()
     local agitators = {}
     for _, unit in ipairs(world.units.active) do
-        if is_unkilled(unit) and is_agitated(unit) then
+        if is_unkilled(unit) and dfhack.units.isAgitated(unit) then
             table.insert(agitators, unit)
         end
     end
@@ -250,7 +246,7 @@ local function check_new_unit(unit_id)
     if new_unit_min_frame_counter >= world.frame_counter then return end
     local unit = df.unit.find(unit_id)
     if not unit or not is_unkilled(unit) then return end
-    if state.features.surface and is_agitated(unit) then
+    if state.features.surface and dfhack.units.isAgitated(unit) then
         on_surface_attack()
         return
     end
@@ -330,7 +326,7 @@ end
 local function do_preset(preset_name)
     local preset = presets[preset_name]
     if not preset then
-        qerror('preset not found: ' .. preset_name)
+        qerror(('preset not found: "%s"'):format(preset_name))
     end
     utils.assign(custom_difficulty, preset)
     print('agitation-rebalance: preset applied: ' .. preset_name)
@@ -767,7 +763,7 @@ local function enable_feature(which, enabled)
     end
     local feature = state.features[which]
     if feature == nil then
-        qerror('feature not found: ' .. which)
+        qerror(('feature not found: "%s"'):format(which))
     end
     state.features[which] = enabled
     print(('feature %sabled: %s'):format(enabled and 'en' or 'dis', which))
@@ -781,9 +777,9 @@ if dfhack_flags and dfhack_flags.enable then
     else do_disable()
     end
 elseif command == 'preset' then
-    do_preset(args[1])
+    do_preset(args[1] or '')
 elseif command == 'enable' or command == 'disable' then
-    enable_feature(args[1], command == 'enable')
+    enable_feature(args[1] or '', command == 'enable')
 elseif not command or command == 'status' then
     print_status()
     return

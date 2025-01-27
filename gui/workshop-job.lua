@@ -75,7 +75,7 @@ function JobDetails:init(args)
     if self.job.flags.suspend then
         status = { text = 'Suspended', pen = COLOR_RED }
     elseif worker then
-        status = { text = dfhack.TranslateName(dfhack.units.getVisibleName(worker)), pen = COLOR_GREEN }
+        status = { text = dfhack.units.getReadableName(worker), pen = COLOR_GREEN }
     end
 
     self:addviews{

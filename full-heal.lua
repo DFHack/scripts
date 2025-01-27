@@ -19,19 +19,6 @@ if args.help then
     return
 end
 
-function isCitizen(unit)
---  required as dfhack.units.isCitizen() returns false for dead units
-    local hf = df.historical_figure.find(unit.hist_figure_id)
-    if not hf then
-        return false
-    end
-    for _,link in ipairs(hf.entity_links) do
-        if link.entity_id == df.global.plotinfo.group_id and df.histfig_entity_link_type[link:getType()] == 'MEMBER' then
-            return true
-        end
-    end
-end
-
 function addResurrectionEvent(histFigID)
     local event = df.history_event_hist_figure_revivedst:new()
     event.histfig = histFigID
@@ -48,7 +35,7 @@ function heal(unit, resurrect, keep_corpse)
     end
     if resurrect then
         if unit.flags2.killed and not unit.flags3.scuttle then -- scuttle appears to be applicable to just wagons, which probably shouldn't be resurrected
-            --print("Resurrecting...")
+            print(('Resurrecting %s'):format(dfhack.units.getReadableName(unit)))
             unit.flags1.inactive = false
             unit.flags2.slaughter = false
             unit.flags2.killed = false
@@ -250,7 +237,7 @@ if args.all then
 elseif args.all_citizens then
     -- can't use dfhack.units.getCitizens since we want dead ones too
     for _,unit in ipairs(df.global.world.units.active) do
-        if dfhack.units.isCitizen(unit) or dfhack.units.isResident(unit) then
+        if dfhack.units.isCitizen(unit, true) or dfhack.units.isResident(unit) then
             heal(unit,args.r,args.keep_corpse)
         end
     end

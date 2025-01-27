@@ -165,7 +165,7 @@ end
 
 -- Gets the range of the unit caste's min, average, and max value for a trait, as defined in the PERSONALITY creature tokens.
 function getUnitCasteTraitRange(unit, trait)
-  local caste = df.creature_raw.find(unit.race).caste[unit.caste]
+  local caste = dfhack.units.getCasteRaw(unit)
   local range = {}
 
   range.min = caste.personality.a[df.personality_facet_type[trait]]
@@ -243,7 +243,7 @@ function randomTraitValue()
 end
 
 function printUnitTraits(unit)
-  print("Traits of " .. dfhack.TranslateName(unit.name) .. ":")
+  print("Traits of " .. dfhack.df2console(dfhack.units.getReadableName(unit)) .. ":")
   for id, name in ipairs(df.personality_facet_type) do
     if name ~= 'NONE' then
       local baseValue = getUnitTraitBase(unit, id)

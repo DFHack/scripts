@@ -1,3 +1,11 @@
+local argparse = require('argparse')
+
+local verbose, quiet = false, false
+argparse.processArgsGetopt({...}, {
+    {'v', 'verbose', handler=function() verbose = true end},
+    {'q', 'quiet', handler=function() quiet = true end},
+})
+
 local function for_pray_need(needs, fn)
     for idx, need in ipairs(needs) do
         if need.id == df.need_type.PrayOrMeditate then
@@ -79,6 +87,7 @@ local function get_prayer_targets(unit)
     end
 end
 
+local count = 0
 for _,unit in ipairs(dfhack.units.getCitizens(false, true)) do
     local prayer_targets = get_prayer_targets(unit)
     if not unit.status.current_soul or not prayer_targets then
@@ -86,8 +95,14 @@ for _,unit in ipairs(dfhack.units.getCitizens(false, true)) do
     end
     local needs = unit.status.current_soul.personality.needs
     if shuffle_prayer_needs(needs, prayer_targets) then
-        print('rebalanced prayer needs for ' ..
-            dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(unit))))
+        count = count + 1
+        if verbose then
+            print('Shuffled prayer target for '..dfhack.df2console(dfhack.units.getReadableName(unit)))
+        end
     end
     ::next_unit::
+end
+
+if not quiet or count > 0 then
+    print(('Rebalanced prayer needs for %d units.'):format(count))
 end

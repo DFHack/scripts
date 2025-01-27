@@ -11,7 +11,7 @@ and mouse device.
 The labels for Shift, Ctrl, and Alt light up when those modifier keys are being
 held down.
 
-Similar lables for left, middle, and right mouse buttons light up when any of
+Similar labels for left, middle, and right mouse buttons light up when any of
 those buttons are being held down.
 
 The input stream panel shows the keybindings that are being triggered. You can

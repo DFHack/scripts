@@ -25,10 +25,10 @@ function get_civ_list()
                 end
             end
             table.insert(civ_list, {
-            cur_civ_id,
-            rel_str,
-            matched,
-            dfhack.TranslateName(cur_civ.name, true)
+                cur_civ_id,
+                rel_str,
+                matched,
+                dfhack.translation.translateName(cur_civ.name, true)
             })
         end
     end

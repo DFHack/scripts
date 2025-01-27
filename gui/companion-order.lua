@@ -62,13 +62,8 @@ function getxyz() -- this will return pointers x,y and z coordinates.
     return x,y,z -- return the coords
 end
 
-function GetCaste(race_id,caste_id)
-    local race=df.creature_raw.find(race_id)
-    return race.caste[caste_id]
-end
-
 function EnumBodyEquipable(race_id,caste_id)
-    local caste=GetCaste(race_id,caste_id)
+    local caste=dfhack.units.getCasteRaw(race_id,caste_id)
     local bps=caste.body_info.body_parts
     local ret={}
     for k,v in pairs(bps) do
@@ -149,7 +144,7 @@ function AddIfFits(body_equip,unit,item)
     return false
 end
 function EnumGrasps(race_id,caste_id)
-    local caste=GetCaste(race_id,caste_id)
+    local caste=dfhack.units.getCasteRaw(race_id,caste_id)
     local bps=caste.body_info.body_parts
     local ret={}
     for k,v in pairs(bps) do
@@ -499,7 +494,7 @@ function CompanionUi:onRenderBody( dc)
         else
             dc:pen(COLOR_GREY)
         end
-        dc:newline(1):string(string.char(k+char_a)..". "):string(dfhack.TranslateName(v.name));
+        dc:newline(1):string(string.char(k+char_a)..". "):string(dfhack.translation.translateName(v.name));
     end
     dc:pen(COLOR_GREY)
     local w,h=self:getWindowSize()

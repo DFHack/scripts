@@ -1,3 +1,5 @@
+--@ module = true
+
 local gui = require('gui')
 local utils = require('utils')
 local widgets = require('gui.widgets')
@@ -9,15 +11,17 @@ local widgets = require('gui.widgets')
 Sitemap = defclass(Sitemap, widgets.Window)
 Sitemap.ATTRS {
     frame_title='Sitemap',
-    frame={w=47, r=2, t=18, h=23},
+    frame={w=57, r=2, t=18, h=25},
     resizable=true,
+    resize_min={w=43, h=20},
 }
 
 local function to_title_case(str)
     return dfhack.capitalizeStringWords(dfhack.lowerCp437(str:gsub('_', ' ')))
 end
 
-local function get_location_desc(loc)
+-- also called by gui/rename
+function get_location_desc(loc)
     if df.abstract_building_hospitalst:is_instance(loc) then
         return 'Hospital', COLOR_WHITE
     elseif df.abstract_building_inn_tavernst:is_instance(loc) then
@@ -34,7 +38,7 @@ local function get_location_desc(loc)
         local entity = is_deity and df.historical_figure.find(id) or df.historical_entity.find(id)
         local desc = 'Temple'
         if not entity then return desc, COLOR_YELLOW end
-        local name = dfhack.TranslateName(entity.name, true)
+        local name = dfhack.translation.translateName(entity.name, true)
         if #name > 0 then
             desc = ('%s to %s'):format(desc, name)
         end
@@ -46,7 +50,7 @@ end
 
 local function get_location_label(loc, zones)
     local tokens = {}
-    table.insert(tokens, dfhack.TranslateName(loc.name, true))
+    table.insert(tokens, dfhack.translation.translateName(loc.name, true))
     local desc, pen = get_location_desc(loc)
     if desc then
         table.insert(tokens, ' (')
@@ -99,6 +103,45 @@ local function zoom_to_next_zone(_, choice)
     data.next_idx = data.next_idx % #data.zones + 1
 end
 
+local function get_affiliation(unit)
+    local he = df.historical_entity.find(unit.civ_id)
+    if not he then return 'Unknown affiliation' end
+    local et_name = dfhack.translation.translateName(he.name, true)
+    local et_type = df.historical_entity_type[he.type]:gsub('(%l)(%u)', '%1 %2')
+    return ('%s%s %s'):format(#et_name > 0 and et_name or 'Unknown', #et_name > 0 and ',' or '', et_type)
+end
+
+local function get_unit_disposition_and_pen_and_affiliation(unit)
+    local prefix = unit.flags1.caged and 'caged ' or ''
+    if dfhack.units.isDanger(unit) then
+        if dfhack.units.isInvader(unit) then
+            return prefix..'invader', COLOR_RED, get_affiliation(unit)
+        end
+        return prefix..'hostile', COLOR_LIGHTRED
+    elseif dfhack.units.isFortControlled(unit) then
+        return prefix..'fort '..(dfhack.units.isAnimal(unit) and 'animal' or 'member'), COLOR_LIGHTBLUE
+    elseif dfhack.units.isWildlife(unit) then
+        return prefix..'wildlife', COLOR_GREEN
+    elseif dfhack.units.isVisitor(unit) or dfhack.units.isDiplomat(unit) then
+        return prefix..'visitor', COLOR_MAGENTA, get_affiliation(unit)
+    elseif dfhack.units.isMerchant(unit) or dfhack.units.isForest(unit) then
+        return prefix..'merchant'..(dfhack.units.isAnimal(unit) and ' animal' or ''), COLOR_BROWN, get_affiliation(unit)
+    end
+    return prefix..'friendly', COLOR_LIGHTGREEN
+end
+
+local function get_unit_choice_text(unit)
+    local disposition, disposition_pen, affiliation = get_unit_disposition_and_pen_and_affiliation(unit)
+    return {
+        dfhack.units.getReadableName(unit),
+        ' (',
+        {text=disposition, pen=disposition_pen},
+        affiliation and ': ' or '',
+        {text=affiliation, pen=COLOR_YELLOW},
+        ')',
+    }
+end
+
 local function get_unit_choices()
     local is_fort = dfhack.world.isFortressMode()
     local choices = {}
@@ -110,7 +153,7 @@ local function get_unit_choices()
             goto continue
         end
         table.insert(choices, {
-            text=dfhack.units.getReadableName(unit),
+            text=get_unit_choice_text(unit),
             data={
                 unit_id=unit.id,
             },
@@ -267,6 +310,10 @@ end
 
 function SitemapScreen:onDismiss()
     view = nil
+end
+
+if dfhack_flags.module then
+    return
 end
 
 if not dfhack.isMapLoaded() then

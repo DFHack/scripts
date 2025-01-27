@@ -19,7 +19,7 @@ as item 500, but we detect that caption at position 501 in ``main_interface.hove
 produced by the script will include the above element at position 501 instead of 500.
 
 Before running this script, the size of ``main_interface.hover_instruction`` must be aligned properly with the
-loaded verison of DF so the array of strings can be read.
+loaded version of DF so the array of strings can be read.
 
 Usage
 -----

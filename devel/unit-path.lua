@@ -127,7 +127,7 @@ function UnitPathUI:onRenderBody(dc)
 
     dc:seek(2,3):pen(COLOR_BLUE):string(prof)
     if name and name.has_name then
-        dc:seek(2,4):pen(COLOR_BLUE):string(dfhack.TranslateName(name))
+        dc:seek(2,4):pen(COLOR_BLUE):string(dfhack.translation.translateName(name))
     end
 
     local cursor = guidm.getCursorPos()

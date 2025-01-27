@@ -5,6 +5,8 @@ local dialog = require 'gui.dialogs'
 local widgets = require 'gui.widgets'
 local base_editor = reqscript("internal/gm-unit/base_editor")
 
+rng = rng or dfhack.random.new(nil, 10)
+
 -- TODO: Trigger recalculation of body sizes after size is edited
 
 Editor_Body_Modifier=defclass(Editor_Body_Modifier, widgets.Window)
@@ -26,22 +28,33 @@ function Editor_Body_Modifier:setPartModifier(indexList, value)
   for _, index in ipairs(indexList) do
     self.target_unit.appearance.bp_modifiers[index] = tonumber(value)
   end
+
+  -- Update the unit's portrait
+  self.target_unit.flags4.portrait_must_be_refreshed = true
+  -- Update the world texture
+  self.target_unit.flags4.any_texture_must_be_refreshed = true
+
   self:updateChoices()
 end
 
 function Editor_Body_Modifier:setBodyModifier(modifierIndex, value)
   self.target_unit.appearance.body_modifiers[modifierIndex] = tonumber(value)
+
+  -- Update the unit's portrait
+  self.target_unit.flags4.portrait_must_be_refreshed = true
+  -- Update the world texture
+  self.target_unit.flags4.any_texture_must_be_refreshed = true
+
   self:updateChoices()
 end
 
 function Editor_Body_Modifier:selected(index, selected)
   dialog.showInputPrompt(
-    self:beautifyString(df.appearance_modifier_type[selected.modifier.entry.type]),
+    self:beautifyString(df.appearance_modifier_type[selected.modifier.entry.modifier.type]),
     "Enter new value:",
     nil,
     tostring(selected.value),
     function(newValue)
-      self.target_unit.flags4.portrait_must_be_refreshed = true
       local value = tonumber(newValue)
       if self.partChoice.type == "part" then
         self:setPartModifier(selected.modifier.idx, value)
@@ -63,8 +76,8 @@ function Editor_Body_Modifier:random()
   local startIndex = rng:random(6) -- Will give a number between 0-5 which, when accounting for the fact that the range table starts at 0, gives us the index of which of the first 6 to use
 
   -- Set the ranges
-  local min = selected.modifier.entry.ranges[startIndex]
-  local max = selected.modifier.entry.ranges[startIndex+1]
+  local min = selected.modifier.entry.modifier.ranges[startIndex]
+  local max = selected.modifier.entry.modifier.ranges[startIndex+1]
 
   -- Get the difference between the two
   local difference = math.abs(min - max)
@@ -86,7 +99,7 @@ function Editor_Body_Modifier:step(amount)
 
   -- Build a table of description ranges
   local ranges = {}
-  for index, value in ipairs(selected.modifier.entry.desc_range) do
+  for index, value in ipairs(selected.modifier.entry.modifier.desc_range) do
     -- Only add a new entry if: There are none, or the value is higher than the previous range
     if #ranges == 0 or value > ranges[#ranges] then
       table.insert(ranges, value)
@@ -129,7 +142,7 @@ function Editor_Body_Modifier:updateChoices()
     else -- Body
       currentValue = self.target_unit.appearance.body_modifiers[modifier.index]
     end
-    table.insert(choices, {text = self:beautifyString(df.appearance_modifier_type[modifier.entry.type]) .. ": " .. currentValue, value = currentValue, modifier = modifier})
+    table.insert(choices, {text = self:beautifyString(df.appearance_modifier_type[modifier.entry.modifier.type]) .. ": " .. currentValue, value = currentValue, modifier = modifier})
   end
 
   self.subviews.modifiers:setChoices(choices)
