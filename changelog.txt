@@ -42,6 +42,7 @@ Template for new versions:
 - `hide-tutorials`: new ``reset`` command that will re-enable popups in the current game
 
 ## Removed
+- `linger`: merged into `bodyswap` as ``bodyswap linger``
 
 # 51.02-r1
 
