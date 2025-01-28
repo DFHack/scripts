@@ -14,60 +14,84 @@ local options = {
     help = false
 }
 
-fortId=nil
+fort = nil
+civ = nil
+capital = nil
 
-function isNoble(unit)
-    local nps = dfhack.units.getNoblePositions(unit) or {}
-    local isLawMaker = false
+-- adapted from Units::get_land_title(np)
+function findSiteOfRule(np)
+    site = nil
+    civ = np.entity -- lawmakers seem to be all civ-level positions
+    assignments = civ.positions.assignments
+    for _, link in ipairs(civ.site_links) do
+        if not link.flags.land_for_holding then goto continue end
+        if link.position_profile_id ~= np.assignment.id then goto continue end
 
-    local noblePos, nobleName
+        site = df.world_site.find(link.target)
+        break
+        ::continue::
+    end
 
-    for _, np in ipairs(nps) do
-        pos = np.position
-        if pos.flags.IS_LAW_MAKER then
-            isLawMaker = true
-            noblePos = np
-            nobleName = dfhack.df2console(dfhack.units.getReadableName(unit))
+    return site
+end
+
+---comment
+---@return df.world_site|nil
+function findCapital(civ)
+    local capital = nil
+    for _, link in ipairs(civ.site_links) do
+        siteId = link.target
+        if link.flags.capital then
+            capital = df.world_site.find(siteId)
             break
         end
     end
 
-    if not isLawMaker then return false end
+    return capital
+end
 
-    civ = noblePos.entity -- lawmakers seem to be all civ-level positions
-    assignments = civ.positions.assignments
-    for _, link in ipairs(civ.site_links) do
-        siteId = link.target
-        posProfId = link.position_profile_id
-        if posProfId < 0 then goto continue end
-
-        assignment = assignments[posProfId]
-        if assignment.id ~= noblePos.assignment.id then goto continue end
-
-        site = df.world_site.find(siteId)
-        siteName = dfhack.translation.translateName(site.name, true, true)
-
-        if siteId == fortId then
-            print(nobleName.." holds a position in this fortress - "..siteName)
-            goto continue
+function addIfRulesOtherSite(unit, freeloaders)
+    local nps = dfhack.units.getNoblePositions(unit) or {}
+    local noblePos = nil
+    for _, np in ipairs(nps) do
+        if np.position.flags.IS_LAW_MAKER then
+            noblePos = np
+            break
         end
-
-        print(nobleName.." is lord of "..siteName)
-        ::continue::
     end
 
-    return isLawMaker
+    if noblePos == nil then return end -- unit is not nobility
+
+    -- Monarchs do not seem to have an world_site associated to them (?)
+    if noblePos.position.code == "MONARCH" then
+        if capital.id ~= fort.id then
+            freeloaders[unit.id] = capital
+        end
+        return
+    end
+
+    name = dfhack.units.getReadableName(unit)
+    -- Logic for non-monarch nobility (dukes, counts, barons)
+    site = findSiteOfRule(noblePos)
+    if site == nil then qerror("could not find land of "..name) end
+
+    if site.id == fort.id then return end -- noble rules current fort
+    freeloaders[unit.id] = site
 end
 
 function main()
-    fort = df.historical_entity.find(fortId)
-    fortName = dfhack.translation.translateName(fort.name, true)
-    print("Current fort is "..fortName)
-
+    freeloaders = {}
     for _, unit in ipairs(dfhack.units.getCitizens()) do
-        if dfhack.units.isDead(unit) then goto continue end
-        isNoble(unit)
+        if dfhack.units.isDead(unit) or not dfhack.units.isSane(unit) then goto continue end
+        addIfRulesOtherSite(unit, freeloaders)
         ::continue::
+    end
+
+    for unitId, site in pairs(freeloaders) do
+        unit = df.unit.find(unitId)
+        unitName = dfhack.df2console(dfhack.units.getReadableName(unit))
+        siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
+        print(unitName.." is lord of "..siteName)
     end
 end
 
@@ -82,11 +106,14 @@ function initChecks()
         return false
     end
 
-    fortId = dfhack.world.GetCurrentSiteId()
-    if fortId == -1 then
-        qerror('could not find current site')
-        return false
-    end
+    fort = dfhack.world.getCurrentSite()
+    if fort == nil then qerror("could not find current site") end
+
+    civ = df.historical_entity.find(df.global.plotinfo.civ_id)
+    if civ == nil then qerror("could not find current civ") end
+
+    capital = findCapital(civ)
+    if capital == nil then qerror("could not find capital") end
 
     return true
 end
