@@ -178,6 +178,11 @@ function emigrate(nobleId, site)
     local hf_event_id = df.global.hist_event_next_id
     df.global.hist_event_next_id = df.global.hist_event_next_id+1
     df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hf_event_id, hfid = histFigId, state = 1, reason = -1, site = newSiteId})
+
+    -- announce the changes
+    local line = unitName .. " has left the settlement to govern " .. siteName
+    print(dfhack.df2console(line))
+    dfhack.gui.showAnnouncement(line, COLOR_WHITE)
 end
 
 function main()
@@ -195,8 +200,8 @@ function main()
     --     print(index..": "..unitName.." <"..siteName..">")
     -- end
 
-    for i, record in pairs(freeloaders) do
-        if i == 2 then emigrate(record.id, record.site) end
+    for _, record in pairs(freeloaders) do
+        emigrate(record.id, record.site)
     end
 end
 
