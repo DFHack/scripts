@@ -1,15 +1,13 @@
 --Deport resident nobles of other lands and summon your rightful lord if he/she is elsewhere
 
+--[[
+TODO:
+  * Feature: have rightful ruler immigrate to fort if off-site
+  * QoL: make sure items are unassigned
+]]--
+
 local argparse = require("argparse")
 
---[[
-Planned modes/options:
-  - d/deport = remove inherited freeloaders
-    - list = list possible nobles to evict
-    - index = specific noble to kick
-    - all = kick all listed nobles
-  - i/import = find and invite heir to fortress (need a better name)
-]]--
 local options = {
     help = false,
     all = false,
@@ -23,7 +21,7 @@ capital = nil   ---@type df.world_site
 
 -- adapted from Units::get_land_title()
 ---@return df.world_site|nil
-function findSiteOfRule(np)
+local function findSiteOfRule(np)
     local site = nil
     local civ = np.entity -- lawmakers seem to be all civ-level positions
     for _, link in ipairs(civ.site_links) do
@@ -39,7 +37,7 @@ function findSiteOfRule(np)
 end
 
 ---@return df.world_site|nil
-function findCapital(civ)
+local function findCapital(civ)
     local capital = nil
     for _, link in ipairs(civ.site_links) do
         if link.flags.capital then
@@ -61,7 +59,7 @@ function addNobleOfOtherSite(unit, nobleList)
         end
     end
 
-    if noblePos == nil then return end -- unit is not nobility
+    if not noblePos then return end -- unit is not nobility
 
     -- Monarchs do not seem to have an world_site associated to them (?)
     if noblePos.position.code == "MONARCH" then
@@ -74,7 +72,7 @@ function addNobleOfOtherSite(unit, nobleList)
     local name = dfhack.units.getReadableName(unit)
     -- Logic for dukes, counts, barons
     local site = findSiteOfRule(noblePos)
-    if site == nil then qerror("could not find land of "..name) end
+    if not site then qerror("could not find land of "..name) end
 
     if site.id == fort.id then return end -- noble rules current fort
     table.insert(nobleList, {id = unit.id, site = site})
@@ -91,7 +89,7 @@ local function addHistFigToSite(histFig, newSite)
     -- have unit join new site
     local siteId = newSite.id
     local siteGov = df.historical_entity.find(siteGovId)
-    if siteGov == nil then qerror("could not find site!") end
+    if not siteGov then qerror("could not find site!") end
 
     siteGov.histfig_ids:insert('#', histFigId)
     siteGov.hist_figures:insert('#', histFig)
@@ -189,11 +187,21 @@ function emigrate(unit, toSite)
 
     local fortEnt = df.global.plotinfo.main.fortress_entity
 
+    -- mark for leaving
     unit.following = nil
-    unit.civ_id = civ.id
+    unit.civ_id = civ.id -- should be redundant but oh well
     unit.flags1.forest = true
     unit.flags2.visitor = true
     unit.animal.leave_countdown = 2
+
+    -- remove current job
+    if unit.job.current_job then dfhack.job.removeJob(unit.job.current_job) end
+
+    -- break up any social activities
+    for _, actId in ipairs(unit.social_activities) do
+        local act = df.activity_entry.find(actId)
+        if act then act.events[0].flags.dismissed = true end
+    end
 
     removeUnitFromSiteEntity(unit, histFig, fortEnt)
     addHistFigToSite(histFig, toSite)
@@ -206,11 +214,20 @@ function emigrate(unit, toSite)
     dfhack.gui.showAnnouncement(line, COLOR_WHITE)
 end
 
+---@param unit df.unit
+local function inStrangeMood(unit)
+    local job = unit.job.current_job
+    if not job then return false end
+
+    local jobType = job.job_type -- taken from notifications::for_moody()
+    return df.job_type_class[df.job_type.attrs[jobType].type] == 'StrangeMood'
+end
+
 function listNoblesFound(nobleList)
     for _, record in pairs(nobleList) do
         local unit = df.unit.find(record.id)
         local site = record.site
-        if unit == nil then qerror("could not find unit!") end
+        if not unit then qerror("could not find unit!") end
 
         local nobleName = dfhack.df2console(dfhack.units.getReadableName(unit))
         local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
@@ -244,12 +261,14 @@ function main()
     for _, record in pairs(freeloaders) do
         local noble = df.unit.find(record.id)
         local site = record.site
-        if noble == nil then qerror("could not find unit!") end
+        if not noble then qerror("could not find unit!") end
 
+        local nobleName = dfhack.units.getReadableName(noble)
         if noble.military.squad_id ~= -1 then
             local squadName = dfhack.military.getSquadName(noble.military.squad_id)
-            local nobleName = dfhack.units.getReadableName(noble)
-            print("[-] "..nobleName.." is a soldier of "..squadName..". Unassign him from the squad and try again.")
+            print("[-] "..nobleName.." is a soldier of "..squadName..". Unassign from squad and try again.")
+        elseif inStrangeMood(noble) then
+            print("[-] "..nobleName.." is in a strange mood! Leave alone for now.")
         else
             emigrate(noble, site)
         end
@@ -268,13 +287,13 @@ function initChecks()
     end
 
     fort = dfhack.world.getCurrentSite()
-    if fort == nil then qerror("could not find current site") end
+    if not fort then qerror("could not find current site") end
 
     civ = df.historical_entity.find(df.global.plotinfo.civ_id)
-    if civ == nil then qerror("could not find current civ") end
+    if not civ then qerror("could not find current civ") end
 
     capital = findCapital(civ)
-    if capital == nil then qerror("could not find capital") end
+    if not capital then qerror("could not find capital") end
 
     if options.list then return true end -- list option does not require unit options
 
