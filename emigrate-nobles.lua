@@ -12,13 +12,17 @@ Planned modes/options:
 ]]--
 local options = {
     help = false,
+    all = false,
+    unitId = -1,
+    list = false
 }
 
-fort = nil
-civ = nil
-capital = nil
+fort = nil      ---@type df.world_site
+civ = nil       ---@type df.historical_entity
+capital = nil   ---@type df.world_site
 
 -- adapted from Units::get_land_title()
+---@return df.world_site|nil
 function findSiteOfRule(np)
     local site = nil
     local civ = np.entity -- lawmakers seem to be all civ-level positions
@@ -68,7 +72,7 @@ function addNobleOfOtherSite(unit, nobleList)
     end
 
     local name = dfhack.units.getReadableName(unit)
-    -- Logic for non-monarch nobility (dukes, counts, barons)
+    -- Logic for dukes, counts, barons
     local site = findSiteOfRule(noblePos)
     if site == nil then qerror("could not find land of "..name) end
 
@@ -76,22 +80,35 @@ function addNobleOfOtherSite(unit, nobleList)
     table.insert(nobleList, {id = unit.id, site = site})
 end
 
--- adapted from emigration::desert()
-function emigrate(nobleId, site)
-    local unit = df.unit.find(nobleId)
-    local unitName = dfhack.df2console(dfhack.units.getReadableName(unit))
-    local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
-    print(unitName.." <"..siteName..">")
+---@param histFig df.historical_figure
+---@param newSite df.world_site
+local function addHistFigToSite(histFig, newSite)
+    -- have unit join site government
+    local siteGovId = newSite.cur_owner_id
+    histFig.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = siteGovId, link_strength = 100})
+    local histFigId = histFig.id
 
-    unit.following = nil
-    local histFigId = unit.hist_figure_id
-    local histFig = df.historical_figure.find(unit.hist_figure_id)
-    local fortEnt = df.global.plotinfo.main.fortress_entity
+    -- have unit join new site
+    local siteId = newSite.id
+    local siteGov = df.historical_entity.find(siteGovId)
+    if siteGov == nil then qerror("could not find site!") end
 
-    unit.civ_id = civ.id
-    unit.flags1.forest = true
-    unit.flags2.visitor = true
-    unit.animal.leave_countdown = 2
+    siteGov.histfig_ids:insert('#', histFigId)
+    siteGov.hist_figures:insert('#', histFig)
+    local hfEventId = df.global.hist_event_next_id
+    df.global.hist_event_next_id = df.global.hist_event_next_id+1
+    df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, civ = siteGovId, histfig = histFigId, link_type = 0})
+
+    local hfEventId = df.global.hist_event_next_id
+    df.global.hist_event_next_id = df.global.hist_event_next_id+1
+    df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, hfid = histFigId, state = 1, reason = -1, site = siteId})
+end
+
+---@param unit df.unit
+---@param histFig df.historical_figure
+---@param oldSite df.historical_entity
+local function removeUnitFromSiteEntity(unit, histFig, oldSite)
+    local histFigId = histFig.id
 
     -- free owned rooms
     for i = #unit.owned_buildings-1, 0, -1 do
@@ -133,19 +150,19 @@ function emigrate(nobleId, site)
     end
 
     -- erase the unit from the fortress entity
-    for k,v in ipairs(fortEnt.histfig_ids) do
+    for k,v in ipairs(oldSite.histfig_ids) do
         if v == histFigId then
             df.global.plotinfo.main.fortress_entity.histfig_ids:erase(k)
             break
         end
     end
-    for k,v in ipairs(fortEnt.hist_figures) do
+    for k,v in ipairs(oldSite.hist_figures) do
         if v.id == histFigId then
             df.global.plotinfo.main.fortress_entity.hist_figures:erase(k)
             break
         end
     end
-    for k,v in ipairs(fortEnt.nemesis) do
+    for k,v in ipairs(oldSite.nemesis) do
         if v.figure.id == histFigId then
             df.global.plotinfo.main.fortress_entity.nemesis:erase(k)
             df.global.plotinfo.main.fortress_entity.nemesis_ids:erase(k)
@@ -154,54 +171,88 @@ function emigrate(nobleId, site)
     end
 
     -- remove the old entity link and create new one to indicate former membership
-    histFig.entity_links:insert("#", {new = df.histfig_entity_link_former_memberst, entity_id = fortEnt.id, link_strength = 100})
+    histFig.entity_links:insert("#", {new = df.histfig_entity_link_former_memberst, entity_id = oldSite.id, link_strength = 100})
     for k,v in ipairs(histFig.entity_links) do
-        if v._type == df.histfig_entity_link_memberst and v.entity_id == fortEnt.id then
+        if v._type == df.histfig_entity_link_memberst and v.entity_id == oldSite.id then
             histFig.entity_links:erase(k)
             break
         end
     end
+end
 
-    -- have unit join site government
-    local newEntId = site.cur_owner_id
-    histFig.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = newEntId, link_strength = 100})
+-- adapted from emigration::desert()
+---@param unit df.unit
+---@param toSite df.world_site
+function emigrate(unit, toSite)
+    local histFig = df.historical_figure.find(unit.hist_figure_id)
+    if histFig == nil then qerror("could not find histfig!") end
 
-    -- have unit join new site
-    local newSiteId = site.id
-    local newEntity = df.historical_entity.find(newEntId)
-    newEntity.histfig_ids:insert('#', histFigId)
-    newEntity.hist_figures:insert('#', histFig)
-    local hf_event_id = df.global.hist_event_next_id
-    df.global.hist_event_next_id = df.global.hist_event_next_id+1
-    df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hf_event_id, civ = newEntId, histfig = histFigId, link_type = 0})
+    local fortEnt = df.global.plotinfo.main.fortress_entity
 
-    local hf_event_id = df.global.hist_event_next_id
-    df.global.hist_event_next_id = df.global.hist_event_next_id+1
-    df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hf_event_id, hfid = histFigId, state = 1, reason = -1, site = newSiteId})
+    unit.following = nil
+    unit.civ_id = civ.id
+    unit.flags1.forest = true
+    unit.flags2.visitor = true
+    unit.animal.leave_countdown = 2
+
+    removeUnitFromSiteEntity(unit, histFig, fortEnt)
+    addHistFigToSite(histFig, toSite)
 
     -- announce the changes
-    local line = unitName .. " has left the settlement to govern " .. siteName
-    print(dfhack.df2console(line))
+    local unitName = dfhack.df2console(dfhack.units.getReadableName(unit))
+    local siteName = dfhack.df2console(dfhack.translation.translateName(toSite.name, true))
+    local line = unitName .. " has left to govern " .. siteName .. "."
+    print("[+] "..dfhack.df2console(line))
     dfhack.gui.showAnnouncement(line, COLOR_WHITE)
 end
 
+function listNoblesFound(nobleList)
+    for _, record in pairs(nobleList) do
+        local unit = df.unit.find(record.id)
+        local site = record.site
+        if unit == nil then qerror("could not find unit!") end
+
+        local nobleName = dfhack.df2console(dfhack.units.getReadableName(unit))
+        local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
+        print(unit.id..": "..nobleName.." - to be sent to "..siteName)
+    end
+end
+
 function main()
-    freeloaders = {}
+    local freeloaders = {}
     for _, unit in ipairs(dfhack.units.getCitizens()) do
+        if options.unitId ~= -1 and unit.id ~= options.unitId then goto continue end
         if dfhack.units.isDead(unit) or not dfhack.units.isSane(unit) then goto continue end
+
         addNobleOfOtherSite(unit, freeloaders)
         ::continue::
     end
 
-    -- for index, record in pairs(freeloaders) do
-    --     unit = df.unit.find(record.id)
-    --     unitName = dfhack.df2console(dfhack.units.getReadableName(unit))
-    --     siteName = dfhack.df2console(dfhack.translation.translateName(record.site.name, true))
-    --     print(index..": "..unitName.." <"..siteName..">")
-    -- end
+    if #freeloaders == 0 then
+        if options.unitId ~= -1 then
+            print("No eligible nobles to be emigrated.")
+        else
+            print("No eligible nobles found with ID = "..options.unitId)
+        end
+    end
+
+    if options.list then
+        listNoblesFound(freeloaders)
+        return
+    end
 
     for _, record in pairs(freeloaders) do
-        emigrate(record.id, record.site)
+        local noble = df.unit.find(record.id)
+        local site = record.site
+        if noble == nil then qerror("could not find unit!") end
+
+        if noble.military.squad_id ~= -1 then
+            local squadName = dfhack.military.getSquadName(noble.military.squad_id)
+            local nobleName = dfhack.units.getReadableName(noble)
+            print("[x] "..nobleName.." is a soldier of "..squadName..". Unassign him from the squad and try again.")
+        else
+            emigrate(noble, site)
+        end
     end
 end
 
@@ -225,11 +276,30 @@ function initChecks()
     capital = findCapital(civ)
     if capital == nil then qerror("could not find capital") end
 
+    if options.list then return true end -- list option does not require unit options
+
+    local noOptions = options.unitId == -1 and not options.all
+    if noOptions then
+        print("No options selected, defaulting to list mode.")
+        options.list = true
+        return true
+    end
+
+    local invalidUnit = options.unitId ~= -1 and options.all
+    if invalidUnit then qerror("Either specify one unit or all.") end
+
     return true
 end
 
+------------------------------
+-- [[ SCRIPT STARTS HERE ]] --
+------------------------------
+
 argparse.processArgsGetopt({...}, {
-    {"h", "help", handler=function() options.help = true end}
+    {"h", "help", handler=function() options.help = true end},
+    {"a", "all", handler=function() options.all = true end},
+    {"u", "unit", hasArg=true, handler=function(id) options.unitId = tonumber(id) end},
+    {"l", "list", handler=function() options.list = true end}
 })
 
 pass = initChecks()
