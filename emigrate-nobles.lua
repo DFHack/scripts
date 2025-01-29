@@ -249,7 +249,7 @@ function main()
         if noble.military.squad_id ~= -1 then
             local squadName = dfhack.military.getSquadName(noble.military.squad_id)
             local nobleName = dfhack.units.getReadableName(noble)
-            print("[x] "..nobleName.." is a soldier of "..squadName..". Unassign him from the squad and try again.")
+            print("[-] "..nobleName.." is a soldier of "..squadName..". Unassign him from the squad and try again.")
         else
             emigrate(noble, site)
         end
