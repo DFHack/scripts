@@ -133,6 +133,7 @@ function Quantum:init()
             view_id='create_sp',
             key='CUSTOM_CTRL_Z',
             label='Create output pile:',
+            disabled=function() return self.subviews.name.focus end,
         },
         widgets.CycleHotkeyLabel{
             view_id='feeder_mode',

@@ -380,6 +380,7 @@ function Quickfort:init()
                         label='Warm dig:',
                         initial_option=markers.warm,
                         on_change=function(val) markers.warm = val end,
+                        disabled=function() return self.subviews.repeat_times.focus end,
                     },
                 },
             },

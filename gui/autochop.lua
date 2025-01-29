@@ -239,6 +239,7 @@ function Autochop:init()
                 self:update_choices()
             end,
             visible=is_not_minimal,
+            disabled=function() return self.subviews.target.focus end,
         },
         widgets.Label{
             view_id='summary',
