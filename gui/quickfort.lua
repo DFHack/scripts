@@ -38,7 +38,7 @@ transformations = transformations or {}
 
 -- blueprint selection dialog, shown when the script starts or when a user wants
 -- to load a new blueprint into the ui
-BlueprintDialog = defclass(SelectDialog, gui.ZScreenModal)
+BlueprintDialog = defclass(BlueprintDialog, gui.ZScreenModal)
 BlueprintDialog.ATTRS{
     focus_path='quickfort/dialog',
     on_select=DEFAULT_NIL,
