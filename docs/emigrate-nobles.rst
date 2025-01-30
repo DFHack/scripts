@@ -40,5 +40,5 @@ Options
     List all nobles that do not rule your fortress
 ``-a``, ``--all``
     Emigrate all nobles do not rule your fortress
-``-u <id>``, ``--unit <id>``
+``-u``, ``--unit <id>``
     Emigrate noble matching specified unit ID that does not rule your fortress
