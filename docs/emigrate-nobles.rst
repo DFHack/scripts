@@ -10,8 +10,8 @@ to have them (willingly) emigrate to their rightful lands.
 
 The unit must not be assigned to a squad.
 
-Warning! Nobles will not surrender any assigned items, be sure to unassign your artefacts before
-using this tool.
+Warning! Nobles will not surrender any symbols of office before leaving, be sure to unassign
+your artefacts before using this tool.
 
 Usage
 -----
