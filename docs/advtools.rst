@@ -36,7 +36,7 @@ additional conversation options for asking whereabouts of your relationships --
 in vanilla, you can only ask whereabouts of historical figures involved in
 rumors you personally witnessed or heard about.
 
-``advtools.combat``
+``advtools.fastcombat``
 ~~~~~~~~~~~~~~~~~~~
 
 When enabled, this overlay will allow you to skip most combat animations, 
