@@ -1,5 +1,5 @@
 emigrate-nobles
-==========
+===============
 
 .. dfhack-tool::
     :summary: Allow inherited nobles to emigrate from fort to their site of governance.
