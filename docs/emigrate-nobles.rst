@@ -16,11 +16,19 @@ using this tool.
 Usage
 -----
 
+::
+
+    emigrate-nobles [--list]
+    emigrate-nobles <target>
+
+Examples
+--------
+
 ``emigrate-nobles --list``
     List all nobles that do not rule your fortress
 ``emigrate-nobles --all``
     Emigrate all nobles that do not rule your fortress
-``emigrate-nobles --unit <id>``
+``emigrate-nobles --unit 34534``
     Emigrate a noble matching the specified unit ID that does not rule your fortress
 
 Options
