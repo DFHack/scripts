@@ -83,6 +83,7 @@ end
 local function addHistFigToSite(histFig, newSite)
     -- have unit join site government
     local siteGovId = newSite.cur_owner_id
+    print("new site gov = "..siteGovId)
     histFig.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = siteGovId, link_strength = 100})
     local histFigId = histFig.id
 
@@ -100,6 +101,8 @@ local function addHistFigToSite(histFig, newSite)
     local hfEventId = df.global.hist_event_next_id
     df.global.hist_event_next_id = df.global.hist_event_next_id+1
     df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, hfid = histFigId, state = 1, reason = -1, site = siteId})
+
+    return siteGov
 end
 
 ---@param unit df.unit
@@ -178,6 +181,63 @@ local function removeUnitFromSiteEntity(unit, histFig, oldSite)
     end
 end
 
+---@param unit df.unit
+local function removeUnitFromAnySquad(unit)
+    if unit.military.squad_id == -1 then return end
+    local fortEnt = df.global.plotinfo.main.fortress_entity
+
+    -- remove from squad records
+    local squadId = unit.military.squad_id
+    local squadPos = unit.military.squad_position
+    local squad = df.squad.find(squadId)
+    if not squad then qerror("could not find squad") end
+
+    squad.positions[squadPos].occupant = -1
+
+    -- remove from unit information
+    unit.military.squad_id = -1
+    unit.military.squad_position = -1
+
+    -- remove assignment if captain or commander
+    local assignmentId = -1
+    if squadPos == 0 then
+        for _, np in ipairs(dfhack.units.getNoblePositions(unit) or {}) do
+            if np.entity.id ~= fortEnt then goto continue end
+            if np.assignment.squad_id ~= squadId then goto continue end
+
+            np.assignment.histfig = -1
+            np.assignment.histfig2 = -1
+            assignmentId = np.assignment.id
+            ::continue::
+        end
+    end
+
+    -- remove the old entity link and create new one to indicate former membership
+    local histFig = df.historical_figure.find(unit.hist_figure_id)
+    local yearOfPos = -1
+    if not histFig then qerror("could not find histfig") end
+    for k,v in ipairs(histFig.entity_links) do
+        if df.histfig_entity_link_positionst:is_instance(v)
+            and v.assignment_id == assignmentId
+            and v.entity_id == fortEnt.id
+        then
+            histFig.entity_links:erase(k) -- unit was captain/commander
+            yearOfPos = v.start_year
+        elseif df.histfig_entity_link_squadst:is_instance(v) and v.squad_id == squadId then
+            histFig.entity_links:erase(k) -- unit was regular soldier
+            yearOfPos = v.start_year
+        else goto continue end
+        break
+        ::continue::
+    end
+
+    if assignmentId ~= -1 then -- unit was a captain/commander
+        histFig.entity_links:insert("#", {new = df.histfig_entity_link_former_positionst, entity_id = fortEnt.id, assignment_id = assignmentId, start_year = yearOfPos, end_year = df.global.cur_year, link_strength = 100})
+    else
+        histFig.entity_links:insert("#", {new = df.histfig_entity_link_former_squadst, entity_id = fortEnt.id, squad_id = squadId, start_year = yearOfPos, end_year = df.global.cur_year, link_strength = 100})
+    end
+end
+
 -- adapted from emigration::desert()
 ---@param unit df.unit
 ---@param toSite df.world_site
@@ -186,6 +246,7 @@ function emigrate(unit, toSite)
     if histFig == nil then qerror("could not find histfig!") end
 
     local fortEnt = df.global.plotinfo.main.fortress_entity
+    removeUnitFromAnySquad(unit) -- self-explanatory
 
     -- mark for leaving
     unit.following = nil
@@ -204,12 +265,13 @@ function emigrate(unit, toSite)
     end
 
     removeUnitFromSiteEntity(unit, histFig, fortEnt)
-    addHistFigToSite(histFig, toSite)
+    local siteGov = addHistFigToSite(histFig, toSite)
 
     -- announce the changes
     local unitName = dfhack.df2console(dfhack.units.getReadableName(unit))
     local siteName = dfhack.df2console(dfhack.translation.translateName(toSite.name, true))
-    local line = unitName .. " has left to govern " .. siteName .. "."
+    local govName = dfhack.df2console(dfhack.translation.translateName(siteGov.name, true))
+    local line = unitName .. " has left to join " ..govName.. " as lord of " .. siteName .. "."
     print("[+] "..dfhack.df2console(line))
     dfhack.gui.showAnnouncement(line, COLOR_WHITE)
 end
@@ -262,10 +324,7 @@ function main()
         local site = record.site
 
         local nobleName = dfhack.units.getReadableName(noble)
-        if noble.military.squad_id ~= -1 then
-            local squadName = dfhack.military.getSquadName(noble.military.squad_id)
-            print("[-] "..nobleName.." is a soldier of "..squadName..". Unassign from squad and try again.")
-        elseif inStrangeMood(noble) then
+        if inStrangeMood(noble) then
             print("[-] "..nobleName.." is in a strange mood! Leave alone for now.")
         else
             emigrate(noble, site)
