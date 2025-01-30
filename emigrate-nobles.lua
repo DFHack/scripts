@@ -64,7 +64,7 @@ function addNobleOfOtherSite(unit, nobleList)
     -- Monarchs do not seem to have an world_site associated to them (?)
     if noblePos.position.code == "MONARCH" then
         if capital.id ~= fort.id then
-            table.insert(nobleList, {id = unit.id, site = capital})
+            table.insert(nobleList, {unit = unit, site = capital})
         end
         return
     end
@@ -75,7 +75,7 @@ function addNobleOfOtherSite(unit, nobleList)
     if not site then qerror("could not find land of "..name) end
 
     if site.id == fort.id then return end -- noble rules current fort
-    table.insert(nobleList, {id = unit.id, site = site})
+    table.insert(nobleList, {unit = unit, site = site})
 end
 
 ---@param histFig df.historical_figure
@@ -225,9 +225,8 @@ end
 
 function listNoblesFound(nobleList)
     for _, record in pairs(nobleList) do
-        local unit = df.unit.find(record.id)
+        local unit = record.unit
         local site = record.site
-        if not unit then qerror("could not find unit!") end
 
         local nobleName = dfhack.df2console(dfhack.units.getReadableName(unit))
         local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
@@ -259,9 +258,8 @@ function main()
     end
 
     for _, record in pairs(freeloaders) do
-        local noble = df.unit.find(record.id)
+        local noble = record.unit
         local site = record.site
-        if not noble then qerror("could not find unit!") end
 
         local nobleName = dfhack.units.getReadableName(noble)
         if noble.military.squad_id ~= -1 then
