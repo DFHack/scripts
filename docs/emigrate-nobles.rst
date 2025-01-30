@@ -34,8 +34,6 @@ Examples
 Options
 -------
 
-``-h``, ``--help``
-    View help
 ``-l``, ``--list``
     List all nobles that do not rule your fortress
 ``-a``, ``--all``
