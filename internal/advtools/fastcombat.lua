@@ -1,4 +1,6 @@
 --@ module=true
+local gui = require('gui')
+local widgets = require('gui.widgets')
 local overlay = require('plugins.overlay')
 
 -- Overlay
@@ -8,7 +10,6 @@ AdvCombatOverlay.ATTRS{
     default_enabled=true,
     viewscreens='dungeonmode',
     fullscreen=true,
-    default_pos={x=1,y=1},
     skip_combat = false
 }
 
