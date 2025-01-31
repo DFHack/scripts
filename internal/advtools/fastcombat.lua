@@ -7,51 +7,51 @@ AdvCombatOverlay.ATTRS{
     desc='Faster combat!',
     default_enabled=true,
     viewscreens='dungeonmode',
-    frame={w=0, h=0},
+    fullscreen=true,
+    default_pos={x=1,y=1},
+    skip_combat = false
 }
-local skip_combat = false
+
 function AdvCombatOverlay:render()
-    local adv = df.global.adventure
-    if adv.player_control_state == df.adventurest.T_player_control_state.TAKING_INPUT then
-        skip_combat = false
+    if df.global.adventure.player_control_state == df.adventurest.T_player_control_state.TAKING_INPUT then
+        self.skip_combat = false
         return
     end
-    if skip_combat then
+    if self.skip_combat then
         -- Instantly process the projectile travelling
-        adv.projsubloop_visible_projectile = false
+        df.global.adventure.projsubloop_visible_projectile = false
         -- Skip the combat swing animations
-        adv.game_loop_animation_timer_start = adv.game_loop_animation_timer_start + 1000
+        df.global.adventure.game_loop_animation_timer_start = df.global.adventure.game_loop_animation_timer_start + 1000
     end
 end
 
 
-COMBAT_MOVE_KEYS={
-    _MOUSE_L = true,
-    SELECT = true,
-    A_MOVE_N = true,
-    A_MOVE_S = true,
-    A_MOVE_E = true,
-    A_MOVE_W = true,
-    A_MOVE_NW = true,
-    A_MOVE_NE = true,
-    A_MOVE_SW = true,
-    A_MOVE_SE = true,
-    A_MOVE_SAME_SQUARE = true,
-    A_ATTACK = true,
-    A_COMBAT_ATTACK = true,
+local COMBAT_MOVE_KEYS = {
+    _MOUSE_L=true,
+    SELECT=true,
+    A_MOVE_N=true,
+    A_MOVE_S=true,
+    A_MOVE_E=true,
+    A_MOVE_W=true,
+    A_MOVE_NW=true,
+    A_MOVE_NE=true,
+    A_MOVE_SW=true,
+    A_MOVE_SE=true,
+    A_MOVE_SAME_SQUARE=true,
+    A_ATTACK=true,
+    A_COMBAT_ATTACK=true,
 }
 
 function AdvCombatOverlay:onInput(keys)
     if AdvCombatOverlay.super.onInput(self, keys) then
         return true
     end
-    local adv = df.global.adventure
     for code,_ in pairs(keys) do
         if COMBAT_MOVE_KEYS[code] then
-            if adv.player_control_state ~= df.adventurest.T_player_control_state.TAKING_INPUT then
+            if df.global.adventure.player_control_state ~= df.adventurest.T_player_control_state.TAKING_INPUT then
                 -- Instantly speed up the combat
-                skip_combat = true
-            elseif adv.player_control_state == df.adventurest.T_player_control_state.TAKING_INPUT then
+                self.skip_combat = true
+            elseif df.global.adventure.player_control_state == df.adventurest.T_player_control_state.TAKING_INPUT then
                 if COMBAT_MOVE_KEYS[code] and df.global.world.status.temp_flag.adv_showing_announcements then
                     -- We're using mouse to skip, more unique behavior to mouse clicking is handled here
                     if keys._MOUSE_L then
@@ -72,7 +72,7 @@ function AdvCombatOverlay:onInput(keys)
                     end
                     -- Instantly process the projectile travelling
                     -- (for some reason, projsubloop is still active during "TAKING INPUT" phase)
-                    adv.projsubloop_visible_projectile = false
+                    df.global.adventure.projsubloop_visible_projectile = false
 
                     -- If there is more to be seen in this box...
                     if df.global.world.status.temp_flag.adv_have_more then
