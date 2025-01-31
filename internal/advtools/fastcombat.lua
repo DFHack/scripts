@@ -1,6 +1,4 @@
 --@ module=true
-local gui = require('gui')
-local widgets = require('gui.widgets')
 local overlay = require('plugins.overlay')
 
 -- Overlay
