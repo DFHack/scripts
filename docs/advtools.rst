@@ -47,6 +47,6 @@ entirely with the second press. This drastically speeds up combat while still
 being intuitive enough - you can still be slow and methodical if you choose
 not to skip. Skip keys are left mouseclick, the SELECT button, the movement
 keys and combat-related keys that don't bring up its own menu (such as bump
-attack). If clicking to skip past combat, it will properly unerstand when
+attack). If clicking to skip past combat, it will properly understand when
 you're clicking within the announcements box and not activate the script -
 only clicking OUTSIDE it will process the skipping.
