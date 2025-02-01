@@ -85,5 +85,5 @@ function AdvCombatOverlay:onInput(keys)
             end
         end
         ::continue::
-    end    
+    end
 end
