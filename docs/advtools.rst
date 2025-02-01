@@ -45,7 +45,6 @@ also let you skip the announcements window when the "More" button is active,
 scrolling you to the very bottom with the first press, and skipping the window
 entirely with the second press. This drastically speeds up combat while still
 giving you the option not to skip the announcements. Skip keys are left mouse click,
-the SELECT button, the movement
-keys and combat-related keys that don't bring up a menu (such as bump
-attack). If clicking to skip past combat, it will only skip the announcements
-if you're clicking outside the announcements panel.
+the SELECT button, the movement keys and combat-related keys that don't bring up a
+menu (such as bump attack). If clicking to skip past combat, it will only skip the
+announcements if you're clicking outside the announcements panel.

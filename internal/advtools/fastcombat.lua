@@ -76,8 +76,8 @@ function AdvCombatOverlay:onInput(keys)
 
             -- If there is more to be seen in this box...
             if df.global.world.status.temp_flag.adv_have_more then
-                -- Scroll down 10 paces aka the same way it'd happen if you pressed on "more"
-                df.global.world.status.adv_scroll_position = math.min(df.global.world.status.adv_scroll_position + 10, #df.global.world.status.adv_announcement)
+                -- Scroll down to the very bottom
+                df.global.world.status.adv_scroll_position = #df.global.world.status.adv_announcement
             -- Nothing new left to see, get us OUT OF HERE!!
             else
                 -- Allow us to quit out of showing announcements by clicking anywhere OUTSIDE the box
