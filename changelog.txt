@@ -30,7 +30,7 @@ Template for new versions:
 - `autocheese`: automatically make cheese using barrels that have accumulated sufficient milk
 
 ## New Features
-- `advtools`: new overlay ``advtools.fastcombat``, while active it allows you to instantly skip many combat actions
+- `advtools`: new overlay ``advtools.fastcombat``; allows you to skip combat animations and the announcement "More" button
 
 ## Fixes
 - `advtools`: fix dfhack-added conversation options not appearing in the ask whereabouts conversation tree
