@@ -39,7 +39,7 @@ rumors you personally witnessed or heard about.
 ``advtools.fastcombat``
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-When enabled, this overlay will allow you to skip most combat animations, 
+When enabled, this overlay will allow you to skip most combat animations,
 including the whooshes and projectiles travelling through the screen. It will
 also let you skip the announcements window if "More" button is active,
 scrolling you to the very bottom with the first press, and skipping the window
