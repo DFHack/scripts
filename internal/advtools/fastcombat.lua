@@ -1,5 +1,7 @@
 --@ module=true
 local overlay = require('plugins.overlay')
+local gui = require('gui')
+local widgets = require('gui.widgets')
 
 -- Overlay
 AdvCombatOverlay = defclass(AdvCombatOverlay, overlay.OverlayWidget)
@@ -8,10 +10,27 @@ AdvCombatOverlay.ATTRS{
     default_enabled=true,
     viewscreens='dungeonmode',
     fullscreen=true,
-    skip_combat = false
+    default_pos={x=1, y=7},
+    frame={h=15},
 }
 
-function AdvCombatOverlay:render()
+function AdvCombatOverlay:init()
+    self.skip_combat = false
+
+    self:addviews{
+        widgets.Panel{
+            frame={w=113},
+            view_id='announcement_panel_mask'
+        }
+    }
+end
+
+function AdvCombatOverlay:preUpdateLayout(parent_rect)
+    self.frame.w = parent_rect.width
+end
+
+function AdvCombatOverlay:render(dc)
+    AdvCombatOverlay.super.render(self, dc)
     if df.global.adventure.player_control_state == df.adventurest.T_player_control_state.TAKING_INPUT then
         self.skip_combat = false
         return
@@ -52,22 +71,9 @@ function AdvCombatOverlay:onInput(keys)
                 self.skip_combat = true
             elseif df.global.adventure.player_control_state == df.adventurest.T_player_control_state.TAKING_INPUT then
                 if COMBAT_MOVE_KEYS[code] and df.global.world.status.temp_flag.adv_showing_announcements then
-                    -- We're using mouse to skip, more unique behavior to mouse clicking is handled here
-                    if keys._MOUSE_L then
-                        x,y = dfhack.screen.getMousePos()
-                        local screen_width, _ = dfhack.screen.getWindowSize()
-                        -- Calculate if we're clicking within the vanilla adv announcements box
-                        adv_announce_width = 112
-                        adv_announce_x1 = screen_width/2 - adv_announce_width/2 - 1
-                        adv_announce_x2 = screen_width/2 + adv_announce_width/2 - 1
-                        -- The Y values for this box don't change
-                        adv_announce_y1, adv_announce_y2 = 6, 20
-                        -- Check if we're clicking within the bounds of the adv announcements box that is being shown right now
-                        if y >= adv_announce_y1 and y <= adv_announce_y2 and x >= adv_announce_x1 and x <= adv_announce_x2 then
-                            -- Don't do anything on our end, the player is clicking within the adv announcements box.
-                            -- We don't want to overtake vanilla behavior in this ui element.
-                            return
-                        end
+                    -- Don't let mouse skipping work when you click within the adventure mode announcement panel
+                    if keys._MOUSE_L and self.subviews.announcement_panel_mask:getMousePos() then
+                        return
                     end
                     -- Instantly process the projectile travelling
                     -- (for some reason, projsubloop is still active during "TAKING INPUT" phase)
