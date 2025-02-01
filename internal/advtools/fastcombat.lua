@@ -6,7 +6,7 @@ local widgets = require('gui.widgets')
 -- Overlay
 AdvCombatOverlay = defclass(AdvCombatOverlay, overlay.OverlayWidget)
 AdvCombatOverlay.ATTRS{
-    desc='Faster combat!',
+    desc='Skip combat animations and announcements with a click or key press.',
     default_enabled=true,
     viewscreens='dungeonmode',
     fullscreen=true,
@@ -30,7 +30,6 @@ function AdvCombatOverlay:preUpdateLayout(parent_rect)
 end
 
 function AdvCombatOverlay:render(dc)
-    AdvCombatOverlay.super.render(self, dc)
     if df.global.adventure.player_control_state == df.adventurest.T_player_control_state.TAKING_INPUT then
         self.skip_combat = false
         return
@@ -61,35 +60,30 @@ local COMBAT_MOVE_KEYS = {
 }
 
 function AdvCombatOverlay:onInput(keys)
-    if AdvCombatOverlay.super.onInput(self, keys) then
-        return true
-    end
     for code,_ in pairs(keys) do
-        if COMBAT_MOVE_KEYS[code] then
-            if df.global.adventure.player_control_state ~= df.adventurest.T_player_control_state.TAKING_INPUT then
-                -- Instantly speed up the combat
-                self.skip_combat = true
-            elseif df.global.adventure.player_control_state == df.adventurest.T_player_control_state.TAKING_INPUT then
-                if COMBAT_MOVE_KEYS[code] and df.global.world.status.temp_flag.adv_showing_announcements then
-                    -- Don't let mouse skipping work when you click within the adventure mode announcement panel
-                    if keys._MOUSE_L and self.subviews.announcement_panel_mask:getMousePos() then
-                        return
-                    end
-                    -- Instantly process the projectile travelling
-                    -- (for some reason, projsubloop is still active during "TAKING INPUT" phase)
-                    df.global.adventure.projsubloop_visible_projectile = false
+        if not COMBAT_MOVE_KEYS[code] then goto continue end
+        if df.global.adventure.player_control_state ~= df.adventurest.T_player_control_state.TAKING_INPUT then
+            -- Instantly speed up the combat
+            self.skip_combat = true
+        elseif df.global.world.status.temp_flag.adv_showing_announcements then
+            -- Don't let mouse skipping work when you click within the adventure mode announcement panel
+            if keys._MOUSE_L and self.subviews.announcement_panel_mask:getMousePos() then
+                return
+            end
+            -- Instantly process the projectile travelling
+            -- (for some reason, projsubloop is still active during "TAKING INPUT" phase)
+            df.global.adventure.projsubloop_visible_projectile = false
 
-                    -- If there is more to be seen in this box...
-                    if df.global.world.status.temp_flag.adv_have_more then
-                        -- Scroll down 10 paces aka the same way it'd happen if you pressed on "more"
-                        df.global.world.status.adv_scroll_position = math.min(df.global.world.status.adv_scroll_position + 10, #df.global.world.status.adv_announcement)
-                    -- Nothing new left to see, get us OUT OF HERE!!
-                    else
-                        -- Allow us to quit out of showing announcements by clicking anywhere OUTSIDE the box
-                        df.global.world.status.temp_flag.adv_showing_announcements = false
-                    end
-                end
+            -- If there is more to be seen in this box...
+            if df.global.world.status.temp_flag.adv_have_more then
+                -- Scroll down 10 paces aka the same way it'd happen if you pressed on "more"
+                df.global.world.status.adv_scroll_position = math.min(df.global.world.status.adv_scroll_position + 10, #df.global.world.status.adv_announcement)
+            -- Nothing new left to see, get us OUT OF HERE!!
+            else
+                -- Allow us to quit out of showing announcements by clicking anywhere OUTSIDE the box
+                df.global.world.status.temp_flag.adv_showing_announcements = false
             end
         end
-    end
+        ::continue::
+    end    
 end

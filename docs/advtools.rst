@@ -41,12 +41,11 @@ rumors you personally witnessed or heard about.
 
 When enabled, this overlay will allow you to skip most combat animations,
 including the whooshes and projectiles travelling through the screen. It will
-also let you skip the announcements window if "More" button is active,
+also let you skip the announcements window when the "More" button is active,
 scrolling you to the very bottom with the first press, and skipping the window
 entirely with the second press. This drastically speeds up combat while still
-being intuitive enough - you can still be slow and methodical if you choose
-not to skip. Skip keys are left mouseclick, the SELECT button, the movement
-keys and combat-related keys that don't bring up its own menu (such as bump
-attack). If clicking to skip past combat, it will properly understand when
-you're clicking within the announcements box and not activate the script -
-only clicking OUTSIDE it will process the skipping.
+giving you the option not to skip the announcements. Skip keys are left mouse click,
+the SELECT button, the movement
+keys and combat-related keys that don't bring up a menu (such as bump
+attack). If clicking to skip past combat, it will only skip the announcements
+if you're clicking outside the announcements panel.
