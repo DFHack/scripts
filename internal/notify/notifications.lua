@@ -534,6 +534,12 @@ NOTIFICATIONS_BY_IDX = {
                 return "Last save: ".. (dfhack.formatInt(minsSinceSave)) ..' mins ago'
             end
         end,
+        adv_fn=function ()
+            local minsSinceSave = dfhack.persistent.getUnsavedSeconds()//60
+            if minsSinceSave >= 15 then
+                return "Last save: ".. (dfhack.formatInt(minsSinceSave)) ..' mins ago'
+            end
+        end,
         on_click=function()
             local minsSinceSave = dfhack.persistent.getUnsavedSeconds()//60
             local message = 'It has been ' .. dfhack.formatInt(minsSinceSave) .. ' minutes since your last save. \n\nWould you like to save now?\n\n' ..
