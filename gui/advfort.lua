@@ -1837,4 +1837,7 @@ function usetool:onRenderBody(dc)
     self:shopMode(self:isOnBuilding())
     self:renderParent()
 end
+if not (dfhack.gui.getCurFocus()[1]=="dungeonmode/Look" or dfhack.gui.getCurFocus()[1]=="dungeonmode/Default") then
+    qerror("This script requires an adventurer mode with (l)ook or default mode.")
+end
 usetool():show()
