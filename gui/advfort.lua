@@ -97,7 +97,7 @@ function reverseRaceLookup(id)
 end
 function deon_filter(name,type_id,subtype_id,custom_id, parent)
     --print(name)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local race_filter=build_filter[reverseRaceLookup(adv.race)]
     if race_filter then
         if race_filter.forbid_all then
@@ -195,7 +195,7 @@ end
 function advGlobalPos()
     local map=df.global.world.map
     local wd=df.global.world.world_data
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     --wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y
     --return wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y
     --return wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x+adv.pos.x/16,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y+adv.pos.y/16
@@ -1178,7 +1178,7 @@ usetool=defclass(usetool,gui.Screen)
 usetool.focus_path = 'advfort'
 --luacheck: out=string
 function usetool:getModeName()
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local ret
     if adv.job.current_job then
         ret= string.format("%s working(%d) ",(actions[(mode or 0)+1][1] or ""),adv.job.current_job.completion_timer)
@@ -1232,7 +1232,7 @@ function usetool:init(args)
                   }
             }
             }
-    local labors=df.global.world.units.active[0].status.labors
+    local labors=dfhack.world.getAdventurer().status.labors
     for i,v in ipairs(labors) do
         labors[i]=true
     end
@@ -1302,7 +1302,7 @@ function siegeWeaponActionChosen(args,actionid)
             args.pre_actions={dfhack.curry(setFiltersUp,{items={{quantity=1,item_type=df.SIEGEAMMO}}}),AssignJobItems}
         end
         args.job_type=action
-        args.unit=df.global.world.units.active[0]
+        args.unit=dfhack.world.getAdventurer()
         local from_pos={x=args.unit.pos.x,y=args.unit.pos.y, z=args.unit.pos.z}
         args.from_pos=from_pos
         args.pos=from_pos
@@ -1312,7 +1312,7 @@ function siegeWeaponActionChosen(args,actionid)
             action=df.job_type.FireCatapult
         end
         args.job_type=action
-        args.unit=df.global.world.units.active[0]
+        args.unit=dfhack.world.getAdventurer()
         local from_pos={x=args.unit.pos.x,y=args.unit.pos.y, z=args.unit.pos.z}
         args.from_pos=from_pos
         args.pos=from_pos
@@ -1329,7 +1329,7 @@ function putItemToBuilding(building,item)
     end
 end
 function usetool:openPutWindow(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local items=EnumItems{pos=adv.pos,unit=adv,
         inv={[df.unit_inventory_item.T_mode.Hauled]=true,--[df.unit_inventory_item.T_mode.Worn]=true,
              [df.unit_inventory_item.T_mode.Weapon]=true,},deep=true}
@@ -1345,7 +1345,7 @@ function usetool:openSiegeWindow(building)
         dfhack.curry(siegeWeaponActionChosen,args))
 end
 function usetool:onWorkShopButtonClicked(building,index,choice)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local args={unit=adv,building=building}
     if df.interface_button_building_new_jobst:is_instance(choice.button) then
         choice.button:click()
@@ -1393,7 +1393,7 @@ function usetool:openShopWindowButtoned(building,no_reset)
             ,nil, nil,true)
 end
 function usetool:openShopWindow(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
 
     local filter_pile=workshopJobs.getJobs(building:getType(),building:getSubtype(),building:getCustomType())
     if filter_pile then
@@ -1441,7 +1441,7 @@ function track_stop_configure(bld) --TODO: dedicated widget with nice interface 
     dialog.showListPrompt("Track stop configure", "Choose what to change:",COLOR_WHITE,choices,chosen)
 end
 function usetool:armCleanTrap(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     --[[
     Lever,
         PressurePlate,
@@ -1487,7 +1487,7 @@ function usetool:armCleanTrap(building)
 end
 --luacheck: in=df.building_hivest out=none
 function usetool:hiveActions(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local args={unit=adv,post_actions={AssignBuildingRef},pos=adv.pos,
     from_pos=adv.pos,job_type=df.job_type.InstallColonyInHive,building=building,screen=self}
     local job_filter={items={{quantity=1,item_type=df.item_type.VERMIN}} }
@@ -1498,14 +1498,14 @@ function usetool:hiveActions(building)
 end
 function usetool:operatePump(building)
     --TODO: low priotity, but would be nice to have the job auto cleanup (i.e. one work would only pump and then you could press it again)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local set_operate=function ( args )
         args.building.pump_manually=true
     end
     makeJob{unit=adv,building=building,post_actions={AssignBuildingRef,set_operate},pos=adv.pos,from_pos=adv.pos,job_type=df.job_type.OperatePump,screen=self}
 end
 function usetool:farmPlot(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local do_harvest=false
     for id, con_item in pairs(building.contained_items) do
         if con_item.use_mode==2 and con_item.item:getType()==df.item_type.PLANT then
@@ -1531,14 +1531,14 @@ function usetool:farmPlot(building)
 end
 --luacheck: in=df.building_bedst out=none
 function usetool:bedActions(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local args={unit=adv,pos=adv.pos,from_pos=adv.pos,screen=self,building=building,
     job_type=df.job_type.Sleep,post_actions={AssignBuildingRef}}
     makeJob(args)
 end
 --luacheck: in=df.building_chairst out=none
 function usetool:chairActions(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local eatjob={items={{quantity=1,item_type=df.item_type.FOOD}}}
     local args={unit=adv,pos=adv.pos,from_pos=adv.pos,screen=self,job_type=df.job_type.Eat,building=building,
         pre_actions={dfhack.curry(setFiltersUp,eatjob),AssignJobItems},post_actions={AssignBuildingRef}}
@@ -1640,7 +1640,7 @@ end
 function usetool:setupFields()
     local ui=df.global.plotinfo
 
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     if settings.set_civ==true then
         ui.civ_id=adv.civ_id
         ui.race_id=adv.race
@@ -1676,7 +1676,7 @@ function usetool:siteCheck()
 end
 --movement and co... Also passes on allowed keys
 function usetool:fieldInput(keys)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local cur_mode=actions[(mode or 0)+1]
     local failed=false
     for code,_ in pairs(keys) do
@@ -1744,7 +1744,7 @@ function usetool:onInput(keys)
 
     self:update_site()
 
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
 
     if keys.LEAVESCREEN  then
         if df.global.cursor.x~=-30000 then --if not poiting at anything
@@ -1786,7 +1786,7 @@ function usetool:cancel_wait()
     self.long_wait=false
 end
 function usetool:onIdle()
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local job_ptr=adv.job.current_job
     local job_action=findAction(adv,df.unit_action_type.Job)
 
@@ -1825,7 +1825,7 @@ function usetool:onIdle()
     self._native.parent:logic()
 end
 function usetool:isOnBuilding()
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local bld=dfhack.buildings.findAtTile(adv.pos)
     if bld and MODES[bld:getType()]~=nil and bld:getBuildStage()==bld:getMaxBuildStage() then
         return true,MODES[bld:getType()],bld
