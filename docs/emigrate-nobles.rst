@@ -8,10 +8,12 @@ emigrate-nobles
 Tired of inherited nobility freeloading off your fortress making inane demands? Use this tool
 to have them (willingly) emigrate to their rightful lands.
 
-The unit must not be assigned to a squad.
+Nobles assigned to squads will not be emigrated. Remove them from the squad before retrying.
 
-Warning! Nobles will not surrender any symbols of office before leaving, be sure to unassign
-your artefacts before using this tool.
+.. warning::
+
+    Emigrated nobles will not surrender any symbols of office before leaving.
+    Unassign your artefacts before using this tool.
 
 Usage
 -----

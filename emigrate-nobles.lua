@@ -182,7 +182,7 @@ local function removeUnitFromSiteEntity(unit, histFig, oldSite)
 end
 
 ---@param unit df.unit
-local function removeUnitFromAnySquad(unit)
+local function removeUnitFromSquad(unit)
     if unit.military.squad_id == -1 then return end
     local fortEnt = df.global.plotinfo.main.fortress_entity
 
@@ -200,17 +200,18 @@ local function removeUnitFromAnySquad(unit)
 
     -- remove assignment if captain or commander
     local assignmentId = -1
-    if squadPos == 0 then
-        for _, np in ipairs(dfhack.units.getNoblePositions(unit) or {}) do
-            if np.entity.id ~= fortEnt then goto continue end
-            if np.assignment.squad_id ~= squadId then goto continue end
+    if squadPos ~= 0 then goto next end
+    for _, np in ipairs(dfhack.units.getNoblePositions(unit) or {}) do
+        if np.entity.id ~= fortEnt then goto continue end
+        if np.assignment.squad_id ~= squadId then goto continue end
 
-            np.assignment.histfig = -1
-            np.assignment.histfig2 = -1
-            assignmentId = np.assignment.id
-            ::continue::
-        end
+        np.assignment.histfig = -1
+        np.assignment.histfig2 = -1
+        assignmentId = np.assignment.id
+        break
+        ::continue::
     end
+    ::next::
 
     -- remove the old entity link and create new one to indicate former membership
     local histFig = df.historical_figure.find(unit.hist_figure_id)
@@ -246,7 +247,6 @@ function emigrate(unit, toSite)
     if histFig == nil then qerror("could not find histfig!") end
 
     local fortEnt = df.global.plotinfo.main.fortress_entity
-    removeUnitFromAnySquad(unit) -- self-explanatory
 
     -- mark for leaving
     unit.following = nil
@@ -285,6 +285,11 @@ local function inStrangeMood(unit)
     return df.job_type_class[df.job_type.attrs[jobType].type] == 'StrangeMood'
 end
 
+---@param unit df.unit
+local function isSoldier(unit)
+    return unit.military.squad_id ~= -1
+end
+
 function listNoblesFound(nobleList)
     for _, record in pairs(nobleList) do
         local unit = record.unit
@@ -292,7 +297,15 @@ function listNoblesFound(nobleList)
 
         local nobleName = dfhack.df2console(dfhack.units.getReadableName(unit))
         local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
-        print(unit.id..": "..nobleName.." - to be sent to "..siteName)
+        local unitMsg = unit.id..": "..nobleName.." to be sent to "..siteName
+        if isSoldier(unit) then
+            local squad = df.squad.find(unit.military.squad_id)
+            if not squad then qerror("could not find unit's squad") end
+            local squadName = dfhack.df2console(dfhack.translation.translateName(squad.name, true))
+            unitMsg = unitMsg.." [!] Unit is soldier in "..squadName
+        end
+
+        print(unitMsg)
     end
 end
 
@@ -326,6 +339,8 @@ function main()
         local nobleName = dfhack.units.getReadableName(noble)
         if inStrangeMood(noble) then
             print("[-] "..nobleName.." is in a strange mood! Leave alone for now.")
+        elseif isSoldier(noble) then
+            print("[-] "..nobleName.." is in a squad! Unassign the unit before proceeding.")
         else
             emigrate(noble, site)
         end
