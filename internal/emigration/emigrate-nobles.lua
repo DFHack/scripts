@@ -1,3 +1,5 @@
+--@module = true
+
 --Deport resident nobles of other lands and summon your rightful lord if he/she is elsewhere
 
 --[[
@@ -9,15 +11,14 @@ TODO:
 local argparse = require("argparse")
 
 local options = {
-    help = false,
     all = false,
     unitId = -1,
     list = false
 }
 
-fort = nil      ---@type df.world_site
-civ = nil       ---@type df.historical_entity
-capital = nil   ---@type df.world_site
+local fort = nil      ---@type df.world_site
+local playerCiv = nil ---@type df.historical_entity
+local capital = nil   ---@type df.world_site
 
 -- adapted from Units::get_land_title()
 ---@return df.world_site|nil
@@ -38,18 +39,18 @@ end
 
 ---@return df.world_site|nil
 local function findCapital(civ)
-    local capital = nil
+    local civCapital = nil
     for _, link in ipairs(civ.site_links) do
         if link.flags.capital then
-            capital = df.world_site.find(link.target)
+            civCapital = df.world_site.find(link.target)
             break
         end
     end
 
-    return capital
+    return civCapital
 end
 
-function addNobleOfOtherSite(unit, nobleList)
+local function addNobleOfOtherSite(unit, nobleList)
     local nps = dfhack.units.getNoblePositions(unit) or {}
     local noblePos = nil
     for _, np in ipairs(nps) do
@@ -83,7 +84,6 @@ end
 local function addHistFigToSite(histFig, newSite)
     -- have unit join site government
     local siteGovId = newSite.cur_owner_id
-    print("new site gov = "..siteGovId)
     histFig.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = siteGovId, link_strength = 100})
     local histFigId = histFig.id
 
@@ -184,7 +184,7 @@ end
 -- adapted from emigration::desert()
 ---@param unit df.unit
 ---@param toSite df.world_site
-function emigrate(unit, toSite)
+local function emigrate(unit, toSite)
     local histFig = df.historical_figure.find(unit.hist_figure_id)
     if histFig == nil then qerror("could not find histfig!") end
 
@@ -192,7 +192,7 @@ function emigrate(unit, toSite)
 
     -- mark for leaving
     unit.following = nil
-    unit.civ_id = civ.id -- should be redundant but oh well
+    unit.civ_id = playerCiv.id -- should be redundant but oh well
     unit.flags1.forest = true
     unit.flags2.visitor = true
     unit.animal.leave_countdown = 2
@@ -232,26 +232,28 @@ local function isSoldier(unit)
     return unit.military.squad_id ~= -1
 end
 
-function listNoblesFound(nobleList)
+local function listNoblesFound(nobleList)
     for _, record in pairs(nobleList) do
         local unit = record.unit
         local site = record.site
 
         local nobleName = dfhack.df2console(dfhack.units.getReadableName(unit))
-        local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
-        local unitMsg = unit.id..": "..nobleName.." to be sent to "..siteName
+        local unitMsg = unit.id..": "..nobleName
         if isSoldier(unit) then
             local squad = df.squad.find(unit.military.squad_id)
             if not squad then qerror("could not find unit's squad") end
             local squadName = dfhack.df2console(dfhack.translation.translateName(squad.name, true))
-            unitMsg = unitMsg.." [!] Unit is soldier in "..squadName
+            unitMsg = "[!] "..unitMsg.." - soldier in "..squadName
+        else
+            local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
+            unitMsg = unitMsg.." to be sent to "..siteName
         end
 
         print(unitMsg)
     end
 end
 
-function main()
+local function main()
     local freeloaders = {}
     for _, unit in ipairs(dfhack.units.getCitizens()) do
         if options.unitId ~= -1 and unit.id ~= options.unitId then goto continue end
@@ -262,7 +264,7 @@ function main()
     end
 
     if #freeloaders == 0 then
-        if options.unitId ~= -1 then
+        if options.unitId == -1 then
             print("No eligible nobles to be emigrated.")
         else
             print("No eligible nobles found with ID = "..options.unitId)
@@ -289,12 +291,7 @@ function main()
     end
 end
 
-function initChecks()
-    if options.help then
-        print(dfhack.script_help())
-        return false
-    end
-
+local function initChecks()
     if not dfhack.world.isFortressMode() or not dfhack.isMapLoaded() then
         qerror('needs a loaded fortress map')
         return false
@@ -303,10 +300,10 @@ function initChecks()
     fort = dfhack.world.getCurrentSite()
     if not fort then qerror("could not find current site") end
 
-    civ = df.historical_entity.find(df.global.plotinfo.civ_id)
-    if not civ then qerror("could not find current civ") end
+    playerCiv = df.historical_entity.find(df.global.plotinfo.civ_id)
+    if not playerCiv then qerror("could not find current civ") end
 
-    capital = findCapital(civ)
+    capital = findCapital(playerCiv)
     if not capital then qerror("could not find capital") end
 
     if options.list then return true end -- list option does not require unit options
@@ -324,18 +321,32 @@ function initChecks()
     return true
 end
 
+local function resetState()
+    options.all = false
+    options.unitId = -1
+    options.list = false
+
+    fort = nil
+    capital = nil
+    playerCiv = nil
+end
+
 ------------------------------
 -- [[ SCRIPT STARTS HERE ]] --
 ------------------------------
 
-argparse.processArgsGetopt({...}, {
-    {"h", "help", handler=function() options.help = true end},
-    {"a", "all", handler=function() options.all = true end},
-    {"u", "unit", hasArg=true, handler=function(id) options.unitId = tonumber(id) end},
-    {"l", "list", handler=function() options.list = true end}
-})
+function run(args)
+    argparse.processArgsGetopt(args, {
+        {"a", "all", handler=function() options.all = true end},
+        {"u", "unit", hasArg=true, handler=function(id) options.unitId = tonumber(id) end},
+        {"l", "list", handler=function() options.list = true end}
+    })
 
-pass = initChecks()
-if not pass then return end
+    pass = initChecks()
+    if not pass then goto reset end
 
-main()
+    main()
+
+    ::reset::
+    resetState()
+end

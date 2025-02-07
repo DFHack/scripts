@@ -2,6 +2,7 @@
 --@enable = true
 
 local utils = require('utils')
+local nobles = reqscript('internal/emigration/emigrate-nobles')
 
 local GLOBAL_KEY = 'emigration' -- used for state change hooks and persistence
 
@@ -251,6 +252,9 @@ if args[1] == "enable" then
     state.enabled = true
 elseif args[1] == "disable" then
     state.enabled = false
+elseif args[1] == "nobles" then
+    table.remove(args, 1)
+    nobles.run(args)
 else
     print('emigration is ' .. (state.enabled and 'enabled' or 'not enabled'))
     return
