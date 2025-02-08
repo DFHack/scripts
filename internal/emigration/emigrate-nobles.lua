@@ -10,7 +10,7 @@ TODO:
 
 local argparse = require("argparse")
 
-local unit_link_utils = reqscript("unit-site-links")
+local unit_link_utils = reqscript("unit-link-utils")
 
 local options = {
     all = false,
