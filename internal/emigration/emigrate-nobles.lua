@@ -150,10 +150,10 @@ local function listNoblesFound(nobleList)
                 and dfhack.df2console(dfhack.translation.translateName(squad.name, true))
                 or "unknown squad"
 
-            unitMsg = "[!] "..unitMsg.." - soldier in "..squadName
+            unitMsg = "! "..unitMsg.." - soldier in "..squadName
         else
             local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
-            unitMsg = unitMsg.." to be sent to "..siteName
+            unitMsg = "  "..unitMsg.." - to "..siteName
         end
 
         print(unitMsg)
@@ -164,7 +164,7 @@ local function printNoNobles()
     if options.unitId == -1 then
         print("No eligible nobles to be emigrated.")
     else
-        print("No eligible nobles found with ID = "..options.unitId)
+        print("Unit ID "..options.unitId.." is not an eligible noble.")
     end
 end
 
@@ -218,8 +218,16 @@ local function initChecks()
 
     local noOptions = options.unitId == -1 and not options.all
     if noOptions then
-        print("No options selected, defaulting to list mode.")
-        options.list = true
+        unit = dfhack.gui.getSelectedUnit(true)
+        if unit then
+            options.unitId = unit.id
+            local name = dfhack.units.getReadableName(unit)
+            print("Selecting "..name.." (ID "..unit.id..")")
+        else
+            options.list = true
+            print("Defaulting to list mode:")
+        end
+
         return true
     end
 
