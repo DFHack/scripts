@@ -16,10 +16,6 @@ local options = {
     list = false
 }
 
-local fort = nil      ---@type df.world_site
-local playerCiv = nil ---@type df.historical_entity
-local capital = nil   ---@type df.world_site
-
 -- adapted from Units::get_land_title()
 ---@return df.world_site|nil
 local function findSiteOfRule(np)
@@ -50,7 +46,11 @@ local function findCapital(civ)
     return civCapital
 end
 
-local function addNobleOfOtherSite(unit, nobleList)
+---@param unit          df.unit
+---@param nobleList     { unit: df.unit, site: df.world_site }[]
+---@param playerFort    df.world_site
+---@param civ           df.historical_entity
+local function addNobleOfOtherSite(unit, nobleList, playerFort, civ)
     local nps = dfhack.units.getNoblePositions(unit) or {}
     local noblePos = nil
     for _, np in ipairs(nps) do
@@ -64,7 +64,8 @@ local function addNobleOfOtherSite(unit, nobleList)
 
     -- Monarchs do not seem to have an world_site associated to them (?)
     if noblePos.position.code == "MONARCH" then
-        if capital.id ~= fort.id then
+        local capital = findCapital(civ)
+        if capital and capital.id ~= playerFort.id then
             table.insert(nobleList, {unit = unit, site = capital})
         end
         return
@@ -75,7 +76,7 @@ local function addNobleOfOtherSite(unit, nobleList)
     local site = findSiteOfRule(noblePos)
     if not site then qerror("could not find land of "..name) end
 
-    if site.id == fort.id then return end -- noble rules current fort
+    if site.id == playerFort.id then return end -- noble rules current fort
     table.insert(nobleList, {unit = unit, site = site})
 end
 
@@ -182,9 +183,10 @@ local function removeUnitFromSiteEntity(unit, histFig, oldSite)
 end
 
 -- adapted from emigration::desert()
----@param unit df.unit
----@param toSite df.world_site
-local function emigrate(unit, toSite)
+---@param unit      df.unit
+---@param toSite    df.world_site
+---@param civ       df.historical_entity
+local function emigrate(unit, toSite, civ)
     local histFig = df.historical_figure.find(unit.hist_figure_id)
     if histFig == nil then qerror("could not find histfig!") end
 
@@ -192,7 +194,7 @@ local function emigrate(unit, toSite)
 
     -- mark for leaving
     unit.following = nil
-    unit.civ_id = playerCiv.id -- should be redundant but oh well
+    unit.civ_id = civ.id -- should be redundant but oh well
     unit.flags1.forest = true
     unit.flags2.visitor = true
     unit.animal.leave_countdown = 2
@@ -253,22 +255,33 @@ local function listNoblesFound(nobleList)
     end
 end
 
+local function printNoNobles()
+    if options.unitId == -1 then
+        print("No eligible nobles to be emigrated.")
+    else
+        print("No eligible nobles found with ID = "..options.unitId)
+    end
+end
+
 local function main()
+    local fort = dfhack.world.getCurrentSite()
+    if not fort then qerror("could not find current site") end
+
+    local civ = df.historical_entity.find(df.global.plotinfo.civ_id)
+    if not civ then qerror("could not find current civ") end
+
+    ---@type { unit: df.unit, site: df.world_site }[]
     local freeloaders = {}
     for _, unit in ipairs(dfhack.units.getCitizens()) do
         if options.unitId ~= -1 and unit.id ~= options.unitId then goto continue end
-        if dfhack.units.isDead(unit) or not dfhack.units.isSane(unit) then goto continue end
 
-        addNobleOfOtherSite(unit, freeloaders)
+        addNobleOfOtherSite(unit, freeloaders, fort, civ)
         ::continue::
     end
 
     if #freeloaders == 0 then
-        if options.unitId == -1 then
-            print("No eligible nobles to be emigrated.")
-        else
-            print("No eligible nobles found with ID = "..options.unitId)
-        end
+        printNoNobles()
+        return
     end
 
     if options.list then
@@ -286,7 +299,7 @@ local function main()
         elseif isSoldier(noble) then
             print("[-] "..nobleName.." is in a squad! Unassign the unit before proceeding.")
         else
-            emigrate(noble, site)
+            emigrate(noble, site, civ)
         end
     end
 end
@@ -294,17 +307,7 @@ end
 local function initChecks()
     if not dfhack.world.isFortressMode() or not dfhack.isMapLoaded() then
         qerror('needs a loaded fortress map')
-        return false
     end
-
-    fort = dfhack.world.getCurrentSite()
-    if not fort then qerror("could not find current site") end
-
-    playerCiv = df.historical_entity.find(df.global.plotinfo.civ_id)
-    if not playerCiv then qerror("could not find current civ") end
-
-    capital = findCapital(playerCiv)
-    if not capital then qerror("could not find capital") end
 
     if options.list then return true end -- list option does not require unit options
 
@@ -321,14 +324,10 @@ local function initChecks()
     return true
 end
 
-local function resetState()
+local function resetOptions()
     options.all = false
     options.unitId = -1
     options.list = false
-
-    fort = nil
-    capital = nil
-    playerCiv = nil
 end
 
 ------------------------------
@@ -346,5 +345,5 @@ function run(args)
         main()
     end
 
-    resetState()
+    resetOptions()
 end
