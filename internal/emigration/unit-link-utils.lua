@@ -39,73 +39,35 @@ function removeHistFigFromEntity(histFig, oldEntity)
 end
 
 ---@param histFig   df.historical_figure
----@param newEntity df.historical_entity
-function addHistFigToEntity(histFig, newEntity)
-    if not histFig or not newEntity then return end
-
-    local histFigId = histFig.id
-    local newEntId = newEntity.id
-
-    -- have unit join site government
-    histFig.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = newEntId, link_strength = 100})
-
-    -- create event indicating new membership
-    newEntity.histfig_ids:insert('#', histFigId)
-    newEntity.hist_figures:insert('#', histFig)
-    local hfEventId = df.global.hist_event_next_id
-    df.global.hist_event_next_id = df.global.hist_event_next_id+1
-    df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, civ = newEntId, histfig = histFigId, link_type = 0})
-end
-
----@param histFig df.historical_figure
----@param newSite df.historical_entity
-function createHistFigJoinSiteEvent(histFig, newSite)
-    if not histFig or not newSite then return end
-
-    -- create event indicating histfig moved to site
-    local histFigId = histFig.id
-    local siteId = newSite.id
-    hfEventId = df.global.hist_event_next_id
-    df.global.hist_event_next_id = df.global.hist_event_next_id+1
-    df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, hfid = histFigId, state = 1, reason = -1, site = siteId})
-end
-
----@param histFig   df.historical_figure
 ---@param entity    df.historical_entity
-function insertNewHistFigEntityLink(histFig, entity)
-    if not histFig or not entity then return end
-
-    local entityId = entity.id
-    histFig.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = entityId, link_strength = 100})
+function addNewHistFigEntityLink(histFig, entity)
 end
 
+---Creates events indicating a histfig's move to a new site and joining its entity.
 ---@param histFig df.historical_figure
----@param newSite df.world_site
----@return df.historical_entity|nil siteGov New site entity histfig is associated with
-function addHistFigToSite(histFig, newSite)
-    if not histFig or not newSite then return nil end
+---@param siteId  number Set to -1 if unneeded
+---@param siteGov df.historical_entity
+function addHistFigToSite(histFig, siteId, siteGov)
+    if not histFig or not siteGov then return nil end
 
-    -- have unit join site government
-    local siteGovId = newSite.cur_owner_id
-    histFig.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = siteGovId, link_strength = 100})
     local histFigId = histFig.id
 
-    -- have unit join new site
-    local siteId = newSite.id
-    local siteGov = df.historical_entity.find(siteGovId)
-    if not siteGov then qerror("could not find site!") end
+    -- add new site gov to histfig links
+    histFig.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = siteGov.id, link_strength = 100})
 
+    -- add histfig to new site gov
     siteGov.histfig_ids:insert('#', histFigId)
     siteGov.hist_figures:insert('#', histFig)
     local hfEventId = df.global.hist_event_next_id
     df.global.hist_event_next_id = df.global.hist_event_next_id+1
-    df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, civ = siteGovId, histfig = histFigId, link_type = 0})
+    df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, civ = siteGov.id, histfig = histFigId, link_type = 0})
 
+    if siteId <= -1 then return end -- skip site join event
+
+    -- create event indicating histfig moved to site
     hfEventId = df.global.hist_event_next_id
     df.global.hist_event_next_id = df.global.hist_event_next_id+1
     df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, hfid = histFigId, state = 1, reason = -1, site = siteId})
-
-    return siteGov
 end
 
 ---@param unit df.unit

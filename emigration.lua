@@ -46,7 +46,6 @@ function desert(u,method,civ)
         unit_link_utils.markUnitForEmigration(u, civ, true)
     end
 
-    local hf_id = u.hist_figure_id
     local hf = df.historical_figure.find(u.hist_figure_id)
     local fort_ent = df.global.plotinfo.main.fortress_entity
     local civ_ent = df.historical_entity.find(hf.civ_id)
@@ -57,35 +56,24 @@ function desert(u,method,civ)
     unit_link_utils.removeHistFigFromEntity(hf, fort_ent)
 
     -- try to find a new entity for the unit to join
-    for k,v in ipairs(civ_ent.entity_links) do
-        if v.type == df.entity_entity_link_type.CHILD and v.target ~= fort_ent.id then
-            newent_id = v.target
+    for _,entity_link in ipairs(civ_ent.entity_links) do
+        if entity_link.type == df.entity_entity_link_type.CHILD and entity_link.target ~= fort_ent.id then
+            newent_id = entity_link.target
             break
         end
     end
 
     if newent_id > -1 then
-        hf.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = newent_id, link_strength = 100})
-
         -- try to find a new site for the unit to join
-        for k,v in ipairs(df.global.world.entities.all[hf.civ_id].site_links) do
+        for _,site_link in ipairs(df.global.world.entities.all[hf.civ_id].site_links) do
             local site_id = df.global.plotinfo.site_id
-            if v.type == df.entity_site_link_type.Claim and v.target ~= site_id then
-                newsite_id = v.target
+            if site_link.type == df.entity_site_link_type.Claim and site_link.target ~= site_id then
+                newsite_id = site_link.target
                 break
             end
         end
         local newent = df.historical_entity.find(newent_id)
-        newent.histfig_ids:insert('#', hf_id)
-        newent.hist_figures:insert('#', hf)
-        local hf_event_id = df.global.hist_event_next_id
-        df.global.hist_event_next_id = df.global.hist_event_next_id+1
-        df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hf_event_id, civ = newent_id, histfig = hf_id, link_type = 0})
-        if newsite_id > -1 then
-            local hf_event_id = df.global.hist_event_next_id
-            df.global.hist_event_next_id = df.global.hist_event_next_id+1
-            df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hf_event_id, hfid = hf_id, state = 1, reason = -1, site = newsite_id})
-        end
+        unit_link_utils.addHistFigToSite(hf, newsite_id, newent)
     end
     print(dfhack.df2console(line))
     dfhack.gui.showAnnouncement(line, COLOR_WHITE)

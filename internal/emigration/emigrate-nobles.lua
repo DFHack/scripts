@@ -107,8 +107,10 @@ local function emigrate(unit, toSite, civ)
     unit_link_utils.removeUnitAssociations(unit)
     unit_link_utils.removeHistFigFromEntity(histFig, fortEnt)
 
-    local siteGov = unit_link_utils.addHistFigToSite(histFig, toSite)
-    if not siteGov then qerror("could not add unit to new site") end
+    -- have unit join new site government
+    local siteGov = df.historical_entity.find(toSite.cur_owner_id)
+    if not siteGov then qerror("could not find entity associated with new site") end
+    unit_link_utils.addHistFigToSite(histFig, toSite.id, siteGov)
 
     -- announce the changes
     local unitName = dfhack.df2console(dfhack.units.getReadableName(unit))
