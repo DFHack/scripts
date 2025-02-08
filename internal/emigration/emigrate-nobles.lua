@@ -9,6 +9,7 @@ TODO:
 ]]--
 
 local argparse = require("argparse")
+local unit_link_utils = reqscript("unit-site-links")
 
 local options = {
     all = false,
@@ -80,124 +81,19 @@ local function addNobleOfOtherSite(unit, nobleList, playerFort, civ)
     table.insert(nobleList, {unit = unit, site = site})
 end
 
----@param histFig df.historical_figure
----@param newSite df.world_site
-local function addHistFigToSite(histFig, newSite)
-    -- have unit join site government
-    local siteGovId = newSite.cur_owner_id
-    histFig.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = siteGovId, link_strength = 100})
-    local histFigId = histFig.id
-
-    -- have unit join new site
-    local siteId = newSite.id
-    local siteGov = df.historical_entity.find(siteGovId)
-    if not siteGov then qerror("could not find site!") end
-
-    siteGov.histfig_ids:insert('#', histFigId)
-    siteGov.hist_figures:insert('#', histFig)
-    local hfEventId = df.global.hist_event_next_id
-    df.global.hist_event_next_id = df.global.hist_event_next_id+1
-    df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, civ = siteGovId, histfig = histFigId, link_type = 0})
-
-    local hfEventId = df.global.hist_event_next_id
-    df.global.hist_event_next_id = df.global.hist_event_next_id+1
-    df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, hfid = histFigId, state = 1, reason = -1, site = siteId})
-
-    return siteGov
-end
-
----@param unit df.unit
----@param histFig df.historical_figure
----@param oldSite df.historical_entity
-local function removeUnitFromSiteEntity(unit, histFig, oldSite)
-    local histFigId = histFig.id
-
-    -- free owned rooms
-    for i = #unit.owned_buildings-1, 0, -1 do
-        local tmp = df.building.find(unit.owned_buildings[i].id)
-        dfhack.buildings.setOwner(tmp, nil)
-    end
-
-    -- remove from workshop profiles
-    for _, bld in ipairs(df.global.world.buildings.other.WORKSHOP_ANY) do
-        for k, v in ipairs(bld.profile.permitted_workers) do
-            if v == unit.id then
-                bld.profile.permitted_workers:erase(k)
-                break
-            end
-        end
-    end
-    for _, bld in ipairs(df.global.world.buildings.other.FURNACE_ANY) do
-        for k, v in ipairs(bld.profile.permitted_workers) do
-            if v == unit.id then
-                bld.profile.permitted_workers:erase(k)
-                break
-            end
-        end
-    end
-
-    -- disassociate from work details
-    for _, detail in ipairs(df.global.plotinfo.labor_info.work_details) do
-        for k, v in ipairs(detail.assigned_units) do
-            if v == unit.id then
-                detail.assigned_units:erase(k)
-                break
-            end
-        end
-    end
-
-    -- unburrow
-    for _, burrow in ipairs(df.global.plotinfo.burrows.list) do
-        dfhack.burrows.setAssignedUnit(burrow, unit, false)
-    end
-
-    -- erase the unit from the fortress entity
-    for k,v in ipairs(oldSite.histfig_ids) do
-        if v == histFigId then
-            df.global.plotinfo.main.fortress_entity.histfig_ids:erase(k)
-            break
-        end
-    end
-    for k,v in ipairs(oldSite.hist_figures) do
-        if v.id == histFigId then
-            df.global.plotinfo.main.fortress_entity.hist_figures:erase(k)
-            break
-        end
-    end
-    for k,v in ipairs(oldSite.nemesis) do
-        if v.figure.id == histFigId then
-            df.global.plotinfo.main.fortress_entity.nemesis:erase(k)
-            df.global.plotinfo.main.fortress_entity.nemesis_ids:erase(k)
-            break
-        end
-    end
-
-    -- remove the old entity link and create new one to indicate former membership
-    histFig.entity_links:insert("#", {new = df.histfig_entity_link_former_memberst, entity_id = oldSite.id, link_strength = 100})
-    for k,v in ipairs(histFig.entity_links) do
-        if v._type == df.histfig_entity_link_memberst and v.entity_id == oldSite.id then
-            histFig.entity_links:erase(k)
-            break
-        end
-    end
-end
-
 -- adapted from emigration::desert()
 ---@param unit      df.unit
 ---@param toSite    df.world_site
 ---@param civ       df.historical_entity
 local function emigrate(unit, toSite, civ)
     local histFig = df.historical_figure.find(unit.hist_figure_id)
-    if histFig == nil then qerror("could not find histfig!") end
+    if not histFig then
+        print("Could not find associated historical figure!")
+        return
+    end
 
     local fortEnt = df.global.plotinfo.main.fortress_entity
-
-    -- mark for leaving
-    unit.following = nil
-    unit.civ_id = civ.id -- should be redundant but oh well
-    unit.flags1.forest = true
-    unit.flags2.visitor = true
-    unit.animal.leave_countdown = 2
+    unit_link_utils.markUnitForEmigration(unit, civ.id, true)
 
     -- remove current job
     if unit.job.current_job then dfhack.job.removeJob(unit.job.current_job) end
@@ -208,8 +104,11 @@ local function emigrate(unit, toSite, civ)
         if act then act.events[0].flags.dismissed = true end
     end
 
-    removeUnitFromSiteEntity(unit, histFig, fortEnt)
-    local siteGov = addHistFigToSite(histFig, toSite)
+    unit_link_utils.removeUnitAssociations(unit)
+    unit_link_utils.removeHistFigFromEntity(histFig, fortEnt)
+
+    local siteGov = unit_link_utils.addHistFigToSite(histFig, toSite)
+    if not siteGov then qerror("could not add unit to new site") end
 
     -- announce the changes
     local unitName = dfhack.df2console(dfhack.units.getReadableName(unit))
@@ -244,8 +143,10 @@ local function listNoblesFound(nobleList)
         local unitMsg = unit.id..": "..nobleName
         if isSoldier(unit) then
             local squad = df.squad.find(unit.military.squad_id)
-            if not squad then qerror("could not find unit's squad") end
-            local squadName = dfhack.df2console(dfhack.translation.translateName(squad.name, true))
+            local squadName = squad
+                and dfhack.df2console(dfhack.translation.translateName(squad.name, true))
+                or "unknown squad"
+
             unitMsg = "[!] "..unitMsg.." - soldier in "..squadName
         else
             local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))

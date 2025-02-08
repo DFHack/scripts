@@ -2,7 +2,9 @@
 --@enable = true
 
 local utils = require('utils')
+
 local nobles = reqscript('internal/emigration/emigrate-nobles')
+local unit_link_utils = reqscript('internal/emigration/unit-link-utils')
 
 local GLOBAL_KEY = 'emigration' -- used for state change hooks and persistence
 
@@ -38,15 +40,12 @@ function desert(u,method,civ)
     local line = dfhack.units.getReadableName(u) .. " has "
     if method == 'merchant' then
         line = line.."joined the merchants"
-        u.flags1.merchant = true
-        u.civ_id = civ
+        unit_link_utils.markUnitForEmigration(u, civ, false)
     else
         line = line.."abandoned the settlement in search of a better life."
-        u.civ_id = civ
-        u.flags1.forest = true
-        u.flags2.visitor = true
-        u.animal.leave_countdown = 2
+        unit_link_utils.markUnitForEmigration(u, civ, true)
     end
+
     local hf_id = u.hist_figure_id
     local hf = df.historical_figure.find(u.hist_figure_id)
     local fort_ent = df.global.plotinfo.main.fortress_entity
@@ -54,74 +53,8 @@ function desert(u,method,civ)
     local newent_id = -1
     local newsite_id = -1
 
-    -- free owned rooms
-    for i = #u.owned_buildings-1, 0, -1 do
-        local temp_bld = df.building.find(u.owned_buildings[i].id)
-        dfhack.buildings.setOwner(temp_bld, nil)
-    end
-
-    -- remove from workshop profiles
-    for _, bld in ipairs(df.global.world.buildings.other.WORKSHOP_ANY) do
-        for k, v in ipairs(bld.profile.permitted_workers) do
-            if v == u.id then
-                bld.profile.permitted_workers:erase(k)
-                break
-            end
-        end
-    end
-    for _, bld in ipairs(df.global.world.buildings.other.FURNACE_ANY) do
-        for k, v in ipairs(bld.profile.permitted_workers) do
-            if v == u.id then
-                bld.profile.permitted_workers:erase(k)
-                break
-            end
-        end
-    end
-
-    -- disassociate from work details
-    for _, detail in ipairs(df.global.plotinfo.labor_info.work_details) do
-        for k, v in ipairs(detail.assigned_units) do
-            if v == u.id then
-                detail.assigned_units:erase(k)
-                break
-            end
-        end
-    end
-
-    -- unburrow
-    for _, burrow in ipairs(df.global.plotinfo.burrows.list) do
-        dfhack.burrows.setAssignedUnit(burrow, u, false)
-    end
-
-    -- erase the unit from the fortress entity
-    for k,v in ipairs(fort_ent.histfig_ids) do
-        if v == hf_id then
-            df.global.plotinfo.main.fortress_entity.histfig_ids:erase(k)
-            break
-        end
-    end
-    for k,v in ipairs(fort_ent.hist_figures) do
-        if v.id == hf_id then
-            df.global.plotinfo.main.fortress_entity.hist_figures:erase(k)
-            break
-        end
-    end
-    for k,v in ipairs(fort_ent.nemesis) do
-        if v.figure.id == hf_id then
-            df.global.plotinfo.main.fortress_entity.nemesis:erase(k)
-            df.global.plotinfo.main.fortress_entity.nemesis_ids:erase(k)
-            break
-        end
-    end
-
-    -- remove the old entity link and create new one to indicate former membership
-    hf.entity_links:insert("#", {new = df.histfig_entity_link_former_memberst, entity_id = fort_ent.id, link_strength = 100})
-    for k,v in ipairs(hf.entity_links) do
-        if v._type == df.histfig_entity_link_memberst and v.entity_id == fort_ent.id then
-            hf.entity_links:erase(k)
-            break
-        end
-    end
+    unit_link_utils.removeUnitAssociations(u)
+    unit_link_utils.removeHistFigFromEntity(hf, fort_ent)
 
     -- try to find a new entity for the unit to join
     for k,v in ipairs(civ_ent.entity_links) do
