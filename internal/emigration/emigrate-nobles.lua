@@ -342,11 +342,9 @@ function run(args)
         {"l", "list", handler=function() options.list = true end}
     })
 
-    pass = initChecks()
-    if not pass then goto reset end
+    if initChecks() then
+        main()
+    end
 
-    main()
-
-    ::reset::
     resetState()
 end
