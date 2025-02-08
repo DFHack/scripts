@@ -10,7 +10,7 @@ TODO:
 
 local argparse = require("argparse")
 
-local unit_link_utils = reqscript("unit-link-utils")
+local unit_link_utils = reqscript("internal/emigration/unit-link-utils")
 
 local options = {
     all = false,
@@ -200,9 +200,9 @@ local function main()
 
         local nobleName = dfhack.units.getReadableName(noble)
         if inStrangeMood(noble) then
-            print("[-] "..nobleName.." is in a strange mood! Leave alone for now.")
+            print("[!] "..nobleName.." is in a strange mood! Leave alone for now.")
         elseif isSoldier(noble) then
-            print("[-] "..nobleName.." is in a squad! Unassign the unit before proceeding.")
+            print("[!] "..nobleName.." is in a squad! Unassign the unit before proceeding.")
         else
             emigrate(noble, site, civ)
         end
