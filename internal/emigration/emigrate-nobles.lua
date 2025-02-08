@@ -123,9 +123,11 @@ local function emigrate(unit, toSite, civ)
 end
 
 ---@param unit df.unit
-local function inStrangeMood(unit)
+local function inSpecialJob(unit)
     local job = unit.job.current_job
     if not job then return false end
+
+    if job.flags.special then return true end -- cannot cancel
 
     local jobType = job.job_type -- taken from notifications::for_moody()
     return df.job_type_class[df.job_type.attrs[jobType].type] == 'StrangeMood'
@@ -199,8 +201,8 @@ local function main()
         local site = record.site
 
         local nobleName = dfhack.units.getReadableName(noble)
-        if inStrangeMood(noble) then
-            print("[!] "..nobleName.." is in a strange mood! Leave alone for now.")
+        if inSpecialJob(noble) then
+            print("[!] "..nobleName.." is busy! Leave alone for now.")
         elseif isSoldier(noble) then
             print("[!] "..nobleName.." is in a squad! Unassign the unit before proceeding.")
         else
