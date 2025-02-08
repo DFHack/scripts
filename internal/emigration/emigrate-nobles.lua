@@ -234,8 +234,9 @@ local function isSoldier(unit)
     return unit.military.squad_id ~= -1
 end
 
+---@param nobleList { unit: df.unit, site: df.world_site }[]
 local function listNoblesFound(nobleList)
-    for _, record in pairs(nobleList) do
+    for _, record in ipairs(nobleList) do
         local unit = record.unit
         local site = record.site
 
@@ -289,7 +290,7 @@ local function main()
         return
     end
 
-    for _, record in pairs(freeloaders) do
+    for _, record in ipairs(freeloaders) do
         local noble = record.unit
         local site = record.site
 
