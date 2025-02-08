@@ -33,7 +33,7 @@ Usage
 
     enable emigration
     emigration nobles [--list]
-    emigration nobles <target>
+    emigration nobles [<target>]
 
 Examples
 --------
