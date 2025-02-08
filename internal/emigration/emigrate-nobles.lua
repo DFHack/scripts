@@ -1,6 +1,6 @@
 --@module = true
 
---Deport resident nobles of other lands and summon your rightful lord if he/she is elsewhere
+--Deport resident nobles of other lands
 
 --[[
 TODO:
@@ -9,6 +9,7 @@ TODO:
 ]]--
 
 local argparse = require("argparse")
+
 local unit_link_utils = reqscript("unit-site-links")
 
 local options = {

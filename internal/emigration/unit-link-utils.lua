@@ -1,4 +1,4 @@
---@module true
+--@module = true
 
 ---@param histFig   df.historical_figure
 ---@param oldEntity df.historical_entity
@@ -36,11 +36,6 @@ function removeHistFigFromEntity(histFig, oldEntity)
             break
         end
     end
-end
-
----@param histFig   df.historical_figure
----@param entity    df.historical_entity
-function addNewHistFigEntityLink(histFig, entity)
 end
 
 ---Creates events indicating a histfig's move to a new site and joining its entity.
