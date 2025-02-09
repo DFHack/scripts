@@ -48,12 +48,13 @@ end
 
 ---@param unit df.unit
 ---@param nobleList { unit: df.unit, site: df.world_site }[]
----@param playerFort df.world_site
+---@param thisSite df.world_site
 ---@param civ df.historical_entity
-local function addNobleOfOtherSite(unit, nobleList, playerFort, civ)
+local function addNobleOfOtherSite(unit, nobleList, thisSite, civ)
     local nps = dfhack.units.getNoblePositions(unit) or {}
     local noblePos = nil
     for _, np in ipairs(nps) do
+        -- TODO: also check if civ is not your fort? Some site govs have IS_LAW_MAKER positions
         if np.position.flags.IS_LAW_MAKER then
             noblePos = np
             break
@@ -62,10 +63,14 @@ local function addNobleOfOtherSite(unit, nobleList, playerFort, civ)
 
     if not noblePos then return end -- unit is not nobility
 
+    -- TODO: support other races that may not use MONARCH as position code
+    --   entity.type == df.historical_entity_type.Civilization
+    --   position.flags.RULES_FROM_LOCATION
+
     -- Monarchs do not seem to have an world_site associated to them (?)
     if noblePos.position.code == "MONARCH" then
         local capital = findCapital(civ)
-        if capital and capital.id ~= playerFort.id then
+        if capital and capital.id ~= thisSite.id then
             table.insert(nobleList, {unit = unit, site = capital})
         end
         return
@@ -76,7 +81,7 @@ local function addNobleOfOtherSite(unit, nobleList, playerFort, civ)
     local site = findSiteOfRule(noblePos)
     if not site then qerror("could not find land of "..name) end
 
-    if site.id == playerFort.id then return end -- noble rules current fort
+    if site.id == thisSite.id then return end -- noble rules current fort
     table.insert(nobleList, {unit = unit, site = site})
 end
 
@@ -93,17 +98,17 @@ local function removeMandates(unit)
 end
 
 -- adapted from emigration::desert()
----@param unit      df.unit
----@param toSite    df.world_site
----@param civ       df.historical_entity
-local function emigrate(unit, toSite, civ)
+---@param unit df.unit
+---@param toSite df.world_site
+---@param prevEnt df.historical_entity
+---@param civ df.historical_entity
+local function emigrate(unit, toSite, prevEnt, civ)
     local histFig = df.historical_figure.find(unit.hist_figure_id)
     if not histFig then
         print("Could not find associated historical figure!")
         return
     end
 
-    local fortEnt = df.global.plotinfo.main.fortress_entity
     unit_link_utils.markUnitForEmigration(unit, civ.id, true)
 
     -- remove current job
@@ -119,7 +124,7 @@ local function emigrate(unit, toSite, civ)
     removeMandates(unit)
 
     unit_link_utils.removeUnitAssociations(unit)
-    unit_link_utils.removeHistFigFromEntity(histFig, fortEnt)
+    unit_link_utils.removeHistFigFromEntity(histFig, prevEnt)
 
     -- have unit join new site government
     local siteGov = df.historical_entity.find(toSite.cur_owner_id)
@@ -151,8 +156,27 @@ local function isSoldier(unit)
     return unit.military.squad_id ~= -1
 end
 
+---@param unit df.unit
+---@param fortEnt df.historical_entity
+---@param includeElected boolean
+local function isAdministrator(unit, fortEnt, includeElected)
+    ---@diagnostic disable-next-line: missing-parameter
+    local nps = dfhack.units.getNoblePositions(unit) or {}
+
+    ---@diagnostic disable-next-line: param-type-mismatch
+    for _, np in ipairs(nps) do
+        -- Elected officials can be chosen again
+        local isAdmin = np.entity.id == fortEnt.id
+        if not includeElected then isAdmin = isAdmin and not np.position.flags.ELECTED end
+        if isAdmin then return true end
+    end
+    return false
+end
+
 ---@param nobleList { unit: df.unit, site: df.world_site }[]
-local function listNoblesFound(nobleList)
+---@param fort df.world_site
+---@param fortEnt df.historical_entity
+local function listNoblesFound(nobleList, fort, fortEnt)
     for _, record in ipairs(nobleList) do
         local unit = record.unit
         local site = record.site
@@ -166,6 +190,9 @@ local function listNoblesFound(nobleList)
                 or "unknown squad"
 
             unitMsg = "! "..unitMsg.." - soldier in "..squadName
+        elseif isAdministrator(unit, fortEnt, true) then
+            local fortName = dfhack.df2console(dfhack.translation.translateName(fort.name, true))
+            unitMsg = "! "..unitMsg.." - administrator of "..fortName
         else
             local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
             unitMsg = "  "..unitMsg.." - to "..siteName
@@ -184,8 +211,11 @@ local function printNoNobles()
 end
 
 local function main()
-    local fort = dfhack.world.getCurrentSite()
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local fort = dfhack.world.getCurrentSite() ---@type df.world_site
     if not fort then qerror("could not find current site") end
+
+    local fortEnt = df.global.plotinfo.main.fortress_entity
 
     local civ = df.historical_entity.find(df.global.plotinfo.civ_id)
     if not civ then qerror("could not find current civ") end
@@ -205,7 +235,7 @@ local function main()
     end
 
     if options.list then
-        listNoblesFound(freeloaders)
+        listNoblesFound(freeloaders, fort, fortEnt)
         return
     end
 
@@ -215,11 +245,13 @@ local function main()
 
         local nobleName = dfhack.units.getReadableName(noble)
         if inSpecialJob(noble) then
-            print("[!] "..nobleName.." is busy! Leave alone for now.")
+            print("! "..nobleName.." is busy! Leave alone for now.")
         elseif isSoldier(noble) then
-            print("[!] "..nobleName.." is in a squad! Unassign the unit before proceeding.")
+            print("! "..nobleName.." is in a squad! Unassign the unit and try again.")
+        elseif isAdministrator(noble, fortEnt, false) then
+            print("! "..nobleName.." is an administrator! Unassign the unit and try again.")
         else
-            emigrate(noble, site, civ)
+            emigrate(noble, site, fortEnt, civ)
         end
     end
 end
