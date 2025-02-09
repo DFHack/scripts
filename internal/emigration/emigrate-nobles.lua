@@ -140,6 +140,10 @@ local function emigrate(unit, toSite, prevEnt, civ)
     dfhack.gui.showAnnouncement(line, COLOR_WHITE)
 end
 
+------------------------
+-- [[ GUARD CHECKS ]] --
+------------------------
+
 ---@param unit df.unit
 local function inSpecialJob(unit)
     local job = unit.job.current_job
@@ -172,6 +176,10 @@ local function isAdministrator(unit, fortEnt, includeElected)
     end
     return false
 end
+
+-----------------------
+-- [[ PRINT MODES ]] --
+-----------------------
 
 ---@param nobleList { unit: df.unit, site: df.world_site }[]
 ---@param fort df.world_site
@@ -209,6 +217,10 @@ local function printNoNobles()
         print("Unit ID "..options.unitId.." is not an eligible noble.")
     end
 end
+
+-------------------------
+-- [[ MAIN FUNCTION ]] --
+-------------------------
 
 local function main()
     ---@diagnostic disable-next-line: assign-type-mismatch
@@ -289,10 +301,6 @@ local function resetOptions()
     options.unitId = -1
     options.list = false
 end
-
-------------------------------
--- [[ SCRIPT STARTS HERE ]] --
-------------------------------
 
 function run(args)
     argparse.processArgsGetopt(args, {
