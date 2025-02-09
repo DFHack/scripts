@@ -54,7 +54,6 @@ local function addNobleOfOtherSite(unit, nobleList, thisSite, civ)
     local nps = dfhack.units.getNoblePositions(unit) or {}
     local noblePos = nil
     for _, np in ipairs(nps) do
-        -- TODO: also check if civ is not your fort? Some site govs have IS_LAW_MAKER positions
         if np.position.flags.IS_LAW_MAKER then
             noblePos = np
             break
@@ -63,12 +62,8 @@ local function addNobleOfOtherSite(unit, nobleList, thisSite, civ)
 
     if not noblePos then return end -- unit is not nobility
 
-    -- TODO: support other races that may not use MONARCH as position code
-    --   entity.type == df.historical_entity_type.Civilization
-    --   position.flags.RULES_FROM_LOCATION
-
     -- Monarchs do not seem to have an world_site associated to them (?)
-    if noblePos.position.code == "MONARCH" then
+    if noblePos.position.flags.RULES_FROM_LOCATION and noblePos.entity.id == civ.id then
         local capital = findCapital(civ)
         if capital and capital.id ~= thisSite.id then
             table.insert(nobleList, {unit = unit, site = capital})
@@ -136,7 +131,7 @@ local function emigrate(unit, toSite, prevEnt, civ)
     local siteName = dfhack.df2console(dfhack.translation.translateName(toSite.name, true))
     local govName = dfhack.df2console(dfhack.translation.translateName(siteGov.name, true))
     local line = unitName .. " has left to join " ..govName.. " as lord of " .. siteName .. "."
-    print("[+] "..dfhack.df2console(line))
+    print("+ "..dfhack.df2console(line))
     dfhack.gui.showAnnouncement(line, COLOR_WHITE)
 end
 
@@ -184,19 +179,19 @@ local function listNoblesFound(nobleList, fortEnt)
         local unit = record.unit
         local site = record.site
 
-        local nobleName = dfhack.df2console(dfhack.units.getReadableName(unit))
+        local nobleName = dfhack.units.getReadableName(unit)
         local unitMsg = unit.id..": "..nobleName
         if isSoldier(unit) then
             local squad = df.squad.find(unit.military.squad_id)
             local squadName = squad
-                and dfhack.df2console(dfhack.translation.translateName(squad.name, true))
+                and dfhack.translation.translateName(squad.name, true)
                 or "unknown squad"
 
             unitMsg = "! "..unitMsg.." - soldier in "..squadName
         elseif isAdministrator(unit, fortEnt) then
-            unitMsg = "! "..unitMsg.." - administrator of this fort"
+            unitMsg = "! "..unitMsg.." - fort administrator"
         else
-            local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
+            local siteName = dfhack.translation.translateName(site.name, true)
             unitMsg = "  "..unitMsg.." - to "..siteName
         end
 
@@ -253,9 +248,9 @@ local function main()
         if inSpecialJob(noble) then
             print("! "..nobleName.." is busy! Leave alone for now.")
         elseif isSoldier(noble) then
-            print("! "..nobleName.." is in a squad! Unassign the unit and try again.")
+            print("! "..nobleName.." is in a squad! Unassign unit and try again.")
         elseif isAdministrator(noble, fortEnt) then
-            print("! "..nobleName.." is an administrator! Unassign the unit and try again.")
+            print("! "..nobleName.." is an administrator! Unassign unit and try again.")
         else
             emigrate(noble, site, fortEnt, civ)
         end
