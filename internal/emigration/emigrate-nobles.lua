@@ -162,17 +162,13 @@ end
 
 ---@param unit df.unit
 ---@param fortEnt df.historical_entity
----@param includeElected boolean
-local function isAdministrator(unit, fortEnt, includeElected)
+local function isAdministrator(unit, fortEnt)
     ---@diagnostic disable-next-line: missing-parameter
     local nps = dfhack.units.getNoblePositions(unit) or {}
 
     ---@diagnostic disable-next-line: param-type-mismatch
     for _, np in ipairs(nps) do
-        -- Elected officials can be chosen again
-        local isAdmin = np.entity.id == fortEnt.id
-        if not includeElected then isAdmin = isAdmin and not np.position.flags.ELECTED end
-        if isAdmin then return true end
+        if np.entity.id == fortEnt.id then return true end
     end
     return false
 end
@@ -182,9 +178,8 @@ end
 -----------------------
 
 ---@param nobleList { unit: df.unit, site: df.world_site }[]
----@param fort df.world_site
 ---@param fortEnt df.historical_entity
-local function listNoblesFound(nobleList, fort, fortEnt)
+local function listNoblesFound(nobleList, fortEnt)
     for _, record in ipairs(nobleList) do
         local unit = record.unit
         local site = record.site
@@ -198,9 +193,8 @@ local function listNoblesFound(nobleList, fort, fortEnt)
                 or "unknown squad"
 
             unitMsg = "! "..unitMsg.." - soldier in "..squadName
-        elseif isAdministrator(unit, fortEnt, true) then
-            local fortName = dfhack.df2console(dfhack.translation.translateName(fort.name, true))
-            unitMsg = "! "..unitMsg.." - administrator of "..fortName
+        elseif isAdministrator(unit, fortEnt) then
+            unitMsg = "! "..unitMsg.." - administrator of this fort"
         else
             local siteName = dfhack.df2console(dfhack.translation.translateName(site.name, true))
             unitMsg = "  "..unitMsg.." - to "..siteName
@@ -247,7 +241,7 @@ local function main()
     end
 
     if options.list then
-        listNoblesFound(freeloaders, fort, fortEnt)
+        listNoblesFound(freeloaders, fortEnt)
         return
     end
 
@@ -260,7 +254,7 @@ local function main()
             print("! "..nobleName.." is busy! Leave alone for now.")
         elseif isSoldier(noble) then
             print("! "..nobleName.." is in a squad! Unassign the unit and try again.")
-        elseif isAdministrator(noble, fortEnt, false) then
+        elseif isAdministrator(noble, fortEnt) then
             print("! "..nobleName.." is an administrator! Unassign the unit and try again.")
         else
             emigrate(noble, site, fortEnt, civ)
