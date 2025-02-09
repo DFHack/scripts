@@ -1,7 +1,5 @@
 --@module = true
 
---Deport resident nobles of other lands
-
 --[[
 TODO:
   * Feature: have rightful ruler immigrate to fort if off-site
@@ -48,10 +46,10 @@ local function findCapital(civ)
     return civCapital
 end
 
----@param unit          df.unit
----@param nobleList     { unit: df.unit, site: df.world_site }[]
----@param playerFort    df.world_site
----@param civ           df.historical_entity
+---@param unit df.unit
+---@param nobleList { unit: df.unit, site: df.world_site }[]
+---@param playerFort df.world_site
+---@param civ df.historical_entity
 local function addNobleOfOtherSite(unit, nobleList, playerFort, civ)
     local nps = dfhack.units.getNoblePositions(unit) or {}
     local noblePos = nil
@@ -82,6 +80,18 @@ local function addNobleOfOtherSite(unit, nobleList, playerFort, civ)
     table.insert(nobleList, {unit = unit, site = site})
 end
 
+---@param unit df.unit
+local function removeMandates(unit)
+    local mandates = df.global.world.mandates
+    for i=#mandates-1,0,-1 do
+        local mandate = mandates[i]
+        if mandate.unit and mandate.unit.id == unit.id then
+            mandates:erase(i)
+            mandate:delete()
+        end
+    end
+end
+
 -- adapted from emigration::desert()
 ---@param unit      df.unit
 ---@param toSite    df.world_site
@@ -104,6 +114,9 @@ local function emigrate(unit, toSite, civ)
         local act = df.activity_entry.find(actId)
         if act then act.events[0].flags.dismissed = true end
     end
+
+    -- cancel any associated mandates
+    removeMandates(unit)
 
     unit_link_utils.removeUnitAssociations(unit)
     unit_link_utils.removeHistFigFromEntity(histFig, fortEnt)
