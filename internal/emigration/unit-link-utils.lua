@@ -2,6 +2,37 @@
 
 ---@param histFig df.historical_figure
 ---@param oldEntity df.historical_entity
+local function unassignMayor(histFig, oldEntity)
+    local assignmentId = -1
+    local nps = dfhack.units.getNoblePositions(histFig) or {}
+    for _,pos in ipairs(nps) do
+        if pos.entity.id == oldEntity.id and pos.position.flags.ELECTED then
+            pos.assignment.histfig = -1
+            pos.assignment.histfig2 = -1
+            assignmentId = pos.assignment.id
+        end
+    end
+    if assignmentId == -1 then qerror("could not find mayor assignment!") end
+
+    local startYear = -1 -- remove mayor assignment
+    for k,v in ipairs(histFig.entity_links) do
+        if v.entity_id == oldEntity.id
+            and df.histfig_entity_link_positionst:is_instance(v)
+            and v.assignment_id == assignmentId
+        then
+            startYear = v.start_year
+            histFig.entity_links:erase(k)
+            v:delete()
+            break
+        end
+    end
+    if startYear == -1 then qerror("could not find entity link!") end
+
+    histFig.entity_links:insert('#', {new = df.histfig_entity_link_former_positionst, assignment_id = assignmentId, start_year = startYear, entity_id = oldEntity.id, end_year = df.global.cur_year, link_strength = 100 })
+end
+
+---@param histFig df.historical_figure
+---@param oldEntity df.historical_entity
 ---@param removeMayor boolean
 function removeHistFigFromEntity(histFig, oldEntity, removeMayor)
     if not histFig or not oldEntity then return end
@@ -30,15 +61,7 @@ function removeHistFigFromEntity(histFig, oldEntity, removeMayor)
     end
 
     -- remove mayor assignment if exists
-    if removeMayor then
-        local nps = dfhack.units.getNoblePositions(histFig) or {}
-        for _,pos in ipairs(nps) do
-            if pos.entity.id == oldEntity.id and pos.position.flags.ELECTED then
-                pos.assignment.histfig = -1
-                pos.assignment.histfig2 = -1
-            end
-        end
-    end
+    if removeMayor then unassignMayor(histFig, oldEntity) end
 
     -- remove the old entity link and create new one to indicate former membership
     histFig.entity_links:insert("#", {new = df.histfig_entity_link_former_memberst, entity_id = oldEntity.id, link_strength = 100})
