@@ -3,7 +3,7 @@
 --[[
 TODO:
   * Feature: have rightful ruler immigrate to fort if off-site
-  * QoL: make sure items are unassigned
+  * Noble of other civ residing in fort?
 ]]--
 
 local argparse = require("argparse")
