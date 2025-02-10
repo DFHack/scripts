@@ -134,3 +134,58 @@ function markUnitForEmigration(unit, civId, leaveNow)
         unit.flags1.merchant = true
     end
 end
+
+---@param item df.item
+local function getPos(item)
+    local x, y, z = dfhack.items.getPosition(item)
+    if not x or not y or not z then
+        return nil
+    end
+
+    if dfhack.maps.isTileVisible(x, y, z) then
+        return xyz2pos(x, y, z)
+    end
+end
+
+---@param assignmentId number
+---@param entity df.historical_entity
+---@param site df.world_site
+function unassignSymbols(assignmentId, entity, site)
+    local claims = entity.artifact_claims
+    local artifacts = df.global.world.artifacts.all
+
+    for i=#claims-1,0,-1 do
+        local claim = claims[i]
+        if claim.claim_type ~= df.artifact_claim_type.Symbol then goto continue end
+        if claim.symbol_claim_id ~= assignmentId then goto continue end
+
+        local artifact = artifacts[claim.artifact_id]
+        local item = artifact.item
+        local artifactName = dfhack.translation.translateName(artifact.name)
+
+        -- we can probably keep artifact.entity_claims since we still hold it
+        local itemPos = getPos(item)
+        local success = false
+        if not itemPos then
+            if artifact.site == site.id then
+                print(" ! "..artifactName.." cannot be found!")
+                goto removeClaim
+            else
+                print(" ! "..artifactName.." is not in this site!")
+                goto continue
+            end
+        end
+
+        success = dfhack.items.moveToGround(item, itemPos)
+        if success then print(" + dropped "..artifactName)
+        else print(" ! could not drop "..artifactName)
+        end
+
+        -- they do not seem to "own" their artifacts, no additional cleaning seems necessary
+
+        ::removeClaim::
+        claims:erase(i)
+        claim:delete()
+        ::continue::
+    end
+end

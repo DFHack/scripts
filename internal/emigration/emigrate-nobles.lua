@@ -47,7 +47,7 @@ local function findCapital(civ)
 end
 
 ---@param unit df.unit
----@param nobleList { unit: df.unit, site: df.world_site }[]
+---@param nobleList { unit: df.unit, site: df.world_site, id: number }[]
 ---@param thisSite df.world_site
 ---@param civ df.historical_entity
 local function addNobleOfOtherSite(unit, nobleList, thisSite, civ)
@@ -66,7 +66,7 @@ local function addNobleOfOtherSite(unit, nobleList, thisSite, civ)
     if noblePos.position.flags.RULES_FROM_LOCATION and noblePos.entity.id == civ.id then
         local capital = findCapital(civ)
         if capital and capital.id ~= thisSite.id then
-            table.insert(nobleList, {unit = unit, site = capital})
+            table.insert(nobleList, {unit = unit, site = capital, id = noblePos.assignment.id})
         end
         return
     end
@@ -77,7 +77,7 @@ local function addNobleOfOtherSite(unit, nobleList, thisSite, civ)
     if not site then qerror("could not find land of "..name) end
 
     if site.id == thisSite.id then return end -- noble rules current fort
-    table.insert(nobleList, {unit = unit, site = site})
+    table.insert(nobleList, {unit = unit, site = site, id = noblePos.assignment.id})
 end
 
 ---@param unit df.unit
@@ -252,7 +252,7 @@ local function main()
     local civ = df.historical_entity.find(df.global.plotinfo.civ_id)
     if not civ then qerror("could not find current civ") end
 
-    ---@type { unit: df.unit, site: df.world_site }[]
+    ---@type { unit: df.unit, site: df.world_site, id: number }[]
     local freeloaders = {}
     for _, unit in ipairs(dfhack.units.getCitizens()) do
         if options.unitId ~= -1 and unit.id ~= options.unitId then goto continue end
@@ -293,6 +293,7 @@ local function main()
 
         local isElected = adminType == AdminType.IS_ELECTED
         emigrate(noble, site, fortEnt, civ, isElected)
+        unit_link_utils.unassignSymbols(record.id, civ, fort)
         ::continue::
     end
 end
