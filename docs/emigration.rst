@@ -18,13 +18,9 @@ emigrate.
 
 The tool also supports ``nobles``, a manually-invoked command that makes nobles
 emigrate to their rightful land of rule. No more freeloaders making inane demands!
-Nobles assigned to squads will not be emigrated.
-Remove them from the squad before retrying.
-
-.. warning::
-
-    Emigrated nobles will not surrender any symbols of office before leaving.
-    Unassign your artefacts before calling ``emigration nobles``.
+Nobles assigned to squads or to fort administrator positions will not be emigrated.
+Remove their assignments before retrying. Nobles holding elected positions
+(i.e. mayors) may be emigrated, but will have a ``*`` icon when listed.
 
 Usage
 -----
@@ -38,12 +34,17 @@ Usage
 Examples
 --------
 
+``emigration nobles``
+    Emigrate the selected noble if it does not rule your fortress.
+    If no unit is selected, list all nobles that do not rule your fortress.
 ``emigration nobles --list``
-    List all nobles that do not rule your fortress
+    List all nobles that do not rule your fortress. Nobles that cannot be emigrated
+    (see above) will have a ``!`` indicator while nobles holding elected positions
+    will have a ``*`` indicator.
 ``emigration nobles --all``
-    Emigrate all nobles that do not rule your fortress
+    Emigrate all nobles that do not rule your fortress.
 ``emigration nobles --unit 34534``
-    Emigrate a noble matching the specified unit ID that does not rule your fortress
+    Emigrate a noble matching the specified unit ID that does not rule your fortress.
 
 Options
 -------
