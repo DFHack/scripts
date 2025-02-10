@@ -97,7 +97,8 @@ end
 ---@param toSite df.world_site
 ---@param prevEnt df.historical_entity
 ---@param civ df.historical_entity
-local function emigrate(unit, toSite, prevEnt, civ)
+---@param removeMayor boolean
+local function emigrate(unit, toSite, prevEnt, civ, removeMayor)
     local histFig = df.historical_figure.find(unit.hist_figure_id)
     if not histFig then
         print("Could not find associated historical figure!")
@@ -119,7 +120,7 @@ local function emigrate(unit, toSite, prevEnt, civ)
     removeMandates(unit)
 
     unit_link_utils.removeUnitAssociations(unit)
-    unit_link_utils.removeHistFigFromEntity(histFig, prevEnt)
+    unit_link_utils.removeHistFigFromEntity(histFig, prevEnt, removeMayor)
 
     -- have unit join new site government
     local siteGov = df.historical_entity.find(toSite.cur_owner_id)
@@ -155,17 +156,34 @@ local function isSoldier(unit)
     return unit.military.squad_id ~= -1
 end
 
+-- just an enum
+local AdminType = {
+    NOT_ADMIN = { sym = " " },
+    IS_ELECTED = { sym = "*" },
+    IS_ADMIN = { sym = "!" }
+}
+
 ---@param unit df.unit
 ---@param fortEnt df.historical_entity
-local function isAdministrator(unit, fortEnt)
+local function getAdminType(unit, fortEnt)
     ---@diagnostic disable-next-line: missing-parameter
     local nps = dfhack.units.getNoblePositions(unit) or {}
+    local result = AdminType.NOT_ADMIN
 
     ---@diagnostic disable-next-line: param-type-mismatch
     for _, np in ipairs(nps) do
-        if np.entity.id == fortEnt.id then return true end
+        if np.entity.id ~= fortEnt.id then goto continue end
+        if np.position.flags.ELECTED then
+            result = AdminType.IS_ELECTED
+            goto continue
+        end
+
+        -- Mayors cannot be evicted if they are also appointed administrators (e.g. manager)
+        result = AdminType.IS_ADMIN
+        break
+        ::continue::
     end
-    return false
+    return result
 end
 
 -----------------------
@@ -179,6 +197,10 @@ local function listNoblesFound(nobleList, fortEnt)
         local unit = record.unit
         local site = record.site
 
+        -- avoid scoping errors
+        local adminType = nil
+        local siteName = ""
+
         local nobleName = dfhack.units.getReadableName(unit)
         local unitMsg = unit.id..": "..nobleName
         if isSoldier(unit) then
@@ -188,13 +210,22 @@ local function listNoblesFound(nobleList, fortEnt)
                 or "unknown squad"
 
             unitMsg = "! "..unitMsg.." - soldier in "..squadName
-        elseif isAdministrator(unit, fortEnt) then
-            unitMsg = "! "..unitMsg.." - fort administrator"
-        else
-            local siteName = dfhack.translation.translateName(site.name, true)
-            unitMsg = "  "..unitMsg.." - to "..siteName
+            goto print
         end
 
+        adminType = getAdminType(unit, fortEnt)
+        if adminType ~= AdminType.NOT_ADMIN then
+            local status = adminType == AdminType.IS_ADMIN
+                and "fort administrator"    -- isAdmin
+                or "elected official"       -- isElected
+            unitMsg = adminType.sym.." "..unitMsg.." - "..status
+            goto print
+        end
+
+        siteName = dfhack.translation.translateName(site.name, true)
+        unitMsg = "  "..unitMsg.." - to "..siteName
+
+        ::print::
         print(unitMsg)
     end
 end
@@ -243,17 +274,26 @@ local function main()
     for _, record in ipairs(freeloaders) do
         local noble = record.unit
         local site = record.site
+        local adminType = nil
 
         local nobleName = dfhack.units.getReadableName(noble)
         if inSpecialJob(noble) then
             print("! "..nobleName.." is busy! Leave alone for now.")
+            goto continue
         elseif isSoldier(noble) then
             print("! "..nobleName.." is in a squad! Unassign unit and try again.")
-        elseif isAdministrator(noble, fortEnt) then
-            print("! "..nobleName.." is an administrator! Unassign unit and try again.")
-        else
-            emigrate(noble, site, fortEnt, civ)
+            goto continue
         end
+
+        adminType = getAdminType(noble, fortEnt)
+        if adminType == AdminType.IS_ADMIN then
+            print("! "..nobleName.." is an administrator! Unassign unit and try again.")
+            goto continue
+        end
+
+        local isElected = adminType == AdminType.IS_ELECTED
+        emigrate(noble, site, fortEnt, civ, isElected)
+        ::continue::
     end
 end
 

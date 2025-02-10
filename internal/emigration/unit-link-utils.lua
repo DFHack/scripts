@@ -1,8 +1,9 @@
 --@module = true
 
----@param histFig   df.historical_figure
+---@param histFig df.historical_figure
 ---@param oldEntity df.historical_entity
-function removeHistFigFromEntity(histFig, oldEntity)
+---@param removeMayor boolean
+function removeHistFigFromEntity(histFig, oldEntity, removeMayor)
     if not histFig or not oldEntity then return end
 
     local histFigId = histFig.id
@@ -25,6 +26,17 @@ function removeHistFigFromEntity(histFig, oldEntity)
             df.global.plotinfo.main.fortress_entity.nemesis:erase(k)
             df.global.plotinfo.main.fortress_entity.nemesis_ids:erase(k)
             break
+        end
+    end
+
+    -- remove mayor assignment if exists
+    if removeMayor then
+        local nps = dfhack.units.getNoblePositions(histFig) or {}
+        for _,pos in ipairs(nps) do
+            if pos.entity.id == oldEntity.id and pos.position.flags.ELECTED then
+                pos.assignment.histfig = -1
+                pos.assignment.histfig2 = -1
+            end
         end
     end
 
