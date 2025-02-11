@@ -48,7 +48,7 @@ local function unassignMayor(histFig, oldEntity)
         id = hfEventId,
         civ = oldEntity.id,
         histfig = histFig.id,
-        link_type = 10,
+        link_type = df.histfig_entity_link_type.POSITION,
         position_id = positionId
     })
 end
@@ -105,21 +105,42 @@ function addHistFigToSite(histFig, siteId, siteGov)
     local histFigId = histFig.id
 
     -- add new site gov to histfig links
-    histFig.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = siteGov.id, link_strength = 100})
+    histFig.entity_links:insert("#", {
+        new = df.histfig_entity_link_memberst,
+        entity_id = siteGov.id,
+        link_strength = 100
+    })
 
     -- add histfig to new site gov
     siteGov.histfig_ids:insert('#', histFigId)
     siteGov.hist_figures:insert('#', histFig)
     local hfEventId = df.global.hist_event_next_id
     df.global.hist_event_next_id = df.global.hist_event_next_id+1
-    df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, civ = siteGov.id, histfig = histFigId, link_type = 0})
+    df.global.world.history.events:insert("#", {
+        new = df.history_event_add_hf_entity_linkst,
+        year = df.global.cur_year,
+        seconds = df.global.cur_year_tick,
+        id = hfEventId,
+        civ = siteGov.id,
+        histfig = histFigId,
+        link_type = df.histfig_entity_link_type.MEMBER
+    })
 
     if siteId <= -1 then return end -- skip site join event
 
     -- create event indicating histfig moved to site
     hfEventId = df.global.hist_event_next_id
     df.global.hist_event_next_id = df.global.hist_event_next_id+1
-    df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, hfid = histFigId, state = 1, reason = -1, site = siteId})
+    df.global.world.history.events:insert("#", {
+        new = df.history_event_change_hf_statest,
+        year = df.global.cur_year,
+        seconds = df.global.cur_year_tick,
+        id = hfEventId,
+        hfid = histFigId,
+        state = df.whereabouts_type.settler,
+        reason = df.history_event_reason.none,
+        site = siteId
+    })
 end
 
 ---@param unit df.unit
