@@ -43,6 +43,7 @@ Template for new versions:
 - `gui/notify`: moody dwarf notification turns red when they can't reach workshop or items
 - `gui/confirm`: in the delete manager order confirmation dialog, show a description of which order you have selected to delete
 - `position`: display both adventurer and site pos simultaneously. Display map block pos+offset of selected tile.
+- `devel/hello-world`: updated to show off the new Slider widget
 
 ## Removed
 
