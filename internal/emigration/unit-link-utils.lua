@@ -30,11 +30,27 @@ local function unassignMayor(histFig, oldEntity)
     end
     if startYear == -1 then qerror("could not find entity link!") end
 
-    histFig.entity_links:insert('#', {new = df.histfig_entity_link_former_positionst, assignment_id = assignmentId, start_year = startYear, entity_id = oldEntity.id, end_year = df.global.cur_year, link_strength = 100 })
+    histFig.entity_links:insert('#', {
+        new = df.histfig_entity_link_former_positionst,
+        assignment_id = assignmentId,
+        start_year = startYear,
+        entity_id = oldEntity.id,
+        end_year = df.global.cur_year,
+        link_strength = 100
+    })
 
     local hfEventId = df.global.hist_event_next_id
     df.global.hist_event_next_id = df.global.hist_event_next_id+1
-    df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, civ = oldEntity.id, histfig = histFig.id, link_type = 11, position_id = positionId})
+    df.global.world.history.events:insert("#", {
+        new = df.history_event_remove_hf_entity_linkst,
+        year = df.global.cur_year,
+        seconds = df.global.cur_year_tick,
+        id = hfEventId,
+        civ = oldEntity.id,
+        histfig = histFig.id,
+        link_type = 10,
+        position_id = positionId
+    })
 end
 
 ---@param histFig df.historical_figure
