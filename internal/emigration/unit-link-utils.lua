@@ -4,12 +4,14 @@
 ---@param oldEntity df.historical_entity
 local function unassignMayor(histFig, oldEntity)
     local assignmentId = -1
+    local positionId = -1
     local nps = dfhack.units.getNoblePositions(histFig) or {}
     for _,pos in ipairs(nps) do
         if pos.entity.id == oldEntity.id and pos.position.flags.ELECTED then
             pos.assignment.histfig = -1
             pos.assignment.histfig2 = -1
             assignmentId = pos.assignment.id
+            positionId = pos.position.id
         end
     end
     if assignmentId == -1 then qerror("could not find mayor assignment!") end
@@ -29,6 +31,10 @@ local function unassignMayor(histFig, oldEntity)
     if startYear == -1 then qerror("could not find entity link!") end
 
     histFig.entity_links:insert('#', {new = df.histfig_entity_link_former_positionst, assignment_id = assignmentId, start_year = startYear, entity_id = oldEntity.id, end_year = df.global.cur_year, link_strength = 100 })
+
+    local hfEventId = df.global.hist_event_next_id
+    df.global.hist_event_next_id = df.global.hist_event_next_id+1
+    df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hfEventId, civ = oldEntity.id, histfig = histFig.id, link_type = 11, position_id = positionId})
 end
 
 ---@param histFig df.historical_figure

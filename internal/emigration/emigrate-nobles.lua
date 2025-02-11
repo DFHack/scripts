@@ -82,7 +82,7 @@ end
 
 ---@param unit df.unit
 local function removeMandates(unit)
-    local mandates = df.global.world.mandates
+    local mandates = df.global.world.mandates.all
     for i=#mandates-1,0,-1 do
         local mandate = mandates[i]
         if mandate.unit and mandate.unit.id == unit.id then
