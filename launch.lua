@@ -8,16 +8,16 @@ Activate with a cursor on screen and you will go there rapidly. Attack
 something first to ride them there.
 
 ]====]
+local guidm = require('gui.dwarfmode')
+
 function launch(unitSource,unitRider)
-    local curpos
-    if df.global.adventure.menu == df.ui_advmode_menu.Look then
-        curpos = df.global.cursor
-    elseif df.global.gamemode == df.game_mode.ADVENTURE then
-        qerror("No [l] cursor located! You would have slammed into the ground and exploded.")
-    else
+    if not dfhack.world.isAdventureMode() then
         qerror("Must be used in adventurer mode or the arena!")
     end
-
+    local curpos = guidm.getCursorPos()
+    if not curpos then
+        qerror("No cursor located! You would have slammed into the ground and exploded.")
+    end
 
     local count=0
     local l = df.global.world.projectiles.all
@@ -61,7 +61,7 @@ function launch(unitSource,unitRider)
     proj.flags.high_flying=true --this probably doesn't do anything, let me know if you figure out what it is
     proj.flags.parabolic=true
     proj.flags.no_collide=true
-    proj.flags.unk9=true
+    proj.flags.no_adv_pause=true
     proj.speed_x=resultx*10000
     proj.speed_y=resulty*10000
     proj.speed_z=resultz*15000 --higher z speed makes it easier to reach a target safely

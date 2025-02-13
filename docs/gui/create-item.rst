@@ -42,6 +42,10 @@ Options
 ``-f``, ``--unrestricted``
     Don't restrict the material options to only those that are normally
     appropriate for the selected item type.
+``-p``, ``--pos <x>,<y>,<z>``
+    If specified, items will be spawned at the given coordinates instead of at
+    the creator unit's feet. ``here`` can be used in place of ``<x>,<y>,<z>``
+    to use the active keyboard cursor.
 ``--startup``
     Instead of showing the item creation interface, start monitoring for a
     modded reaction with a code of ``DFHACK_WISH``. When a reaction with that

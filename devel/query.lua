@@ -2,7 +2,8 @@
 -- Written by Josh Cooper(cppcooper) on 2017-12-21, last modified: 2021-06-13
 -- Version: 3.2
 --luacheck:skip-entirely
-local utils=require('utils')
+local guidm = require('gui.dwarfmode')
+local utils = require('utils')
 local validArgs = utils.invert({
  'help',
 
@@ -221,14 +222,11 @@ function getSelectionData()
     elseif args.job then
         debugf(0,"job selection")
         selection = dfhack.gui.getSelectedJob(true)
-        if selection == nil and df.global.cursor.x >= 0 then
-            local pos = { x=df.global.cursor.x,
-                          y=df.global.cursor.y,
-                          z=df.global.cursor.z }
+        local pos = guidm.getCursorPos()
+        if selection == nil and pos then
             print("searching for a job at the cursor")
             for _link, job in utils.listpairs(df.global.world.jobs.list) do
-                local jp = job.pos
-                if jp.x == pos.x and jp.y == pos.y and jp.z == pos.z then
+                if same_xyz(job.pos, pos) then
                     if selection == nil then
                         selection = {}
                     end
@@ -240,7 +238,7 @@ function getSelectionData()
         path_info_pattern = path_info
     elseif args.tile then
         debugf(0,"tile selection")
-        local pos = copyall(df.global.cursor)
+        local pos = guidm.getCursorPos()
         selection = dfhack.maps.ensureTileBlock(pos.x,pos.y,pos.z)
         bpos = selection.map_pos
         path_info = string.format("tile[%d][%d][%d]",pos.x,pos.y,pos.z)
@@ -249,7 +247,7 @@ function getSelectionData()
         tiley = pos.y%16
     elseif args.block then
         debugf(0,"block selection")
-        local pos = copyall(df.global.cursor)
+        local pos = guidm.getCursorPos()
         selection = dfhack.maps.ensureTileBlock(pos.x,pos.y,pos.z)
         bpos = selection.map_pos
         path_info = string.format("blocks[%d][%d][%d]",bpos.x,bpos.y,bpos.z)

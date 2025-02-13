@@ -232,7 +232,8 @@ local default_accessors = {
             partlayerok, partlayerID = script.showListPrompt('Wish', 'What creature material should it be?',
                 COLOR_LIGHTGREEN, getCreatureMaterialList(raceId, casteId), 1, true)
         else
-            --the offsets here are because indexes in lua are wonky (some start at 0, some start at 1), so we adjust for that, as well as the index offset created by inserting the "generic" option at the start of the body part selection prompt
+            --the offsets here are because indexes in lua are wonky (some start at 0, some start at 1), so we adjust for that,
+            --as well as the index offset created by inserting the "generic" option at the start of the body part selection prompt
             bodypart = bodypart - 2
             partlayerok, partlayerID = script.showListPrompt('Wish', 'What tissue layer should it be?',
                 COLOR_LIGHTGREEN, getCreaturePartLayerList(raceId, casteId, bodypart), 1, true)
@@ -274,6 +275,12 @@ local positionals = argparse.processArgsGetopt({ ... }, {
         'count',
         hasArg = true,
         handler = function(arg) opts.count = argparse.nonnegativeInt(arg, 'count') end,
+    },
+    {
+        'p',
+        'pos',
+        hasArg = true,
+        handler = function(arg) opts.pos = argparse.coords(arg, 'pos') end,
     },
 })
 
