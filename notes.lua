@@ -4,12 +4,14 @@ local overlay = require('plugins.overlay')
 local guidm = require('gui.dwarfmode')
 local note_manager = reqscript('internal/notes/note_manager')
 
-local green_pin = dfhack.textures.loadTileset(
-    'hack/data/art/note_green_pin_map.png',
-    32,
-    32,
-    true
-)
+textures = {
+    green_pin = dfhack.textures.loadTileset(
+        'hack/data/art/note_green_pin_map.png',
+        32,
+        32,
+        true
+    )
+}
 
 NotesOverlay = defclass(NotesOverlay, overlay.OverlayWidget)
 NotesOverlay.ATTRS{
@@ -113,7 +115,7 @@ function NotesOverlay:onRenderFrame(dc)
 
     dc:map(true)
 
-    local texpos = dfhack.textures.getTexposByHandle(green_pin[1])
+    local texpos = dfhack.textures.getTexposByHandle(textures.green_pin[1])
     dc:pen({fg=COLOR_BLACK, bg=COLOR_LIGHTCYAN, tile=texpos})
 
     for _, note in pairs(self.visible_notes) do
