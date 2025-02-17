@@ -348,7 +348,7 @@ function NotesScreen:onDismiss()
     view = nil
 end
 
-function main(options)
+function main()
     if not dfhack.isMapLoaded() or not dfhack.world.isFortressMode() then
         qerror('notes requires a fortress map to be loaded')
     end

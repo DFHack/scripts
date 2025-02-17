@@ -62,7 +62,6 @@ local function add_note(notes_overlay, pos, name, comment)
     gui.simulateInput(dfhack.gui.getCurViewscreen(true), 'CUSTOM_CTRL_ENTER')
 end
 
-
 function test.load_notes_overlay()
     local notes_overlay = install_notes_overlay()
     expect.ne(notes_overlay, nil)
@@ -166,7 +165,6 @@ end
 
 function test.delete_clicked_note()
     local notes_overlay = install_notes_overlay()
-
 
     local viewport = guidm.Viewport.get()
 
