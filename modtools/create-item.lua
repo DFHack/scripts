@@ -78,7 +78,10 @@ local function createCorpsePiece(creator, bodypart, partlayer, creatureID, caste
     casteID = tonumber(casteID)
     bodypart = tonumber(bodypart)
     partlayer = tonumber(partlayer)
-    -- somewhat similar to the bodypart variable below, a value of -1 here means that the user wants to spawn a whole body part. we set the partlayer to 0 (outermost) because the specific layer isn't important, and we're spawning them all anyway. if it's a generic corpsepiece we ignore it, as it gets added to anyway below (we can't do it below because between here and there there's lines that reference the part layer
+    -- somewhat similar to the bodypart variable below, a value of -1 here means that the user wants to spawn a whole body part.
+    -- we set the partlayer to 0 (outermost) because the specific layer isn't important, and we're spawning them all anyway.
+    -- if it's a generic corpsepiece we ignore it, as it gets added to anyway below (we can't do it below because between here and
+    -- there there's lines that reference the part layer
     if partlayer == -1 and not generic then
         partlayer = 0
         wholePart = true
@@ -177,7 +180,8 @@ local function createCorpsePiece(creator, bodypart, partlayer, creatureID, caste
         item.race = creatureID
         item.normal_race = creatureID
         item.normal_caste = casteID
-        -- usually the first two castes are for the creature's sex, so we set the item's sex to the caste if both the creature has one and it's a valid sex id (0 or 1)
+        -- usually the first two castes are for the creature's sex, so we set the item's sex to
+        -- the caste if both the creature has one and it's a valid sex id (0 or 1)
         if casteID < 2 and #(creatorRaceRaw.caste) > 1 then
             item.sex = casteID
         else
@@ -198,12 +202,14 @@ local function createCorpsePiece(creator, bodypart, partlayer, creatureID, caste
         for i,n in pairs(creatorBody.body_parts) do
             -- inserts
             item.body.body_part_relsize:insert('#', n.relsize)
-            item.body.components.body_part_status:insert(i, creator.body.components.body_part_status[0]) --copy the status of the creator's first part to every body_part_status of the desired creature
+            --copy the status of the creator's first part to every body_part_status of the desired creature
+            item.body.components.body_part_status:insert(i, creator.body.components.body_part_status[0])
             item.body.components.body_part_status[i].missing = true
         end
         for i in pairs(creatorBody.layer_part) do
             -- inserts
-            item.body.components.layer_status:insert(i, creator.body.components.layer_status[0]) --copy the layer status of the creator's first layer to every layer_status of the desired creature
+            -- copy the layer status of the creator's first layer to every layer_status of the desired creature
+            item.body.components.layer_status:insert(i, creator.body.components.layer_status[0])
             item.body.components.layer_status[i].gone = true
         end
         if item_type == 'CORPSE' then
@@ -222,7 +228,9 @@ local function createCorpsePiece(creator, bodypart, partlayer, creatureID, caste
                         item.body.components.layer_status[creatorBody.body_parts[i].layers[n].layer_id].gone = false
                     else
                         -- search through the target creature's body parts and bring back every one which has the desired material
-                        if creatorRaceRaw.tissue[creatorBody.body_parts[i].layers[n].tissue_id].tissue_material_str[1] == layerMat and creatorBody.body_parts[i].token ~= 'SKULL' and not creatorBody.body_parts[i].flags.SMALL then
+                        if creatorRaceRaw.tissue[creatorBody.body_parts[i].layers[n].tissue_id].tissue_material_str[1] == layerMat and
+                            creatorBody.body_parts[i].token ~= 'SKULL' and not creatorBody.body_parts[i].flags.SMALL then
+
                             item.body.components.body_part_status[i].missing = false
                             item.body.components.layer_status[creatorBody.body_parts[i].layers[n].layer_id].gone = false
                             -- save the index of the bone layer to a variable
@@ -251,7 +259,8 @@ end
 local function createItem(mat, itemType, quality, creator, description, amount)
     -- The "reaction-gloves" tweak can cause this to create multiple gloves
     local items = dfhack.items.createItem(creator, itemType[1], itemType[2], mat[1], mat[2])
-    assert(#items > 0, ('failed to create item: item_type: %s, item_subtype: %s, mat_type: %s, mat_index: %s, unit: %s'):format(itemType[1], itemType[2], mat[1], mat[2], creator and creator.id or 'nil'))
+    assert(#items > 0, ('failed to create item: item_type: %s, item_subtype: %s, mat_type: %s, mat_index: %s, unit: %s'):format(
+        itemType[1], itemType[2], mat[1], mat[2], creator and creator.id or 'nil'))
     local item = items[1]
     local mat_token = dfhack.matinfo.decode(item):getToken()
     quality = math.max(0, math.min(5, quality - 1))
@@ -350,6 +359,12 @@ function hackWish(accessors, opts)
             end
         end
     end
+    if opts.pos then
+        for _,item in ipairs(items) do
+            dfhack.items.moveToGround(item, opts.pos)
+        end
+    end
+
     return items
 end
 
@@ -435,9 +450,4 @@ local accessors = {
     end,
 }
 
-local items = hackWish(accessors, {})
-if items and opts.pos then
-    for _,item in ipairs(items) do
-        dfhack.items.moveToGround(item, opts.pos)
-    end
-end
+hackWish(accessors, {pos=opts.pos})

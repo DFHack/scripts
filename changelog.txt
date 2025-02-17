@@ -30,12 +30,17 @@ Template for new versions:
 - `devel/export-map`: export map tile data to a JSON file
 - `autocheese`: automatically make cheese using barrels that have accumulated sufficient milk
 - `gui/spectate`: interactive UI for configuring `spectate`
+- `launch`: (reinstated) thrash your enemies with a flying suplex
+- `putontable`: (reinstated) make an item appear on a table like in adventure mode
 
 ## New Features
-- `advtools`: new ``advtools.fastcombat`` overlay (enabled by default)  allows you to skip combat animations and the announcement "More" button by mashing the movement keys
+- `advtools`: new ``advtools.fastcombat`` overlay (enabled by default) allows you to skip combat animations and the announcement "More" button by mashing the movement keys
 
 ## Fixes
 - `position`: support for adv mode look cursor
+- `devel/query`, `devel/tree-info`, `hfs-pit`, `colonies`, `toggle-kbd-cursor`: now function in adventure mode
+- `hfs-pit`: fix up tiletypes of pit walls, better placement of stairs (w/r/t eerie pits and ramp tops)
+- `modtools/create-item`: ``hackWish`` now respects ``opts.pos`` and will spawn items there if provided
 
 ## Misc Improvements
 - `hide-tutorials`: handle tutorial popups for adventure mode
@@ -43,6 +48,7 @@ Template for new versions:
 - `gui/notify`: moody dwarf notification turns red when they can't reach workshop or items
 - `gui/confirm`: in the delete manager order confirmation dialog, show a description of which order you have selected to delete
 - `position`: display both adventurer and site pos simultaneously. Display map block pos+offset of selected tile.
+- `gui/create-item`: now accepts a ``pos`` argument of where to spawn items
 
 ## Removed
 

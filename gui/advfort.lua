@@ -69,14 +69,15 @@ build_filter.HUMANish={
 --[[ FIXME: maybe let player select which to disable?]]
 for k,v in ipairs(df.global.plotinfo.economic_stone) do df.global.plotinfo.economic_stone[k]=0 end
 
-local gui = require 'gui'
-local wid=require 'gui.widgets'
-local dialog=require 'gui.dialogs'
-local buildings=require 'dfhack.buildings'
-local bdialog=require 'gui.buildings'
-local workshopJobs=require 'dfhack.workshops'
-local utils=require 'utils'
-local gscript=require 'gui.script'
+local gui = require('gui')
+local guidm = require('gui.dwarfmode')
+local wid = require('gui.widgets')
+local dialog = require('gui.dialogs')
+local buildings = require('dfhack.buildings')
+local bdialog = require('gui.buildings')
+local workshopJobs = require('dfhack.workshops')
+local utils = require('utils')
+local gscript = require('gui.script')
 
 local advfort_items = reqscript('internal/advfort/advfort_items')
 
@@ -375,7 +376,7 @@ end
 function AssignUnitToJob(job,unit,unit_pos)
     job.general_refs:insert("#",{new=df.general_ref_unit_workerst,unit_id=unit.id})
     unit.job.current_job=job
-    unit_pos=unit_pos or {x=job.pos.x,y=job.pos.y,z=job.pos.z}
+    unit_pos=unit_pos or copyall(job.pos)
     unit.path.dest:assign(unit_pos)
     return true
 end
@@ -383,7 +384,7 @@ function SetCreatureRef(args)
     local job=args.job
     local pos=args.pos
     for k,v in pairs(df.global.world.units.active) do
-        if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
+        if same_xyz(v.pos, pos) then
             job.general_refs:insert("#",{new=df.general_ref_unit_cageest,unit_id=v.id})
             return
         end
@@ -393,7 +394,7 @@ end
 function SetWebRef(args)
     local pos=args.pos
     for k,v in pairs(df.global.world.items.other.ANY_WEBS) do
-        if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
+        if same_xyz(v.pos, pos) then
             args.job.general_refs:insert("#",{new=df.general_ref_item,item_id=v.id})
             return
         end
@@ -403,7 +404,7 @@ function SetPatientRef(args)
     local job=args.job
     local pos=args.pos
     for k,v in pairs(df.global.world.units.active) do
-        if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
+        if same_xyz(v.pos, pos) then
             job.general_refs:insert("#",{new=df.general_ref_unit_patientst,unit_id=v.id})
             return
         end
@@ -481,7 +482,7 @@ end
 function SameSquare(args)
     local pos1=args.pos
     local pos2=args.from_pos
-    if pos1.x==pos2.x and pos1.y==pos2.y and pos1.z==pos2.z then
+    if same_xyz(pos1, pos2) then
        return true
     else
         return false, "Can only do it on same square"
@@ -547,7 +548,7 @@ end
 function IsUnit(args)
     local pos=args.pos
     for k,v in pairs(df.global.world.units.active) do
-        if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
+        if same_xyz(v.pos, pos) then
             return true
         end
     end
@@ -556,7 +557,7 @@ end
 function itemsAtPos(pos,tbl)
     local ret=tbl or {}
     for k,v in pairs(df.global.world.items.other.IN_PLAY) do
-        if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z and v.flags.on_ground then
+        if v.flags.on_ground and same_xyz(v.pos, pos) then
             table.insert(ret,v)
         end
     end
@@ -776,7 +777,7 @@ function EnumItems(args)
         end
     elseif args.pos~=nil then
         for k,v in pairs(df.global.world.items.other.IN_PLAY) do
-            if v.pos.x==args.pos.x and v.pos.y==args.pos.y and v.pos.z==args.pos.z and v.flags.on_ground then
+            if v.flags.on_ground and same_xyz(v.pos, args.pos) then
                 AddItem(ret,v,args.deep)
             end
         end
@@ -1303,7 +1304,7 @@ function siegeWeaponActionChosen(args,actionid)
         end
         args.job_type=action
         args.unit=dfhack.world.getAdventurer()
-        local from_pos={x=args.unit.pos.x,y=args.unit.pos.y, z=args.unit.pos.z}
+        local from_pos=copyall(args.unit.pos)
         args.from_pos=from_pos
         args.pos=from_pos
     elseif actionid==3 then --Fire
@@ -1313,7 +1314,7 @@ function siegeWeaponActionChosen(args,actionid)
         end
         args.job_type=action
         args.unit=dfhack.world.getAdventurer()
-        local from_pos={x=args.unit.pos.x,y=args.unit.pos.y, z=args.unit.pos.z}
+        local from_pos=copyall(args.unit.pos)
         args.from_pos=from_pos
         args.pos=from_pos
     end
@@ -1397,7 +1398,7 @@ function usetool:openShopWindow(building)
 
     local filter_pile=workshopJobs.getJobs(building:getType(),building:getSubtype(),building:getCustomType())
     if filter_pile then
-        local state={unit=adv,from_pos={x=adv.pos.x,y=adv.pos.y, z=adv.pos.z},building=building,screen=self,bld=building}
+        local state={unit=adv,from_pos=copyall(adv.pos),building=building,screen=self,bld=building}
         local choices={}
         for k,v in pairs(filter_pile) do
             table.insert(choices,{job_id=0,text=v.name:lower(),filter=v})
@@ -1687,15 +1688,16 @@ function usetool:fieldInput(keys)
                 unit=adv,
                 pos=moddedpos(adv.pos,MOVEMENT_KEYS[code]),
                 dir=MOVEMENT_KEYS[code],
-                from_pos={x=adv.pos.x,y=adv.pos.y, z=adv.pos.z},
+                from_pos=copyall(adv.pos),
                 post_actions=cur_mode[4],
                 pre_actions=cur_mode[5],
                 job_type=cur_mode[2],
                 screen=self}
 
             if code=="SELECT" then --do job in the distance, TODO: check if you can still cheat-mine (and co.) remotely
-                if df.global.cursor.x~=-30000 then
-                    state.pos={x=df.global.cursor.x,y=df.global.cursor.y,z=df.global.cursor.z}
+                local cursor=guidm.getCursorPos()
+                if cursor then
+                    state.pos=cursor
                 else
                     break
                 end
@@ -1747,7 +1749,7 @@ function usetool:onInput(keys)
     local adv=dfhack.world.getAdventurer()
 
     if keys.LEAVESCREEN  then
-        if df.global.cursor.x~=-30000 then --if not poiting at anything
+        if guidm.getCursorPos() then --if not poiting at anything
             self:sendInputToParent("LEAVESCREEN") --leave poiting
         else
             self:dismiss() --leave the adv-tools all together
