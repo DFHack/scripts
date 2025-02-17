@@ -86,9 +86,14 @@ end
 function test.render_existing_notes()
     local notes_overlay = install_notes_overlay()
 
-    local pos_1 = {x=10, y=20, z=0}
-    local pos_2 = {x=10, y=20, z=0}
-    local pos_3 = {x=10, y=20, z=0}
+    local viewport = guidm.Viewport.get()
+
+    local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
+    local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
+
+    local pos_1 = {x=half_x, y=viewport.y1, z=viewport.z}
+    local pos_2 = {x=viewport.x1, y=half_y, z=viewport.z}
+    local pos_3 = {x=half_x, y=half_y, z=viewport.z}
 
     add_note(notes_overlay, pos_1, 'note 1', 'first note')
     add_note(notes_overlay, pos_2, 'note 2', 'second note')
@@ -96,17 +101,12 @@ function test.render_existing_notes()
 
     reload_notes()
 
-    local viewport = guidm.Viewport.get()
-
     local pin_textpos = dfhack.textures.getTexposByHandle(
         notes_textures.green_pin[1]
     )
 
     for _, pos in ipairs({pos_1, pos_2, pos_3}) do
-        dfhack.gui.revealInDwarfmodeMap(pos)
-
-        -- TODO: find better way to wait for overlay re-render
-        delay(10)
+        notes_overlay:render(gui.Painter.new())
 
         local screen_pos = viewport:tileToScreen(pos)
         local pen = dfhack.screen.readTile(screen_pos.x, screen_pos.y, true)
@@ -119,22 +119,22 @@ end
 function test.edit_clicked_note()
     local notes_overlay = install_notes_overlay()
 
-    local pos = {x=10, y=20, z=0}
-    add_note(notes_overlay, pos, 'note 1', 'note to edit')
-    add_note(notes_overlay, {x=20, y=10, z=2}, 'note 2', 'other note')
-    add_note(notes_overlay, {x=0, y=10, z=5}, 'note 3', 'another note')
+    local viewport = guidm.Viewport.get()
+
+    local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
+    local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
+
+    local pos_1 = {x=half_x, y=viewport.y1, z=viewport.z}
+    local pos_2 = {x=viewport.x1, y=half_y, z=viewport.z}
+    local pos_3 = {x=half_x, y=half_y, z=viewport.z}
+
+    add_note(notes_overlay, pos_1, 'note 1', 'note to edit')
+    add_note(notes_overlay, pos_2, 'note 2', 'other note')
+    add_note(notes_overlay, pos_3, 'note 3', 'another note')
 
     reload_notes()
-    dfhack.screen.invalidate()
-    dfhack.gui.revealInDwarfmodeMap(pos)
 
-    -- TODO: find better way to wait for overlay re-render
-    delay(10)
-
-    notes_overlay:updateLayout()
-
-    local viewport = guidm.Viewport.get()
-    local screen_pos = viewport:tileToScreen(pos)
+    local screen_pos = viewport:tileToScreen(pos_1)
 
     local rect = gui.ViewRect{rect=notes_overlay.frame_rect}
 
@@ -167,19 +167,23 @@ end
 function test.delete_clicked_note()
     local notes_overlay = install_notes_overlay()
 
-    local pos = {x=10, y=20, z=0}
-    add_note(notes_overlay, {x=20, y=10, z=2}, 'note 1', 'note to edit')
-    add_note(notes_overlay, pos, 'note 2', 'other note')
-    add_note(notes_overlay, {x=0, y=10, z=5}, 'note 3', 'another note')
-
-    reload_notes()
-    dfhack.screen.invalidate()
-    dfhack.gui.revealInDwarfmodeMap(pos)
-
-    notes_overlay:updateLayout()
 
     local viewport = guidm.Viewport.get()
-    local screen_pos = viewport:tileToScreen(pos)
+
+    local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
+    local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
+
+    local pos_1 = {x=half_x, y=viewport.y1, z=viewport.z}
+    local pos_2 = {x=viewport.x1, y=half_y, z=viewport.z}
+    local pos_3 = {x=half_x, y=half_y, z=viewport.z}
+
+    add_note(notes_overlay, pos_1, 'note 1', 'note to edit')
+    add_note(notes_overlay, pos_2, 'note 2', 'other note')
+    add_note(notes_overlay, pos_3, 'note 3', 'another note')
+
+    reload_notes()
+
+    local screen_pos = viewport:tileToScreen(pos_2)
 
     local rect = gui.ViewRect{rect=notes_overlay.frame_rect}
 
