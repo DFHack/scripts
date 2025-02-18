@@ -3,6 +3,9 @@
 
 local utils = require('utils')
 
+local nobles = reqscript('internal/emigration/emigrate-nobles')
+local unit_link_utils = reqscript('internal/emigration/unit-link-utils')
+
 local GLOBAL_KEY = 'emigration' -- used for state change hooks and persistence
 
 local function get_default_state()
@@ -37,121 +40,40 @@ function desert(u,method,civ)
     local line = dfhack.units.getReadableName(u) .. " has "
     if method == 'merchant' then
         line = line.."joined the merchants"
-        u.flags1.merchant = true
-        u.civ_id = civ
+        unit_link_utils.markUnitForEmigration(u, civ, false)
     else
         line = line.."abandoned the settlement in search of a better life."
-        u.civ_id = civ
-        u.flags1.forest = true
-        u.flags2.visitor = true
-        u.animal.leave_countdown = 2
+        unit_link_utils.markUnitForEmigration(u, civ, true)
     end
-    local hf_id = u.hist_figure_id
+
     local hf = df.historical_figure.find(u.hist_figure_id)
     local fort_ent = df.global.plotinfo.main.fortress_entity
     local civ_ent = df.historical_entity.find(hf.civ_id)
     local newent_id = -1
     local newsite_id = -1
 
-    -- free owned rooms
-    for i = #u.owned_buildings-1, 0, -1 do
-        local temp_bld = df.building.find(u.owned_buildings[i].id)
-        dfhack.buildings.setOwner(temp_bld, nil)
-    end
-
-    -- remove from workshop profiles
-    for _, bld in ipairs(df.global.world.buildings.other.WORKSHOP_ANY) do
-        for k, v in ipairs(bld.profile.permitted_workers) do
-            if v == u.id then
-                bld.profile.permitted_workers:erase(k)
-                break
-            end
-        end
-    end
-    for _, bld in ipairs(df.global.world.buildings.other.FURNACE_ANY) do
-        for k, v in ipairs(bld.profile.permitted_workers) do
-            if v == u.id then
-                bld.profile.permitted_workers:erase(k)
-                break
-            end
-        end
-    end
-
-    -- disassociate from work details
-    for _, detail in ipairs(df.global.plotinfo.labor_info.work_details) do
-        for k, v in ipairs(detail.assigned_units) do
-            if v == u.id then
-                detail.assigned_units:erase(k)
-                break
-            end
-        end
-    end
-
-    -- unburrow
-    for _, burrow in ipairs(df.global.plotinfo.burrows.list) do
-        dfhack.burrows.setAssignedUnit(burrow, u, false)
-    end
-
-    -- erase the unit from the fortress entity
-    for k,v in ipairs(fort_ent.histfig_ids) do
-        if v == hf_id then
-            df.global.plotinfo.main.fortress_entity.histfig_ids:erase(k)
-            break
-        end
-    end
-    for k,v in ipairs(fort_ent.hist_figures) do
-        if v.id == hf_id then
-            df.global.plotinfo.main.fortress_entity.hist_figures:erase(k)
-            break
-        end
-    end
-    for k,v in ipairs(fort_ent.nemesis) do
-        if v.figure.id == hf_id then
-            df.global.plotinfo.main.fortress_entity.nemesis:erase(k)
-            df.global.plotinfo.main.fortress_entity.nemesis_ids:erase(k)
-            break
-        end
-    end
-
-    -- remove the old entity link and create new one to indicate former membership
-    hf.entity_links:insert("#", {new = df.histfig_entity_link_former_memberst, entity_id = fort_ent.id, link_strength = 100})
-    for k,v in ipairs(hf.entity_links) do
-        if v._type == df.histfig_entity_link_memberst and v.entity_id == fort_ent.id then
-            hf.entity_links:erase(k)
-            break
-        end
-    end
+    unit_link_utils.removeUnitAssociations(u)
+    unit_link_utils.removeHistFigFromEntity(hf, fort_ent)
 
     -- try to find a new entity for the unit to join
-    for k,v in ipairs(civ_ent.entity_links) do
-        if v.type == df.entity_entity_link_type.CHILD and v.target ~= fort_ent.id then
-            newent_id = v.target
+    for _,entity_link in ipairs(civ_ent.entity_links) do
+        if entity_link.type == df.entity_entity_link_type.CHILD and entity_link.target ~= fort_ent.id then
+            newent_id = entity_link.target
             break
         end
     end
 
     if newent_id > -1 then
-        hf.entity_links:insert("#", {new = df.histfig_entity_link_memberst, entity_id = newent_id, link_strength = 100})
-
         -- try to find a new site for the unit to join
-        for k,v in ipairs(df.global.world.entities.all[hf.civ_id].site_links) do
+        for _,site_link in ipairs(df.global.world.entities.all[hf.civ_id].site_links) do
             local site_id = df.global.plotinfo.site_id
-            if v.type == df.entity_site_link_type.Claim and v.target ~= site_id then
-                newsite_id = v.target
+            if site_link.type == df.entity_site_link_type.Claim and site_link.target ~= site_id then
+                newsite_id = site_link.target
                 break
             end
         end
         local newent = df.historical_entity.find(newent_id)
-        newent.histfig_ids:insert('#', hf_id)
-        newent.hist_figures:insert('#', hf)
-        local hf_event_id = df.global.hist_event_next_id
-        df.global.hist_event_next_id = df.global.hist_event_next_id+1
-        df.global.world.history.events:insert("#", {new = df.history_event_add_hf_entity_linkst, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hf_event_id, civ = newent_id, histfig = hf_id, link_type = 0})
-        if newsite_id > -1 then
-            local hf_event_id = df.global.hist_event_next_id
-            df.global.hist_event_next_id = df.global.hist_event_next_id+1
-            df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hf_event_id, hfid = hf_id, state = 1, reason = -1, site = newsite_id})
-        end
+        unit_link_utils.addHistFigToSite(hf, newsite_id, newent)
     end
     print(dfhack.df2console(line))
     dfhack.gui.showAnnouncement(line, COLOR_WHITE)
@@ -251,6 +173,9 @@ if args[1] == "enable" then
     state.enabled = true
 elseif args[1] == "disable" then
     state.enabled = false
+elseif args[1] == "nobles" then
+    table.remove(args, 1)
+    nobles.run(args)
 else
     print('emigration is ' .. (state.enabled and 'enabled' or 'not enabled'))
     return
