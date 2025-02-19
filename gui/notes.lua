@@ -38,6 +38,35 @@ function NotesWindow:init()
     self.note_manager = nil
     self.curr_search_phrase = nil
 
+    local left_panel_content = {
+        widgets.Panel{
+            frame={l=0,h=3},
+            frame_style=gui.FRAME_INTERIOR,
+            subviews={
+                widgets.EditField{
+                    view_id='search',
+                    on_change=self:callback('loadFilteredNotes'),
+                    on_submit=function()
+                        self.subviews.note_list:submit()
+                    end
+                },
+            }
+        },
+        widgets.List{
+            view_id='note_list',
+            frame={l=0,b=2},
+            frame_inset={t=1},
+            row_height=1,
+            on_select=function (ind, note)
+                self:loadNote(note)
+            end,
+            on_submit=function (ind, note)
+                self:loadNote(note)
+                dfhack.gui.pauseRecenter(note.point.pos)
+            end
+        },
+    }
+
     self:addviews{
         widgets.Panel{
             view_id='note_list_panel',
@@ -45,31 +74,7 @@ function NotesWindow:init()
             visible=true,
             frame_inset={l=1,t=1,b=1,r=1},
             autoarrange_subviews=true,
-            subviews={
-                widgets.TextArea{
-                    view_id='search',
-                    frame={l=0,h=3},
-                    frame_style=gui.FRAME_INTERIOR,
-                    one_line_mode=true,
-                    on_text_change=self:callback('loadFilteredNotes'),
-                    on_submit=function()
-                        self.subviews.note_list:submit()
-                    end
-                },
-                widgets.List{
-                    view_id='note_list',
-                    frame={l=0,b=2},
-                    frame_inset={t=1},
-                    row_height=1,
-                    on_select=function (ind, note)
-                        self:loadNote(note)
-                    end,
-                    on_submit=function (ind, note)
-                        self:loadNote(note)
-                        dfhack.gui.pauseRecenter(note.point.pos)
-                    end
-                },
-            },
+            subviews=left_panel_content,
         },
         widgets.HotkeyLabel{
             view_id='create',
