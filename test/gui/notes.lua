@@ -2,9 +2,7 @@ local gui = require('gui')
 local gui_notes = reqscript('gui/notes')
 local utils = require('utils')
 local guidm = require('gui.dwarfmode')
-
-
--- local guidm = require('gui.dwarfmode')
+local overlay = require('plugins.overlay')
 
 config = {
     target = 'gui/notes',
@@ -49,7 +47,11 @@ local function arrange_gui_notes(options)
     gui_notes:updateLayout()
     gui_notes:onRender()
 
-    return gui_notes
+    -- for some reasons running tests remove all overlays,
+    -- but there are need for gui/notes tests
+    overlay.rescan()
+
+    return gui_notes, gui_notes.subviews.notes_window
 end
 
 local function cleanup(gui_notes)
@@ -210,6 +212,43 @@ function test.filter_notes()
 
     local note_list = gui_notes.subviews.note_list:getChoices()
     expect.eq(#note_list, 0)
+
+    cleanup(gui_notes)
+end
+
+function test.edit_note()
+    local notes = {
+        {name='green note 1', comment='comment 1', pos={x=1, y=1, z=1}},
+        {name='green note 2', comment='comment 2', pos={x=2, y=2, z=2}},
+        {name='blue note 3', comment='comment 3', pos={x=3, y=3, z=3}},
+    }
+
+    local gui_notes, gui_notes_window = arrange_gui_notes({ notes=notes })
+    local screen = dfhack.gui.getCurViewscreen(true)
+
+    gui.simulateInput(screen, 'KEYBOARD_CURSOR_DOWN')
+    gui.simulateInput(screen, 'CUSTOM_CTRL_E')
+
+    local note_manager = gui_notes_window.note_manager
+    expect.ne(note_manager, nil)
+
+    expect.eq(note_manager.subviews.name:getText(), 'green note 2')
+    expect.eq(note_manager.subviews.comment:getText(), 'comment 2')
+
+    note_manager.subviews.name:setText('updated green note 2')
+    note_manager.subviews.comment:setText('updated comment 2')
+    local screen = dfhack.gui.getCurViewscreen(true)
+    printall(screen.widgets)
+    gui.simulateInput(dfhack.gui.getCurViewscreen(true), 'CUSTOM_CTRL_ENTER')
+
+    local note_list = gui_notes.subviews.note_list:getChoices()
+    expect.eq(#note_list, 3)
+
+    local updated_note = note_list[2]
+
+    expect.eq(updated_note.text, 'updated green note 2')
+    expect.eq(updated_note.point.name, 'updated green note 2')
+    expect.eq(updated_note.point.comment, 'updated comment 2')
 
     cleanup(gui_notes)
 end

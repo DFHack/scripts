@@ -350,6 +350,11 @@ function NotesScreen:onDismiss()
     if self.should_disable_overlay then
         overlay.overlay_command({'disable', 'notes.map_notes'})
     end
+
+    if self.subviews.notes_window.note_manager then
+        self.subviews.notes_window.note_manager:dismiss()
+    end
+
     view = nil
 end
 
