@@ -6,8 +6,6 @@ config = {
     mode = 'fortress'
 }
 
-local df_major_version = tonumber(dfhack.getCompiledDFVersion():match('%d+'))
-
 local function simulate_input_keys(...)
     local keys = {...}
     for _,key in ipairs(keys) do
