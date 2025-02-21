@@ -562,7 +562,7 @@ NOTIFICATIONS_BY_IDX = {
         default=true,
         fn=get_save_alert,
         on_click=save_popup
-    },    
+    },
 }
 
 NOTIFICATIONS_BY_NAME = {}
