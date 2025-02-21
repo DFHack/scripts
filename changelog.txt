@@ -38,10 +38,11 @@ Template for new versions:
 - `position`: support for adv mode look cursor
 
 ## Misc Improvements
-- `hide-tutorials`: if enabled, also hide tutorial popups for adventure mode
-- `hide-tutorials`: new ``reset`` command that will re-enable popups in the current game
-- `gui/notify`: save reminder now appears in adventure mode and also changes color to yellow at 30 minutes and to orange at 60 minutes
-- `gui/notify`: moody dwarf notification turns red when they can't find workshop or items
+- `hide-tutorials`: handle tutorial popups for adventure mode
+- `hide-tutorials`: new ``reset`` command that will re-enable popups in the current game (in case you hid them all and now want them back)
+- `gui/notify`: moody dwarf notification turns red when they can't reach workshop or items
+- `gui/notify`: save reminder now appears in adventure mode
+- `gui/notify`: save reminder changes color to yellow at 30 minutes and to orange at 60 minutes
 - `gui/confirm`: in the delete manager order confirmation dialog, show a description of which order you have selected to delete
 - `position`: display both adventurer and site pos simultaneously. Display map block pos+offset of selected tile.
 

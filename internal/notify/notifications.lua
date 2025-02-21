@@ -14,7 +14,7 @@ local buildings = df.global.world.buildings
 local caravans = df.global.plotinfo.caravans
 local units = df.global.world.units
 
--- FIXME Add a proper API and UI for notification configuration
+-- TODO: Add a proper API and UI for notification configuration
 -- this is global so one can use `:lua reqscript('internal/notify/notifications').save_time_threshold_mins=X` to change the threshold to X mins.
 save_time_threshold_mins = save_time_threshold_mins or 15
 
@@ -337,13 +337,6 @@ end
 
 -- the order of this list controls the order the notifications will appear in the overlay
 NOTIFICATIONS_BY_IDX = {
-    {-- The save reminder should always be at the top, since it's important.
-        name='save-reminder',
-        desc='Shows a reminder if it has been more than '.. save_time_threshold_mins ..' minute(s) since your last save.',
-        default=true,
-        fn=get_save_alert,
-        on_click=save_popup
-    },
     {
         name='stuck_squad',
         desc='Notifies when a squad is stuck on the world map.',
@@ -563,6 +556,13 @@ NOTIFICATIONS_BY_IDX = {
         adv_fn=curry(get_bar, get_blood, get_max_blood, "Blood", COLOR_RED),
         on_click=nil,
     },
+    {
+        name='save-reminder',
+        desc='Shows a reminder if it has been more than '.. save_time_threshold_mins ..' minute(s) since your last save.',
+        default=true,
+        fn=get_save_alert,
+        on_click=save_popup
+    },    
 }
 
 NOTIFICATIONS_BY_NAME = {}
