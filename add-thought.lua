@@ -14,7 +14,7 @@ function addEmotionToUnit(unit,thought,emotion,severity,strength,subthought)
     local properThought = tonumber(thought) or df.unit_thought_type[thought]
     local properSubthought = tonumber(subthought)
     if not properThought or not df.unit_thought_type[properThought] then
-        for _,syn in ipairs(df.global.world.raws.syndromes.all) do
+        for _,syn in ipairs(df.global.world.raws.mat_table.syndromes.all) do
             if syn.syn_name == thought then
                 properThought = df.unit_thought_type.Syndrome
                 properSubthought = syn.id

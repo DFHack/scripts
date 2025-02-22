@@ -29,7 +29,7 @@ end
 local function format_preference(pref, index)
     print(string.format("Preference #%d:", index))
 
-    local pref_type = df.unit_preference.T_type[pref.type]
+    local pref_type = df.unitpref_type[pref.type]
     local description = ""
     if pref_type == "LikeMaterial" then
         description = "Likes material: " .. dfhack.matinfo.getToken(pref.mattype, pref.matindex)
@@ -76,7 +76,7 @@ local preference_functions = {
         local ret = {}
         if mat_info then
             ret = { --luacheck:retype
-                type = df.unit_preference.T_type.LikeMaterial,
+                type = df.unitpref_type.LikeMaterial,
                 item_type = -1,
                 creature_id = -1,
                 color_id = -1,
@@ -89,7 +89,7 @@ local preference_functions = {
                 mattype = mat_info.type,
                 matindex = mat_info.index,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -109,7 +109,7 @@ local preference_functions = {
         local index = utils.linear_index(df.global.world.raws.creatures.all, creature_id, "creature_id")
         if index then
             return {
-                type = df.unit_preference.T_type.LikeCreature,
+                type = df.unitpref_type.LikeCreature,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -122,7 +122,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -186,7 +186,7 @@ local preference_functions = {
 
             if item_type then
                 return {
-                    type = df.unit_preference.T_type.LikeFood,
+                    type = df.unitpref_type.LikeFood,
                     item_type = item_type,
                     creature_id = item_type,
                     color_id = item_type,
@@ -199,7 +199,7 @@ local preference_functions = {
                     mattype = mat_info.type,
                     matindex = mat_info.index,
                     mat_state = 1,
-                    active = true,
+                    flags = {visible = true},
                     prefstring_seed = rng:random()
                 }
             end
@@ -221,7 +221,7 @@ local preference_functions = {
         local index = utils.linear_index(df.global.world.raws.creatures.all, creature_id, "creature_id")
         if index then
             return {
-                type = df.unit_preference.T_type.HateCreature,
+                type = df.unitpref_type.HateCreature,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -234,7 +234,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -262,7 +262,7 @@ local preference_functions = {
         do
             if item_type then
                 return {
-                    type = df.unit_preference.T_type.LikeItem,
+                    type = df.unitpref_type.LikeItem,
                     item_type = item_type,
                     creature_id = item_type,
                     color_id = item_type,
@@ -275,7 +275,7 @@ local preference_functions = {
                     mattype = -1,
                     matindex = -1,
                     mat_state = 0,
-                    active = true,
+                    flags = {visible = true},
                     prefstring_seed = rng:random()
                 }
             end
@@ -297,7 +297,7 @@ local preference_functions = {
         local index = utils.linear_index(df.global.world.raws.plants.all, plant_id, "id")
         if index then
             return {
-                type = df.unit_preference.T_type.LikePlant,
+                type = df.unitpref_type.LikePlant,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -310,7 +310,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -330,7 +330,7 @@ local preference_functions = {
         local index = utils.linear_index(df.global.world.raws.plants.all, plant_id, "id")
         if index then
             return {
-                type = df.unit_preference.T_type.LikeTree,
+                type = df.unitpref_type.LikeTree,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -343,7 +343,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -364,7 +364,7 @@ local preference_functions = {
         local _, found, index = utils.binsearch(df.global.world.raws.descriptors.colors, color_name, "id")
         if found then
             return {
-                type = df.unit_preference.T_type.LikeColor,
+                type = df.unitpref_type.LikeColor,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -377,7 +377,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -397,7 +397,7 @@ local preference_functions = {
         local index, _ = utils.linear_index(df.global.world.raws.descriptors.shapes, shape_name, "id")
         if index then
             return {
-                type = df.unit_preference.T_type.LikeShape,
+                type = df.unitpref_type.LikeShape,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -410,7 +410,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else

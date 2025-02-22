@@ -31,7 +31,7 @@ config = {
 
 function parse_config()
     local metal_map = {}
-    for id, raw in pairs(df.global.world.raws.inorganics) do
+    for id, raw in pairs(df.global.world.raws.inorganics.all) do
         if raw.material.flags.IS_METAL then
             metal_map[raw.id:upper()] = id
             metal_map[id] = raw.id:upper()

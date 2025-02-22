@@ -5,7 +5,7 @@ fix/population-cap
     :summary: Ensure the population cap is respected.
     :tags: fort bugfix
 
-Run this if you continue to get migrant wave even after you have exceeded your
+Run this if you continue to get migrant waves even after you have exceeded your
 set population cap.
 
 The reason this tool is needed is that the game only updates the records of your

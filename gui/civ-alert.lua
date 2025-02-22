@@ -9,7 +9,7 @@ local widgets = require('gui.widgets')
 local function get_civ_alert()
     local list = df.global.plotinfo.alerts.list
     while #list < 2 do
-        local list_item = df.plotinfost.T_alerts.T_list:new()
+        local list_item = df.alert_statest:new()
         list_item.id = df.global.plotinfo.alerts.next_id
         df.global.plotinfo.alerts.next_id = df.global.plotinfo.alerts.next_id + 1
         list_item.name = 'civ-alert'
@@ -218,7 +218,7 @@ function Civalert:init()
                 },
                 widgets.HotkeyLabel{
                     frame={t=3, l=0},
-                    key='CUSTOM_CTRL_W',
+                    key='CUSTOM_CTRL_N',
                     label='Sound alarm! Citizens run to safety!',
                     on_activate=sound_alarm,
                     enabled=can_sound_alarm,

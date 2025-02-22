@@ -1739,7 +1739,7 @@ function TiletypeScreen:generateDataLists()
 
     data_lists.stone_list = { { text = "none", value = -1 } }
     data_lists.stone_dict = { [-1] = { label= "NONE", value= -1, pen= itemColor("NONE") } }
-    for i,mat in ipairs(df.global.world.raws.inorganics) do
+    for i,mat in ipairs(df.global.world.raws.inorganics.all) do
         if mat and mat.material
             and not mat.flags[df.inorganic_flags.SOIL_ANY]
             and not mat.material.flags[df.material_flags.IS_METAL]

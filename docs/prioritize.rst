@@ -7,7 +7,7 @@ prioritize
 
 This tool encourages specified types of jobs to get assigned and completed as
 soon as possible. Finally, you can be sure your food will be hauled before
-rotting, your hides will be tanned before going bad, and the corpses of your
+it rots, your hides will be tanned before they go bad, and the corpses of your
 enemies will be cleared expediently from your entranceway.
 
 You can prioritize a bunch of active jobs that you need done *right now*, or you
@@ -40,7 +40,8 @@ Examples
     Watch for and prioritize the default set of job types that the community has
     suggested and playtested (see below for details).
 ``prioritize -j``
-    Print out the list of active jobs that you can prioritize right now.
+    Print out the list of not-yet prioritized jobs that you can prioritize
+    right now.
 ``prioritize ConstructBuilding DestroyBuilding``
     Prioritize all current building construction and destruction jobs.
 ``prioritize -a --haul-labor=Food,Body StoreItemInStockpile``
@@ -56,8 +57,7 @@ Options
 ``-d``, ``--delete``
     Stop automatically prioritizing new jobs of the specified job types.
 ``-j``, ``--jobs``
-    Print out how many current jobs of each type there are. This is useful for
-    discovering the types of the jobs that you can prioritize right now. If any
+    Print out how many current unprioritized jobs of each type there are. If any
     job types are specified, only jobs of those types are listed.
 ``-l``, ``--haul-labor <labor>[,<labor>...]``
     For StoreItemInStockpile jobs, match only the specified hauling labor(s).
@@ -97,7 +97,7 @@ staring at the screen in annoyance for too long.
 You may be tempted to automatically prioritize ``ConstructBuilding`` jobs, but
 beware that if you engage in megaprojects where many constructions must be
 built, these jobs can consume your entire fortress if prioritized. It is often
-better to run ``prioritize ConstructBuilding`` by itself (i.e. without the
+better to run ``prioritize ConstructBuilding`` by itself (that is, without the
 ``-a`` parameter) as needed to just prioritize the construction jobs that you
 have ready at the time if you need to "clear the queue".
 

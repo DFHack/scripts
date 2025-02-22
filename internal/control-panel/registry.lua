@@ -68,8 +68,10 @@ COMMANDS_BY_IDX = {
     -- bugfix tools
     {command='adamantine-cloth-wear', help_command='tweak', group='bugfix', mode='tweak', default=true,
         desc='Prevents adamantine clothing from wearing out while being worn.'},
-    {command='craft-age-wear', help_command='tweak', group='bugfix', mode='tweak', default=true,
-        desc='Allows items crafted from organic materials to wear out over time.'},
+    -- re-inserted below for non-Windows users (tweak can't load on Windows)
+    -- can be restored here once we solve issue #4292
+    -- {command='craft-age-wear', help_command='tweak', group='bugfix', mode='tweak', default=true,
+    --     desc='Allows items crafted from organic materials to wear out over time.'},
     {command='fix/blood-del', group='bugfix', mode='run', default=true},
     {command='fix/dead-units', group='bugfix', mode='repeat', default=true,
         desc='Fix units still being assigned to burrows after death.',
@@ -138,6 +140,15 @@ COMMANDS_BY_IDX = {
     {command='timestream', group='gameplay', mode='enable'},
     {command='work-now', group='gameplay', mode='enable'},
 }
+
+-- temporary workaround for Windows users until the tweak works
+if dfhack.getOSType() ~= 'windows' then
+    local idx = utils.linear_index(COMMANDS_BY_IDX, 'adamantine-cloth-wear', 'command') or 1
+    table.insert(COMMANDS_BY_IDX, idx + 1, {
+        command='craft-age-wear', help_command='tweak', group='bugfix', mode='tweak', default=true,
+        desc='Allows items crafted from organic materials to wear out over time.',
+    })
+end
 
 COMMANDS_BY_NAME = {}
 for _,data in ipairs(COMMANDS_BY_IDX) do

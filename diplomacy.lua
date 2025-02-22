@@ -7,7 +7,7 @@ local p_civ = df.historical_entity.find(df.global.plotinfo.civ_id)
 -- get list of civs:
 function get_civ_list()
     local civ_list = {}
-    for _, entity in pairs(p_civ.relations.diplomacy) do
+    for _, entity in ipairs(p_civ.relations.diplomacy.state) do
         local cur_civ_id = entity.group_id
         local cur_civ = df.historical_entity.find(cur_civ_id)
         if cur_civ.type == 0 then
@@ -19,7 +19,7 @@ function get_civ_list()
                 rel_str = "War"
             end
             matched = "No"
-            for _, entity2 in pairs(cur_civ.relations.diplomacy) do
+            for _, entity2 in ipairs(cur_civ.relations.diplomacy.state) do
                 if entity2.group_id == p_civ_id and entity2.relation == entity.relation then
                     matched = "Yes"
                 end
@@ -51,12 +51,12 @@ end
 -- change relation:
 function change_relation(civ_id, relation)
     print("Changing relation with " .. civ_id .. " to " .. (relation == 0 and "Peace" or "War"))
-    for _, entity in pairs(p_civ.relations.diplomacy) do
+    for _, entity in ipairs(p_civ.relations.diplomacy.state) do
         local cur_civ_id = entity.group_id
         local cur_civ = df.historical_entity.find(cur_civ_id)
         if cur_civ.type == 0 and cur_civ_id == civ_id then
             entity.relation = relation
-            for _, entity2 in pairs(cur_civ.relations.diplomacy) do
+            for _, entity2 in pairs(cur_civ.relations.diplomacy.state) do
                 if entity2.group_id == p_civ_id then
                     entity2.relation = relation
                 end

@@ -286,7 +286,7 @@ function MoveGoods:init()
                 widgets.HotkeyLabel{
                     frame={l=0, b=0},
                     label='Select all/none',
-                    key='CUSTOM_CTRL_A',
+                    key='CUSTOM_CTRL_N',
                     on_activate=self:callback('toggle_visible'),
                     auto_width=true,
                 },

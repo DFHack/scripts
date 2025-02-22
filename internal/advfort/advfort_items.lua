@@ -189,7 +189,7 @@ function jobitemEditor:commit()
             for _,slot in pairs(self.slots) do
                 if slot.id == orderedSlotID then
                     for _1,cur_item in pairs(slot.items) do
-                        self.job.items:insert("#",{new=true,item=cur_item,role=df.job_item_ref.T_role.Reagent,job_item_idx=slot.id})
+                        self.job.items:insert("#",{new=true,item=cur_item,role=df.job_role_type.Reagent,job_item_idx=slot.id})
                     end
                 end
             end

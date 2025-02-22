@@ -256,7 +256,7 @@ local function getSyndromeName(syndrome_raw)
 end
 
 local function getSyndromeEffects(syndrome_type)
-    local syndrome_raw = df.global.world.raws.syndromes.all[syndrome_type]
+    local syndrome_raw = df.global.world.raws.mat_table.syndromes.all[syndrome_type]
     local syndrome_effects = {}
 
     for _, effect in ipairs(syndrome_raw.ce) do
@@ -442,7 +442,7 @@ function UnitSyndromes:showUnits(_, choice)
     local choices = {}
 
     if choice.text == "All syndromes" then
-        for _, syndrome in pairs(df.global.world.raws.syndromes.all) do
+        for _, syndrome in pairs(df.global.world.raws.mat_table.syndromes.all) do
             if #syndrome.ce == 0 then
                 goto skipsyndrome
             end
@@ -491,7 +491,7 @@ function UnitSyndromes:showUnitSyndromes(index, choice)
     end
 
     for _, syndrome in pairs(unit_syndromes) do
-        local syndrome_raw = df.global.world.raws.syndromes.all[syndrome.type]
+        local syndrome_raw = df.global.world.raws.mat_table.syndromes.all[syndrome.type]
 
         if #syndrome_raw.ce == 0 then
             goto skipsyndrome

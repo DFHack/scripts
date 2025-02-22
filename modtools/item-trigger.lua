@@ -65,7 +65,7 @@ function compareInvModes(reqMode, itemMode)
     if reqMode == nil then
         return
     end
-    if not tonumber(reqMode) and df.unit_inventory_item.T_mode[itemMode] == tostring(reqMode) then
+    if not tonumber(reqMode) and df.inv_item_role_type[itemMode] == tostring(reqMode) then
         return true
     elseif tonumber(reqMode) == itemMode then
         return true
@@ -217,7 +217,7 @@ eventful.onUnitAttack.attackTrigger = function(attacker, defender, wound)
 
     local attackerWeapon
     for _, item in ipairs(attacker.inventory) do
-        if item.mode == df.unit_inventory_item.T_mode.Weapon then
+        if item.mode == df.inv_item_role_type.Weapon then
             attackerWeapon = item.item
             break
         end

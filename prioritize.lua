@@ -192,15 +192,23 @@ local function for_all_jobs(cb)
 end
 
 local function boost(job_matchers, opts)
-    local count = 0
+    local count, already_prioritized = 0, 0
     for_all_jobs(
         function(job)
-            if not job.flags.do_now and boost_job_if_matches(job, job_matchers) then
-                count = count + 1
+            local was_prioritized = job.flags.do_now
+            if boost_job_if_matches(job, job_matchers) then
+                if was_prioritized then
+                    already_prioritized = already_prioritized + 1
+                else
+                    count = count + 1
+                end
             end
         end)
     if not opts.quiet then
         print(('Prioritized %d job%s.'):format(count, count == 1 and '' or 's'))
+        if already_prioritized > 0 then
+            print(('%d job%s already prioritized.'):format(already_prioritized, already_prioritized == 1 and '' or 's'))
+        end
     end
 end
 
@@ -440,6 +448,7 @@ local function print_current_jobs(job_matchers, opts)
     local filtered = next(job_matchers)
     local function count_job(jobs, job)
         if filtered and not job_matchers[job.job_type] then return end
+        if job.flags.do_now then return end
         local job_type = get_job_type_str(job)
         jobs[job_type] = (jobs[job_type] or 0) + 1
     end

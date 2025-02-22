@@ -7,9 +7,11 @@ gui/sitemap
 
 This simple UI gives you searchable lists of people, locations (temples,
 guildhalls, hospitals, taverns, and libraries), and artifacts in the local area.
-Clicking on a list item will zoom the map to the target. If you are zooming to
-a location and the location has multiple zones attached to it, clicking again
-will zoom to each component zone in turn.
+Clicking on a list item will zoom the map to the target. In fort mode,
+shift-clicking will zoom to the unit or artifact and lock the camera to the
+target with follow mode. If you are zooming to a location and the location has
+multiple zones attached to it, clicking again will zoom to each component zone
+in turn.
 
 Locations are attached to a site, so if you're in adventure mode, you must
 enter a site before searching for locations. For worldgen sites, many locations

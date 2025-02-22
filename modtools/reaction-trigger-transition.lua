@@ -34,7 +34,7 @@ for _,reaction in ipairs(df.global.world.raws.reactions.reactions) do
   if product.mat_index < 0 then
    return
   end
-  local inorganic = df.global.world.raws.inorganics[product.mat_index]
+  local inorganic = df.global.world.raws.inorganics.all[product.mat_index]
   local didInorganicName
   for _,syndrome in ipairs(inorganic.material.syndrome.syndrome) do
    local workerOnly = true

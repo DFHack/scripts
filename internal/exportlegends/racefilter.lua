@@ -106,7 +106,7 @@ end
 
 local function is_hf_page(scr, page)
     page = page or get_cur_page(scr)
-    return page.mode == df.legend_pagest.T_mode.HFS and page.index == -1
+    return page.mode == df.legends_mode_type.HFS and page.index == -1
 end
 
 function RaceFilterOverlay:render(dc)

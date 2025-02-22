@@ -60,7 +60,7 @@ local function cage_dump_armor(list)
             if df.general_ref_contains_unitst:is_instance(ref) then
                 local inventory = df.unit.find(ref.unit_id).inventory
                 for _, it in ipairs(inventory) do
-                    if it.mode == df.unit_inventory_item.T_mode.Worn then
+                    if it.mode == df.inv_item_role_type.Worn then
                         count = count + dump_item(it.item)
                     end
                 end
@@ -81,7 +81,7 @@ local function cage_dump_weapons(list)
             if df.general_ref_contains_unitst:is_instance(ref) then
                 local inventory = df.unit.find(ref.unit_id).inventory
                 for _, it in ipairs(inventory) do
-                    if it.mode == df.unit_inventory_item.T_mode.Weapon then
+                    if it.mode == df.inv_item_role_type.Weapon then
                         count = count + dump_item(it.item)
                     end
                 end

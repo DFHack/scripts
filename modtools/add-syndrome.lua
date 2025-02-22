@@ -88,7 +88,7 @@ local syndrome
 if tonumber(args.syndrome) then
  syndrome = df.syndrome.find(tonumber(args.syndrome))
 else
- for _,syn in ipairs(df.global.world.raws.syndromes.all) do
+ for _,syn in ipairs(df.global.world.raws.mat_table.syndromes.all) do
   if syn.syn_name == args.syndrome then
    syndrome = syn
    break

@@ -18,7 +18,7 @@ function makeCheese(barrel, workshop)
     jitem.flags1.milk = true
     job.job_items.elements:insert('#', jitem)
 
-    if not dfhack.job.attachJobItem(job, barrel, df.job_item_ref.T_role.Reagent, 0, -1) then
+    if not dfhack.job.attachJobItem(job, barrel, df.job_role_type.Reagent, 0, -1) then
         dfhack.error('could not attach item')
     end
 

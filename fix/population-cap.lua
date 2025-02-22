@@ -1,27 +1,30 @@
-local ui = df.global.plotinfo
-local ui_stats = ui.tasks
-local civ = df.historical_entity.find(ui.civ_id)
+local plotinfo = df.global.plotinfo
+local tasks = plotinfo.tasks
+local knowledge = tasks.knowledge
 
-if not civ then
+local civ = df.historical_entity.find(plotinfo.civ_id)
+
+if not dfhack.isMapLoaded() or not dfhack.world.isFortressMode() or not civ then
     qerror('No active fortress.')
 end
 
 local civ_stats = civ.activity_stats
 
-if not civ_stats then
-    civ.activity_stats = {
-        new = true,
-        created_weapons = { resize = #ui_stats.created_weapons },
-        discovered_creature_foods = { resize = #ui_stats.discovered_creature_foods },
-        discovered_creatures = { resize = #ui_stats.discovered_creatures },
-        discovered_plant_foods = { resize = #ui_stats.discovered_plant_foods },
-        discovered_plants = { resize = #ui_stats.discovered_plants },
-    }
-    civ_stats = civ.activity_stats
+local function upsize(civ_vec, tasks_vec)
+    local tasks_vec_size = #tasks_vec
+    if #civ_vec < tasks_vec_size then
+        civ_vec:resize(tasks_vec_size)
+    end
 end
 
+upsize(civ_stats.created_weapons, tasks.created_weapons)
+upsize(civ_stats.knowledge.discovered_creature_foods, knowledge.discovered_creature_foods)
+upsize(civ_stats.knowledge.discovered_creatures, knowledge.discovered_creatures)
+upsize(civ_stats.knowledge.discovered_plant_foods, knowledge.discovered_plant_foods)
+upsize(civ_stats.knowledge.discovered_plants, knowledge.discovered_plants)
+
 -- Use max to keep at least some of the original caravan communication idea
-local new_pop = math.max(civ_stats.population, ui_stats.population)
+local new_pop = math.max(civ_stats.population, tasks.population)
 
 if civ_stats.population ~= new_pop then
     civ_stats.population = new_pop

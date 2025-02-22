@@ -13,7 +13,8 @@ Sitemap.ATTRS {
     frame_title='Sitemap',
     frame={w=57, r=2, t=18, h=25},
     resizable=true,
-    resize_min={w=43, h=20},
+    resize_min={w=44, h=20},
+    frame_inset={l=1, t=1, r=0, b=0},
 }
 
 local function to_title_case(str)
@@ -169,6 +170,19 @@ local function zoom_to_unit(_, choice)
     if not unit then return end
     dfhack.gui.revealInDwarfmodeMap(
         xyz2pos(dfhack.units.getPosition(unit)), true, true)
+    return unit.id
+end
+
+local function follow_unit(idx, choice)
+    local unit_id = zoom_to_unit(idx, choice)
+    if not unit_id or not dfhack.world.isFortressMode() then return end
+    df.global.plotinfo.follow_item = -1
+    df.global.plotinfo.follow_unit = unit_id
+    pcall(function()
+        -- if spectate is available, add the unit to the follow history
+        local spectate = require('plugins.spectate')
+        spectate.spectate_addToHistory(unit_id)
+    end)
 end
 
 local function get_artifact_choices()
@@ -192,6 +206,33 @@ local function zoom_to_item(_, choice)
     if not item then return end
     dfhack.gui.revealInDwarfmodeMap(
         xyz2pos(dfhack.items.getPosition(item)), true, true)
+    return item.id
+end
+
+local function follow_item(idx, choice)
+    local item_id = zoom_to_item(idx, choice)
+    if not item_id or not dfhack.world.isFortressMode() then return end
+    df.global.plotinfo.follow_item = item_id
+    df.global.plotinfo.follow_unit = -1
+end
+
+local function get_bottom_text()
+    local text = {
+        'Click on a name or hit ', {text='Enter', pen=COLOR_LIGHTGREEN}, ' to zoom to', NEWLINE,
+        'the selected target.',
+    }
+
+    if not dfhack.world.isFortressMode() then
+        table.insert(text, NEWLINE)
+        table.insert(text, NEWLINE)
+        return text
+    end
+
+    table.insert(text, ' Shift-click or')
+    table.insert(text, NEWLINE)
+    table.insert(text, {text='Shift-Enter', pen=COLOR_LIGHTGREEN})
+    table.insert(text, ' to zoom and follow unit/item.')
+    return text
 end
 
 function Sitemap:init()
@@ -217,7 +258,7 @@ function Sitemap:init()
         },
         widgets.Pages{
             view_id='pages',
-            frame={t=3, l=0, b=5, r=0},
+            frame={t=3, l=0, b=6, r=0},
             subviews={
                 widgets.Panel{
                     subviews={
@@ -230,6 +271,7 @@ function Sitemap:init()
                         widgets.FilteredList{
                             view_id='list',
                             on_submit=zoom_to_unit,
+                            on_submit2=follow_unit,
                             choices=unit_choices,
                             visible=#unit_choices > 0,
                         },
@@ -255,6 +297,7 @@ function Sitemap:init()
                         widgets.FilteredList{
                             view_id='list',
                             on_submit=zoom_to_next_zone,
+                            on_submit2=zoom_to_next_zone,
                             choices=location_choices,
                             visible=#location_choices > 0,
                         },
@@ -271,6 +314,7 @@ function Sitemap:init()
                         widgets.FilteredList{
                             view_id='list',
                             on_submit=zoom_to_item,
+                            on_submit2=follow_item,
                             choices=artifact_choices,
                             visible=#artifact_choices > 0,
                         },
@@ -279,17 +323,14 @@ function Sitemap:init()
             },
         },
         widgets.Divider{
-            frame={b=3, h=1},
+            frame={b=4, h=1, l=0, r=1},
             frame_style=gui.FRAME_THIN,
             frame_style_l=false,
             frame_style_r=false,
         },
         widgets.Label{
             frame={b=0, l=0},
-            text={
-                'Click on a name or hit ', {text='Enter', pen=COLOR_LIGHTGREEN}, NEWLINE,
-                'to zoom to the selected target.'
-            },
+            text=get_bottom_text(),
         },
     }
 end

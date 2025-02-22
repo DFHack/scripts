@@ -137,7 +137,7 @@ end
 function moveEmbarkStuff(selectedBlock, embarkTiles)
     local spawnPosCentre
     for _, hotkey in ipairs(df.global.plotinfo.main.hotkeys) do
-        if hotkey.cmd == df.ui_hotkey.T_cmd.Zoom then          -- the preset hotkey is centred around the spawn point
+        if hotkey.cmd == df.hotkey_type.Zoom then          -- the preset hotkey is centred around the spawn point
             spawnPosCentre = xyz2pos(hotkey.x, hotkey.y, hotkey.z)
             hotkey:assign(embarkTiles[math.random(1, #embarkTiles)]) -- set the hotkey to the new spawn point
             break

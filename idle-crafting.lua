@@ -235,11 +235,34 @@ watched = watched or {}
 ---@type integer[]
 thresholds = thresholds or { 10000, 1000, 500 }
 
+-- persisting a table with numeric keys results in a json array with a huge number of null entries
+-- therefore, we convert the keys to strings for persistence
+-- also, we clear the frame counter values since the frame counter gets reset on load
+local function to_persist_allowed()
+    local persistable_allowed = {}
+    for workshop_id in pairs(allowed) do
+        persistable_allowed[tostring(workshop_id)] = -1
+    end
+    return persistable_allowed
+end
+
+-- loads both from the older array format and the new string table format
+local function from_persist_allowed(persisted_allowed)
+    if not persisted_allowed then
+        return
+    end
+    local usable_allowed = {}
+    for workshop_id in pairs(persisted_allowed) do
+        usable_allowed[tonumber(workshop_id)] = -1
+    end
+    return usable_allowed
+end
+
 local function persist_state()
     dfhack.persistent.saveSiteData(GLOBAL_KEY, {
-        enabled = enabled,
-        allowed = allowed,
-        thresholds = thresholds
+        enabled=enabled,
+        allowed=to_persist_allowed(),
+        thresholds=thresholds
     })
 end
 
@@ -248,7 +271,7 @@ local function load_state()
     -- load persistent data
     local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
     enabled = persisted_data.enabled or false
-    allowed = persisted_data.allowed or {}
+    allowed = from_persist_allowed(persisted_data.allowed) or {}
     thresholds = persisted_data.thresholds or { 10000, 1000, 500 }
 end
 
@@ -392,7 +415,6 @@ local function processUnit(workshop, idx, unit_id)
         end
     end
     if success then
-        -- Why is the encoding still wrong, even when using df2console?
         print('idle-crafting: assigned crafting job to ' .. dfhack.df2console(dfhack.units.getReadableName(unit)))
         watched[idx][unit_id] = nil
         allowed[workshop.id] = df.global.world.frame_counter

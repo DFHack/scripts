@@ -729,8 +729,7 @@ local function print_status()
     for k,v in pairs(state.features) do
         print(('  %15s: %s'):format(k, v))
     end
-    print(('  %15s: %s'):format('monitor',
-        overlay.get_state().config[WIDGET_NAME].enabled or 'false'))
+    print(('  %15s: %s'):format('monitor', overlay.isOverlayEnabled(WIDGET_NAME) or 'false'))
     print()
     print('difficulty settings:')
     print(('     Wilderness irritation minimum: %d (about %d tree(s) until initial attacks are possible)'):format(

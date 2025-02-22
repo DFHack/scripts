@@ -20,7 +20,7 @@ function launch(unitSource,unitRider)
 
 
     local count=0
-    local l = df.global.world.proj_list
+    local l = df.global.world.projectiles.all
     local lastlist=l
     l=l.next
     while l do

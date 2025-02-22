@@ -3,7 +3,7 @@
 local civ = df.historical_entity.find(df.global.plotinfo.civ_id)
 
 local fixed = false
-for _, entity in pairs(civ.relations.diplomacy) do
+for _, entity in ipairs(civ.relations.diplomacy.state) do
     if entity.group_id == civ.id and entity.relation > 0 then
         entity.relation = 0
         fixed = true

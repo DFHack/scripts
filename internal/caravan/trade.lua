@@ -9,21 +9,13 @@ local common = reqscript('internal/caravan/common')
 local gui = require('gui')
 local overlay = require('plugins.overlay')
 local predicates = reqscript('internal/caravan/predicates')
+local utils = require('utils')
 local widgets = require('gui.widgets')
 
 trader_selected_state = trader_selected_state or {}
 broker_selected_state = broker_selected_state or {}
 handle_ctrl_click_on_render = handle_ctrl_click_on_render or false
 handle_shift_click_on_render = handle_shift_click_on_render or false
-
-local GOODFLAG = {
-    UNCONTAINED_UNSELECTED = 0,
-    UNCONTAINED_SELECTED = 1,
-    CONTAINED_UNSELECTED = 2,
-    CONTAINED_SELECTED = 3,
-    CONTAINER_COLLAPSED_UNSELECTED = 4,
-    CONTAINER_COLLAPSED_SELECTED = 5,
-}
 
 local trade = df.global.game.main_interface.trade
 
@@ -39,50 +31,13 @@ Trade.ATTRS {
     resize_min={w=48, h=40},
 }
 
-local TOGGLE_MAP = {
-    [GOODFLAG.UNCONTAINED_UNSELECTED] = GOODFLAG.UNCONTAINED_SELECTED,
-    [GOODFLAG.UNCONTAINED_SELECTED] = GOODFLAG.UNCONTAINED_UNSELECTED,
-    [GOODFLAG.CONTAINED_UNSELECTED] = GOODFLAG.CONTAINED_SELECTED,
-    [GOODFLAG.CONTAINED_SELECTED] = GOODFLAG.CONTAINED_UNSELECTED,
-    [GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED] = GOODFLAG.CONTAINER_COLLAPSED_SELECTED,
-    [GOODFLAG.CONTAINER_COLLAPSED_SELECTED] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED,
-}
-
-local TARGET_MAP = {
-    [true]={
-        [GOODFLAG.UNCONTAINED_UNSELECTED] = GOODFLAG.UNCONTAINED_SELECTED,
-        [GOODFLAG.UNCONTAINED_SELECTED] = GOODFLAG.UNCONTAINED_SELECTED,
-        [GOODFLAG.CONTAINED_UNSELECTED] = GOODFLAG.CONTAINED_SELECTED,
-        [GOODFLAG.CONTAINED_SELECTED] = GOODFLAG.CONTAINED_SELECTED,
-        [GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED] = GOODFLAG.CONTAINER_COLLAPSED_SELECTED,
-        [GOODFLAG.CONTAINER_COLLAPSED_SELECTED] = GOODFLAG.CONTAINER_COLLAPSED_SELECTED,
-    },
-    [false]={
-        [GOODFLAG.UNCONTAINED_UNSELECTED] = GOODFLAG.UNCONTAINED_UNSELECTED,
-        [GOODFLAG.UNCONTAINED_SELECTED] = GOODFLAG.UNCONTAINED_UNSELECTED,
-        [GOODFLAG.CONTAINED_UNSELECTED] = GOODFLAG.CONTAINED_UNSELECTED,
-        [GOODFLAG.CONTAINED_SELECTED] = GOODFLAG.CONTAINED_UNSELECTED,
-        [GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED,
-        [GOODFLAG.CONTAINER_COLLAPSED_SELECTED] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED,
-    },
-}
-
-local TARGET_REVMAP = {
-    [GOODFLAG.UNCONTAINED_UNSELECTED] = false,
-    [GOODFLAG.UNCONTAINED_SELECTED] = true,
-    [GOODFLAG.CONTAINED_UNSELECTED] = false,
-    [GOODFLAG.CONTAINED_SELECTED] = true,
-    [GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED] = false,
-    [GOODFLAG.CONTAINER_COLLAPSED_SELECTED] = true,
-}
-
 local function get_entry_icon(data)
-    if TARGET_REVMAP[trade.goodflag[data.list_idx][data.item_idx]] then
+    if trade.goodflag[data.list_idx][data.item_idx].selected then
         return common.ALL_PEN
     end
 end
 
-local function sort_noop(a, b)
+local function sort_noop()
     -- this function is used as a marker and never actually gets called
     error('sort_noop should not be called')
 end
@@ -309,7 +264,7 @@ function Trade:init()
         widgets.HotkeyLabel{
             frame={l=0, b=0},
             label='Select all/none',
-            key='CUSTOM_CTRL_A',
+            key='CUSTOM_CTRL_N',
             on_activate=self:callback('toggle_visible'),
             auto_width=true,
         },
@@ -375,7 +330,7 @@ function Trade:cache_choices(list_idx, trade_bins)
     local parent_data
     for item_idx, item in ipairs(trade.good[list_idx]) do
         local goodflag = goodflags[item_idx]
-        if goodflag ~= GOODFLAG.CONTAINED_UNSELECTED and goodflag ~= GOODFLAG.CONTAINED_SELECTED then
+        if not goodflag.contained then
             parent_data = nil
         end
         local is_banned, is_risky = common.scan_banned(item, self.risky_items)
@@ -487,11 +442,13 @@ end
 
 local function toggle_item_base(choice, target_value)
     local goodflag = trade.goodflag[choice.data.list_idx][choice.data.item_idx]
-    local goodflag_map = target_value == nil and TOGGLE_MAP or TARGET_MAP[target_value]
-    trade.goodflag[choice.data.list_idx][choice.data.item_idx] = goodflag_map[goodflag]
-    target_value = TARGET_REVMAP[trade.goodflag[choice.data.list_idx][choice.data.item_idx]]
+    if target_value == nil then
+        target_value = not goodflag.selected
+    end
+    local prev_value = goodflag.selected
+    goodflag.selected = target_value
     if choice.data.update_container_fn then
-        choice.data.update_container_fn(TARGET_REVMAP[goodflag], target_value)
+        choice.data.update_container_fn(prev_value, target_value)
     end
     return target_value
 end
@@ -591,39 +548,40 @@ local function set_height(list_idx, delta)
                      trade.i_height[list_idx] - page_height))
 end
 
-local function select_shift_clicked_container_items(new_state, old_state, list_idx)
+local function flags_match(goodflag1, goodflag2)
+    return goodflag1.selected == goodflag2.selected and
+        goodflag1.contained == goodflag2.contained and
+        goodflag1.container_collapsed == goodflag2.container_collapsed and
+        goodflag1.filtered_off == goodflag2.filtered_off
+end
+
+local function select_shift_clicked_container_items(new_state, old_state_fn, list_idx)
     -- if ctrl is also held, collapse the container too
     local also_collapse = dfhack.internal.getModifiers().ctrl
-    local collapsed_item_count, collapsing_container, in_container = 0, false, false
+    local collapsed_item_count, collapsing_container, in_target_container = 0, false, false
     for k, goodflag in ipairs(new_state) do
-        if in_container then
-            if goodflag <= GOODFLAG.UNCONTAINED_SELECTED
-                    or goodflag >= GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED then
-                break
-            end
-
-            new_state[k] = GOODFLAG.CONTAINED_SELECTED
-
+        if in_target_container then
+            if not goodflag.contained then break end
+            goodflag.selected = true
             if collapsing_container then
                 collapsed_item_count = collapsed_item_count + 1
             end
             goto continue
         end
 
-        if goodflag == old_state[k] then goto continue end
+        local old_goodflag = old_state_fn(k)
+        if flags_match(goodflag, old_goodflag) then goto continue end
         local is_container = df.item_binst:is_instance(trade.good[list_idx][k])
         if not is_container then goto continue end
 
         -- deselect the container itself
-        if also_collapse or
-                old_state[k] == GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED or
-                old_state[k] == GOODFLAG.CONTAINER_COLLAPSED_SELECTED then
-            collapsing_container = goodflag == GOODFLAG.UNCONTAINED_SELECTED
-            new_state[k] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED
-        else
-            new_state[k] = GOODFLAG.UNCONTAINED_UNSELECTED
+        goodflag.selected = false
+
+        if also_collapse or old_goodflag.container_collapsed then
+            goodflag.container_collapsed = true
+            collapsing_container = not old_goodflag.container_collapsed
         end
-        in_container = true
+        in_target_container = true
 
         ::continue::
     end
@@ -633,37 +591,27 @@ local function select_shift_clicked_container_items(new_state, old_state, list_i
     end
 end
 
-local CTRL_CLICK_STATE_MAP = {
-    [GOODFLAG.UNCONTAINED_UNSELECTED] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED,
-    [GOODFLAG.UNCONTAINED_SELECTED] = GOODFLAG.CONTAINER_COLLAPSED_SELECTED,
-    [GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED] = GOODFLAG.UNCONTAINED_UNSELECTED,
-    [GOODFLAG.CONTAINER_COLLAPSED_SELECTED] = GOODFLAG.UNCONTAINED_SELECTED,
-}
-
 -- collapses uncollapsed containers and restores the selection state for the container
 -- and contained items
-local function toggle_ctrl_clicked_containers(new_state, old_state, list_idx)
-    local toggled_item_count, in_container, is_collapsing = 0, false, false
+local function toggle_ctrl_clicked_containers(new_state, old_state_fn, list_idx)
+    local toggled_item_count, in_target_container, is_collapsing = 0, false, false
     for k, goodflag in ipairs(new_state) do
-        if in_container then
-            if goodflag <= GOODFLAG.UNCONTAINED_SELECTED
-                    or goodflag >= GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED then
-                break
-            end
+        local old_goodflag = old_state_fn(k)
+        if in_target_container then
+            if not goodflag.contained then break end
             toggled_item_count = toggled_item_count + 1
-            new_state[k] = old_state[k]
+            utils.assign(goodflag, old_goodflag)
             goto continue
         end
 
-        if goodflag == old_state[k] then goto continue end
-        local is_contained = goodflag == GOODFLAG.CONTAINED_UNSELECTED or goodflag == GOODFLAG.CONTAINED_SELECTED
-        if is_contained then goto continue end
+        if flags_match(goodflag, old_goodflag) or goodflag.contained then goto continue end
         local is_container = df.item_binst:is_instance(trade.good[list_idx][k])
         if not is_container then goto continue end
 
-        new_state[k] = CTRL_CLICK_STATE_MAP[old_state[k]]
-        in_container = true
-        is_collapsing = goodflag == GOODFLAG.UNCONTAINED_UNSELECTED or goodflag == GOODFLAG.UNCONTAINED_SELECTED
+        goodflag.selected = old_goodflag.selected
+        goodflag.container_collapsed = not old_goodflag.container_collapsed
+        in_target_container = true
+        is_collapsing = goodflag.container_collapsed
 
         ::continue::
     end
@@ -696,27 +644,17 @@ end
 local function collapseContainers(item_list, list_idx)
     local num_items_collapsed = 0
     for k, goodflag in ipairs(item_list) do
-        if goodflag == GOODFLAG.CONTAINED_UNSELECTED
-                or goodflag == GOODFLAG.CONTAINED_SELECTED then
-            goto continue
-        end
+        if goodflag.contained then goto continue end
 
         local item = trade.good[list_idx][k]
         local is_container = df.item_binst:is_instance(item)
         if not is_container then goto continue end
 
-        local collapsed_this_container = false
-        if goodflag == GOODFLAG.UNCONTAINED_SELECTED then
-            item_list[k] = GOODFLAG.CONTAINER_COLLAPSED_SELECTED
-            collapsed_this_container = true
-        elseif goodflag == GOODFLAG.UNCONTAINED_UNSELECTED then
-            item_list[k] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED
-            collapsed_this_container = true
-        end
-
-        if collapsed_this_container then
+        if not goodflag.container_collapsed then
+            goodflag.container_collapsed = true
             num_items_collapsed = num_items_collapsed + #dfhack.items.getContainedItems(item)
         end
+
         ::continue::
     end
 
@@ -736,8 +674,14 @@ local function collapseEverything()
 end
 
 local function copyGoodflagState()
-    trader_selected_state = copyall(trade.goodflag[0])
-    broker_selected_state = copyall(trade.goodflag[1])
+    -- utils.clone will return a lua table, with indices offset by 1
+    -- we'll use getSavedGoodflag to map the index back to the original value
+    trader_selected_state = utils.clone(trade.goodflag[0], true)
+    broker_selected_state = utils.clone(trade.goodflag[1], true)
+end
+
+local function getSavedGoodflag(saved_state, k)
+    return saved_state[k+1]
 end
 
 TradeOverlay = defclass(TradeOverlay, overlay.OverlayWidget)
@@ -798,12 +742,12 @@ end
 function TradeOverlay:onRenderBody(dc)
     if handle_shift_click_on_render then
         handle_shift_click_on_render = false
-        select_shift_clicked_container_items(trade.goodflag[0], trader_selected_state, 0)
-        select_shift_clicked_container_items(trade.goodflag[1], broker_selected_state, 1)
+        select_shift_clicked_container_items(trade.goodflag[0], curry(getSavedGoodflag, trader_selected_state), 0)
+        select_shift_clicked_container_items(trade.goodflag[1], curry(getSavedGoodflag, broker_selected_state), 1)
     elseif handle_ctrl_click_on_render then
         handle_ctrl_click_on_render = false
-        toggle_ctrl_clicked_containers(trade.goodflag[0], trader_selected_state, 0)
-        toggle_ctrl_clicked_containers(trade.goodflag[1], broker_selected_state, 1)
+        toggle_ctrl_clicked_containers(trade.goodflag[0], curry(getSavedGoodflag, trader_selected_state), 0)
+        toggle_ctrl_clicked_containers(trade.goodflag[1], curry(getSavedGoodflag, broker_selected_state), 1)
     end
 end
 
@@ -891,7 +835,7 @@ function Ethics:init()
         },
         widgets.HotkeyLabel{
             frame={l=0, b=0},
-            key='CUSTOM_CTRL_A',
+            key='CUSTOM_CTRL_N',
             label='Deselect items in trade list',
             auto_width=true,
             on_activate=self:callback('deselect_transgressions'),
@@ -915,12 +859,10 @@ function for_selected_item(list_idx, fn)
     local in_selected_container = false
     for item_idx, item in ipairs(trade.good[list_idx]) do
         local goodflag = goodflags[item_idx]
-        if goodflag == GOODFLAG.UNCONTAINED_SELECTED or goodflag == GOODFLAG.CONTAINER_COLLAPSED_SELECTED then
-            in_selected_container = true
-        elseif goodflag == GOODFLAG.UNCONTAINED_UNSELECTED or goodflag == GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED then
-            in_selected_container = false
+        if not goodflag.contained then
+            in_selected_container = goodflag.selected
         end
-        if in_selected_container or TARGET_REVMAP[goodflag] then
+        if in_selected_container or goodflag.selected then
             if fn(item_idx, item) then
                 return
             end
@@ -954,10 +896,7 @@ end
 function Ethics:deselect_transgressions()
     local goodflags = trade.goodflag[1]
     for _,choice in ipairs(self.choices) do
-        local goodflag = goodflags[choice.data.item_idx]
-        if TARGET_REVMAP[goodflag] then
-            goodflags[choice.data.item_idx] = TOGGLE_MAP[goodflag]
-        end
+        goodflags[choice.data.item_idx].selected = false
     end
     self:rescan()
 end

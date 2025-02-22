@@ -74,7 +74,7 @@ local function goDrink(unit)
     job.flags.special = true
     local dx, dy, dz = dfhack.items.getPosition(drink)
     job.pos = xyz2pos(dx, dy, dz)
-    if not dfhack.job.attachJobItem(job, drink, df.job_item_ref.T_role.Other, -1, -1) then
+    if not dfhack.job.attachJobItem(job, drink, df.job_role_type.Other, -1, -1) then
         error('could not attach drink')
         return
     end
@@ -96,7 +96,7 @@ local function goEat(unit)
     job.flags.special = true
     local dx, dy, dz = dfhack.items.getPosition(meal)
     job.pos = xyz2pos(dx, dy, dz)
-    if not dfhack.job.attachJobItem(job, meal, df.job_item_ref.T_role.Other, -1, -1) then
+    if not dfhack.job.attachJobItem(job, meal, df.job_role_type.Other, -1, -1) then
         error('could not attach meal')
         return
     end

@@ -704,7 +704,7 @@ function Rename:set_language(val, prev_val)
             sync_name()
         else
             sync_name.language = val
-            sync_name.first_name = self.target.first_name
+            sync_name.first_name = self.target.name.first_name
         end
     end
 end

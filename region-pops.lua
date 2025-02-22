@@ -70,7 +70,7 @@ function enum_populations()
         end
     end
 
-    for i,v in ipairs(df.global.world.populations) do
+    for i,v in ipairs(df.global.world.populations.all) do
         local typeid = df.world_population_type[v.type]
         local is_plant = is_plant_map[typeid]
 

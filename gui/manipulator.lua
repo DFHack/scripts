@@ -1057,7 +1057,7 @@ function QuickMenu:init()
         },
         widgets.HotkeyLabel{
             frame={b=0, l=0},
-            key='CUSTOM_CTRL_A',
+            key='CUSTOM_CTRL_N',
             label='Select all',
             visible=self.multiselect,
             on_activate=function()

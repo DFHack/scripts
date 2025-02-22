@@ -261,7 +261,7 @@ function TagFilterPanel:init()
         widgets.HotkeyLabel{
             frame={b=0, r=0},
             label='Cycle all',
-            key='CUSTOM_CTRL_A',
+            key='CUSTOM_CTRL_N',
             auto_width=true,
             on_activate=self:callback('toggle_all')
         },
@@ -388,7 +388,7 @@ function AutocompletePanel:init()
         widgets.Label{
             frame={l=0, t=3},
             text={
-                {key='CUSTOM_CTRL_W', key_sep=': ', on_activate=open_filter_panel, text='Tags:'},
+                {key='CUSTOM_CTRL_F', key_sep=': ', on_activate=open_filter_panel, text='Tags:'},
                 {gap=1, pen=get_filter_pen, text=get_filter_text},
             },
             on_click=open_filter_panel,

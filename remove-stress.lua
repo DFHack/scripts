@@ -6,9 +6,9 @@
 local utils = require('utils')
 
 function removeStress(unit,value)
-    if unit.counters.soldier_mood > df.unit.T_counters.T_soldier_mood.Enraged then
+    if unit.counters.soldier_mood > df.soldier_mood_type.Enraged then
         -- Tantrum, Depressed, or Oblivious
-        unit.counters.soldier_mood = df.unit.T_counters.T_soldier_mood.None
+        unit.counters.soldier_mood = df.soldier_mood_type.None
     end
     if unit.status.current_soul then
         if unit.status.current_soul.personality.stress > value then

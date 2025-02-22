@@ -6,7 +6,7 @@ pss_counter = pss_counter or 31415926
 
 -- ---------------------------------------------------------------------------
 function insert_preference(unit, preftype, val1)
-    if preftype == df.unit_preference.T_type.LikeMaterial then
+    if preftype == df.unitpref_type.LikeMaterial then
         utils.insert_or_update(unit.status.current_soul.preferences, {
             new = true,
             type = preftype,
@@ -18,7 +18,7 @@ function insert_preference(unit, preftype, val1)
             prefstring_seed = pss_counter,
         }, 'prefstring_seed')
         -- mattype for some is non zero, those non-inorganic like creature:gazelle:hoof is 42,344
-    elseif preftype == df.unit_preference.T_type.LikeFood then
+    elseif preftype == df.unitpref_type.LikeFood then
         consumable_type = val1[1]
         consumable_name = val1[2]
         utils.insert_or_update(unit.status.current_soul.preferences, {
@@ -32,7 +32,7 @@ function insert_preference(unit, preftype, val1)
             active = true,
             prefstring_seed = pss_counter,
         }, 'prefstring_seed')
-    elseif df.unit_preference.T_type[preftype] ~= nil then
+    elseif df.unitpref_type[preftype] ~= nil then
         utils.insert_or_update(unit.status.current_soul.preferences, {
             new = true,
             type = preftype,
@@ -61,68 +61,68 @@ function brainwash_unit(unit, profile)
 
     if profile == "IDEAL" then
         -- Material Likes: IRON(0),STEEL(8),ADAMANTINE(25)
-        insert_preference(unit, df.unit_preference.T_type.LikeMaterial, "IRON")
-        insert_preference(unit, df.unit_preference.T_type.LikeMaterial, "STEEL")
-    --  insert_preference(unit, df.unit_preference.T_type.LikeMaterial, "ADAMANTINE")
+        insert_preference(unit, df.unitpref_type.LikeMaterial, "IRON")
+        insert_preference(unit, df.unitpref_type.LikeMaterial, "STEEL")
+    --  insert_preference(unit, df.unitpref_type.LikeMaterial, "ADAMANTINE")
 
         -- Item likes: (WEAPON, ARMOR, SHIELD)
-        insert_preference(unit, df.unit_preference.T_type.LikeItem, df.item_type.WEAPON)
-        insert_preference(unit, df.unit_preference.T_type.LikeItem, df.item_type.ARMOR)
-        insert_preference(unit, df.unit_preference.T_type.LikeItem, df.item_type.SHIELD)
+        insert_preference(unit, df.unitpref_type.LikeItem, df.item_type.WEAPON)
+        insert_preference(unit, df.unitpref_type.LikeItem, df.item_type.ARMOR)
+        insert_preference(unit, df.unitpref_type.LikeItem, df.item_type.SHIELD)
 
         -- Plant Likes: "Likes plump helmets for their rounded tops"
-        insert_preference(unit, df.unit_preference.T_type.LikePlant, dfhack.matinfo.find("MUSHROOM_HELMET_PLUMP:STRUCTURAL").index)
-    --  insert_preference(unit, df.unit_preference.T_type.LikePlant, dfhack.matinfo.find("PEACH").index)
+        insert_preference(unit, df.unitpref_type.LikePlant, dfhack.matinfo.find("MUSHROOM_HELMET_PLUMP:STRUCTURAL").index)
+    --  insert_preference(unit, df.unitpref_type.LikePlant, dfhack.matinfo.find("PEACH").index)
 
         -- Prefers to consume drink: (From plump helmets we get dwarven wine)
-        insert_preference(unit, df.unit_preference.T_type.LikeFood, {df.item_type.DRINK, "MUSHROOM_HELMET_PLUMP:DRINK"})
+        insert_preference(unit, df.unitpref_type.LikeFood, {df.item_type.DRINK, "MUSHROOM_HELMET_PLUMP:DRINK"})
         -- Prefers to consume food: (plump helmets, mushrooms)
-        insert_preference(unit, df.unit_preference.T_type.LikeFood, {df.item_type.PLANT, "MUSHROOM_HELMET_PLUMP:MUSHROOM"})
+        insert_preference(unit, df.unitpref_type.LikeFood, {df.item_type.PLANT, "MUSHROOM_HELMET_PLUMP:MUSHROOM"})
         -- Prefers to consume prepared meals: (quarry bush)
-        insert_preference(unit, df.unit_preference.T_type.LikeFood, {df.item_type.FOOD, "BUSH_QUARRY"})
+        insert_preference(unit, df.unitpref_type.LikeFood, {df.item_type.FOOD, "BUSH_QUARRY"})
 
         -- Creature detests (TROLL, BIRD_BUZZARD, BIRD_VULTURE, CRUNDLE)
-        insert_preference(unit, df.unit_preference.T_type.HateCreature, list_of_creatures.TROLL)
-        insert_preference(unit, df.unit_preference.T_type.HateCreature, list_of_creatures.BIRD_BUZZARD)
-        insert_preference(unit, df.unit_preference.T_type.HateCreature, list_of_creatures.BIRD_VULTURE)
-        insert_preference(unit, df.unit_preference.T_type.HateCreature, list_of_creatures.CRUNDLE)
+        insert_preference(unit, df.unitpref_type.HateCreature, list_of_creatures.TROLL)
+        insert_preference(unit, df.unitpref_type.HateCreature, list_of_creatures.BIRD_BUZZARD)
+        insert_preference(unit, df.unitpref_type.HateCreature, list_of_creatures.BIRD_VULTURE)
+        insert_preference(unit, df.unitpref_type.HateCreature, list_of_creatures.CRUNDLE)
         if #df.global.world.poetic_forms.all > 0 then
-            insert_preference(unit, df.unit_preference.T_type.LikePoeticForm, 0) -- this just inserts the first song out of typically many.
+            insert_preference(unit, df.unitpref_type.LikePoeticForm, 0) -- this just inserts the first song out of typically many.
         end
         if #df.global.world.musical_forms.all > 0 then
-            insert_preference(unit, df.unit_preference.T_type.LikeMusicalForm, 0) -- same goes for music
+            insert_preference(unit, df.unitpref_type.LikeMusicalForm, 0) -- same goes for music
         end
         if #df.global.world.dance_forms.all > 0 then
-            insert_preference(unit, df.unit_preference.T_type.LikeDanceForm, 0) -- and dancing
+            insert_preference(unit, df.unitpref_type.LikeDanceForm, 0) -- and dancing
         end
         -- end IDEAL profile
 
     elseif profile == "GOTH" then
-        insert_preference(unit, df.unit_preference.T_type.LikeMaterial, "CREATURE:DWARF:SKIN")
-        insert_preference(unit, df.unit_preference.T_type.LikeItem, df.item_type.CORPSE)
-        insert_preference(unit, df.unit_preference.T_type.LikeItem, df.item_type.CORPSEPIECE)
-        insert_preference(unit, df.unit_preference.T_type.LikeItem, df.item_type.REMAINS)
-        insert_preference(unit, df.unit_preference.T_type.LikeItem, df.item_type.COFFIN)
-        insert_preference(unit, df.unit_preference.T_type.LikeColor, list_of_colors.BLACK)
-        insert_preference(unit, df.unit_preference.T_type.LikeShape, list_of_shapes.CROSS)
-        insert_preference(unit, df.unit_preference.T_type.LikePlant, dfhack.matinfo.find("GLUMPRONG").index)
-        insert_preference(unit, df.unit_preference.T_type.LikeFood, {df.item_type.DRINK, "WEED_RAT:DRINK"})
-        insert_preference(unit, df.unit_preference.T_type.LikeFood, {df.item_type.DRINK, "SLIVER_BARB:DRINK"})
-        insert_preference(unit, df.unit_preference.T_type.LikeFood, {df.item_type.PLANT, "TUBER_BLOATED:STRUCTURAL"})
-        insert_preference(unit, df.unit_preference.T_type.HateCreature, list_of_creatures.ELF)
-        insert_preference(unit, df.unit_preference.T_type.HateCreature, list_of_creatures.HUMAN)
-        insert_preference(unit, df.unit_preference.T_type.HateCreature, list_of_creatures.DWARF)
+        insert_preference(unit, df.unitpref_type.LikeMaterial, "CREATURE:DWARF:SKIN")
+        insert_preference(unit, df.unitpref_type.LikeItem, df.item_type.CORPSE)
+        insert_preference(unit, df.unitpref_type.LikeItem, df.item_type.CORPSEPIECE)
+        insert_preference(unit, df.unitpref_type.LikeItem, df.item_type.REMAINS)
+        insert_preference(unit, df.unitpref_type.LikeItem, df.item_type.COFFIN)
+        insert_preference(unit, df.unitpref_type.LikeColor, list_of_colors.BLACK)
+        insert_preference(unit, df.unitpref_type.LikeShape, list_of_shapes.CROSS)
+        insert_preference(unit, df.unitpref_type.LikePlant, dfhack.matinfo.find("GLUMPRONG").index)
+        insert_preference(unit, df.unitpref_type.LikeFood, {df.item_type.DRINK, "WEED_RAT:DRINK"})
+        insert_preference(unit, df.unitpref_type.LikeFood, {df.item_type.DRINK, "SLIVER_BARB:DRINK"})
+        insert_preference(unit, df.unitpref_type.LikeFood, {df.item_type.PLANT, "TUBER_BLOATED:STRUCTURAL"})
+        insert_preference(unit, df.unitpref_type.HateCreature, list_of_creatures.ELF)
+        insert_preference(unit, df.unitpref_type.HateCreature, list_of_creatures.HUMAN)
+        insert_preference(unit, df.unitpref_type.HateCreature, list_of_creatures.DWARF)
         if list_of_creatures.DEMON_1 and df.global.world.raws.creatures.all[list_of_creatures.DEMON_1].prefstring[0] ~= '' then
-            insert_preference(unit, df.unit_preference.T_type.LikeCreature, list_of_creatures.DEMON_1)
+            insert_preference(unit, df.unitpref_type.LikeCreature, list_of_creatures.DEMON_1)
         end
         if #df.global.world.poetic_forms.all > 0 then
-            insert_preference(unit, df.unit_preference.T_type.LikePoeticForm, #df.global.world.poetic_forms.all - 1) -- this just inserts the last song out of typically many.
+            insert_preference(unit, df.unitpref_type.LikePoeticForm, #df.global.world.poetic_forms.all - 1) -- this just inserts the last song out of typically many.
         end
         if #df.global.world.musical_forms.all > 0 then
-            insert_preference(unit, df.unit_preference.T_type.LikeMusicalForm, #df.global.world.musical_forms.all - 1) -- same goes for music
+            insert_preference(unit, df.unitpref_type.LikeMusicalForm, #df.global.world.musical_forms.all - 1) -- same goes for music
         end
         if #df.global.world.dance_forms.all > 0 then
-            insert_preference(unit, df.unit_preference.T_type.LikeDanceForm, #df.global.world.dance_forms.all - 1) -- and dancing
+            insert_preference(unit, df.unitpref_type.LikeDanceForm, #df.global.world.dance_forms.all - 1) -- and dancing
         end
         -- end GOTH profile
     else
@@ -158,7 +158,7 @@ end
 function build_all_lists(printflag)
     list_of_inorganics={} -- Type 0 "Likes iron.."
     list_of_inorganics_string=""
-    vec=df.global.world.raws.inorganics -- also df.global.world.raws.inorganics_subset[0].id available
+    vec=df.global.world.raws.inorganics.all -- also df.global.world.raws.inorganics.cheap[0].id available
     for k=0,#vec-1 do
         name=vec[k].id
         list_of_inorganics[name]=k
@@ -282,7 +282,7 @@ function get_preferences(unit)
 
     print("Preferences for " .. unit_name_to_console(unit) .. ":")
     for _, pref in ipairs(preferences) do
-        local pref_type = df.unit_preference.T_type[pref.type]
+        local pref_type = df.unitpref_type[pref.type]
         local description = ""
 
         if pref_type == "LikeMaterial" then

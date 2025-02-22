@@ -67,7 +67,6 @@ end
 local function trade_goods_all_selected(which)
     local num_selected = 0
     trade_internal.for_selected_item(which, function(idx)
-        print(idx)
         num_selected = num_selected + 1
     end)
     return #mi.trade.goodflag[which] == num_selected
@@ -336,7 +335,6 @@ ConfirmSpec{
             return uniform_has_changes()
         end
         if clicked_on_confirm_button(mouse_offset) then
-            print('confirm click detected')
             clear_uniform_record()
         else
             ensure_uniform_record()
@@ -367,7 +365,7 @@ ConfirmSpec{
         local max_visible_buttons = num_sections // 2
         if selected_offset >= max_visible_buttons or
             selected_idx >= num_hotkeys or
-            plotinfo.main.hotkeys[selected_idx].cmd == df.ui_hotkey.T_cmd.None
+            plotinfo.main.hotkeys[selected_idx].cmd == df.hotkey_type.None
         then
             return false
         end
@@ -432,10 +430,60 @@ ConfirmSpec{
     end,
 }
 
+local function make_order_desc(order, noun)
+    local desc = ''
+    if order.mat_type >= 0 then
+        local matinfo = dfhack.matinfo.decode(order.mat_type, order.mat_index)
+        if matinfo then
+            desc = desc .. ' ' .. matinfo:toString()
+        end
+    else
+        for k,v in pairs(order.material_category) do
+            if v then
+                desc = desc .. ' ' .. k
+                break
+            end
+        end
+    end
+    return desc .. ' ' .. noun
+end
+
+local orders = df.global.world.manager_orders.all
+local itemdefs = df.global.world.raws.itemdefs
+local reactions = df.global.world.raws.reactions.reactions
 ConfirmSpec{
     id='order-remove',
     title='Remove manger order',
-    message='Are you sure you want to remove this manager order?',
+    message=function()
+        local order_desc = ''
+        local scroll_pos = mi.info.work_orders.scroll_position_work_orders
+        local y_offset = dfhack.screen.getWindowSize() > 154 and 8 or 10
+        local _, y = dfhack.screen.getMousePos()
+        if y then
+            local order_idx = scroll_pos + (y - y_offset) // 3
+            local order = orders[order_idx]
+            if order.job_type == df.job_type.CustomReaction then
+                for _, reaction in ipairs(reactions) do
+                    if reaction.code == order.reaction_name then
+                        order_desc = reaction.name
+                    end
+                end
+            elseif order.job_type == df.job_type.MakeArmor then
+                order_desc = make_order_desc(order, itemdefs.armor[order.item_subtype].name)
+            elseif order.job_type == df.job_type.MakeWeapon then
+                order_desc = make_order_desc(order, itemdefs.weapons[order.item_subtype].name)
+            elseif order.job_type == df.job_type.MakePants then
+                order_desc = make_order_desc(order, itemdefs.pants[order.item_subtype].name)
+            elseif order.job_type == df.job_type.SmeltOre then
+                order_desc = make_order_desc(order, 'ore')
+            elseif order.job_type == df.job_type.MakeTool then
+                order_desc = make_order_desc(order, itemdefs.tools[order.item_subtype].name)
+            else
+                order_desc = make_order_desc(order, df.job_type.attrs[order.job_type].caption)
+            end
+        end
+        return ('Are you sure you want to remove this manager order?\n\n%s'):format(dfhack.capitalizeStringWords(order_desc))
+    end,
     intercept_keys='_MOUSE_L',
     context='dwarfmode/Info/WORK_ORDERS/Default',
     predicate=function() return mi.current_hover == df.main_hover_instruction.WORK_ORDERS_REMOVE end,

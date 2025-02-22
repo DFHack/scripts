@@ -39,7 +39,7 @@ CONFIG_KEY = "autogems/config"
 blacklist = {}
 
 gems = {}
-for id, raw in pairs(df.global.world.raws.inorganics) do
+for id, raw in pairs(df.global.world.raws.inorganics.all) do
     if raw.material.flags.IS_GEM then
         if blacklist[id] == nil then
             blacklist[id] = false
@@ -97,7 +97,7 @@ end
 
 function save()
     local save_blacklist = {}
-    for id in ipairs(df.global.world.raws.inorganics) do
+    for id in ipairs(df.global.world.raws.inorganics.all) do
         if blacklist[id] then
             table.insert(save_blacklist, id)
         end

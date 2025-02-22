@@ -50,7 +50,7 @@ function createUnit(raceStr, casteStr, pos, locationRange, locationType, age, do
 
   if entityRawName and entityRawName~="" then
     local isValidRawName
-    for k,v in ipairs(df.global.world.raws.entities) do
+    for k,v in ipairs(df.global.world.raws.entities.all) do
       if v.code == entityRawName then
         isValidRawName = true
         break
@@ -601,7 +601,7 @@ function nameUnit(unit, entityRawName)
   --choose three random words in the appropriate things
   local entity_raw
   if entityRawName and entityRawName~="" then
-    for k,v in ipairs(df.global.world.raws.entities) do
+    for k,v in ipairs(df.global.world.raws.entities.all) do
       if v.code == entityRawName then
         entity_raw = v
         break
@@ -903,7 +903,7 @@ function domesticateUnit(unit)
     unit.animal.population.region_y = -1
     unit.animal.population.unk_28 = -1
     unit.animal.population.population_idx = -1
-    unit.animal.population.depth = -1
+    unit.animal.population.layer_depth = -1
 
     -- And make them tame (from Dirst)
     unit.flags1.tame = true
@@ -924,7 +924,7 @@ function wildUnit(unit)
     end
     unit.animal.population.unk_28 = -1
     unit.animal.population.population_idx = -1  -- Eventually want to make a real population
-    unit.animal.population.depth = -1  -- Eventually this should be a parameter
+    unit.animal.population.layer_depth = -1  -- Eventually this should be a parameter
     unit.animal.leave_countdown = 99999  -- Eventually this should be a parameter
     unit.flags2.roaming_wilderness_population_source = true
     unit.flags2.roaming_wilderness_population_source_not_a_map_feature = true

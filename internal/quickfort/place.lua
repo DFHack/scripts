@@ -155,7 +155,7 @@ local function make_db_entry(keys)
         num_barrels=num_barrels,
         num_wheelbarrows=num_wheelbarrows,
         links={give_to={}, take_from={}},
-        props={},
+        props={storage={}},
         adjustments={},
         logistics={},
     }
@@ -192,12 +192,12 @@ local function custom_stockpile(_, keys)
         end
     end
 
-    -- convert from older parsing style to properties
-    db_entry.props.max_barrels = db_entry.num_barrels
+    -- convert to assign()able properties
+    db_entry.props.storage.max_barrels = db_entry.num_barrels
     db_entry.num_barrels = nil
-    db_entry.props.max_bins = db_entry.num_bins
+    db_entry.props.storage.max_bins = db_entry.num_bins
     db_entry.num_bins = nil
-    db_entry.props.max_wheelbarrows = db_entry.num_wheelbarrows
+    db_entry.props.storage.max_wheelbarrows = db_entry.num_wheelbarrows
     db_entry.num_wheelbarrows = nil
 
     -- alias properties
@@ -215,15 +215,15 @@ local function custom_stockpile(_, keys)
 
     -- actual properties
     if props.barrels then
-        db_entry.props.max_barrels = tonumber(props.barrels)
+        db_entry.props.storage.max_barrels = tonumber(props.barrels)
         props.barrels = nil
     end
     if props.bins then
-        db_entry.props.max_bins = tonumber(props.bins)
+        db_entry.props.storage.max_bins = tonumber(props.bins)
         props.bins = nil
     end
     if props.wheelbarrows then
-        db_entry.props.max_wheelbarrows = tonumber(props.wheelbarrows)
+        db_entry.props.storage.max_wheelbarrows = tonumber(props.wheelbarrows)
         props.wheelbarrows = nil
     end
     if props.links_only == 'true' then
@@ -268,24 +268,25 @@ local function configure_stockpile(bld, db_entry)
 end
 
 local function init_containers(db_entry, ntiles)
-    if db_entry.want_barrels or db_entry.props.max_barrels then
-        local max_barrels = db_entry.props.max_barrels or
+    local storage = db_entry.props.storage
+    if db_entry.want_barrels or storage.max_barrels then
+        local max_barrels = storage.max_barrels or
                 quickfort_set.get_setting('stockpiles_max_barrels')
-        db_entry.props.max_barrels = (max_barrels < 0 or max_barrels >= ntiles) and ntiles or max_barrels
-        log('barrels set to %d', db_entry.props.max_barrels)
+        storage.max_barrels = (max_barrels < 0 or max_barrels >= ntiles) and ntiles or max_barrels
+        log('barrels set to %d', storage.max_barrels)
     end
-    if db_entry.want_bins or db_entry.props.max_bins then
-        local max_bins = db_entry.props.max_bins or
+    if db_entry.want_bins or storage.max_bins then
+        local max_bins = storage.max_bins or
                 quickfort_set.get_setting('stockpiles_max_bins')
-        db_entry.props.max_bins = (max_bins < 0 or max_bins >= ntiles) and ntiles or max_bins
-        log('bins set to %d', db_entry.props.max_bins)
+        storage.max_bins = (max_bins < 0 or max_bins >= ntiles) and ntiles or max_bins
+        log('bins set to %d', storage.max_bins)
     end
-    if db_entry.want_wheelbarrows or db_entry.props.max_wheelbarrows then
-        local max_wb = db_entry.props.max_wheelbarrows or
+    if db_entry.want_wheelbarrows or storage.max_wheelbarrows then
+        local max_wb = storage.max_wheelbarrows or
                 quickfort_set.get_setting('stockpiles_max_wheelbarrows')
         if max_wb < 0 then max_wb = 1 end
-        db_entry.props.max_wheelbarrows = (max_wb >= ntiles - 1) and ntiles-1 or max_wb
-        log('wheelbarrows set to %d', db_entry.props.max_wheelbarrows)
+        storage.max_wheelbarrows = (max_wb >= ntiles - 1) and ntiles-1 or max_wb
+        log('wheelbarrows set to %d', storage.max_wheelbarrows)
     end
 end
 
@@ -456,7 +457,7 @@ function do_orders(zlevel, grid, ctx)
         local db_entry = s.db_entry
         local props = db_entry.props or {}
         quickfort_orders.enqueue_container_orders(ctx,
-            props.max_bins, props.max_barrels, props.max_wheelbarrows)
+            props.storage.max_bins, props.storage.max_barrels, props.storage.max_wheelbarrows)
     end
 end
 

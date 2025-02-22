@@ -1,29 +1,57 @@
 --Print a tree_info visualization of the tree at the cursor.
 --@module = true
 
-local branch_dir =
-{
-    [0] = ' ',
-    [1] = string.char(26), --W
-    [2] = string.char(25), --N
-    [3] = string.char(217), --WN
-    [4] = string.char(27), --E
-    [5] = string.char(196), --WE
-    [6] = string.char(192), --NE
-    [7] = string.char(193), --WNE
-    [8] = string.char(24), --S
-    [9] = string.char(191), --WS
-    [10] = string.char(179), --NS
-    [11] = string.char(180), --WNS
-    [12] = string.char(218), --ES
-    [13] = string.char(194), --WES
-    [14] = string.char(195), --NES
-    [15] = string.char(197), --WNES
+-- [w][n][e][s]
+local branch_chars = {
+    [true]={
+        [true]={
+            [true]={
+                [true]=string.char(197), --WNES
+                [false]=string.char(193), --WNE
+            },
+            [false]={
+                [true]=string.char(180), --WNS
+                [false]=string.char(217), --WN
+            },
+        },
+        [false]={
+            [true]={
+                [true]=string.char(194), --WES
+                [false]=string.char(196), --WE
+            },
+            [false]={
+                [true]=string.char(191), --WS
+                [false]=string.char(26), --W
+            },
+        },
+    },
+    [false]={
+        [true]={
+            [true]={
+                [true]=string.char(195), --NES
+                [false]=string.char(192), --NE
+            },
+            [false]={
+                [true]=string.char(179), --NS
+                [false]=string.char(25), --N
+            },
+        },
+        [false]={
+            [true]={
+                [true]=string.char(218), --ES
+                [false]=string.char(27), --E
+            },
+            [false]={
+                [true]=string.char(24), --S
+                [false]=' ',
+            },
+        },
+    },
 }
 
 local function print_color(s, color)
     dfhack.color(color)
-    dfhack.print(s)
+    dfhack.print(dfhack.df2console(s))
     dfhack.color(COLOR_RESET)
 end
 
@@ -68,7 +96,7 @@ function printTreeTile(bits)
     end
 
     chars = chars-2
-    print_color(' '..(branch_dir[bits.branches_dir] or '?'), COLOR_GREY)
+    print_color(' '..(branch_chars[bits.branch_w][bits.branch_n][bits.branch_e][bits.branch_s] or '?'), COLOR_GREY)
 
     local dir = bits.parent_dir
     if dir > 0 then

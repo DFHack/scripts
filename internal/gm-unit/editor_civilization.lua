@@ -107,7 +107,7 @@ function CivBox:choose_race()
 end
 function CivBox:init(info)
     self.subviews.list.frame={t=3,r=0,l=0}
-    self.subviews.list.edit.ignore_keys={"STRING_A047"},
+    self.subviews.list.edit.text_area.text_area.ignore_keys={"STRING_A047"}
     self:addviews{
         widgets.Label{frame={t=1,l=0},text={
         {text="Filter race ",key="STRING_A047",key_sep="()",on_activate=self:callback("choose_race")},

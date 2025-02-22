@@ -35,6 +35,12 @@ function leverPullInstant(lever)
     end
 end
 
+local flag_names = {
+    [df.building_type.Bridge]={closed="raised", closing="raising", opening="lowering"},
+    [df.building_type.Weapon]={closed="retracted", closing="retracting", opening="unretracting"},
+}
+setmetatable(flag_names, {__index=function() return {closed="closed", closing="closing", opening="opening"} end})
+
 function leverDescribe(lever)
     local lever_name = ''
     if #lever.name > 0 then
@@ -70,23 +76,18 @@ function leverDescribe(lever)
     for _, m in ipairs(lever.linked_mechanisms) do
         local tref = dfhack.items.getGeneralRef(m, df.general_ref_type.BUILDING_HOLDER)
         if tref then
-            tg = tref:getBuilding()
+            local tg = tref:getBuilding()
             if pcall(function()
                 return tg.gate_flags
             end) then
-                if tg.gate_flags.closed then
-                    state = "closed"
-                else
-                    state = "opened"
-                end
+                local btype = tg:getType()
+                state = flag_names[btype].closed
 
-                if tg.gate_flags.closing then
-                    state = state .. (', closing (%d)'):format(tg.timer)
+                if tg.gate_flags[flag_names[btype].closing] then
+                    state = state .. (', %s (%d)'):format(flag_names[btype].closing, tg.timer)
+                elseif tg.gate_flags[flag_names[btype].opening] then
+                    state = state .. (', %s (%d)'):format(flag_names[btype].opening, tg.timer)
                 end
-                if tg.gate_flags.opening then
-                    state = state .. (', opening (%d)'):format(tg.timer)
-                end
-
             end
 
             t = t ..

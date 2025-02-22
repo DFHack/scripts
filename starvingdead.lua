@@ -65,7 +65,7 @@ function StarvingDead:checkDecay()
         attribute.value = math.floor(attribute.value - (attribute.value * self.attribute_decay))
       end
 
-      if unit.curse.time_on_site > (self.death_threshold * 33600) then
+      if unit.curse.interaction.time_on_site > (self.death_threshold * 33600) then
         unit.animal.vanish_countdown = 1
       end
     end

@@ -40,11 +40,11 @@ end
 local used_types = {
     df.job_type,
     df.item_type,
-    df.manager_order.T_frequency,
-    df.manager_order_condition_item.T_compare_type,
-    df.manager_order_condition_order.T_condition,
+    df.workquota_frequency_type,
+    df.logic_condition_type,
+    df.workquota_order_condition_type,
     df.tool_uses,
-    df.job_art_specification.T_type
+    df.job_art_specifier_type
 }
 local function print_types(_, filter)
     for _, t in ipairs(used_types) do
@@ -265,7 +265,7 @@ function create_orders(orders, quiet)
         end
 
         if it["art"] then
-            order.art_spec.type = ensure_df_id(df.job_art_specification.T_type, it["art"]["type"])
+            order.art_spec.type = ensure_df_id(df.job_art_specifier_type, it["art"]["type"])
                         or qerror ("Invalid art type value for manager order: " .. it["art"]["type"])
             order.art_spec.id = tonumber( it["art"]["id"] )
             if it["art"]["subid"] then
@@ -278,7 +278,7 @@ function create_orders(orders, quiet)
         --order.status.validated = it["is_validated"] -- ignoring
         --order.status.active = it["is_active"] -- ignoring
 
-        order.frequency = ensure_df_id(df.manager_order.T_frequency, it["frequency"])
+        order.frequency = ensure_df_id(df.workquota_frequency_type, it["frequency"])
                         or qerror("Invalid frequency value for manager order: " .. it["frequency"])
 
         -- finished_year, finished_year_tick
@@ -300,7 +300,7 @@ function create_orders(orders, quiet)
                 condition = df.manager_order_condition_item:new()
                 dfhack.with_onerror(function() condition:delete() end, -- cleanup in case of errors
                 function()
-                condition.compare_type = ensure_df_id(df.manager_order_condition_item.T_compare_type, it2["condition"])
+                condition.compare_type = ensure_df_id(df.logic_condition_type, it2["condition"])
                                     or qerror ("Invalid item condition for manager order: " .. it2["condition"] )
                 condition.compare_val = tonumber(it2["value"])
 
@@ -342,7 +342,7 @@ function create_orders(orders, quiet)
                 if it2["bearing"] then
                     local bearing = it2["bearing"]
                     local idx
-                    for i, raw in ipairs(world.raws.inorganics) do
+                    for i, raw in ipairs(world.raws.inorganics.all) do
                         if raw.id == bearing then
                             idx = i
                             break
@@ -386,7 +386,7 @@ function create_orders(orders, quiet)
                 condition.order_id = id ~= it["id"] and id_mapping[id]
                                     or qerror("Missing order condition target for manager order: " .. it2["order"])
 
-                condition.condition = ensure_df_id(df.manager_order_condition_order.T_condition, it2["condition"])
+                condition.condition = ensure_df_id(df.workquota_order_condition_type, it2["condition"])
                                     or qerror ( "Invalid order condition type for manager order: " .. it2["condition"] )
 
                 -- condition.unk_1

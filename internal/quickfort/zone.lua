@@ -61,11 +61,11 @@ end
 
 local function parse_tomb_props(zone_data, props)
     if props.pets == 'true' then
-        ensure_keys(zone_data, 'zone_settings', 'tomb').no_pets = false
+        ensure_keys(zone_data, 'zone_settings', 'tomb', 'flags').no_pets = false
         props.pets = nil
     end
     if props.citizens == 'false' then
-        ensure_keys(zone_data, 'zone_settings', 'tomb').no_citizens = true
+        ensure_keys(zone_data, 'zone_settings', 'tomb', 'flags').no_citizens = true
         props.citizens = nil
     end
 end
@@ -106,7 +106,7 @@ local zone_db_raw = {
     b={label='Bedroom', default_data={type=df.civzone_type.Bedroom}},
     h={label='Dining Hall', default_data={type=df.civzone_type.DiningHall}},
     n={label='Pen/Pasture', default_data={type=df.civzone_type.Pen,
-       assign={zone_settings={pen={check_occupants=true}}}}},
+       assign={zone_settings={pen={flags={check_occupants=true}}}}}},
     p={label='Pit/Pond', props_fn=parse_pit_pond_props, default_data={type=df.civzone_type.Pond,
        assign={zone_settings={pond={flag={keep_filled=true}}}}}},
     w={label='Water Source', default_data={type=df.civzone_type.WaterSource}},
@@ -121,7 +121,7 @@ local zone_db_raw = {
     d={label='Garbage Dump', default_data={type=df.civzone_type.Dump}},
     t={label='Animal Training', default_data={type=df.civzone_type.AnimalTraining}},
     T={label='Tomb', props_fn=parse_tomb_props, default_data={type=df.civzone_type.Tomb,
-       assign={zone_settings={tomb={whole=1}}}}},
+       assign={zone_settings={tomb={flags={whole=1}}}}}},
     g={label='Gather/Pick Fruit', props_fn=parse_gather_props, default_data={type=df.civzone_type.PlantGathering,
        assign={zone_settings={gather={flags={pick_trees=true, pick_shrubs=true, gather_fallen=true}}}}}},
     c={label='Clay', default_data={type=df.civzone_type.ClayCollection}},

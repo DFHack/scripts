@@ -717,7 +717,7 @@ local function export_more_legends_xml()
                         file:write("\t\t<"..k..">"..escape_xml(dfhack.df2utf(df.creature_raw.find(detailV).name[0])).."</"..k..">\n")
                     end
                 elseif df.history_event_body_abusedst:is_instance(event) and (k == "abuse_data") then
-                    if event.abuse_type == df.history_event_body_abusedst.T_abuse_type.Impaled then
+                    if event.abuse_type == df.body_abuse_method_type.Impaled then
                         file:write("\t\t<item_type>"..tostring(df_enums.item_type[event.abuse_data.Impaled.item_type]):lower().."</item_type>\n")
                         file:write("\t\t<item_subtype>"..getItemSubTypeName(event.abuse_data.Impaled.item_type,event.abuse_data.Impaled.item_subtype).."</item_subtype>\n")
                         if (event.abuse_data.Impaled.mat_type > -1) then
@@ -728,16 +728,16 @@ local function export_more_legends_xml()
                                 file:write("\t\t<item_mat>"..dfhack.df2utf(dfhack.matinfo.toString(dfhack.matinfo.decode(event.abuse_data.Impaled.mat_type, event.abuse_data.Impaled.mat_index))).."</item_mat>\n")
                             end
                         end
-                    elseif event.abuse_type == df.history_event_body_abusedst.T_abuse_type.Piled then
-                        local val = df.history_event_body_abusedst.T_abuse_data.T_Piled.T_pile_type [event.abuse_data.Piled.pile_type]
+                    elseif event.abuse_type == df.body_abuse_method_type.Piled then
+                        local val = df.body_abuse_sculpture_type [event.abuse_data.Piled.pile_type]
                         if not val then
                             file:write("\t\t<pile_type>unknown "..tostring(event.abuse_data.Piled.pile_type).."</pile_type>\n")
                         else
                             file:write("\t\t<pile_type>"..tostring(val):lower().."</pile_type>\n")
                         end
-                    elseif event.abuse_type == df.history_event_body_abusedst.T_abuse_type.Flayed then
+                    elseif event.abuse_type == df.body_abuse_method_type.Flayed then
                         file:write("\t\t<structure>"..tostring(event.abuse_data.Flayed.structure).."</structure>\n")
-                    elseif event.abuse_type == df.history_event_body_abusedst.T_abuse_type.Hung then
+                    elseif event.abuse_type == df.body_abuse_method_type.Hung then
                         file:write("\t\t<tree>"..tostring(event.abuse_data.Hung.tree).."</tree>\n")
                         if (dfhack.matinfo.decode(event.abuse_data.Hung.mat_type, event.abuse_data.Hung.mat_index) == nil) then
                             file:write("\t\t<mat_type>"..event.abuse_data.Hung.mat_type.."</mat_type>\n")
@@ -745,8 +745,8 @@ local function export_more_legends_xml()
                         else
                             file:write("\t\t<item_mat>"..dfhack.df2utf(dfhack.matinfo.toString(dfhack.matinfo.decode(event.abuse_data.Hung.mat_type, event.abuse_data.Hung.mat_index))).."</item_mat>\n")
                         end
-                    elseif event.abuse_type == df.history_event_body_abusedst.T_abuse_type.Mutilated then  --  For completeness. No fields
-                    elseif event.abuse_type == df.history_event_body_abusedst.T_abuse_type.Animated then
+                    elseif event.abuse_type == df.body_abuse_method_type.Mutilated then  --  For completeness. No fields
+                    elseif event.abuse_type == df.body_abuse_method_type.Animated then
                         file:write("\t\t<interaction>"..tostring(event.abuse_data.Animated.interaction).."</interaction>\n")
                     end
                 elseif df.history_event_assume_identityst:is_instance(event) and k == "identity" then
@@ -784,16 +784,16 @@ local function export_more_legends_xml()
                         file:write("\t\t<caste>"..(world.raws.creatures.all[event.race].caste[v].caste_id):lower().."</caste>\n")
                     end
                 elseif k == "interaction" and df.history_event_hf_does_interactionst:is_instance(event) then
-                    if #world.raws.interactions[v].sources > 0 then
-                        local str_1 = world.raws.interactions[v].sources[0].hist_string_1
+                    if #world.raws.interactions.all[v].sources > 0 then
+                        local str_1 = world.raws.interactions.all[v].sources[0].hist_string_1
                         if string.sub (str_1, 1, 1) == " " and string.sub (str_1, string.len (str_1), string.len (str_1)) == " " then
                             str_1 = string.sub (str_1, 2, string.len (str_1) - 1)
                         end
-                        file:write("\t\t<interaction_action>"..str_1..world.raws.interactions[v].sources[0].hist_string_2.."</interaction_action>\n")
+                        file:write("\t\t<interaction_action>"..str_1..world.raws.interactions.all[v].sources[0].hist_string_2.."</interaction_action>\n")
                     end
                 elseif k == "interaction" and df.history_event_hf_learns_secretst:is_instance(event) then
-                    if #world.raws.interactions[v].sources > 0 then
-                        file:write("\t\t<secret_text>"..world.raws.interactions[v].sources[0].name.."</secret_text>\n")
+                    if #world.raws.interactions.all[v].sources > 0 then
+                        file:write("\t\t<secret_text>"..world.raws.interactions.all[v].sources[0].name.."</secret_text>\n")
                     end
                 elseif df.history_event_hist_figure_diedst:is_instance(event) and k == "weapon" then
                     for detailK,detailV in pairs(v) do

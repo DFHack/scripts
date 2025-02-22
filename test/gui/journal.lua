@@ -530,11 +530,6 @@ function test.table_of_contents_selection_follows_cursor()
     journal:dismiss()
 end
 
-if df_major_version < 51 then
-    -- temporary ignore test features that base on newest API of the DF game
-    return
-end
-
 function test.table_of_contents_keyboard_navigation()
     local journal, text_area = arrange_empty_journal({
         w=100,
@@ -623,6 +618,3 @@ function test.show_tutorials_on_first_use()
     expect.str_find('Section 1\n', read_rendered_text(toc_panel));
     journal:dismiss()
 end
-
--- TODO: separate journal tests from TextEditor tests
--- add "one_line_mode" tests

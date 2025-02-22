@@ -161,7 +161,7 @@ AdvNotifyOverlay.ATTRS{
 
 function AdvNotifyOverlay:set_width()
     local desired_width = 13
-    if df.global.adventure.player_control_state ~= df.adventurest.T_player_control_state.TAKING_INPUT then
+    if df.global.adventure.player_control_state ~= df.adventure_game_loop_type.TAKING_INPUT then
         local offset = self.frame_parent_rect.width > 137 and 26 or
             (self.frame_parent_rect.width+1) // 2 - 43
         desired_width = self.frame_parent_rect.width // 2 + offset

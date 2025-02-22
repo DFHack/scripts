@@ -34,7 +34,7 @@ Valid filters:
     Include one of these to describe what the id argument represents.
 - ``-type <PREFERENCE TYPE>``:
     This describes the type of the preference. Can be entered either using the numerical ID or text id.
-    Run ``lua @df.unit_preference.T_type`` for a full list of valid values.
+    Run ``lua @df.unitpref_type`` for a full list of valid values.
 - ``-subtype <ID>``:
     The value for an item's subtype
 - ``-material <ID>``:

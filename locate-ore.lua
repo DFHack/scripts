@@ -49,7 +49,7 @@ end
 
 local function matchesMetalOreById(mat_indices, target_ore)
     for _, mat_index in ipairs(mat_indices) do
-        local metal_raw = df.global.world.raws.inorganics[mat_index]
+        local metal_raw = df.global.world.raws.inorganics.all[mat_index]
         if metal_raw ~= nil and string.lower(metal_raw.id) == target_ore then
             return true
         end
@@ -77,7 +77,7 @@ local function findOres(opts, check_designation, target_ore)
                 goto skipevent
             end
 
-            local ino_raw = df.global.world.raws.inorganics[bevent.inorganic_mat]
+            local ino_raw = df.global.world.raws.inorganics.all[bevent.inorganic_mat]
             if not ino_raw.flags.METAL_ORE then
                 goto skipevent
             end
@@ -131,7 +131,7 @@ local function getOreDescription(opts, vein)
     local visible = opts.all and '' or 'visible '
     local str = ('%5d %stile(s) of %s ('):format(#vein.positions, visible, tostring(vein.inorganic_id):lower())
     for _, mat_index in ipairs(vein.metal_ore.mat_index) do
-        local metal_raw = df.global.world.raws.inorganics[mat_index]
+        local metal_raw = df.global.world.raws.inorganics.all[mat_index]
         str = ('%s%s, '):format(str, string.lower(metal_raw.id))
     end
 

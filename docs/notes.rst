@@ -29,7 +29,7 @@ Creating a Note
 1. Use the keyboard cursor to select the desired map tile where you want to place a note.
 2. Execute ``notes add`` via the DFHack console.
 3. In the pop-up dialog, fill in the note's title and detailed comment.
-4. Press :kbd:`Alt` + :kbd:`S` to create the note.
+4. Press :kbd:`Ctrl` + :kbd:`Enter` to create the note.
 
 Editing or Deleting a Note
 --------------------------

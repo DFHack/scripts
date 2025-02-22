@@ -46,7 +46,7 @@ local function fix_clothing_ownership(unit)
     for _, inv_item in ipairs(unit.inventory) do
         local item = inv_item.item
         -- only act on worn items, not weapons
-        if inv_item.mode == df.unit_inventory_item.T_mode.Worn and
+        if inv_item.mode == df.inv_item_role_type.Worn and
             not dfhack.items.getOwner(item) and
             dfhack.items.setOwner(item, unit)
         then
@@ -69,11 +69,11 @@ function clear_enemy_status(unit)
     status_cache.slot_used[status_slot] = false
 
     for index in ipairs(status_cache.rel_map[status_slot]) do
-        status_cache.rel_map[status_slot][index] = -1
+        status_cache.rel_map[status_slot][index].ur = -1
     end
 
     for index in ipairs(status_cache.rel_map) do
-        status_cache.rel_map[index][status_slot] = -1
+        status_cache.rel_map[index][status_slot].ur = -1
     end
 
     -- TODO: what if there were status slots taken above status_slot?

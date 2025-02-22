@@ -1,48 +1,74 @@
 -- Scan and dump likely vtable addresses
-memscan = require('memscan')
+local memscan = require('memscan')
 
 local osType = dfhack.getOSType()
 if osType ~= 'linux' then
     qerror('unsupported OS: ' .. osType)
 end
 
-local df_ranges = {}
-for _, mem in ipairs(dfhack.internal.getMemRanges()) do
-    if mem.read and (
-        string.match(mem.name,'/dwarfort%.exe$')
-        or string.match(mem.name,'/dwarfort$')
-        or string.match(mem.name,'/Dwarf_Fortress$')
-        or string.match(mem.name,'Dwarf Fortress%.exe')
-        or string.match(mem.name,'/libg_src_lib.so$')
-    )
-    then
-        table.insert(df_ranges, mem)
+local function get_ranges()
+    local df_ranges, lib_names = {}, {}
+
+    local raw_ranges = dfhack.internal.getMemRanges()
+
+    -- add main binary mem ranges first
+    for _, range in ipairs(raw_ranges) do
+        if range.read and (
+            string.match(range.name, '/dwarfort$') or
+            string.match(range.name, 'Dwarf Fortress%.exe')
+        )
+        then
+            table.insert(df_ranges, range)
+        end
     end
+
+    for _, range in ipairs(raw_ranges) do
+        if range.read and string.match(range.name, '/libg_src_lib.so$') then
+            table.insert(df_ranges, range)
+            lib_names[range.name] = true
+        end
+    end
+
+    return df_ranges, lib_names
 end
 
+local df_ranges, lib_names = get_ranges()
+
+-- vtables that cross a range boundary can appear twice, a truncated version in the
+-- lower memory range and a full version in the higher memory range
+-- therefore, sort the memory ranges by start address, descending
+-- but keep libraries last
+local function sort_ranges(a, b)
+    if lib_names[a.name] == lib_names[b.name] then
+        return a.start_addr > b.start_addr
+    end
+    return lib_names[b.name]
+end
+
+table.sort(df_ranges, sort_ranges)
+
 function is_df_addr(a)
-    for _, mem in ipairs(df_ranges) do
-        if a >= mem.start_addr and a < mem.end_addr then
+    for _, range in ipairs(df_ranges) do
+        if a >= range.start_addr and a < range.end_addr then
             return true
         end
     end
     return false
 end
 
-local names = {}
+local function is_vtable_range(range)
+    return not range.write and not range.execute
+end
 
-function scan_ranges(g_src)
+function scan_ranges()
     local vtables = {}
-    for _, range in ipairs(df_ranges) do
-        if (not range.read) or range.write or range.execute then
-            goto next_range
-        end
-        if not not range.name:match('g_src') ~= g_src then
-            goto next_range
-        end
+    local seen = {} -- only record the first encountered vtable for each name
 
+    for _, range in ipairs(df_ranges) do
+        if not is_vtable_range(range) then goto next_range end
         local base = range.name:match('.*/(.*)$')
         local area = memscan.MemoryArea.new(range.start_addr, range.end_addr)
+        local is_lib = lib_names[range.name]
         for i = 1, area.uintptr_t.count - 1 do
             -- take every pointer-aligned value in memory mapped to the DF executable, and see if it is a valid vtable
             -- start by following the logic in Process::doReadClassName() and ensure it doesn't crash
@@ -71,27 +97,26 @@ function scan_ranges(g_src)
             if demangled_name and
                 not demangled_name:match('[<>]') and
                 not demangled_name:match('^std::') and
-                not names[demangled_name] and
-                (g_src or demangled_name ~= 'widgets::widget')  -- the widget in g_src takes precedence
+                not seen[demangled_name] and
+                (is_lib or demangled_name ~= 'widgets::widget')  -- the widget in g_src takes precedence
             then
                 local base_str = ''
-                if g_src then
+                if is_lib then
                     vtable = vtable - range.base_addr
                     base_str = (" base='%s'"):format(base)
                 end
                 vtables[demangled_name] = {value=vtable, base_str=base_str}
+                seen[demangled_name] = true
             end
             ::next_ptr::
         end
         ::next_range::
     end
-    for name, data in pairs(vtables) do
-        if not names[name] then
-            print(("<vtable-address name='%s' value='0x%x'%s/>"):format(name, data.value, data.base_str))
-            names[name] = true
-        end
-    end
+
+    return vtables
 end
 
-scan_ranges(false)
-scan_ranges(true)
+local vtables = scan_ranges()
+for name, data in pairs(vtables) do
+    print(("<vtable-address name='%s' value='0x%x'%s/>"):format(name, data.value, data.base_str))
+end

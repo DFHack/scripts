@@ -15,7 +15,7 @@ eventful.onUnload.reactionTrigger = function()
 end
 
 local function findSyndrome(name)
- for _,syndrome in ipairs(df.global.world.raws.syndromes.all) do
+ for _,syndrome in ipairs(df.global.world.raws.mat_table.syndromes.all) do
   if syndrome.syn_name == name then
    return syndrome
   end

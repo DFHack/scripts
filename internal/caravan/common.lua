@@ -334,8 +334,8 @@ end
 
 function get_banned_items()
     local banned_items = {}
-    for _, mandate in ipairs(df.global.world.mandates) do
-        if mandate.mode == df.mandate.T_mode.Export then
+    for _, mandate in ipairs(df.global.world.mandates.all) do
+        if mandate.mode == df.mandate_type.Export then
             register_item_type(banned_items, mandate)
         end
     end
@@ -344,8 +344,8 @@ end
 
 local function analyze_noble(unit, risky_items, banned_items)
     for _, preference in ipairs(unit.status.current_soul.preferences) do
-        if preference.type == df.unit_preference.T_type.LikeItem and
-            preference.active
+        if preference.type == df.unitpref_type.LikeItem and
+            preference.flags.visible
         then
             register_item_type(risky_items, preference, banned_items)
         end

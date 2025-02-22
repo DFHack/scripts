@@ -27,20 +27,43 @@ Template for new versions:
 # Future
 
 ## New Tools
-
+- `devel/export-map`: export map tile data to a JSON file
 - `autocheese`: automatically make cheese using barrels that have accumulated sufficient milk
+- `gui/spectate`: interactive UI for configuring `spectate`
+- `gui/notes`: UI for adding and managing notes attached to tiles on the map
 
 ## New Features
+- `advtools`: new ``advtools.fastcombat`` overlay (enabled by default)  allows you to skip combat animations and the announcement "More" button by mashing the movement keys
 
 ## Fixes
+- `position`: support for adv mode look cursor
+
+## Misc Improvements
+- `hide-tutorials`: handle tutorial popups for adventure mode
+- `hide-tutorials`: new ``reset`` command that will re-enable popups in the current game (in case you hid them all and now want them back)
+- `gui/notify`: moody dwarf notification turns red when they can't reach workshop or items
+- `gui/notify`: save reminder now appears in adventure mode
+- `gui/notify`: save reminder changes color to yellow at 30 minutes and to orange at 60 minutes
+- `gui/confirm`: in the delete manager order confirmation dialog, show a description of which order you have selected to delete
+- `position`: display both adventurer and site pos simultaneously. Display map block pos+offset of selected tile.
+- `gui/sitemap`: shift click to start following the selected unit or artifact
+- `prioritize`: when prioritizing jobs of a specified type, also output how many of those jobs were already prioritized before you ran the command
+- `prioritize`: don't include already-prioritized jobs in the output of ``prioritize -j``
+
+## Removed
+
+# 51.04-r1.1
+
+## Fixes
+- `advtools`: fix dfhack-added conversation options not appearing in the ask whereabouts conversation tree
+- `gui/rename`: fix error when changing the language of a unit's name
 
 ## Misc Improvements
 - `assign-preferences`: new ``--show`` option to display the preferences of the selected unit
 - `pref-adjust`: new ``show`` command to display the preferences of the selected unit
-- `hide-tutorials`: if enabled, also hide tutorial popups for adventure mode
-- `hide-tutorials`: new ``reset`` command that will re-enable popups in the current game
 
 ## Removed
+- `gui/control-panel`: removed ``craft-age-wear`` tweak for Windows users; the tweak doesn't currently load on Windows
 
 # 51.02-r1
 

@@ -46,7 +46,7 @@ end
 
 local function refund_population(entry)
     local epop = entry.pop
-    for _,population in ipairs(df.global.world.populations) do
+    for _,population in ipairs(df.global.world.populations.all) do
         local wpop = population.population
         if population.quantity < 10000001 and
             wpop.region_x == epop.region_x and
