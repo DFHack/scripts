@@ -3,6 +3,7 @@ local gui_notes = reqscript('gui/notes')
 local utils = require('utils')
 local guidm = require('gui.dwarfmode')
 local overlay = require('plugins.overlay')
+local notes_textures = reqscript('notes').textures
 
 config = {
     target = 'gui/notes',
@@ -43,6 +44,7 @@ local function arrange_gui_notes(options)
     gui_notes.main()
 
     local gui_notes = gui_notes.view
+    gui_notes.enable_selector_blink = false
 
     gui_notes:updateLayout()
     gui_notes:onRender()
@@ -238,7 +240,6 @@ function test.edit_note()
     note_manager.subviews.name:setText('updated green note 2')
     note_manager.subviews.comment:setText('updated comment 2')
     local screen = dfhack.gui.getCurViewscreen(true)
-    printall(screen.widgets)
     gui.simulateInput(dfhack.gui.getCurViewscreen(true), 'CUSTOM_CTRL_ENTER')
 
     local note_list = gui_notes.subviews.note_list:getChoices()
@@ -281,3 +282,68 @@ function test.delete_note()
 
     cleanup(gui_notes)
 end
+
+function test.create_new_note()
+    local notes = {
+        {name='green note 1', comment='comment 1', pos={x=1, y=1, z=1}},
+    }
+
+    local gui_notes, gui_notes_window = arrange_gui_notes({ notes=notes })
+
+    local note_list = gui_notes.subviews.note_list:getChoices()
+    expect.eq(#note_list, 1)
+
+    gui.simulateInput(dfhack.gui.getCurViewscreen(true), 'CUSTOM_CTRL_N')
+
+    local viewport = guidm.Viewport.get()
+
+    local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
+    local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
+
+    local pos = {x=half_x, y=half_y, z=viewport.z}
+    local screen_pos = viewport:tileToScreen(pos)
+    df.global.cursor = pos
+
+    -- should not be a test function to map screen tile to mouse pos?
+    df.global.gps.precise_mouse_x = screen_pos.x * df.global.gps.viewport_zoom_factor / 4
+    df.global.gps.precise_mouse_y = screen_pos.y * df.global.gps.viewport_zoom_factor / 4
+
+    df.global.gps.mouse_x = screen_pos.x
+    df.global.gps.mouse_y = screen_pos.y
+
+    gui_notes:render(gui.Painter.new())
+
+    local pen = dfhack.screen.readTile(screen_pos.x, screen_pos.y, true)
+
+    if dfhack.screen.inGraphicsMode() then
+        local pin_textpos = dfhack.textures.getTexposByHandle(
+            notes_textures.green_pin[1]
+        )
+        expect.eq(pen and pen.tile, pin_textpos)
+    else
+        expect.eq(pen and pen.ch, string.byte('X'))
+    end
+
+    gui.simulateInput(dfhack.gui.getCurViewscreen(true), '_MOUSE_L')
+
+    local note_manager = gui_notes_window.note_manager
+
+    expect.ne(note_manager, nil)
+    expect.eq(note_manager.visible, true)
+
+    note_manager.subviews.name:setText('note 2')
+    note_manager.subviews.comment:setText('new note')
+
+    gui.simulateInput(dfhack.gui.getCurViewscreen(true), 'CUSTOM_CTRL_ENTER')
+
+    local note_list = gui_notes.subviews.note_list:getChoices()
+    expect.eq(#note_list, 2)
+
+    local gui_note = note_list[2]
+    expect.eq(gui_note.text, 'note 2')
+    expect.eq(gui_note.point.comment, 'new note')
+    expect.table_eq(gui_note.point.pos, pos)
+
+    cleanup(gui_notes)
+end
+

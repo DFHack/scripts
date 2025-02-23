@@ -9,6 +9,7 @@ local overlay = require 'plugins.overlay'
 local utils = require 'utils'
 
 local note_manager = reqscript('internal/notes/note_manager')
+local notes_textures = reqscript('notes').textures
 
 local map_points = df.global.plotinfo.waypoints.points
 
@@ -16,13 +17,6 @@ local NOTE_LIST_RESIZE_MIN = {w=26}
 local RESIZE_MIN = {w=65, h=30}
 local NOTE_SEARCH_BATCH_SIZE = 25
 local OVERLAY_NAME = 'notes.map_notes'
-
-local green_pin = dfhack.textures.loadTileset(
-    'hack/data/art/note_green_pin_map.png',
-    32,
-    32,
-    true
-)
 
 NotesWindow = defclass(NotesWindow, widgets.Window)
 NotesWindow.ATTRS {
@@ -253,6 +247,7 @@ NotesScreen = defclass(NotesScreen, gui.ZScreen)
 NotesScreen.ATTRS {
     focus_path='gui/notes',
     pass_movement_keys=true,
+    enable_selector_blink = true,
 }
 
 function NotesScreen:init()
@@ -283,7 +278,7 @@ function NotesScreen:onInput(keys)
         if (keys.SELECT or keys._MOUSE_L) then
             self.adding_note_pos = dfhack.gui.getMousePos()
 
-            local manager = note_manager.NoteManager{
+            local note_manager = note_manager.NoteManager{
                 note=nil,
                 on_update=function()
                     dfhack.run_command_silent('overlay trigger notes.map_notes')
@@ -294,7 +289,8 @@ function NotesScreen:onInput(keys)
                     self:stopNoteAdd()
                 end
             }:show()
-            manager:setNotePos(self.adding_note_pos)
+            note_manager:setNotePos(self.adding_note_pos)
+            self.subviews.notes_window.note_manager = note_manager
 
             return true
         elseif (keys.LEAVESCREEN or keys._MOUSE_R)then
@@ -309,7 +305,7 @@ end
 function NotesScreen:onRenderFrame(dc, rect)
     NotesScreen.super.onRenderFrame(self, dc, rect)
 
-    if not dfhack.screen.inGraphicsMode() and not gui.blink_visible(500) then
+    if self.enable_selector_blink and not gui.blink_visible(500) then
         return
     end
 
@@ -321,7 +317,9 @@ function NotesScreen:onRenderFrame(dc, rect)
 
         local function get_overlay_pen(pos)
             if same_xy(curr_pos, pos) then
-                local texpos = dfhack.textures.getTexposByHandle(green_pin[1])
+                local texpos = dfhack.textures.getTexposByHandle(
+                    notes_textures.green_pin[1]
+                )
                 return dfhack.pen.parse{
                     ch='X',
                     fg=COLOR_BLUE,
