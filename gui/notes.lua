@@ -76,7 +76,7 @@ function NotesWindow:init()
             auto_width=true,
             label='New note',
             key='CUSTOM_CTRL_N',
-            visible=edit_mode,
+            visible=true,
             on_activate=function()
                 if self.on_note_add then
                     self:on_note_add()

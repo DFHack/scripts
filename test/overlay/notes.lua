@@ -22,7 +22,7 @@ local function install_notes_overlay(options)
 
     overlay.rescan()
     overlay.overlay_command({'enable', 'notes.map_notes'})
-    -- if overlay
+
     local overlay_state = overlay.get_state()
     if not overlay_state.config['notes.map_notes'].enabled then
         qerror('can not enable notes.map_notes overlay')
@@ -62,6 +62,27 @@ local function add_note(notes_overlay, pos, name, comment)
     gui.simulateInput(dfhack.gui.getCurViewscreen(true), 'CUSTOM_CTRL_ENTER')
 end
 
+function assert_note_pen(pen)
+    if dfhack.screen.inGraphicsMode() then
+        local pin_textpos = dfhack.textures.getTexposByHandle(
+            notes_textures.green_pin[1]
+        )
+        expect.eq(pen and pen.tile, pin_textpos)
+    else
+        expect.eq(pen and pen.ch, string.byte('N'))
+    end
+end
+
+function set_mouse_screen_pos(screen_pos)
+    -- should not be a test function to map screen tile to mouse pos?
+    df.global.gps.precise_mouse_x = screen_pos.x * df.global.gps.viewport_zoom_factor / 4
+    df.global.gps.precise_mouse_y = screen_pos.y * df.global.gps.viewport_zoom_factor / 4
+
+    df.global.gps.mouse_x = screen_pos.x
+    df.global.gps.mouse_y = screen_pos.y
+
+end
+
 function test.load_notes_overlay()
     local notes_overlay = install_notes_overlay()
     expect.ne(notes_overlay, nil)
@@ -90,9 +111,9 @@ function test.render_existing_notes()
     local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
     local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
 
-    local pos_1 = {x=half_x, y=viewport.y1, z=viewport.z}
-    local pos_2 = {x=viewport.x1, y=half_y, z=viewport.z}
-    local pos_3 = {x=half_x, y=half_y, z=viewport.z}
+    local pos_1 = {x=half_x, y=half_y, z=viewport.z}
+    local pos_2 = {x=half_x - 2, y=half_y + 2, z=viewport.z}
+    local pos_3 = {x=half_x + 2, y=half_y + 2, z=viewport.z}
 
     add_note(notes_overlay, pos_1, 'note 1', 'first note')
     add_note(notes_overlay, pos_2, 'note 2', 'second note')
@@ -100,16 +121,12 @@ function test.render_existing_notes()
 
     reload_notes()
 
-    local pin_textpos = dfhack.textures.getTexposByHandle(
-        notes_textures.green_pin[1]
-    )
-
     for _, pos in ipairs({pos_1, pos_2, pos_3}) do
         notes_overlay:render(gui.Painter.new())
 
         local screen_pos = viewport:tileToScreen(pos)
         local pen = dfhack.screen.readTile(screen_pos.x, screen_pos.y, true)
-        expect.eq(pen and pen.tile, pin_textpos)
+        assert_note_pen(pen)
     end
 
     cleanup(notes_overlay)
@@ -123,9 +140,9 @@ function test.edit_clicked_note()
     local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
     local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
 
-    local pos_1 = {x=half_x, y=viewport.y1, z=viewport.z}
-    local pos_2 = {x=viewport.x1, y=half_y, z=viewport.z}
-    local pos_3 = {x=half_x, y=half_y, z=viewport.z}
+    local pos_1 = {x=half_x, y=half_y, z=viewport.z}
+    local pos_2 = {x=half_x - 2, y=half_y + 2, z=viewport.z}
+    local pos_3 = {x=half_x + 2, y=half_y + 2, z=viewport.z}
 
     add_note(notes_overlay, pos_1, 'note 1', 'note to edit')
     add_note(notes_overlay, pos_2, 'note 2', 'other note')
@@ -135,19 +152,16 @@ function test.edit_clicked_note()
 
     local screen_pos = viewport:tileToScreen(pos_1)
 
-    local rect = gui.ViewRect{rect=notes_overlay.frame_rect}
+    set_mouse_screen_pos(screen_pos)
 
-    -- should not be a test function to map screen tile to mouse pos?
-    df.global.gps.precise_mouse_x = screen_pos.x * df.global.gps.viewport_zoom_factor / 4
-    df.global.gps.precise_mouse_y = screen_pos.y * df.global.gps.viewport_zoom_factor / 4
-
-    local screen = dfhack.gui.getCurViewscreen(true)
-    gui.simulateInput(screen, {
+    gui.simulateInput(dfhack.gui.getCurViewscreen(true), {
         _MOUSE_L=true,
+        _MOUSE_L_DOWN=true,
     })
 
     local note_manager = notes_overlay.note_manager
     expect.ne(note_manager, nil)
+    expect.eq(note_manager:isDismissed(), false)
 
     expect.eq(note_manager.subviews.name:getText(), 'note 1')
     expect.eq(note_manager.subviews.comment:getText(), 'note to edit')
@@ -171,9 +185,9 @@ function test.delete_clicked_note()
     local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
     local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
 
-    local pos_1 = {x=half_x, y=viewport.y1, z=viewport.z}
-    local pos_2 = {x=viewport.x1, y=half_y, z=viewport.z}
-    local pos_3 = {x=half_x, y=half_y, z=viewport.z}
+    local pos_1 = {x=half_x, y=half_y, z=viewport.z}
+    local pos_2 = {x=half_x - 2, y=half_y + 2, z=viewport.z}
+    local pos_3 = {x=half_x + 2, y=half_y + 2, z=viewport.z}
 
     add_note(notes_overlay, pos_1, 'note 1', 'note to edit')
     add_note(notes_overlay, pos_2, 'note 2', 'other note')
@@ -185,13 +199,11 @@ function test.delete_clicked_note()
 
     local rect = gui.ViewRect{rect=notes_overlay.frame_rect}
 
-    -- should not be a test function to map screen tile to mouse pos?
-    df.global.gps.precise_mouse_x = screen_pos.x * df.global.gps.viewport_zoom_factor / 4
-    df.global.gps.precise_mouse_y = screen_pos.y * df.global.gps.viewport_zoom_factor / 4
+    set_mouse_screen_pos(screen_pos)
 
-    local screen = dfhack.gui.getCurViewscreen(true)
-    gui.simulateInput(screen, {
+    gui.simulateInput(dfhack.gui.getCurViewscreen(true), {
         _MOUSE_L=true,
+        _MOUSE_L_DOWN=true,
     })
 
     expect.eq(#map_points, 3)

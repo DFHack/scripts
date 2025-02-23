@@ -324,7 +324,10 @@ function test.create_new_note()
         expect.eq(pen and pen.ch, string.byte('X'))
     end
 
-    gui.simulateInput(dfhack.gui.getCurViewscreen(true), '_MOUSE_L')
+    gui.simulateInput(dfhack.gui.getCurViewscreen(true), {
+        _MOUSE_L=true,
+        _MOUSE_L_DOWN=true,
+    })
 
     local note_manager = gui_notes_window.note_manager
 
@@ -346,4 +349,3 @@ function test.create_new_note()
 
     cleanup(gui_notes)
 end
-
