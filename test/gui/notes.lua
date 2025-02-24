@@ -66,6 +66,21 @@ local function cleanup(gui_notes)
     map_points_backup = nil
 end
 
+function get_visible_map_center()
+    local viewport = guidm.Viewport.get()
+
+    local half_x = math.max(
+        math.floor((viewport.x1 + viewport.x2) / 2),
+        2
+    )
+    local half_y = math.max(
+        math.floor((viewport.y1 + viewport.y2) / 2),
+        2
+    )
+
+    return half_x, half_y, viewport.z
+end
+
 function test.load_gui_notes()
     local gui_notes = arrange_gui_notes()
     expect.eq(gui_notes.visible, true)
@@ -297,8 +312,7 @@ function test.create_new_note()
 
     local viewport = guidm.Viewport.get()
 
-    local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
-    local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
+    local half_x, half_y = get_visible_map_center()
 
     local pos = {x=half_x, y=half_y, z=viewport.z}
     local screen_pos = viewport:tileToScreen(pos)

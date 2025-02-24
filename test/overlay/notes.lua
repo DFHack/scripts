@@ -23,11 +23,11 @@ local function install_notes_overlay(options)
     overlay.rescan()
     overlay.overlay_command({'enable', 'notes.map_notes'})
 
-    local overlay_state = overlay.get_state()
-    if not overlay_state.config['notes.map_notes'].enabled then
+    if not overlay.isOverlayEnabled('notes.map_notes') then
         qerror('can not enable notes.map_notes overlay')
     end
 
+    local overlay_state = overlay.get_state()
     return overlay_state.db['notes.map_notes'].widget
 end
 
@@ -83,6 +83,21 @@ function set_mouse_screen_pos(screen_pos)
 
 end
 
+function get_visible_map_center()
+    local viewport = guidm.Viewport.get()
+
+    local half_x = math.max(
+        math.floor((viewport.x1 + viewport.x2) / 2),
+        2
+    )
+    local half_y = math.max(
+        math.floor((viewport.y1 + viewport.y2) / 2),
+        2
+    )
+
+    return half_x, half_y, viewport.z
+end
+
 function test.load_notes_overlay()
     local notes_overlay = install_notes_overlay()
     expect.ne(notes_overlay, nil)
@@ -108,8 +123,7 @@ function test.render_existing_notes()
 
     local viewport = guidm.Viewport.get()
 
-    local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
-    local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
+    local half_x, half_y = get_visible_map_center()
 
     local pos_1 = {x=half_x, y=half_y, z=viewport.z}
     local pos_2 = {x=half_x - 2, y=half_y + 2, z=viewport.z}
@@ -137,8 +151,7 @@ function test.edit_clicked_note()
 
     local viewport = guidm.Viewport.get()
 
-    local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
-    local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
+    local half_x, half_y, z = get_visible_map_center()
 
     local pos_1 = {x=half_x, y=half_y, z=viewport.z}
     local pos_2 = {x=half_x - 2, y=half_y + 2, z=viewport.z}
@@ -182,8 +195,7 @@ function test.delete_clicked_note()
 
     local viewport = guidm.Viewport.get()
 
-    local half_x = math.floor((viewport.x1 + viewport.x2) / 2)
-    local half_y = math.floor((viewport.y1 + viewport.y2) / 2)
+    local half_x, half_y = get_visible_map_center()
 
     local pos_1 = {x=half_x, y=half_y, z=viewport.z}
     local pos_2 = {x=half_x - 2, y=half_y + 2, z=viewport.z}
