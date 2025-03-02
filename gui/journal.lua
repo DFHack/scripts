@@ -7,34 +7,14 @@ local utils = require 'utils'
 local json = require 'json'
 local shifter = reqscript('internal/journal/shifter')
 local table_of_contents = reqscript('internal/journal/table_of_contents')
+local journal_context = reqscript('internal/journal/journal_context')
 
 local RESIZE_MIN = {w=54, h=20}
 local TOC_RESIZE_MIN = {w=24}
 
-local JOURNAL_PERSIST_KEY = 'journal'
-
-local JOURNAL_WELCOME_COPY =  [=[
-Welcome to gui/journal, the chronicler's tool for Dwarf Fortress!
-
-Here, you can carve out notes, sketch your grand designs, or record the history of your fortress.
-The text you write here is saved together with your fort.
-
-For guidance on navigation and hotkeys, tap the ? button in the upper right corner.
-Happy digging!
-]=]
-
-local TOC_WELCOME_COPY =  [=[
-Start a line with # symbols and a space to create a header. For example:
-
-# My section heading
-
-or
-
-## My section subheading
-
-Those headers will appear here, and you can click on them to jump to them in the text.]=]
-
 journal_config = journal_config or json.open('dfhack-config/journal.json')
+
+JOURNAL_CONTEXT_MODE = journal_context.JOURNAL_CONTEXT_MODE
 
 JournalWindow = defclass(JournalWindow, widgets.Window)
 JournalWindow.ATTRS {
@@ -46,6 +26,9 @@ JournalWindow.ATTRS {
     init_cursor=1,
     save_layout=true,
     show_tutorial=false,
+
+    toc_welcome_copy=DEFAULT_NIL,
+    journal_welcome_copy=DEFAULT_NIL,
 
     on_text_change=DEFAULT_NIL,
     on_cursor_change=DEFAULT_NIL,
@@ -76,7 +59,7 @@ function JournalWindow:init()
                 widgets.WrappedLabel{
                     view_id='table_of_contents_tutorial',
                     frame={l=0,t=0,r=0,b=3},
-                    text_to_wrap=TOC_WELCOME_COPY,
+                    text_to_wrap=self.toc_welcome_copy or '',
                     visible=false
                 }
             }
@@ -143,7 +126,7 @@ function JournalWindow:init()
             widgets.WrappedLabel{
                 view_id='journal_tutorial',
                 frame={l=0,t=1,r=0,b=0},
-                text_to_wrap=JOURNAL_WELCOME_COPY
+                text_to_wrap=self.journal_welcome_copy or ''
             }
         }
     end
@@ -285,13 +268,17 @@ end
 JournalScreen = defclass(JournalScreen, gui.ZScreen)
 JournalScreen.ATTRS {
     focus_path='journal',
-    save_on_change=true,
+    context_mode=DEFAULT_NIL,
     save_layout=true,
     save_prefix=''
 }
 
 function JournalScreen:init()
-    local context = self:loadContext()
+    self.journal_context = journal_context.journal_context_factory(
+        self.context_mode,
+        self.save_prefix
+    )
+    local content = self.journal_context:load_content()
 
     self:addviews{
         JournalWindow{
@@ -300,44 +287,24 @@ function JournalScreen:init()
 
             save_layout=self.save_layout,
 
-            init_text=context.text[1],
-            init_cursor=context.cursor[1],
-            show_tutorial=context.show_tutorial or false,
+            init_text=content.text[1],
+            init_cursor=content.cursor[1],
+            show_tutorial=content.show_tutorial or false,
 
-            on_text_change=self:callback('saveContext'),
-            on_cursor_change=self:callback('saveContext')
+            toc_welcome_copy=self.journal_context:tocWelcomeCopy(),
+            journal_welcome_copy=self.journal_context:welcomeCopy(),
+
+            on_text_change=self:callback('onTextChange'),
+            on_cursor_change=self:callback('onTextChange')
         },
     }
 end
 
-function JournalScreen:loadContext()
-    local site_data = self.save_on_change and dfhack.persistent.getSiteData(
-        self.save_prefix .. JOURNAL_PERSIST_KEY
-    ) or {}
+function JournalScreen:onTextChange()
+    local text = self.subviews.journal_editor:getText()
+    local cursor = self.subviews.journal_editor:getCursor()
 
-    if not site_data.text then
-        site_data.text={''}
-        site_data.show_tutorial = true
-    end
-    site_data.cursor = site_data.cursor or {#site_data.text[1] + 1}
-
-    return site_data
-end
-
-function JournalScreen:onTextChange(text)
-    self:saveContext(text)
-end
-
-function JournalScreen:saveContext()
-    if self.save_on_change and dfhack.isWorldLoaded() then
-        local text = self.subviews.journal_editor:getText()
-        local cursor = self.subviews.journal_editor:getCursor()
-
-        dfhack.persistent.saveSiteData(
-            self.save_prefix .. JOURNAL_PERSIST_KEY,
-            {text={text}, cursor={cursor}}
-        )
-    end
+    self.journal_context:save_content(text, cursor)
 end
 
 function JournalScreen:onDismiss()
@@ -345,17 +312,20 @@ function JournalScreen:onDismiss()
 end
 
 function main(options)
-    if not dfhack.isMapLoaded() or not dfhack.world.isFortressMode() then
-        qerror('journal requires a fortress map to be loaded')
+    if not dfhack.isMapLoaded() or (not dfhack.world.isFortressMode()
+        and not dfhack.world.isAdventureMode()) then
+        qerror('journal requires a fortress/adventure map to be loaded')
     end
 
     local save_layout = options and options.save_layout
-    local save_on_change = options and options.save_on_change
+    local overrided_context_mode = options and options.context_mode
+    local context_mode = overrided_context_mode == nil and
+        journal_context.detect_journal_context_mode() or overrided_context_mode
 
     view = view and view:raise() or JournalScreen{
         save_prefix=options and options.save_prefix or '',
         save_layout=save_layout == nil and true or save_layout,
-        save_on_change=save_on_change == nil and true or save_on_change,
+        context_mode=context_mode,
     }:show()
 end
 
