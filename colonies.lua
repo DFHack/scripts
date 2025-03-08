@@ -20,6 +20,8 @@ and ``colonies convert TERMITE`` ends your beekeeping industry.
 
 ]====]
 
+local guidm = require('gui.dwarfmode')
+
 function findVermin(target_verm)
     for k,v in ipairs(df.global.world.raws.creatures.all) do
         if v.creature_id == target_verm then
@@ -50,8 +52,8 @@ function convert_vermin_to(target_verm)
 end
 
 function place_vermin(target_verm)
-    local pos = copyall(df.global.cursor)
-    if pos.x == -30000 then
+    local pos = guidm.getCursorPos()
+    if not pos then
         qerror("Cursor must be pointing somewhere")
     end
     local verm = df.vermin:new()

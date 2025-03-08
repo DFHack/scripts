@@ -333,6 +333,8 @@ end
 function unitIsAvailable(unit)
     if unit.job.current_job then
         return false
+    elseif #unit.specific_refs > 0 then -- activities such as "Conduct Meeting"
+        return false
     elseif #unit.social_activities > 0 then
         return false
     elseif #unit.individual_drills > 0 then

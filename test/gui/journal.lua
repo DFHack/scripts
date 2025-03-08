@@ -1,12 +1,11 @@
 local gui = require('gui')
 local gui_journal = reqscript('gui/journal')
+local journal_context = reqscript('internal/journal/journal_context')
 
 config = {
     target = 'gui/journal',
     mode = 'fortress'
 }
-
-local df_major_version = tonumber(dfhack.getCompiledDFVersion():match('%d+'))
 
 local function simulate_input_keys(...)
     local keys = {...}
@@ -75,8 +74,8 @@ local function arrange_empty_journal(options)
     options = options or {}
 
     gui_journal.main({
-        save_prefix='test:',
-        save_on_change=options.save_on_change or false,
+        save_prefix=options.save_prefix or 'test:',
+        context_mode=options.context_mode or gui_journal.JOURNAL_CONTEXT_MODE.DUMMY,
         save_layout=options.allow_layout_restore or false,
     })
 
@@ -98,9 +97,6 @@ local function arrange_empty_journal(options)
     local text_area = journal_window.subviews.journal_editor.text_area
 
     text_area.enable_cursor_blink = false
-    if not options.save_on_change then
-        text_area:setText('')
-    end
 
     if not options.allow_layout_restore then
         local toc_panel = journal_window.subviews.table_of_contents_panel
@@ -202,7 +198,10 @@ function test.restore_layout()
 end
 
 function test.restore_text_between_sessions()
-    local journal, text_area = arrange_empty_journal({w=80,save_on_change=true})
+    local journal, text_area = arrange_empty_journal({
+        w=80,
+        context_mode=gui_journal.JOURNAL_CONTEXT_MODE.FORTRESS
+    })
 
     simulate_input_keys('CUSTOM_CTRL_A')
     simulate_input_keys('CUSTOM_DELETE')
@@ -224,7 +223,10 @@ function test.restore_text_between_sessions()
 
     journal:dismiss()
 
-    journal, text_area = arrange_empty_journal({w=80, save_on_change=true})
+    journal, text_area = arrange_empty_journal({
+        w=80,
+        context_mode=gui_journal.JOURNAL_CONTEXT_MODE.FORTRESS
+    })
 
     expect.eq(read_rendered_text(text_area), table.concat({
         '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
@@ -600,11 +602,27 @@ function test.table_of_contents_keyboard_navigation()
     journal:dismiss()
 end
 
-function test.show_tutorials_on_first_use()
-    local journal, text_area, journal_window = arrange_empty_journal({w=65})
+function test.show_fortress_tutorials_on_first_use()
+    local save_prefix = 'test:'
+    local context = journal_context.journal_context_factory(
+        gui_journal.JOURNAL_CONTEXT_MODE.FORTRESS,
+        save_prefix
+    )
+    -- reset saved data
+    context:delete_content()
+
+    local journal, text_area, journal_window = arrange_empty_journal({
+        w=125,
+        context_mode=gui_journal.JOURNAL_CONTEXT_MODE.FORTRESS,
+        save_prefix=save_prefix
+    })
+
     simulate_input_keys('CUSTOM_CTRL_O')
 
-    expect.str_find('Welcome to gui/journal', read_rendered_text(text_area));
+    expect.str_find(
+        "Welcome to gui/journal, the chronicler's tool for Dwarf Fortress!",
+        read_rendered_text(text_area)
+    );
 
     simulate_input_text(' ')
 

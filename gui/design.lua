@@ -122,6 +122,14 @@ function DimensionsOverlay:preUpdateLayout(parent_rect)
     self.frame.h = parent_rect.height
 end
 
+function DimensionsOverlay:overlay_onenable()
+    df.global.d_init.display.flags.SHOW_RECTANGLE_DIMENSIONS = false
+end
+
+function DimensionsOverlay:overlay_ondisable()
+    df.global.d_init.display.flags.SHOW_RECTANGLE_DIMENSIONS = true
+end
+
 ---
 --- RightClickOverlay
 ---

@@ -46,14 +46,14 @@ end
 Spectate = defclass(Spectate, widgets.Window)
 Spectate.ATTRS {
     frame_title='Spectate',
-    frame={l=5, t=5, w=36, h=39},
+    frame={l=5, t=5, w=36, h=40},
 }
 
 local function create_toggle_button(frame, cfg_elem, hotkey, label, cfg_elem_key)
     return ToggleLabel{
         frame=frame,
         initial_option=spectate.get_config_elem(cfg_elem, cfg_elem_key),
-        on_change=function(val) dfhack.run_command('spectate', 'set', cfg_elem, tostring(val)) end,
+        on_change=function(val) dfhack.run_command('spectate', 'set', cfg_elem, cfg_elem_key, tostring(val)) end,
         key=hotkey,
         label=label,
     }
@@ -151,7 +151,7 @@ local function create_stress_list(frame, colFollow, colHover)
         table.insert(choices, make_choice({{text=elem.text, pen=elem.pen}, ' ', elem.name}, tlFollow, tlHover))
     end
 
-    table.insert(subviews, widgets.List{
+    table.insert(subviews, 1, widgets.List{
         frame={l=2},
         on_submit=function(_, choice) choice.data.tlFollow:cycle() end,
         on_submit2=function(_, choice) choice.data.tlHover:cycle() end,
@@ -188,6 +188,7 @@ function Spectate:init()
             on_change=function(val) dfhack.run_command(val and 'enable' or 'disable', 'spectate') end,
             key='CUSTOM_ALT_E',
             label='Spectate mode ',
+            enabled=dfhack.world.isFortressMode,
         },
         create_numeric_edit_field({t=4}, 'follow-seconds', 'CUSTOM_ALT_F', 'Switch target (sec): '),
         create_toggle_button({t=6}, 'auto-unpause', 'CUSTOM_ALT_U', rpad('Auto unpause', lWidth)),
@@ -224,11 +225,26 @@ function Spectate:init()
             text='Hover',
         },
         create_row({t=21}, 'Enabled', 'E', '', colFollow, colHover),
+
         create_numeric_edit_field({t=23}, 'tooltip-follow-blink-milliseconds', 'CUSTOM_B', 'Blink period (ms): '),
-        create_row({t=25}, 'Job', 'J', 'job', colFollow, colHover),
-        create_row({t=26}, 'Name', 'N', 'name', colFollow, colHover),
-        create_row({t=27}, 'Stress', 'S', 'stress', colFollow, colHover),
-        create_stress_list({t=28}, colFollow, colHover),
+        widgets.CycleHotkeyLabel{
+            frame={t=24},
+            key='CUSTOM_C',
+            label="Hold to show:",
+            options={
+                {label="None", value="none", pen=COLOR_GREY},
+                {label="Ctrl", value="ctrl", pen=COLOR_LIGHTCYAN},
+                {label="Alt", value="alt", pen=COLOR_LIGHTCYAN},
+                {label="Shift", value="shift", pen=COLOR_LIGHTCYAN},
+            },
+            initial_option=spectate.get_config_elem('tooltip-follow-hold-to-show'),
+            on_change=function(new, _) dfhack.run_command('spectate', 'set', 'tooltip-follow-hold-to-show', new) end
+        },
+
+        create_row({t=26}, 'Job', 'J', 'job', colFollow, colHover),
+        create_row({t=27}, 'Name', 'N', 'name', colFollow, colHover),
+        create_row({t=28}, 'Stress', 'S', 'stress', colFollow, colHover),
+        create_stress_list({t=29}, colFollow, colHover),
     }
 end
 

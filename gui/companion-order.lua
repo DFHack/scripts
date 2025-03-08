@@ -25,10 +25,11 @@ Can be called with '-c' flag to display "cheating" commands.
 ]====]
 
 local gui = require 'gui'
+local guidm = require 'gui.dwarfmode'
 local dlg = require 'gui.dialogs'
 local args={...}
 local is_cheat=(#args>0 and args[1]=="-c")
-local cursor=xyz2pos(df.global.cursor.x,df.global.cursor.y,df.global.cursor.z)
+local cursor=guidm.getCursorPos()
 local permited_equips={}
 
 permited_equips[df.item_backpackst]="UPPERBODY"
@@ -46,7 +47,7 @@ function DoesHaveSubtype(item)
     return true
 end
 function CheckCursor(p)
-    if p.x==-30000 then
+    if not p then
         dlg.showMessage(
                 'Companion orders',
                 'You must have a cursor on some tile!', COLOR_LIGHTRED
@@ -54,12 +55,6 @@ function CheckCursor(p)
         return false
     end
     return true
-end
-function getxyz() -- this will return pointers x,y and z coordinates.
-    local x=df.global.cursor.x
-    local y=df.global.cursor.y
-    local z=df.global.cursor.z
-    return x,y,z -- return the coords
 end
 
 function EnumBodyEquipable(race_id,caste_id)
@@ -190,7 +185,7 @@ end
 function GetItemsAtPos(pos)
     local ret={}
     for k,v in pairs(df.global.world.items.other.IN_PLAY) do
-        if v.flags.on_ground and v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
+        if v.flags.on_ground and same_xyz(v.pos, pos) then
             table.insert(ret,v)
         end
     end
@@ -232,7 +227,7 @@ function move_unit( unit,tx,ty,tz ) --copied from http/commands.lua with minor m
     unit.idle_area_threshold=0
     unit.follow_distance=50
     --invalidate old path
-    unit.path.dest={x=unit.idle_area.x,y=unit.idle_area.y,z=unit.idle_area.z}
+    unit.path.dest=copyall(unit.idle_area)
     unit.path.goal=df.unit_path_goal.SeekStation
     unit.path.path.x:resize(0)
     unit.path.path.y:resize(0)
@@ -394,7 +389,7 @@ end},
         return false
     end
     adv=dfhack.world.getAdventurer()
-    item=GetItemsAtPos(df.global.cursor)[1]
+    item=GetItemsAtPos(cursor)[1]
     print(item.id)
     for k,v in pairs(unit_list) do
         v.riding_item_id=item.id

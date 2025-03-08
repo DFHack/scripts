@@ -767,11 +767,11 @@ function BoxSelection:onInput(keys)
     end
 
     local mousePos = dfhack.gui.getMousePos(true)
-    local cursorPos = copyall(df.global.cursor)
-    cursorPos.x = math.max(math.min(cursorPos.x, df.global.world.map.x_count - 1), 0)
-    cursorPos.y = math.max(math.min(cursorPos.y, df.global.world.map.y_count - 1), 0)
+    local cursorPos = guidm.getCursorPos()
 
     if cursorPos and keys.SELECT then
+        cursorPos.x = math.max(math.min(cursorPos.x, df.global.world.map.x_count - 1), 0)
+        cursorPos.y = math.max(math.min(cursorPos.y, df.global.world.map.y_count - 1), 0)
         if self.first_point and not self.last_point then
             if not self.flat or cursorPos.z == self.first_point.z then
                 self.last_point = cursorPos
@@ -834,7 +834,7 @@ function BoxSelection:onRenderFrame(dc, rect)
     if not box then
         local selectedPos = dfhack.gui.getMousePos(true)
         if self.useCursor or not selectedPos then
-            selectedPos = copyall(df.global.cursor)
+            selectedPos = guidm.getCursorPos() or xyz2pos(nil)
             selectedPos.x = math.max(math.min(selectedPos.x, df.global.world.map.x_count - 1), 0)
             selectedPos.y = math.max(math.min(selectedPos.y, df.global.world.map.y_count - 1), 0)
         end

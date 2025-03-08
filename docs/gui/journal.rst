@@ -3,14 +3,14 @@ gui/journal
 
 .. dfhack-tool::
     :summary: Fort journal with a multi-line text editor.
-    :tags: fort interface
+    :tags: adventure fort interface
 
 The `gui/journal` interface makes it easy to take notes and document
-important details for the fortresses.
+important details for your fortresses and adventurers.
 
 With this multi-line text editor,
-you can keep track of your fortress's background story, goals, notable events,
-and both short-term and long-term plans.
+you can keep track of your fortress's/adventurer's background story, goals,
+notable events, and both short-term and long-term plans.
 
 This is particularly useful when you need to take a longer break from the game.
 Having detailed notes makes it much easier to resume your game after

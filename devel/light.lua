@@ -27,12 +27,6 @@ function setCell(x,y,cell)
     cell.bo=cell.bo or {r=0,g=0,b=0}
     render.setCell(x,y,cell)
 end
-function getCursorPos()
-    local g_cursor=df.global.cursor
-    if g_cursor.x ~= -30000 then
-        return copyall(g_cursor)
-    end
-end
 --luacheck: skip
 function falloff(color,sqDist,maxdist)
     local v1=1/(sqDist/maxdist+1)
@@ -273,7 +267,7 @@ function LightOverlay:calculateLightSun()
     end
 end
 function LightOverlay:calculateLightCursor()
-    local c=getCursorPos()
+    local c=guidm.getCursorPos()
 
     if c then
 

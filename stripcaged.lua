@@ -1,4 +1,5 @@
 local argparse = require('argparse')
+local guidm = require('gui.dwarfmode')
 local opts = {}
 local positionals = argparse.processArgsGetopt({...}, {
     {'h', 'help', handler = function() opts.help = true end},
@@ -206,8 +207,8 @@ if positionals[2] == 'here' then
             end
         end
     -- Is the player trying to select a cage using the keyboard cursor?
-    elseif df.global.cursor.z > -10000 then -- cursor has values around -30000 if not valid/active.
-        local cursor = df.global.cursor
+    elseif guidm.getCursorPos() then
+        local cursor = guidm.getCursorPos()
         for _, cage in ipairs(df.global.world.items.other.ANY_CAGE_OR_TRAP) do
             if same_xyz(cursor, cage.pos) then
                 table.insert(list, cage)

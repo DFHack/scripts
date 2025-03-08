@@ -39,7 +39,6 @@ function NoteManager:init()
                     frame={t=1,h=3},
                     frame_style=gui.FRAME_INTERIOR,
                     init_text=self.note and self.note.point.name or '',
-                    -- init_cursor=self.note and #self.note.point.name + 1 or 1,
                     one_line_mode=true
                 },
                 widgets.HotkeyLabel {
@@ -97,11 +96,11 @@ function NoteManager:init()
 end
 
 function NoteManager:setNotePos(note_pos)
-    self.notes_pos = note_pos
+    self.note_pos = note_pos
 end
 
 function NoteManager:createNote()
-    local cursor_pos = self.notes_pos or guidm.getCursorPos()
+    local cursor_pos = self.note_pos or guidm.getCursorPos()
     if cursor_pos == nil then
         dfhack.printerr('Enable keyboard cursor to add a note.')
         return
@@ -150,8 +149,8 @@ function NoteManager:saveNote()
 
     self.note.point.name = name
     self.note.point.comment = comment
-    if self.notes_pos then
-        self.note.pos=self.notes_pos
+    if self.note_pos then
+        self.note.pos=self.note_pos
     end
 
     if self.on_update then

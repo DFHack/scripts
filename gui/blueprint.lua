@@ -381,7 +381,7 @@ function Blueprint:onShow()
 end
 
 function Blueprint:save_cursor_pos()
-    self.saved_cursor = copyall(df.global.cursor)
+    self.saved_cursor = guidm.getCursorPos()
 end
 
 function Blueprint:is_setting_start_pos()

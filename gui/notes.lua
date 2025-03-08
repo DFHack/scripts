@@ -9,6 +9,7 @@ local overlay = require 'plugins.overlay'
 local utils = require 'utils'
 
 local note_manager = reqscript('internal/notes/note_manager')
+local notes_textures = reqscript('notes').textures
 
 local map_points = df.global.plotinfo.waypoints.points
 
@@ -16,13 +17,6 @@ local NOTE_LIST_RESIZE_MIN = {w=26}
 local RESIZE_MIN = {w=65, h=30}
 local NOTE_SEARCH_BATCH_SIZE = 25
 local OVERLAY_NAME = 'notes.map_notes'
-
-local green_pin = dfhack.textures.loadTileset(
-    'hack/data/art/note_green_pin_map.png',
-    32,
-    32,
-    true
-)
 
 NotesWindow = defclass(NotesWindow, widgets.Window)
 NotesWindow.ATTRS {
@@ -38,6 +32,35 @@ function NotesWindow:init()
     self.note_manager = nil
     self.curr_search_phrase = nil
 
+    local left_panel_content = {
+        widgets.Panel{
+            frame={l=0,h=3},
+            frame_style=gui.FRAME_INTERIOR,
+            subviews={
+                widgets.EditField{
+                    view_id='search',
+                    on_change=self:callback('loadFilteredNotes'),
+                    on_submit=function()
+                        self.subviews.note_list:submit()
+                    end
+                },
+            }
+        },
+        widgets.List{
+            view_id='note_list',
+            frame={l=0,b=2},
+            frame_inset={t=1},
+            row_height=1,
+            on_select=function (ind, note)
+                self:loadNote(note)
+            end,
+            on_submit=function (ind, note)
+                self:loadNote(note)
+                dfhack.gui.pauseRecenter(note.point.pos)
+            end
+        },
+    }
+
     self:addviews{
         widgets.Panel{
             view_id='note_list_panel',
@@ -45,31 +68,7 @@ function NotesWindow:init()
             visible=true,
             frame_inset={l=1,t=1,b=1,r=1},
             autoarrange_subviews=true,
-            subviews={
-                widgets.TextArea{
-                    view_id='search',
-                    frame={l=0,h=3},
-                    frame_style=gui.FRAME_INTERIOR,
-                    one_line_mode=true,
-                    on_text_change=self:callback('loadFilteredNotes'),
-                    on_submit=function()
-                        self.subviews.note_list:submit()
-                    end
-                },
-                widgets.List{
-                    view_id='note_list',
-                    frame={l=0,b=2},
-                    frame_inset={t=1},
-                    row_height=1,
-                    on_select=function (ind, note)
-                        self:loadNote(note)
-                    end,
-                    on_submit=function (ind, note)
-                        self:loadNote(note)
-                        dfhack.gui.pauseRecenter(note.point.pos)
-                    end
-                },
-            },
+            subviews=left_panel_content,
         },
         widgets.HotkeyLabel{
             view_id='create',
@@ -77,7 +76,7 @@ function NotesWindow:init()
             auto_width=true,
             label='New note',
             key='CUSTOM_CTRL_N',
-            visible=edit_mode,
+            visible=true,
             on_activate=function()
                 if self.on_note_add then
                     self:on_note_add()
@@ -248,6 +247,7 @@ NotesScreen = defclass(NotesScreen, gui.ZScreen)
 NotesScreen.ATTRS {
     focus_path='gui/notes',
     pass_movement_keys=true,
+    enable_selector_blink = true,
 }
 
 function NotesScreen:init()
@@ -278,7 +278,7 @@ function NotesScreen:onInput(keys)
         if (keys.SELECT or keys._MOUSE_L) then
             self.adding_note_pos = dfhack.gui.getMousePos()
 
-            local manager = note_manager.NoteManager{
+            local note_manager = note_manager.NoteManager{
                 note=nil,
                 on_update=function()
                     dfhack.run_command_silent('overlay trigger notes.map_notes')
@@ -289,7 +289,8 @@ function NotesScreen:onInput(keys)
                     self:stopNoteAdd()
                 end
             }:show()
-            manager:setNotePos(self.adding_note_pos)
+            note_manager:setNotePos(self.adding_note_pos)
+            self.subviews.notes_window.note_manager = note_manager
 
             return true
         elseif (keys.LEAVESCREEN or keys._MOUSE_R)then
@@ -304,7 +305,7 @@ end
 function NotesScreen:onRenderFrame(dc, rect)
     NotesScreen.super.onRenderFrame(self, dc, rect)
 
-    if not dfhack.screen.inGraphicsMode() and not gui.blink_visible(500) then
+    if self.enable_selector_blink and not gui.blink_visible(500) then
         return
     end
 
@@ -316,7 +317,9 @@ function NotesScreen:onRenderFrame(dc, rect)
 
         local function get_overlay_pen(pos)
             if same_xy(curr_pos, pos) then
-                local texpos = dfhack.textures.getTexposByHandle(green_pin[1])
+                local texpos = dfhack.textures.getTexposByHandle(
+                    notes_textures.green_pin[1]
+                )
                 return dfhack.pen.parse{
                     ch='X',
                     fg=COLOR_BLUE,
@@ -335,7 +338,7 @@ function NotesScreen:onRenderFrame(dc, rect)
 end
 
 function NotesScreen:onAboutToShow()
-    if overlay.isOverlayEnabled(OVERLAY_NAME) then
+    if not overlay.isOverlayEnabled(OVERLAY_NAME) then
         self.should_disable_overlay = true
         overlay.overlay_command({'enable', 'notes.map_notes'})
     end
@@ -345,10 +348,15 @@ function NotesScreen:onDismiss()
     if self.should_disable_overlay then
         overlay.overlay_command({'disable', 'notes.map_notes'})
     end
+
+    if self.subviews.notes_window.note_manager then
+        self.subviews.notes_window.note_manager:dismiss()
+    end
+
     view = nil
 end
 
-function main(options)
+function main()
     if not dfhack.isMapLoaded() or not dfhack.world.isFortressMode() then
         qerror('notes requires a fortress map to be loaded')
     end

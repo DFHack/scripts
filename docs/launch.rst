@@ -3,7 +3,7 @@ launch
 
 .. dfhack-tool::
     :summary: Thrash your enemies with a flying suplex.
-    :tags: unavailable
+    :tags: adventure armok units
 
 Attack another unit and then run this command to grab them and fly in a glorious
 parabolic arc to where you have placed the cursor. You'll land safely and your

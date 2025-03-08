@@ -1,4 +1,5 @@
 --@ module = true
+local guidm = require('gui.dwarfmode')
 local repeatUtil = require('repeat-util')
 
 local GLOBAL_KEY = 'source' -- used for state change hooks and persistence
@@ -130,11 +131,11 @@ function main(args)
         return
     end
 
-    local targetPos = copyall(df.global.cursor)
+    local targetPos = guidm.getCursorPos()
     local index = find_liquid_source_at_pos(targetPos)
 
     if command == 'delete' then
-        if targetPos.x < 0 then
+        if not targetPos then
             qerror("Please place the cursor where there is a source to delete")
         end
         if index then
@@ -147,7 +148,7 @@ function main(args)
     end
 
     if command == 'add' then
-        if targetPos.x < 0 then
+        if not targetPos then
             qerror('Please place the cursor where you would like a source')
         end
         local liquidArg = args[2]

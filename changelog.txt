@@ -31,12 +31,23 @@ Template for new versions:
 - `autocheese`: automatically make cheese using barrels that have accumulated sufficient milk
 - `gui/spectate`: interactive UI for configuring `spectate`
 - `gui/notes`: UI for adding and managing notes attached to tiles on the map
+- `launch`: (reinstated) new adventurer fighting move: thrash your enemies with a flying suplex
+- `putontable`: (reinstated) make an item appear on a table
+- `devel/query`: support adventure mode
+- `devel/tree-info`: support adventure mode
+- `hfs-pit`: support adventure mode
+- `colonies`: support adventure mode
+- `toggle-kbd-cursor`: support adventure mode
 
 ## New Features
-- `advtools`: new ``advtools.fastcombat`` overlay (enabled by default)  allows you to skip combat animations and the announcement "More" button by mashing the movement keys
+- `advtools`: new ``advtools.fastcombat`` overlay (enabled by default) allows you to skip combat animations and the announcement "More" button by mashing the movement keys
+- `gui/journal`: now working in adventure mode
 
 ## Fixes
 - `position`: support for adv mode look cursor
+- `hfs-pit`: use correct wall types when making pits with walls
+- `gui/liquids`: using the remove tool with magma selected will no longer create unexpected unpathable tiles
+- `idle-crafting`: do not assign crafting jobs to nobles holding meetings (avoid dangling jobs)
 
 ## Misc Improvements
 - `hide-tutorials`: handle tutorial popups for adventure mode
@@ -45,10 +56,16 @@ Template for new versions:
 - `gui/notify`: save reminder now appears in adventure mode
 - `gui/notify`: save reminder changes color to yellow at 30 minutes and to orange at 60 minutes
 - `gui/confirm`: in the delete manager order confirmation dialog, show a description of which order you have selected to delete
-- `position`: display both adventurer and site pos simultaneously. Display map block pos+offset of selected tile.
+- `gui/create-item`: now accepts a ``pos`` argument of where to spawn items
+- `modtools/create-item`: exported ``hackWish`` function now supports ``opts.pos`` for determining spawn location
+- `hfs-pit`: improve placement of stairs w/r/t eerie pits and ramp tops
+- `position`: add adventurer tile position
+- `position`: add global site position
+- `position`: when a tile is selected, display relevant map block and intra-block offset
 - `gui/sitemap`: shift click to start following the selected unit or artifact
 - `prioritize`: when prioritizing jobs of a specified type, also output how many of those jobs were already prioritized before you ran the command
 - `prioritize`: don't include already-prioritized jobs in the output of ``prioritize -j``
+- `gui/design`: only display vanilla dimensions tooltip if the DFHack dimensions tooltip is disabled
 
 ## Removed
 
@@ -95,8 +112,6 @@ Template for new versions:
 - `caravan`: add filter for written works in display furniture assignment dialog
 - `fix/wildlife`: don't vaporize stuck wildlife that is onscreen -- kill them instead (as if they died from old age)
 - `gui/sitemap`: show primary group affiliation for visitors and invaders (e.g. civilization name or performance troupe)
-
-# 50.15-r1
 
 # 50.14-r2
 
@@ -694,8 +709,6 @@ Template for new versions:
 ## Removed
 - `gui/automelt`: replaced by an overlay panel that appears when you click on a stockpile
 
-# 50.08-r3
-
 # 50.08-r2
 
 ## New Scripts
@@ -744,8 +757,6 @@ Template for new versions:
 
 # 50.07-r1
 
-## New Scripts
-
 ## Fixes
 -@ `caravan`: fix trade good list sometimes disappearing when you collapse a bin
 -@ `gui/gm-editor`: no longer nudges last open window when opening a new one
@@ -757,8 +768,6 @@ Template for new versions:
 - `gui/gm-editor`: the key column now auto-fits to the widest key
 - `prioritize`: revise and simplify the default list of prioritized jobs -- be sure to tell us if your forts are running noticeably better (or worse!)
 -@ `gui/control-panel`: add `faststart` to the system services
-
-## Removed
 
 # 50.07-beta2
 

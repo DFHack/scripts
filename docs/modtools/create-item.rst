@@ -48,4 +48,5 @@ Options
     caste associated with it.
 ``-p``, ``--pos <x>,<y>,<z>``
     If specified, items will be spawned at the given coordinates instead of at
-    the creator unit's feet.
+    the creator unit's feet. ``here`` can be used in place of ``<x>,<y>,<z>``
+    to use the active keyboard cursor.

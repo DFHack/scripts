@@ -1,5 +1,6 @@
 --Print a tree_info visualization of the tree at the cursor.
 --@module = true
+local guidm = require('gui.dwarfmode')
 
 -- [w][n][e][s]
 local branch_chars = {
@@ -172,7 +173,9 @@ function printTree(t)
 end
 
 if not dfhack_flags.module then
-    local p = dfhack.maps.getPlantAtTile(copyall(df.global.cursor))
+    local pos = guidm.getCursorPos()
+    if not pos then qerror('No cursor!') end
+    local p = dfhack.maps.getPlantAtTile(pos)
     if p and p.tree_info then
         printTree(p.tree_info)
     else
