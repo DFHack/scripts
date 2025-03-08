@@ -20,7 +20,7 @@ The tool also supports ``nobles``, a manually-invoked command that makes nobles
 emigrate to their rightful land of rule. No more freeloaders making inane demands!
 Nobles assigned to squads or to fort administrator positions will not be emigrated.
 Remove their assignments before retrying. Nobles holding elected positions
-(i.e. mayors) may be emigrated, but will have a ``*`` icon when listed.
+(i.e. mayors) may be emigrated, but will be marked with a ``*`` icon when listed.
 
 Usage
 -----

@@ -42,7 +42,7 @@ Template for new versions:
 ## New Features
 - `advtools`: new ``advtools.fastcombat`` overlay (enabled by default) allows you to skip combat animations and the announcement "More" button by mashing the movement keys
 - `gui/journal`: now working in adventure mode
-- `emigration`: new command for sending barons of other sites back to the sites that they rule over
+- `emigration`: new ``nobles`` command for sending "freeloader" barons back to the sites that they rule over
 
 ## Fixes
 - `position`: support for adv mode look cursor
