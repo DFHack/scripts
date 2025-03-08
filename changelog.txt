@@ -31,6 +31,7 @@ Template for new versions:
 - `autocheese`: automatically make cheese using barrels that have accumulated sufficient milk
 - `gui/spectate`: interactive UI for configuring `spectate`
 - `gui/notes`: UI for adding and managing notes attached to tiles on the map
+- `gui/adv-finder`: UI for tracking historical figures and artifacts in adventure mode
 - `launch`: (reinstated) new adventurer fighting move: thrash your enemies with a flying suplex
 - `putontable`: (reinstated) make an item appear on a table
 - `devel/query`: support adventure mode
