@@ -43,6 +43,8 @@ Template for new versions:
 - `advtools`: new ``advtools.fastcombat`` overlay (enabled by default) allows you to skip combat animations and the announcement "More" button by mashing the movement keys
 - `gui/journal`: now working in adventure mode
 - `emigration`: new ``nobles`` command for sending "freeloader" barons back to the sites that they rule over
+- `advtools`: new ``advtools.fastcombat`` overlay (enabled by default)  allows you to skip combat animations and the announcement "More" button by mashing the movement keys
+- `idle-crafting`: default to only considering happy and ecstatic units for the highest need threshold
 
 ## Fixes
 - `position`: support for adv mode look cursor
@@ -52,6 +54,7 @@ Template for new versions:
 - `rejuvenate`: update unit portrait and sprite when aging up babies and children
 - `rejuvenate`: recalculate labor assignments for unit when aging up babies and children (so they can start accepting jobs)
 - `gui/liquids`: don't add liquids to wall tiles
+- `idle-crafting`: check that units still have crafting needs before creating a job for them
 
 ## Misc Improvements
 - `hide-tutorials`: handle tutorial popups for adventure mode

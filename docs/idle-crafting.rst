@@ -26,6 +26,12 @@ Usage
      given unit. Units meeting higher thresholds will be prioritized. Defaults
      to ``500,1000,10000``.
 
+``idle-crafting happy [yes|no]``
+     If set to ``no``, "happy" and "ecstatic" dwarves not suffering from
+     long-term stress will only satisfy their crafting needs when meeting the
+     highest configured threshold (eg. ``10000`` at default settings). Defaults
+     to ``no``.
+
 ``disable idle-crafting``
      Disallow idle crafting at all workshops. You can re-enable idle crafting
      at individual Craftsdwarf's workshops.
@@ -34,7 +40,10 @@ Examples
 --------
 
 ``idle-crafting thresholds 500,1000,10000``
-    Reset thresholds to defaults.
+     Reset thresholds to defaults.
+
+``idle-crafting happy yes``
+     Treat happy and ecstatic dwarves the same as everyone else.
 
 Overlay
 -------
