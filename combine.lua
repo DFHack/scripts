@@ -5,6 +5,7 @@ local opts, args = {
     help = false,
     all = nil,
     here = nil,
+    item = nil,
     dry_run = false,
     types = nil,
     quiet = false,
@@ -44,6 +45,7 @@ local valid_types_map = {
     plant = {[df.item_type.PLANT]       ={type_id=df.item_type.PLANT,        max_stack_qty=5,  max_mat_amt=1},
              [df.item_type.PLANT_GROWTH]={type_id=df.item_type.PLANT_GROWTH, max_stack_qty=5,  max_mat_amt=1}},
     powder= {[df.item_type.POWDER_MISC] ={type_id=df.item_type.POWDER_MISC,  max_stack_qty=10, max_mat_amt=1}},
+    coin  = {[df.item_type.COIN]        ={type_id=df.item_type.COIN,         max_stack_qty=500, max_mat_amt=1}},
 --    seed   = {[df.item_type.SEEDS]       ={type_id=df.item_type.SEEDS,        max_stack_qty=1,   max_mat_amt=1}},
 }
 
@@ -122,7 +124,11 @@ local function comp_item_add_item(stockpile, stack_type, comp_item, item, contai
         new_item.before_size = item.stack_size
 
         new_item.stockpile_id = stockpile.id
-        new_item.stockpile_name = stockpile.name
+        if df.item:is_instance(stockpile) then
+            new_item.stockpile_name = dfhack.items.getReadableDescription(stockpile)
+        else
+            new_item.stockpile_name = stockpile.name
+        end
 
         -- material amount info
         new_item.before_mat_amt = {}
@@ -437,7 +443,7 @@ local function stacks_add_items(stockpile, stacks, items, container, ind)
 
         -- item type in list of included types?
         if stack_type and not item:isSand() and not item:isPlaster() and isValidPart(item) then
-            if not isRestrictedItem(item) and item.stack_size <= stack_type.max_stack_qty then
+            if not isRestrictedItem(item) and (item.stack_size <= stack_type.max_stack_qty) then
 
                 stacks_add_item(stockpile, stacks, stack_type, item, container)
 
@@ -505,10 +511,16 @@ local function populate_stacks(stacks, stockpiles, types)
     -- iterate across the stockpiles, get the list of items and call the add function to check/add as needed
     log(4, ('stockpiles'))
     for _, stockpile in ipairs(stockpiles) do
-
-        local items = dfhack.buildings.getStockpileContents(stockpile)
-        log(4, ('   stockpile:%30s <%6d> pos:(%3d,%3d,%3d) #items:%5d'):format(
-            stockpile.name, stockpile.id, stockpile.centerx, stockpile.centery, stockpile.z,  #items))
+        local items = nil
+        if df.building_stockpilest:is_instance(stockpile) then
+            items = dfhack.buildings.getStockpileContents(stockpile)
+            log(4, ('   stockpile:%30s <%6d> pos:(%3d,%3d,%3d) #items:%5d'):format(
+                stockpile.name, stockpile.id, stockpile.centerx, stockpile.centery, stockpile.z,  #items))
+        elseif df.item:is_instance(stockpile) then
+            items = dfhack.items.getContainedItems(stockpile)
+            log(4, ('   container:%30s <%6d> pos:(%3d,%3d,%3d) #items:%5d'):format(
+                dfhack.items.getReadableDescription(stockpile), stockpile.id, stockpile.pos.x, stockpile.pos.y, stockpile.pos.z,  #items))
+        end
 
         if #items > 0 then
             stacks_add_items(stockpile, stacks, items)
@@ -689,6 +701,11 @@ local function merge_stacks(stacks)
                 if item.after_size == 0 then
                     log(4, '      removing')
                     dfhack.items.remove(item.item)
+                    if dfhack.world.isAdventureMode() and df.global.game.main_interface.adventure.inventory.open then
+                        -- refresh the inventory to prevent stale item references
+                        print('!! closed adventure mode inventory screen to prevent stale item references !!')
+                        df.global.game.main_interface.adventure.inventory.open = false
+                    end
 
                 -- some items left in stack
                 elseif not typesThatUseMaterial[df.item_type[stack_type.type_id]] and item.before_size ~= item.after_size then
@@ -792,6 +809,8 @@ local function parse_commandline(opts, args)
         opts.all=get_stockpile_all()
     elseif positionals[1] == 'here' then
         opts.here=get_stockpile_here()
+    elseif positionals[1] == 'item' then
+        opts.item={dfhack.gui.getSelectedItem(true)}
     else
         opts.help = true
     end
@@ -805,8 +824,8 @@ end
 -- main program starts here
 local function main()
 
-    if df.global.gamemode ~= df.game_mode.DWARF or not dfhack.isMapLoaded() then
-        qerror('combine needs a loaded fortress map to work')
+    if not dfhack.isMapLoaded() then
+        qerror('combine can only be used in-game!')
     end
 
     parse_commandline(opts, args)
@@ -818,7 +837,7 @@ local function main()
 
     local stacks = stacks_new()
 
-    populate_stacks(stacks,  opts.all or opts.here, opts.types)
+    populate_stacks(stacks,  opts.all or opts.here or opts.item, opts.types)
 
     preview_stacks(stacks)
 
