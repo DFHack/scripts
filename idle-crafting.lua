@@ -235,6 +235,9 @@ watched = watched or {}
 ---@type integer[]
 thresholds = thresholds or { 10000, 1000, 500 }
 
+---@type boolean
+ignore_happy = ignore_happy == nil and true or ignore_happy
+
 -- persisting a table with numeric keys results in a json array with a huge number of null entries
 -- therefore, we convert the keys to strings for persistence
 -- also, we clear the frame counter values since the frame counter gets reset on load
@@ -262,7 +265,8 @@ local function persist_state()
     dfhack.persistent.saveSiteData(GLOBAL_KEY, {
         enabled=enabled,
         allowed=to_persist_allowed(),
-        thresholds=thresholds
+        thresholds=thresholds,
+        ignore_happy=ignore_happy
     })
 end
 
@@ -273,6 +277,7 @@ local function load_state()
     enabled = persisted_data.enabled or false
     allowed = from_persist_allowed(persisted_data.allowed) or {}
     thresholds = persisted_data.thresholds or { 10000, 1000, 500 }
+    ignore_happy = persisted_data.ignore_happy == nil and true or ignore_happy
 end
 
 --frequently accessed values
@@ -281,16 +286,18 @@ local BONE_CARVE = df.unit_labor['BONE_CARVE']
 local STONE_CRAFT = df.unit_labor['STONE_CRAFT']
 
 ---negative crafting focus penalty
+---@generic T
 ---@param unit df.unit
----@return number
-function getCraftingNeed(unit)
+---@param value_if_absent T
+---@return number|T
+function getCraftingNeed(unit, value_if_absent)
     local needs = unit.status.current_soul.personality.needs
     for _, need in ipairs(needs) do
         if need.id == CraftObject then
             return -need.focus_level
         end
     end
-    return 0
+    return value_if_absent
 end
 
 local function stop()
@@ -383,8 +390,8 @@ end
 ---@return boolean "proceed to next workshop"
 local function processUnit(workshop, idx, unit_id)
     local unit = df.unit.find(unit_id)
-    -- check that unit is still there and not caged or chained
-    if not unit or unit.flags1.caged or unit.flags1.chained then
+    -- check that unit is still there, not caged or chained, and still has crafting needs
+    if not unit or unit.flags1.caged or unit.flags1.chained or getCraftingNeed(unit, -1) < 0 then
         watched[idx][unit_id] = nil
         return false
     elseif not canAccessWorkshop(unit, workshop) then
@@ -511,16 +518,33 @@ local function main_loop()
         num_watched[idx] = 0
     end
 
+    local max_threshold = thresholds[1]
     for _, unit in ipairs(dfhack.units.getCitizens(true, false)) do
+
+        local crafting_need = getCraftingNeed(unit, nil)
+
+        if not crafting_need then
+            goto next_unit
+        end
+
+        local is_happy = unit.status.current_soul.personality.stress < -25000 and
+                         unit.status.current_soul.personality.longterm_stress < 0
+
         for idx, threshold in ipairs(thresholds) do
-            if getCraftingNeed(unit) > threshold then
+            if ignore_happy and is_happy and threshold < max_threshold then
+                -- ignore happy and ecstatic units for any threshold but the highest
+                print(dfhack.df2console(("idle-crafting: skipping happy unit %s"):format(dfhack.units.getReadableName(unit))))
+                goto next_unit
+            end
+
+            if crafting_need > threshold then
                 watched[idx][unit.id] = true
                 num_watched[idx] = num_watched[idx] + 1
                 watching = true
-                goto continue
+                goto next_unit
             end
         end
-        ::continue::
+        ::next_unit::
     end
     -- print(('watching %s dwarfs with crafting needs'):format(
     --     table.concat(num_watched, '/')
@@ -665,9 +689,12 @@ if not positionals[1] or positionals[1] == 'status' then
     ---@type integer[]
     stats = {}
     for _, unit in ipairs(dfhack.units.getCitizens(true, false)) do
-        local fulfillment = -getCraftingNeed(unit)
+        local crafting_need = getCraftingNeed(unit, nil)
+        if not crafting_need then
+            goto continue
+        end
         for i = 1, 7 do
-            if fulfillment >= fulfillment_threshold[i] then
+            if -crafting_need >= fulfillment_threshold[i] then
                 stats[i] = stats[i] and stats[i] + 1 or 1
                 goto continue
             end
@@ -686,11 +713,19 @@ if not positionals[1] or positionals[1] == 'status' then
         format(enabled and 'enabled' or 'disabled', num_workshops))
     print(('The thresholds for "craft item" needs are %s'):
         format(table.concat(thresholds, ',')))
+    if ignore_happy then
+        print('Will only assign crafting jobs to happy dwarves with strong needs')
+    else
+        print('Will treat happy units like all other units')
+    end
+
 elseif positionals[1] == 'thresholds' then
     thresholds = argparse.numberList(positionals[2], 'thresholds')
     table.sort(thresholds, function (a, b) return a > b end)
     print(('Thresholds for "craft item" needs set to %s'):
         format(table.concat(thresholds, ',')))
+elseif positionals[1] == 'happy' then
+    ignore_happy = not argparse.boolean(positionals[2], 'happy')
 elseif positionals[1] == 'disable' then
         allowed = {}
         stop()

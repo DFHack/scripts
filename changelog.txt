@@ -30,7 +30,11 @@ Template for new versions:
 
 ## New Features
 
+- `idle-crafting`: default to only considering happy and ecstatic units for the highest need threshold
+
 ## Fixes
+
+- `idle-crafting`: check that units still have crafting needs before creating a job for them
 
 ## Misc Improvements
 
