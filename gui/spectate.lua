@@ -46,7 +46,7 @@ end
 Spectate = defclass(Spectate, widgets.Window)
 Spectate.ATTRS {
     frame_title='Spectate',
-    frame={l=5, t=5, w=36, h=40},
+    frame={l=5, t=5, w=36, h=41},
 }
 
 local function create_toggle_button(frame, cfg_elem, hotkey, label, cfg_elem_key)
@@ -242,9 +242,10 @@ function Spectate:init()
         },
 
         create_row({t=26}, 'Job', 'J', 'job', colFollow, colHover),
-        create_row({t=27}, 'Name', 'N', 'name', colFollow, colHover),
-        create_row({t=28}, 'Stress', 'S', 'stress', colFollow, colHover),
-        create_stress_list({t=29}, colFollow, colHover),
+        create_row({t=27}, 'Activity', 'A', 'activity', colFollow, colHover),
+        create_row({t=28}, 'Name', 'N', 'name', colFollow, colHover),
+        create_row({t=29}, 'Stress', 'S', 'stress', colFollow, colHover),
+        create_stress_list({t=30}, colFollow, colHover),
     }
 end
 
