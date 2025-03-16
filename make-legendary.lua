@@ -80,6 +80,26 @@ function PrintSkillClassList()
     print('For example: Medical will make all medical skills legendary')
 end
 
+function FortressLegendary()
+    local count = 0
+    local units = dfhack.units.getCitizens()
+    
+    if #units == 0 then
+        qerror('No fortress citizens found. Are you in fortress mode?')
+        return
+    end
+    
+    for _, unit in ipairs(units) do
+        for i in ipairs(df.job_skill) do
+            legendize(unit, i)
+        end
+        print('The secrets of the depths have been mastered by ' .. getName(unit))
+        count = count + 1
+    end
+    
+    print(string.format('\nMade %d fortress citizens legendary!', count))
+end
+
 --main script operation starts here
 ----
 local opt = ...
@@ -97,6 +117,9 @@ elseif opt == 'classes' then
     return
 elseif opt == 'all' then
     BreathOfArmok()
+    return
+elseif opt == 'fortress' then
+    FortressLegendary()
     return
 elseif df.job_skill_class[opt] then
     LegendaryByClass(opt)
