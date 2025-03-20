@@ -35,7 +35,7 @@ function SitemapToolbarOverlay:init()
 
     self:addviews{
         widgets.Panel{
-            frame={t=0, r=0, w=26, h=5},
+            frame={t=0, l=0, w=26, h=5},
             frame_style=gui.FRAME_PANEL,
             frame_background=gui.CLEAR_PEN,
             frame_inset={l=1, r=1},
@@ -52,7 +52,7 @@ function SitemapToolbarOverlay:init()
         },
         widgets.Panel{
             view_id='icon',
-            frame={b=0, r=22, w=4, h=3},
+            frame={b=0, l=0, w=4, h=3},
             subviews={
                 widgets.Label{
                     text=widgets.makeButtonLabelText{
