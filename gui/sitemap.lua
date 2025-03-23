@@ -8,7 +8,7 @@ local overlay = require('plugins.overlay')
 local toolbar_textures = (dfhack.textures.loadTileset('hack/data/art/sitemap_toolbar.png', 8,12))
 
 function launch_sitemap()
-    SitemapScreen{}:show()
+    dfhack.run_script('gui/sitemap')
 end
 
 --
