@@ -29,7 +29,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
-
+- `gui/mass-remove`: added a button to the bottom toolbar when eraser mode is active for launching `gui/mass-remove`
 - `idle-crafting`: default to only considering happy and ecstatic units for the highest need threshold
 
 ## Fixes
