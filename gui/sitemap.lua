@@ -443,7 +443,7 @@ function SitemapToolbarOverlay:onInput(keys)
     return SitemapToolbarOverlay.super.onInput(self, keys)
 end
 
-OVERLAY_WIDGETS = {sitemaptoolbar=SitemapToolbarOverlay}
+OVERLAY_WIDGETS = {toolbar=SitemapToolbarOverlay}
 
 
 if dfhack_flags.module then
