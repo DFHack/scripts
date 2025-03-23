@@ -24,3 +24,17 @@ Usage
 ::
 
     gui/sitemap
+
+
+Overlay
+-------
+
+This tool also provides one overlay that is managed by the `overlay`
+framework.
+
+sitemaptoolbar
+~~~~~~~~~~~~~~~~~
+
+The sitemap.sitemaptoolbar overlay adds a button to the toolbar at the bottom left corner of the
+screen with the other menu buttons. It allows you to conveniently open the ``gui/sitemap``
+interface.
