@@ -435,10 +435,6 @@ function SitemapToolbarOverlay:init()
 end
 
 function SitemapToolbarOverlay:onInput(keys)
-    if keys.CUSTOM_CTRL_G then
-        launch_sitemap()
-        return true
-    end
     return SitemapToolbarOverlay.super.onInput(self, keys)
 end
 
