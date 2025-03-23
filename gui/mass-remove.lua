@@ -480,8 +480,7 @@ function MassRemoveToolbarOverlay:onInput(keys)
     return MassRemoveToolbarOverlay.super.onInput(self, keys)
 end
 
-OVERLAY_WIDGETS = {massremovetoolbar=MassRemoveToolbarOverlay}
-
+OVERLAY_WIDGETS = {toolbar=MassRemoveToolbarOverlay}
 
 if dfhack_flags.module then
     return
