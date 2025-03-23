@@ -367,7 +367,7 @@ end
 
 SitemapToolbarOverlay = defclass(SitemapToolbarOverlay, overlay.OverlayWidget)
 SitemapToolbarOverlay.ATTRS{
-    desc='Adds a button to the toolbar at the bottom left corner of the screen with the other menu buttons for launching gui/sitemap,
+    desc='Adds a button to the toolbar at the bottom left corner of the screen with the other menu buttons for launching gui/sitemap',
     default_pos={x=35, y=-1},
     default_enabled=true,
     viewscreens='dwarfmode',
