@@ -5,7 +5,7 @@ local utils = require('utils')
 local widgets = require('gui.widgets')
 local overlay = require('plugins.overlay')
 
-local toolbar_textures = (dfhack.textures.loadTileset('hack/data/art/sitemap_toolbar.png', 8,12))
+local toolbar_textures = dfhack.textures.loadTileset('hack/data/art/sitemap_toolbar.png', 8, 12)
 
 function launch_sitemap()
     dfhack.run_script('gui/sitemap')
@@ -367,12 +367,10 @@ end
 
 SitemapToolbarOverlay = defclass(SitemapToolbarOverlay, overlay.OverlayWidget)
 SitemapToolbarOverlay.ATTRS{
-    desc='Adds widgets to the erase interface to open the mass removal tool',
+    desc='Adds a button to the toolbar at the bottom left corner of the screen with the other menu buttons.',
     default_pos={x=35, y=-1},
     default_enabled=true,
-    viewscreens={
-        'dwarfmode'
-    },
+    viewscreens='dwarfmode',
     frame={w=28, h=9},
 }
 
@@ -389,11 +387,12 @@ function SitemapToolbarOverlay:init()
             frame_style=gui.FRAME_PANEL,
             frame_background=gui.CLEAR_PEN,
             frame_inset={l=1, r=1},
-            visible=function() return not not self.subviews.icon:getMousePos() end,
+            visible=function() return self.subviews.icon:getMousePos() end,
             subviews={
                 widgets.Label{
                     text={
-                        'Open the sitemap menu.', NEWLINE,
+                        'Open the general search', NEWLINE,
+                        'interface.', NEWLINE,
                         NEWLINE,
                         {text='Hotkey: ', pen=COLOR_GRAY}, {key='CUSTOM_CTRL_G'},
                     },
