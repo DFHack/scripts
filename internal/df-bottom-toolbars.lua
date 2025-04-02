@@ -114,22 +114,17 @@ The module provides the following fields:
     ``mass_designation``. See the complete list of secondary toolbar buttons in
     the module's code.
 
-    The definition of a secondary toolbar uses the same ``width`` & ``buttons``
-    fields as the primary toolbars.
+    The definition of a secondary toolbar provides the same ``width``
+    and``buttons`` fields and ``frame`` method as the primary toolbars.
 
-  * ``fort.center:secondary_toolbar_frame(interface_rect, secondary_name)``
-
-    Provides the frame (like ``toolbar:frame()``) for the specified secondary
-    toolbar when displayed in the specified interface size.
-
-    Again, a button's ``offset`` can be combined with its secondary toolbar's
-    frame's ``l`` to find the location of a specific button::
+    The ``offset`` of a secondary toolbar's button can be combined with the
+    toolbar's frame's ``l`` to find the location of a specific button::
 
       local tb = reqscript('internal/df-bottom-toolbars')
       ...
-      local center = tb.fort.center
-      local dig_advanced_offset = center:secondary_toolbar_frame(interface_size, 'dig')
-          + center.secondary_toolbars.dig.advanced_toggle.offset
+      local dig = tb.fort.center.secondary_toolbars.dig
+      local dig_advanced_offset = dig:frame(interface_size)
+          + dig.buttons.advanced_toggle.offset
 
 ]]
 
@@ -160,11 +155,6 @@ end
 ---@alias Button { offset: integer, width: integer }
 ---@alias NamedButtons table<string,Button> -- multiple entries
 
----@class Toolbar
----@field button_offsets NamedOffsets deprecated, use buttons[name].offset
----@field buttons NamedButtons
----@field width integer
-
 ---@class Toolbar.Widget.frame: widgets.Widget.frame
 ---@field l integer Gap between the left edge of the frame and the parent.
 ---@field t integer Gap between the top edge of the frame and the parent.
@@ -173,8 +163,16 @@ end
 ---@field w integer Width
 ---@field h integer Height
 
+---@class Toolbar.Base
+---@field button_offsets NamedOffsets deprecated, use buttons[name].offset
+---@field buttons NamedButtons
+---@field width integer
+
+---@class Toolbar: Toolbar.Base
+---@field frame fun(self: Toolbar, interface_size: Toolbar.Rectangle.Size): Toolbar.Widget.frame
+
 ---@param widths NamedWidth[] single-name entries only!
----@return Toolbar
+---@return Toolbar.Base
 local function button_widths_to_toolbar(widths)
     local offsets = {}
     local buttons = {}
@@ -203,7 +201,7 @@ local function buttons_to_widths(buttons)
 end
 
 ---@param buttons string[]
----@return Toolbar
+---@return Toolbar.Base
 local function buttons_to_toolbar(buttons)
     return button_widths_to_toolbar(buttons_to_widths(buttons))
 end
@@ -211,7 +209,7 @@ end
 -- Fortress mode toolbar definitions
 fort = {}
 
----@class LeftToolbar : Toolbar
+---@class LeftToolbar: Toolbar
 fort.left = buttons_to_toolbar{
     'citizens', 'tasks', 'places', 'labor',
     'orders', 'nobles', 'objects', 'justice',
@@ -270,6 +268,7 @@ end
 ---@alias CenterToolbarToolNames              'dig' | 'chop' | 'gather' | 'smooth' | 'erase' | 'build' | 'stockpile' |                     'zone' | 'burrow' |                   'cart' | 'traffic' | 'mass_designation'
 ---@alias CenterToolbarSecondaryToolbarNames  'dig' | 'chop' | 'gather' | 'smooth' | 'erase' |           'stockpile' | 'stockpile_paint' |                      'burrow_paint' |          'traffic' | 'mass_designation'
 
+---@deprecated Use center.secondary_toolbars[toolbar_name]:frame().
 ---@param interface_size Toolbar.Rectangle.Size
 ---@param toolbar_name CenterToolbarSecondaryToolbarNames
 ---@return Toolbar.Widget.frame
@@ -315,68 +314,115 @@ function fort.center:secondary_toolbar_frame(interface_size, toolbar_name)
     }
 end
 
+---@param interface_size Toolbar.Rectangle.Size
+---@param tool_name CenterToolbarToolNames
+---@param secondary_toolbar Toolbar.Base
+---@return Toolbar.Widget.frame
+local function center_secondary_frame(interface_size, tool_name, secondary_toolbar)
+    local toolbar_offset = fort.center:frame(interface_size).l
+    local toolbar_button = fort.center.buttons[tool_name] or dfhack.error('invalid tool name: ' .. tool_name)
+
+    -- Ideally, the secondary toolbar is positioned directly above the (main) toolbar button
+    local ideal_offset = toolbar_offset + toolbar_button.offset
+
+    -- In "narrow" interfaces conditions, a wide secondary toolbar (pretty much
+    -- any tool that has "advanced" options) that was ideally positioned above
+    -- its tool's button would extend past the right edge of the interface area.
+    -- Such wide secondary toolbars are instead right justified with a bit of
+    -- padding.
+
+    -- padding necessary to line up width-constrained secondaries
+    local secondary_padding = 5
+    local width_constrained_offset = math.max(0, interface_size.width - (secondary_toolbar.width + secondary_padding))
+
+    -- Use whichever position is left-most.
+    local l = math.min(ideal_offset, width_constrained_offset)
+    return {
+        l = l,
+        w = secondary_toolbar.width,
+        r = interface_size.width - l - secondary_toolbar.width,
+
+        t = interface_size.height - TOOLBAR_HEIGHT - SECONDARY_TOOLBAR_HEIGHT,
+        h = SECONDARY_TOOLBAR_HEIGHT,
+        b = TOOLBAR_HEIGHT,
+    }
+end
+
 ---@type table<CenterToolbarSecondaryToolbarNames,Toolbar>
-fort.center.secondary_toolbars = {
-    dig = buttons_to_toolbar{
-        'dig', 'stairs', 'ramp', 'channel', 'remove_construction', '_gap',
+fort.center.secondary_toolbars = {}
+
+---@param tool_name CenterToolbarToolNames
+---@param secondary_name CenterToolbarSecondaryToolbarNames
+---@param toolbar Toolbar.Base
+---@return Toolbar
+local function center_secondary(tool_name, secondary_name, toolbar)
+    local ntb = toolbar --[[@as Toolbar]]
+    function ntb:frame(interface_size)
+        return center_secondary_frame(interface_size, tool_name, self)
+    end
+    fort.center.secondary_toolbars[secondary_name] = ntb
+    return ntb
+end
+
+center_secondary('dig', 'dig', buttons_to_toolbar{
+    'dig', 'stairs', 'ramp', 'channel', 'remove_construction', '_gap',
+    'rectangle', 'draw', '_gap',
+    'advanced_toggle', '_gap',
+    'all', 'auto', 'ore_gem', 'gem', '_gap',
+    'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', '_gap',
+    'blueprint', 'blueprint_to_standard', 'standard_to_blueprint',
+})
+center_secondary('chop', 'chop', buttons_to_toolbar{
+    'chop', '_gap',
+    'rectangle', 'draw', '_gap',
+    'advanced_toggle', '_gap',
+    'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', '_gap',
+    'blueprint', 'blueprint_to_standard', 'standard_to_blueprint',
+})
+center_secondary('gather', 'gather', buttons_to_toolbar{
+    'gather', '_gap',
+    'rectangle', 'draw', '_gap',
+    'advanced_toggle', '_gap',
+    'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', '_gap',
+    'blueprint', 'blueprint_to_standard', 'standard_to_blueprint',
+})
+center_secondary('smooth', 'smooth', buttons_to_toolbar{
+    'smooth', 'engrave', 'carve_track', 'carve_fortification', '_gap',
+    'rectangle', 'draw', '_gap',
+    'advanced_toggle', '_gap',
+    'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', '_gap',
+    'blueprint', 'blueprint_to_standard', 'standard_to_blueprint',
+})
+center_secondary( 'erase', 'erase', buttons_to_toolbar{
+    'rectangle',
+    'draw',
+})
+-- build -- completely different and quite variable
+center_secondary('stockpile', 'stockpile', buttons_to_toolbar{ 'add_stockpile' })
+center_secondary('stockpile', 'stockpile_paint', buttons_to_toolbar{
+    'rectangle', 'draw', 'erase_toggle', 'remove',
+})
+-- zone -- no secondary toolbar
+-- burrow -- no direct secondary toolbar
+center_secondary('burrow', 'burrow_paint', buttons_to_toolbar{
+    'rectangle', 'draw', 'erase_toggle', 'remove',
+})
+-- cart -- no secondary toolbar
+center_secondary('traffic', 'traffic', button_widths_to_toolbar(
+    concat_sequences{ buttons_to_widths{
+        'high', 'normal', 'low', 'restricted', '_gap',
         'rectangle', 'draw', '_gap',
         'advanced_toggle', '_gap',
-        'all', 'auto', 'ore_gem', 'gem', '_gap',
-        'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', '_gap',
-        'blueprint', 'blueprint_to_standard', 'standard_to_blueprint',
-    },
-    chop = buttons_to_toolbar{
-        'chop', '_gap',
-        'rectangle', 'draw', '_gap',
-        'advanced_toggle', '_gap',
-        'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', '_gap',
-        'blueprint', 'blueprint_to_standard', 'standard_to_blueprint',
-    },
-    gather = buttons_to_toolbar{
-        'gather', '_gap',
-        'rectangle', 'draw', '_gap',
-        'advanced_toggle', '_gap',
-        'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', '_gap',
-        'blueprint', 'blueprint_to_standard', 'standard_to_blueprint',
-    },
-    smooth = buttons_to_toolbar{
-        'smooth', 'engrave', 'carve_track', 'carve_fortification', '_gap',
-        'rectangle', 'draw', '_gap',
-        'advanced_toggle', '_gap',
-        'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', '_gap',
-        'blueprint', 'blueprint_to_standard', 'standard_to_blueprint',
-    },
-    erase = buttons_to_toolbar{
-        'rectangle',
-        'draw',
-    },
-    -- build   -- completely different and quite variable
-    stockpile = buttons_to_toolbar{ 'add_stockpile' },
-    stockpile_paint = buttons_to_toolbar{
-        'rectangle', 'draw', 'erase_toggle', 'remove',
-    },
-    -- zone    -- no secondary toolbar
-    -- burrow -- no direct secondary toolbar
-    burrow_paint = buttons_to_toolbar{
-        'rectangle', 'draw', 'erase_toggle', 'remove',
-    },
-    -- cart    -- no secondary toolbar
-    traffic = button_widths_to_toolbar(
-        concat_sequences{ buttons_to_widths{
-            'high', 'normal', 'low', 'restricted', '_gap',
-            'rectangle', 'draw', '_gap',
-            'advanced_toggle', '_gap',
-        }, {
-            { weight_which = 4 },
-            { weight_slider = 26 },
-            { weight_input = 6 },
-        } }
-    ),
-    mass_designation = buttons_to_toolbar{
-        'claim', 'forbid', 'dump', 'no_dump', 'melt', 'no_melt', 'hidden', 'visible', '_gap',
-        'rectangle', 'draw',
-    },
-}
+    }, {
+        { weight_which = 4 },
+        { weight_slider = 26 },
+        { weight_input = 6 },
+    } }
+))
+center_secondary('mass_designation', 'mass_designation', buttons_to_toolbar{
+    'claim', 'forbid', 'dump', 'no_dump', 'melt', 'no_melt', 'hidden', 'visible', '_gap',
+    'rectangle', 'draw',
+})
 
 ---@class RightToolbar: Toolbar
 fort.right = buttons_to_toolbar{
@@ -502,7 +548,7 @@ local function update_demonstrations(secondary)
         --               {s demo}
         --               [s tool]
         -- [l tool]   [c tool]   [r tool]  (bottom of UI)
-        update(secondary_toolbar_demo, fort.center:secondary_toolbar_frame(ir, secondary),
+        update(secondary_toolbar_demo, fort.center.secondary_toolbars[secondary]:frame(ir),
             fort.center.secondary_toolbars[secondary].buttons)
         secondary_visible = true
         toolbar_demo_dy = toolbar_demo_dy - 2 * SECONDARY_TOOLBAR_HEIGHT
