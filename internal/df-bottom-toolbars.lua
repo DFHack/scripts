@@ -139,6 +139,11 @@ TOOLBAR_HEIGHT = 3
 SECONDARY_TOOLBAR_HEIGHT = 3
 MINIMUM_INTERFACE_RECT = require('gui').mkdims_wh(0, 0, 114, 46)
 
+-- Only width and height are used here. We could define a new "@class", but
+-- LuaLS doesn't seem to accept gui.dimensions values as compatible with that
+-- new class...
+---@alias Toolbar.Rectangle.Size gui.dimension
+
 ---@generic T
 ---@param sequences T[][]
 ---@return T[]
@@ -212,15 +217,15 @@ fort.left = buttons_to_toolbar{
     'orders', 'nobles', 'objects', 'justice',
 }
 
----@param interface_rect gui.dimension
+---@param interface_size Toolbar.Rectangle.Size
 ---@return Toolbar.Widget.frame
-function fort.left:frame(interface_rect)
+function fort.left:frame(interface_size)
     return {
         l = 0,
         w = self.width,
-        r = interface_rect.width - self.width,
+        r = interface_size.width - self.width,
 
-        t = interface_rect.height - TOOLBAR_HEIGHT,
+        t = interface_size.height - TOOLBAR_HEIGHT,
         h = TOOLBAR_HEIGHT,
         b = 0,
     }
@@ -241,22 +246,22 @@ fort.center = button_widths_to_toolbar{
     { _right_border = 1 },
 }
 
----@param interface_rect gui.dimension
+---@param interface_size Toolbar.Rectangle.Size
 ---@return Toolbar.Widget.frame
-function fort.center:frame(interface_rect)
+function fort.center:frame(interface_size)
     -- center toolbar is "centered" in interface area, but never closer to the
     -- left toolbar than fort.left_center_gap_minimum
 
-    local interface_offset_centered = math.ceil((interface_rect.width - self.width + 1) / 2)
+    local interface_offset_centered = math.ceil((interface_size.width - self.width + 1) / 2)
     local interface_offset_min = fort.left.width + fort.left_center_gap_minimum
     local interface_offset = math.max(interface_offset_min, interface_offset_centered)
 
     return {
         l = interface_offset,
         w = self.width,
-        r = interface_rect.width - interface_offset - self.width,
+        r = interface_size.width - interface_offset - self.width,
 
-        t = interface_rect.height - TOOLBAR_HEIGHT,
+        t = interface_size.height - TOOLBAR_HEIGHT,
         h = TOOLBAR_HEIGHT,
         b = 0,
     }
@@ -265,10 +270,10 @@ end
 ---@alias CenterToolbarToolNames              'dig' | 'chop' | 'gather' | 'smooth' | 'erase' | 'build' | 'stockpile' |                     'zone' | 'burrow' |                   'cart' | 'traffic' | 'mass_designation'
 ---@alias CenterToolbarSecondaryToolbarNames  'dig' | 'chop' | 'gather' | 'smooth' | 'erase' |           'stockpile' | 'stockpile_paint' |                      'burrow_paint' |          'traffic' | 'mass_designation'
 
----@param interface_rect gui.dimension
+---@param interface_size Toolbar.Rectangle.Size
 ---@param toolbar_name CenterToolbarSecondaryToolbarNames
 ---@return Toolbar.Widget.frame
-function fort.center:secondary_toolbar_frame(interface_rect, toolbar_name)
+function fort.center:secondary_toolbar_frame(interface_size, toolbar_name)
     local secondary_toolbar = self.secondary_toolbars[toolbar_name] or
         dfhack.error('invalid toolbar name: ' .. toolbar_name)
 
@@ -281,7 +286,7 @@ function fort.center:secondary_toolbar_frame(interface_rect, toolbar_name)
     else
         tool_name = toolbar_name --[[@as CenterToolbarToolNames]]
     end
-    local toolbar_offset = self:frame(interface_rect).l
+    local toolbar_offset = self:frame(interface_size).l
     local toolbar_button = self.buttons[tool_name] or dfhack.error('invalid tool name: ' .. tool_name)
 
     -- Ideally, the secondary toolbar is positioned directly above the (main) toolbar button
@@ -295,16 +300,16 @@ function fort.center:secondary_toolbar_frame(interface_rect, toolbar_name)
 
     -- padding necessary to line up width-constrained secondaries
     local secondary_padding = 5
-    local width_constrained_offset = math.max(0, interface_rect.width - (secondary_toolbar.width + secondary_padding))
+    local width_constrained_offset = math.max(0, interface_size.width - (secondary_toolbar.width + secondary_padding))
 
     -- Use whichever position is left-most.
     local l = math.min(ideal_offset, width_constrained_offset)
     return {
         l = l,
         w = secondary_toolbar.width,
-        r = interface_rect.width - l - secondary_toolbar.width,
+        r = interface_size.width - l - secondary_toolbar.width,
 
-        t = interface_rect.height - TOOLBAR_HEIGHT - SECONDARY_TOOLBAR_HEIGHT,
+        t = interface_size.height - TOOLBAR_HEIGHT - SECONDARY_TOOLBAR_HEIGHT,
         h = SECONDARY_TOOLBAR_HEIGHT,
         b = TOOLBAR_HEIGHT,
     }
@@ -378,15 +383,15 @@ fort.right = buttons_to_toolbar{
     'squads', 'world',
 }
 
----@param interface_rect gui.dimension
+---@param interface_size Toolbar.Rectangle.Size
 ---@return Toolbar.Widget.frame
-function fort.right:frame(interface_rect)
+function fort.right:frame(interface_size)
     return {
-        l = interface_rect.width - self.width,
+        l = interface_size.width - self.width,
         w = self.width,
         r = 0,
 
-        t = interface_rect.height - TOOLBAR_HEIGHT,
+        t = interface_size.height - TOOLBAR_HEIGHT,
         h = TOOLBAR_HEIGHT,
         b = 0,
     }
