@@ -368,7 +368,7 @@ end
 SitemapToolbarOverlay = defclass(SitemapToolbarOverlay, overlay.OverlayWidget)
 SitemapToolbarOverlay.ATTRS{
     desc='Adds a button to the toolbar at the bottom left corner of the screen for launching gui/sitemap.',
-    default_pos={x=35, y=-1},
+    default_pos={x=34, y=-1},
     default_enabled=true,
     viewscreens='dwarfmode',
     frame={w=28, h=10},
@@ -392,7 +392,7 @@ function SitemapToolbarOverlay:init()
                 widgets.Label{
                     text={
                         'Open the general search', NEWLINE,
-                        'interface.', NEWLINE,
+                        'and zoom interface.', NEWLINE,
                         NEWLINE,
                         {text='Hotkey: ', pen=COLOR_GRAY}, {key='CUSTOM_CTRL_G'},
                     },

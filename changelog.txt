@@ -35,6 +35,7 @@ Template for new versions:
 
 ## Fixes
 - `idle-crafting`: check that units still have crafting needs before creating a job for them
+- `gui/journal`: prevent pause/unpause events from leaking through the UI when keys are mashed
 
 ## Misc Improvements
 

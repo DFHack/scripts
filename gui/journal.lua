@@ -268,6 +268,7 @@ end
 JournalScreen = defclass(JournalScreen, gui.ZScreen)
 JournalScreen.ATTRS {
     focus_path='journal',
+    pass_pause=false,
     context_mode=DEFAULT_NIL,
     save_layout=true,
     save_prefix=''
