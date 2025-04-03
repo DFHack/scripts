@@ -431,8 +431,8 @@ local MR_HEIGHT = MR_TOOLTIP_HEIGHT + 1 --[[empty line]] + MR_BUTTON_HEIGHT
 local function mass_remove_button_offsets(interface_rect)
     local remove_buttons = tb.fort.center:secondary_toolbar_frame(interface_rect, 'erase')
     return {
-        l = remove_buttons.l + remove_buttons.w,
-        r = remove_buttons.r - MR_BUTTON_WIDTH,
+        l = remove_buttons.l + remove_buttons.w + 1, -- one "gap column" past the end of erase tools
+        r = remove_buttons.r - 1 - MR_BUTTON_WIDTH, -- leave room for the gap and our button
         t = remove_buttons.t,
         b = remove_buttons.b,
     }
