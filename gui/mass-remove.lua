@@ -399,13 +399,67 @@ end
 -- MassRemoveToolbarOverlay
 --
 
+-- The overlay is positioned (by default) so that, no matter what size interface
+-- is being used, the overlay's button is placed one column to the right of the
+-- right-most button of the secondary toolbar displayed for the "erase" tool
+-- (used to remove designations).
+
+-- This would be straightforward in a full_interface overlay (just set its
+-- l/r/t/b frame positioning fields based on the "erase" toolbar's position).
+-- However, to preserve player-positioning, we take a more circuitous route.
+
+-- Usually, the player-configured positions are relative to the edges of the DF
+-- interface area. But because the button of this overlay needs to "stick with"
+-- the rest of the toolbar buttons, the player-configured positioning is
+-- reinterpreted a bit.
+
+-- The offset between the overlay's default position and its player-configured
+-- position is used as the overlay's effective offset from its "ideal" position.
+-- This "effective offset" is realized by updating the overlay's width, not its
+-- position (which we leave in the hands of the overlay system, under player
+-- control). When combined with the player-configured position, this results in
+-- translating the overlay position to be relative to its "ideal" position so
+-- that the overlay "moves with" the rest of the toolbar buttons, but still
+-- allows for player customization.
+
+-- Note: This "position reinterpretation" currently only works when the overlay
+-- is anchored to the left and bottom edges of the interface area. If the
+-- overlay is player-reconfigured to be anchored to the right or top edges, it
+-- will result in normal edge-relative positioning.
+
+local tb = reqscript('internal/df-bottom-toolbars')
+
+local MR_BUTTON_WIDTH = 4
+local MR_BUTTON_HEIGHT = 3
+local MR_TOOLTIP_WIDTH = 26
+local MR_TOOLTIP_HEIGHT = 6
+local MR_WIDTH = math.max(MR_BUTTON_WIDTH, MR_TOOLTIP_WIDTH)
+local MR_HEIGHT = MR_TOOLTIP_HEIGHT + 1 --[[empty line]] + MR_BUTTON_HEIGHT
+
+local function mass_remove_button_offsets(interface_rect)
+    local remove_buttons = tb.fort.center:secondary_toolbar_frame(interface_rect, 'erase')
+    return {
+        l = remove_buttons.l + remove_buttons.w + 1, -- one "gap column" past the end of erase tools
+        r = remove_buttons.r - 1 - MR_BUTTON_WIDTH, -- leave room for the gap and our button
+        t = remove_buttons.t,
+        b = remove_buttons.b,
+    }
+end
+
+-- This value is compatible with the initial release of the overlay, but it not
+-- the actual left-offset of this overlay; if bumping overlay version, this
+-- could be changed to mass_remove_button_offsets(tb.MINIMUM_INTERFACE_RECT).l
+-- Adopting the calculated value would let the overlay be moved all the way to
+-- the left (in a minimum-size interface).
+local MR_DEFAULT_OFFSET = 41
+
 MassRemoveToolbarOverlay = defclass(MassRemoveToolbarOverlay, overlay.OverlayWidget)
 MassRemoveToolbarOverlay.ATTRS{
     desc='Adds a button to the erase toolbar to open the mass removal tool.',
-    default_pos={x=42, y=-4},
+    default_pos={x=MR_DEFAULT_OFFSET+1, y=-(tb.TOOLBAR_HEIGHT+1)},
     default_enabled=true,
     viewscreens='dwarfmode/Designate/ERASE',
-    frame={w=26, h=10},
+    frame={w=MR_WIDTH, h=MR_HEIGHT},
 }
 
 function MassRemoveToolbarOverlay:init()
@@ -417,7 +471,7 @@ function MassRemoveToolbarOverlay:init()
 
     self:addviews{
         widgets.Panel{
-            frame={t=0, r=0, w=26, h=6},
+            frame={t=0, r=0, w=MR_WIDTH, h=MR_TOOLTIP_HEIGHT},
             frame_style=gui.FRAME_PANEL,
             frame_background=gui.CLEAR_PEN,
             frame_inset={l=1, r=1},
@@ -435,7 +489,7 @@ function MassRemoveToolbarOverlay:init()
         },
         widgets.Panel{
             view_id='icon',
-            frame={b=0, r=22, w=4, h=3},
+            frame={b=0, r=0, w=MR_WIDTH, h=tb.SECONDARY_TOOLBAR_HEIGHT},
             subviews={
                 widgets.Label{
                     text=widgets.makeButtonLabelText{
@@ -469,12 +523,8 @@ function MassRemoveToolbarOverlay:init()
 end
 
 function MassRemoveToolbarOverlay:preUpdateLayout(parent_rect)
-    local w = parent_rect.width
-    if w <= 130 then
-        self.frame.w = 50
-    else
-        self.frame.w = (parent_rect.width+1)//2 - 15
-    end
+    local offsets = mass_remove_button_offsets(parent_rect)
+    self.frame.w = MR_WIDTH + offsets.l - MR_DEFAULT_OFFSET
 end
 
 function MassRemoveToolbarOverlay:onInput(keys)
