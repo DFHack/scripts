@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `devel/dflayout`: demo and visually verify gui.dflayout module (fort toolbars)
 
 ## New Features
 
