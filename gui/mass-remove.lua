@@ -9,6 +9,7 @@ local guidm = require('gui.dwarfmode')
 local utils = require('utils')
 local widgets = require('gui.widgets')
 local overlay = require('plugins.overlay')
+local layout = require('gui.dflayout')
 
 local function noop()
 end
@@ -399,13 +400,42 @@ end
 -- MassRemoveToolbarOverlay
 --
 
+local MR_BUTTON_WIDTH = 4
+local MR_BUTTON_HEIGHT = layout.SECONDARY_TOOLBAR_HEIGHT
+local MR_TOOLTIP_WIDTH = 26
+local MR_TOOLTIP_HEIGHT = 6
+local MR_WIDTH = math.max(MR_TOOLTIP_WIDTH, MR_BUTTON_WIDTH)
+local MR_HEIGHT = MR_TOOLTIP_HEIGHT + 1 --[[ empty line ]] + MR_BUTTON_HEIGHT
+
+local erase_toolbar = layout.fort.secondary_toolbars.erase
+
+-- one "gap column" past the right end of the erase secondary toolbar
+local function mass_remove_button_offsets(interface_size)
+    local erase_frame = erase_toolbar.frame(interface_size)
+    return {
+        l = erase_frame.l + erase_frame.w + 1,
+        w = erase_frame.w,
+        r = erase_frame.r - 1 - MR_BUTTON_WIDTH,
+
+        t = erase_frame.t,
+        h = erase_frame.h,
+        b = erase_frame.b,
+    }
+end
+
+-- If the overlay version is bumped, this could be changed to
+-- mass_remove_button_offsets(layout.MINIMUM_INTERFACE_RECT).l
+-- Adopting the calculated value would let the overlay be moved all the way to
+-- the left in a minimum-size interface.
+local MR_DEFAULT_L_OFFSET = 41
+
 MassRemoveToolbarOverlay = defclass(MassRemoveToolbarOverlay, overlay.OverlayWidget)
 MassRemoveToolbarOverlay.ATTRS{
     desc='Adds a button to the erase toolbar to open the mass removal tool.',
-    default_pos={x=42, y=-4},
+    default_pos={x=(MR_DEFAULT_L_OFFSET+1), y=-(layout.TOOLBAR_HEIGHT+1)},
     default_enabled=true,
     viewscreens='dwarfmode/Designate/ERASE',
-    frame={w=26, h=10},
+    frame={w=MR_WIDTH, h=MR_HEIGHT},
 }
 
 function MassRemoveToolbarOverlay:init()
@@ -417,7 +447,7 @@ function MassRemoveToolbarOverlay:init()
 
     self:addviews{
         widgets.Panel{
-            frame={t=0, r=0, w=26, h=6},
+            frame={t=0, r=0, w=MR_WIDTH, h=MR_TOOLTIP_HEIGHT},
             frame_style=gui.FRAME_PANEL,
             frame_background=gui.CLEAR_PEN,
             frame_inset={l=1, r=1},
@@ -435,7 +465,7 @@ function MassRemoveToolbarOverlay:init()
         },
         widgets.Panel{
             view_id='icon',
-            frame={b=0, r=22, w=4, h=3},
+            frame={b=0, r=0, w=MR_WIDTH, h=MR_BUTTON_HEIGHT},
             subviews={
                 widgets.Label{
                     text=widgets.makeButtonLabelText{
@@ -469,12 +499,7 @@ function MassRemoveToolbarOverlay:init()
 end
 
 function MassRemoveToolbarOverlay:preUpdateLayout(parent_rect)
-    local w = parent_rect.width
-    if w <= 130 then
-        self.frame.w = 50
-    else
-        self.frame.w = (parent_rect.width+1)//2 - 15
-    end
+    self.frame.w = MR_WIDTH + math.max(0, mass_remove_button_offsets(parent_rect).l - MR_DEFAULT_L_OFFSET)
 end
 
 function MassRemoveToolbarOverlay:onInput(keys)
