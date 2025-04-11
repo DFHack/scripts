@@ -10,6 +10,7 @@ local utils = require('utils')
 
 local presets_file = json.open("dfhack-config/mod-manager.json")
 local GLOBAL_KEY = 'mod-manager'
+local INSTALLED_MODS_PATH = 'data/installed_mods/'
 
 -- get_newregion_viewscreen and get_modlist_fields are declared as global functions
 -- so external tools can call them to get the DF mod list
@@ -401,6 +402,120 @@ function ModmanageScreen:init()
     }
 end
 
+ModlistMenu = defclass(ModlistMenu, widgets.Window)
+ModlistMenu.ATTRS {
+    view_id = "modlist_menu",
+    frame_title = "Active Modlist",
+    frame_style = gui.WINDOW_FRAME,
+
+    resize_min = { w = 30, h = 15 },
+    frame = { w = 40, t = 10, b = 15 },
+
+    resizable = true,
+    autoarrange_subviews=false,
+}
+
+local function get_mod_id_and_version(path)
+    local idfile = path .. '/info.txt'
+    local ok, lines = pcall(io.lines, idfile)
+    if not ok then return end
+    local id, version
+    for line in lines do
+        if not id then
+            _,_,id = line:find('^%[ID:([^%]]+)%]')
+        end
+        if not version then
+            -- note this doesn't include the closing brace since some people put
+            -- non-number characters in here, and DF only reads the leading digits
+            -- as the numeric version
+            _,_,version = line:find('^%[NUMERIC_VERSION:(%d+)')
+        end
+        -- note that we do *not* want to break out of this loop early since
+        -- lines has to hit EOF to close the file
+    end
+    return id, version
+end
+
+local function add_mod_paths(mod_paths, id, base_path, subdir)
+    local sep = base_path:endswith('/') and '' or '/'
+    local path = ('%s%s%s'):format(base_path, sep, subdir)
+    if dfhack.filesystem.isdir(path) then
+        table.insert(mod_paths, {id=id, path=path})
+    end
+end
+
+local function getWorldModlist()
+    -- ordered map of mod id -> {handled=bool, versions=map of version -> path}
+    local mods = utils.OrderedTable()
+    local mod_paths = {}
+
+    -- if a world is loaded, process active mods first, and lock to active version
+    if dfhack.isWorldLoaded() then
+        for _,path in ipairs(df.global.world.object_loader.object_load_order_src_dir) do
+            path = tostring(path.value)
+            -- skip vanilla "mods"
+            if not path:startswith(INSTALLED_MODS_PATH) then goto continue end
+            local id = get_mod_id_and_version(path)
+            if not id then goto continue end
+            mods[id] = {handled=true}
+            add_mod_paths(mod_paths, id, path, '.')
+            ::continue::
+        end
+        local modlist = {}
+        for _,mod in ipairs(mod_paths) do
+            table.insert(modlist,mod.id)
+        end
+        return modlist
+    end
+    qerror('No world is loaded')
+end
+
+function ModlistMenu:init()
+    local modlist = widgets.List{
+        view_id='modlist',
+        frame = {t=3},
+        choices = getWorldModlist()
+    }
+    self:addviews{
+        widgets.Label{
+            frame = { l=0, t=0 },
+            text = {'Active mods:'},
+        },
+        widgets.HotkeyLabel{
+            view_id='copy',
+            frame={t=1, r=1},
+            label='Copy modlist to clipboard',
+            text_pen=COLOR_YELLOW,
+            auto_width=true,
+            on_activate=function()
+                local mods = ''
+                for _,mod in ipairs(getWorldModlist()) do
+                    mods = (mods == '' and mod) or (mods .. ', ' .. mod)
+                end
+                dfhack.internal.setClipboardTextCp437(mods)
+            end,
+            enabled=function() return #modlist:getChoices() > 0 end,
+        },
+        modlist
+    }
+end
+
+
+ModlistScreen = defclass(ModlistScreen, gui.ZScreen)
+ModlistScreen.ATTRS {
+    focus_path = "modlist",
+}
+
+function ModlistScreen:init()
+    self:addviews{
+        ModlistMenu{}
+    }
+end
+
+function ModlistScreen:onDismiss()
+    view = nil
+end
+
 ModmanageOverlay = defclass(ModmanageOverlay, overlay.OverlayWidget)
 ModmanageOverlay.ATTRS {
     frame = { w=16, h=3 },
@@ -494,5 +609,4 @@ if dfhack_flags.module then
     return
 end
 
--- TODO: when invoked as a command, should show information on which mods are loaded
--- and give the player the option to export the list (or at least copy it to the clipboard)
+view = view and view:raise() or ModlistScreen{}:show()
