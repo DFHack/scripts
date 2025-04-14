@@ -1,10 +1,6 @@
 local gui = require('gui')
 local layout = require('gui.dflayout')
-local Panel = require('gui.widgets.containers.panel')
-local Window = require('gui.widgets.containers.window')
-local Label = require('gui.widgets.labels.label')
-local Toggle = require('gui.widgets.labels.toggle_hotkey_label')
-local List = require('gui.widgets.list')
+local widgets = require('gui.widgets')
 local utils = require('utils')
 
 --- Demo Control Window and Screen ---
@@ -26,7 +22,7 @@ do -- limit env pollution
         return screen:isActive() and not screen.defocused
     end
 
-    local DemoWindow = defclass(nil, Window)
+    local DemoWindow = defclass(nil, widgets.Window)
     DemoWindow.ATTRS{
         frame_title = 'dflayout demos',
         frame = { w = 39, h = 9 },
@@ -38,14 +34,14 @@ do -- limit env pollution
     function DemoWindow:init(args)
         self.demos = args.demos
         self:addviews{
-            Toggle{
+            widgets.ToggleHotkeyLabel{
                 label = 'Demos visible when not focused?',
                 initial_option = visible_when_not_focused,
                 on_change = function(new, old)
                     visible_when_not_focused = new
                 end
             },
-            List{
+            widgets.List{
                 view_id = 'list',
                 frame = { h = 10, },
                 icon_pen = COLOR_GREY,
@@ -129,7 +125,7 @@ do
         return visible() and fort_toolbars_demo.active
     end
 
-    FortToolbarDemoPanel = defclass(FortToolbarDemoPanel, Panel)
+    FortToolbarDemoPanel = defclass(FortToolbarDemoPanel, widgets.Panel)
     FortToolbarDemoPanel.ATTRS{
         frame_style = function(...)
             local style = gui.FRAME_THIN(...)
@@ -143,20 +139,20 @@ do
 
     local left_toolbar_demo = FortToolbarDemoPanel{
         frame_title = 'left toolbar',
-        subviews = { Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
+        subviews = { widgets.Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
     }
     local center_toolbar_demo = FortToolbarDemoPanel{
         frame_title = 'center toolbar',
-        subviews = { Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
+        subviews = { widgets.Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
     }
     local right_toolbar_demo = FortToolbarDemoPanel{
         frame_title = 'right toolbar',
-        subviews = { Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
+        subviews = { widgets.Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
     }
     local secondary_visible = false
     local secondary_toolbar_demo = FortToolbarDemoPanel{
         frame_title = 'secondary toolbar',
-        subviews = { Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
+        subviews = { widgets.Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
         visible = function() return fort_toolbars_visible() and secondary_visible end,
     }
 
