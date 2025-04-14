@@ -5,8 +5,6 @@ local utils = require('utils')
 
 --- Demo Control Window and Screen ---
 
-local screen
-
 local function demo_available(demo)
     if not demo.available then return true end
     return demo.available()
@@ -73,6 +71,10 @@ function DemoWindow:refresh()
 end
 
 DemoScreen = defclass(DemoScreen, gui.ZScreen)
+DemoScreen.ATTRS{
+    focus_path = 'gui.dflayout-demo'
+}
+
 function DemoScreen:init(args)
     self.demos = args.demos
     local function demo_views()
@@ -88,6 +90,10 @@ function DemoScreen:init(args)
         DemoWindow{ demos = self.demos }:refresh(),
         table.unpack(demo_views())
     }
+end
+
+function DemoScreen:onDismiss()
+    screen = nil
 end
 
 local if_percentage
@@ -301,7 +307,7 @@ end
 
 --- start demo control window ---
 
-screen = DemoScreen{
+screen = screen and screen:raise() or DemoScreen{
     demos = {
         fort_toolbars_demo,
     },
