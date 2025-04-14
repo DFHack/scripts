@@ -6,7 +6,6 @@ local utils = require('utils')
 --- Demo Control Window and Screen ---
 
 local screen
-local DemoScreen
 local visible
 
 do -- limit env pollution
@@ -22,7 +21,7 @@ do -- limit env pollution
         return screen:isActive() and not screen.defocused
     end
 
-    local DemoWindow = defclass(nil, widgets.Window)
+    DemoWindow = defclass(DemoWindow, widgets.Window)
     DemoWindow.ATTRS{
         frame_title = 'dflayout demos',
         frame = { w = 39, h = 9 },
@@ -75,7 +74,7 @@ do -- limit env pollution
         return self
     end
 
-    DemoScreen = defclass(nil, gui.ZScreen)
+    DemoScreen = defclass(DemoScreen, gui.ZScreen)
     function DemoScreen:init(args)
         self.demos = args.demos
         local function demo_views()
