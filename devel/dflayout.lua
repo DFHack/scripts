@@ -13,10 +13,10 @@ local utils = require('utils')
 ---@field update fun() called by main window to recompute demo frames
 
 local visible_when_not_focused = true
-function visible()
-    if visible_when_not_focused then return true end
+function demos_are_visible()
     if not screen then return false end
-    return screen:isActive() and not screen.defocused
+    if visible_when_not_focused then return true end
+    return screen:isActive() and screen:hasFocus()
 end
 
 DemoWindow = defclass(DemoWindow, widgets.Window)
@@ -114,7 +114,7 @@ end
 
 function DemoScreen:postComputeFrame(frame_body)
     for _, demo in ipairs(self.demos) do
-        if demo.active and demo.update then
+        if demo.available() and demo.active then
             demo.update()
         end
     end
@@ -129,7 +129,7 @@ local fort_toolbars_demo = {
 }
 
 local function fort_toolbars_visible()
-    return visible() and fort_toolbars_demo.active
+    return demos_are_visible() and fort_toolbars_demo.active
 end
 
 local secondary_visible = false
