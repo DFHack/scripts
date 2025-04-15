@@ -47,6 +47,7 @@ function DemoWindow:init(args)
             on_submit = function(index, item)
                 local demo = self.demos[index]
                 demo.active = demo.available() and not demo.active
+                if demo.active then demo.update() end
                 self:refresh()
             end
         },
@@ -104,6 +105,7 @@ function DemoScreen:render(...)
     if visible_when_not_focused then
         local new_if_percentage = df.global.init.display.max_interface_percentage
         if new_if_percentage ~= if_percentage then
+            if_percentage = new_if_percentage
             self:updateLayout()
         end
     end
@@ -203,6 +205,7 @@ local function update_fort_toolbars(secondary)
         v.subviews.buttons:setText(
             buttons:sub(2) -- the demo panel border is at offset 0, so trim first character to start at offset 1
         )
+        v:updateLayout()
     end
     if secondary then
         -- a secondary toolbar is active, move the primary demonstration up to
