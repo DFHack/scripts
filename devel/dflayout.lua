@@ -132,35 +132,140 @@ local function fort_toolbars_visible()
     return visible() and fort_toolbars_demo.active
 end
 
-FortToolbarDemoPanel = defclass(FortToolbarDemoPanel, widgets.Panel)
-FortToolbarDemoPanel.ATTRS{
+local secondary_visible = false
+
+local function primary_toolbar_dy()
+    if secondary_visible then
+        -- When a secondary toolbar is active, move the primary demos up to let
+        -- the secondary demo be right above the actual secondary:
+        -- {l demo}   {c demo}   {r demo}
+        --               {s demo}
+        --               [s tool]
+        -- [l tool]   [c tool]   [r tool]  (bottom of UI)
+        return -(layout.TOOLBAR_HEIGHT + 2 * layout.SECONDARY_TOOLBAR_HEIGHT)
+    else
+        -- Otherwise, draw primary toolbar demos right above the primary
+        -- toolbars:
+        -- {l demo}   {c demo}   {r demo}
+        -- [l tool]   [c tool]   [r tool]  (bottom of UI)
+        return -layout.TOOLBAR_HEIGHT
+    end
+end
+
+-- Generates a `view:computeFrame()` function that tracks the placement of the
+-- given `toolbar`.
+--
+-- Note: The returned function does not return a separate body rect; subviews
+-- will be able to overwrite the normal UI-drawn frame!
+---@param toolbar DFLayout.Toolbar
+---@param dy_fn fun(): integer
+---@return function
+local function get_computeFrame_fn(toolbar, dy_fn)
+    return function(self, parent_rect)
+        local ir = gui.get_interface_rect()
+        local frame = toolbar.frame(ir)
+        return gui.mkdims_wh(
+            ir.x1 + frame.l,
+            ir.y1 + frame.t + dy_fn(),
+            frame.w,
+            frame.h)
+    end
+end
+
+---@param buttons DFLayout.Toolbar.NamedButtons
+local function buttons_string(buttons)
+    local sorted = {}
+    for _, button in pairs(buttons) do
+        utils.insert_sorted(sorted, button, 'offset')
+    end
+    -- For a one-column button, use | to indicate the button's position.
+    -- For wider buttons, use shapes like /\ or /--\ to illustrate the
+    -- button's position and width.
+    local str = ''
+    for i, o in ipairs(sorted) do
+        if o.offset > #str then
+            str = str .. (' '):rep(o.offset - #str)
+        end
+        if o.width == 1 then
+            str = str .. '|'
+        elseif o.width > 1 then
+            str = str .. '/' .. ('-'):rep(o.width - 2) .. '\\'
+        end
+    end
+    return str
+end
+
+---@class ToolbarDemo.attrs: widgets.Panel.attrs
+---@class ToolbarDemo.attrs.partial: widgets.Panel.attrs.partial
+---@class ToolbarDemo.initTable: ToolbarDemo.attrs.partial, { toolbar?: DFLayout.Toolbar, toolbar_dy?: fun(): integer }
+---@class ToolbarDemo: widgets.Panel
+---@field super widgets.Panel
+---@field ATTRS ToolbarDemo.attrs|fun(attributes: ToolbarDemo.attrs.partial)
+---@overload fun(init_table: ToolbarDemo.initTable): self
+ToolbarDemo = defclass(ToolbarDemo, widgets.Panel)
+ToolbarDemo.ATTRS{
     frame_style = function(...)
         local style = gui.FRAME_THIN(...)
         style.signature_pen = false
         return style
     end,
-    visible_override = true,
     visible = fort_toolbars_visible,
     frame_background = { ch = 32, bg = COLOR_BLACK },
 }
 
-local left_toolbar_demo = FortToolbarDemoPanel{
+---@param args ToolbarDemo.initTable
+function ToolbarDemo:init(args)
+    self.label = widgets.Label{ frame = { l = 0 } }
+    if args.toolbar and args.toolbar_dy then
+        self:update_to_toolbar(args.toolbar, args.toolbar_dy)
+    end
+    self:addviews{ self.label }
+end
+
+---@param toolbar DFLayout.Toolbar
+---@param dy fun(): integer
+---@return unknown
+function ToolbarDemo:update_to_toolbar(toolbar, dy)
+    -- set button representation string
+    local text = buttons_string(toolbar.buttons)
+    local l_inset = 0
+    if text:sub(1, 1) == ' ' then
+        -- don't overwrite the left border edge with a plain space
+        l_inset = 1
+        text = text:sub(2)
+    end
+    self.label.frame.l = l_inset
+    self.label:setText(text)
+
+    -- track actual toolbar, but with a y offset
+    self.computeFrame = get_computeFrame_fn(toolbar, dy)
+
+    return self
+end
+
+local left_toolbar_demo = ToolbarDemo{
     frame_title = 'left toolbar',
-    subviews = { widgets.Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
+    toolbar = layout.fort.toolbars.left,
+    toolbar_dy = primary_toolbar_dy,
 }
-local center_toolbar_demo = FortToolbarDemoPanel{
+
+local center_toolbar_demo = ToolbarDemo{
     frame_title = 'center toolbar',
-    subviews = { widgets.Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
+    toolbar = layout.fort.toolbars.center,
+    toolbar_dy = primary_toolbar_dy,
 }
-local right_toolbar_demo = FortToolbarDemoPanel{
+
+local right_toolbar_demo = ToolbarDemo{
     frame_title = 'right toolbar',
-    subviews = { widgets.Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
+    toolbar = layout.fort.toolbars.right,
+    toolbar_dy = primary_toolbar_dy,
 }
-local secondary_visible = false
-local secondary_toolbar_demo = FortToolbarDemoPanel{
+
+local secondary_toolbar_demo = ToolbarDemo{
     frame_title = 'secondary toolbar',
-    subviews = { widgets.Label{ view_id = 'buttons', frame = { l = 0, r = 0 } } },
-    visible = function() return fort_toolbars_visible() and secondary_visible end,
+    visible = function()
+        return fort_toolbars_visible() and secondary_visible
+    end,
 }
 
 fort_toolbars_demo.views = {
@@ -172,59 +277,26 @@ fort_toolbars_demo.views = {
 
 ---@param secondary? DFLayout.Fort.SecondaryToolbar.Names
 local function update_fort_toolbars(secondary)
-    -- by default, draw primary toolbar demonstrations right above the primary toolbars:
-    -- {l demo}   {c demo}   {r demo}
-    -- [l tool]   [c tool]   [r tool]  (bottom of UI)
-    local toolbar_demo_dy = -layout.TOOLBAR_HEIGHT
-    local ir = gui.get_interface_rect()
-    ---@param v widgets.Panel
-    ---@param frame widgets.Widget.frame
-    ---@param buttons DFLayout.Toolbar.NamedButtons
-    local function update(v, frame, buttons)
-        v.frame = {
-            w = frame.w,
-            h = frame.h,
-            l = frame.l + ir.x1,
-            t = frame.t + ir.y1 + toolbar_demo_dy,
-        }
-        local sorted = {}
-        for _, button in pairs(buttons) do
-            utils.insert_sorted(sorted, button, 'offset')
+    local function updateLayout(view)
+        if view.frame_parent_rect then
+            view:updateLayout()
         end
-        local buttons = ''
-        for i, o in ipairs(sorted) do
-            if o.offset > #buttons then
-                buttons = buttons .. (' '):rep(o.offset - #buttons)
-            end
-            if o.width == 1 then
-                buttons = buttons .. '|'
-            elseif o.width > 1 then
-                buttons = buttons .. '/' .. ('-'):rep(o.width - 2) .. '\\'
-            end
-        end
-        v.subviews.buttons:setText(
-            buttons:sub(2) -- the demo panel border is at offset 0, so trim first character to start at offset 1
-        )
-        v:updateLayout()
     end
     if secondary then
-        -- a secondary toolbar is active, move the primary demonstration up to
-        -- let the secondary be demonstrated right above the actual secondary:
-        -- {l demo}   {c demo}   {r demo}
-        --               {s demo}
-        --               [s tool]
-        -- [l tool]   [c tool]   [r tool]  (bottom of UI)
-        update(secondary_toolbar_demo, layout.fort.secondary_toolbars[secondary].frame(ir),
-            layout.fort.secondary_toolbars[secondary].buttons)
+        -- show secondary demo just above actual secondary
+        local function dy()
+            return -layout.SECONDARY_TOOLBAR_HEIGHT
+        end
+        secondary_toolbar_demo:update_to_toolbar(layout.fort.secondary_toolbars[secondary], dy)
+        updateLayout(secondary_toolbar_demo)
         secondary_visible = true
-        toolbar_demo_dy = toolbar_demo_dy - 2 * layout.SECONDARY_TOOLBAR_HEIGHT
     else
         secondary_visible = false
     end
 
-    update(left_toolbar_demo, layout.fort.toolbars.left.frame(ir), layout.fort.toolbars.left.buttons)
-    update(right_toolbar_demo, layout.fort.toolbars.right.frame(ir), layout.fort.toolbars.right.buttons)
-    update(center_toolbar_demo, layout.fort.toolbars.center.frame(ir), layout.fort.toolbars.center.buttons)
+    updateLayout(left_toolbar_demo)
+    updateLayout(right_toolbar_demo)
+    updateLayout(center_toolbar_demo)
 end
 
 local tool_from_designation = {
@@ -303,13 +375,14 @@ fort_toolbars_demo.update = function()
 end
 
 local secondary
+local center_render = center_toolbar_demo.render
 function center_toolbar_demo:render(...)
     local new_secondary = active_secondary()
     if new_secondary ~= secondary then
         secondary = new_secondary
         update_fort_toolbars(secondary)
     end
-    return FortToolbarDemoPanel.render(self, ...)
+    return center_render(self, ...)
 end
 
 --- start demo control window ---
