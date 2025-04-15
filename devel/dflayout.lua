@@ -3,8 +3,6 @@ local layout = require('gui.dflayout')
 local widgets = require('gui.widgets')
 local utils = require('utils')
 
---- Demo Control Window and Screen ---
-
 ---@class Demo
 ---@field text string text displayed in main window demo list
 ---@field available fun(): boolean? return true if demo is available in current context
@@ -19,107 +17,6 @@ local function demos_are_visible()
     if not screen then return false end
     if visible_when_not_focused then return true end
     return screen:isActive() and screen:hasFocus()
-end
-
-DemoWindow = defclass(DemoWindow, widgets.Window)
-DemoWindow.ATTRS{
-    frame_title = 'dflayout demos',
-    frame = { w = 39, h = 9 },
-    resizable = true,
-    autoarrange_subviews = true,
-    autoarrange_gap = 1,
-}
-
----@param args { demos: Demo[] }
-function DemoWindow:init(args)
-    self.demos = args.demos
-    self:addviews{
-        widgets.ToggleHotkeyLabel{
-            label = 'Demos visible when not focused?',
-            initial_option = visible_when_not_focused,
-            on_change = function(new, old)
-                visible_when_not_focused = new
-            end
-        },
-        widgets.List{
-            view_id = 'list',
-            frame = { h = 10, },
-            icon_pen = COLOR_GREY,
-            icon_width = 3,
-            on_submit = function(index, item)
-                local demo = self.demos[index]
-                demo.active = demo.available() and not demo.active
-                if demo.active then demo.update() end
-                self:refresh()
-            end
-        },
-    }
-end
-
-local CHECK = string.char(251) -- U+221A SQUARE ROOT
-
-function DemoWindow:refresh()
-    local choices = {}
-    for _, demo in ipairs(self.demos) do
-        local icon
-        if not demo.available() then
-            icon = '-'
-        elseif demo.active then
-            icon = CHECK
-        end
-        table.insert(choices, {
-            text = demo.text,
-            icon = icon,
-        })
-    end
-    self.subviews.list:setChoices(choices)
-    return self
-end
-
-DemoScreen = defclass(DemoScreen, gui.ZScreen)
-DemoScreen.ATTRS{
-    focus_path = 'gui.dflayout-demo'
-}
-
-function DemoScreen:init(args)
-    self.demos = args.demos
-    local function demo_views()
-        local views = {}
-        for _, demo in ipairs(self.demos) do
-            if demo.views then
-                table.move(demo.views, 1, #demo.views, #views + 1, views)
-            end
-        end
-        return views
-    end
-    self:addviews{
-        DemoWindow{ demos = self.demos }:refresh(),
-        table.unpack(demo_views())
-    }
-end
-
-function DemoScreen:onDismiss()
-    screen = nil
-end
-
-local if_percentage
-function DemoScreen:render(...)
-    if demos_are_visible() then
-        local new_if_percentage = df.global.init.display.max_interface_percentage
-        if new_if_percentage ~= if_percentage then
-            if_percentage = new_if_percentage
-            self:updateLayout()
-        end
-    end
-    return DemoScreen.super.render(self, ...)
-end
-
-function DemoScreen:postComputeFrame(frame_body)
-    for _, demo in ipairs(self.demos) do
-        if demo.available() and demo.active then
-            demo.update()
-        end
-    end
 end
 
 --- Fort Toolbar Demo ---
@@ -387,7 +284,108 @@ function center_toolbar_demo:render(...)
     return center_render(self, ...)
 end
 
---- start demo control window ---
+--- Demo Control Window and Screen ---
+
+DemoWindow = defclass(DemoWindow, widgets.Window)
+DemoWindow.ATTRS{
+    frame_title = 'dflayout demos',
+    frame = { w = 39, h = 9 },
+    resizable = true,
+    autoarrange_subviews = true,
+    autoarrange_gap = 1,
+}
+
+---@param args { demos: Demo[] }
+function DemoWindow:init(args)
+    self.demos = args.demos
+    self:addviews{
+        widgets.ToggleHotkeyLabel{
+            label = 'Demos visible when not focused?',
+            initial_option = visible_when_not_focused,
+            on_change = function(new, old)
+                visible_when_not_focused = new
+            end
+        },
+        widgets.List{
+            view_id = 'list',
+            frame = { h = 10, },
+            icon_pen = COLOR_GREY,
+            icon_width = 3,
+            on_submit = function(index, item)
+                local demo = self.demos[index]
+                demo.active = demo.available() and not demo.active
+                if demo.active then demo.update() end
+                self:refresh()
+            end
+        },
+    }
+end
+
+local CHECK = string.char(251) -- U+221A SQUARE ROOT
+
+function DemoWindow:refresh()
+    local choices = {}
+    for _, demo in ipairs(self.demos) do
+        local icon
+        if not demo.available() then
+            icon = '-'
+        elseif demo.active then
+            icon = CHECK
+        end
+        table.insert(choices, {
+            text = demo.text,
+            icon = icon,
+        })
+    end
+    self.subviews.list:setChoices(choices)
+    return self
+end
+
+DemoScreen = defclass(DemoScreen, gui.ZScreen)
+DemoScreen.ATTRS{
+    focus_path = 'gui.dflayout-demo'
+}
+
+function DemoScreen:init(args)
+    self.demos = args.demos
+    local function demo_views()
+        local views = {}
+        for _, demo in ipairs(self.demos) do
+            if demo.views then
+                table.move(demo.views, 1, #demo.views, #views + 1, views)
+            end
+        end
+        return views
+    end
+    self:addviews{
+        DemoWindow{ demos = self.demos }:refresh(),
+        table.unpack(demo_views())
+    }
+end
+
+function DemoScreen:onDismiss()
+    screen = nil
+end
+
+local if_percentage
+function DemoScreen:render(...)
+    if demos_are_visible() then
+        local new_if_percentage = df.global.init.display.max_interface_percentage
+        if new_if_percentage ~= if_percentage then
+            if_percentage = new_if_percentage
+            self:updateLayout()
+        end
+    end
+    return DemoScreen.super.render(self, ...)
+end
+
+function DemoScreen:postComputeFrame(frame_body)
+    for _, demo in ipairs(self.demos) do
+        if demo.available() and demo.active then
+            demo.update()
+        end
+    end
+end
 
 screen = screen and screen:raise() or DemoScreen{
     demos = {
