@@ -5,10 +5,12 @@ local utils = require('utils')
 
 --- Demo Control Window and Screen ---
 
-local function demo_available(demo)
-    if not demo.available then return true end
-    return demo.available()
-end
+---@class Demo
+---@field text string text displayed in main window demo list
+---@field available fun(): boolean? return true if demo is available in current context
+---@field active? boolean whether the main window has enabled this demo (managed by main window)
+---@field views gui.View[] list of views to add to main ZScreen
+---@field update fun() called by main window to recompute demo frames
 
 local visible_when_not_focused = true
 function visible()
@@ -26,6 +28,7 @@ DemoWindow.ATTRS{
     autoarrange_gap = 1,
 }
 
+---@param args { demos: Demo[] }
 function DemoWindow:init(args)
     self.demos = args.demos
     self:addviews{
@@ -43,7 +46,7 @@ function DemoWindow:init(args)
             icon_width = 3,
             on_submit = function(index, item)
                 local demo = self.demos[index]
-                demo.active = demo_available(demo) and not demo.active
+                demo.active = demo.available() and not demo.active
                 self:refresh()
             end
         },
@@ -56,7 +59,7 @@ function DemoWindow:refresh()
     local choices = {}
     for _, demo in ipairs(self.demos) do
         local icon
-        if not demo_available(demo) then
+        if not demo.available() then
             icon = '-'
         elseif demo.active then
             icon = CHECK
@@ -117,6 +120,7 @@ end
 
 --- Fort Toolbar Demo ---
 
+---@class FortToolbarsDemo: Demo
 local fort_toolbars_demo = {
     text = 'fort toolbars',
     available = dfhack.world.isFortressMode,
