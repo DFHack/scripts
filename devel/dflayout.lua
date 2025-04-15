@@ -104,7 +104,7 @@ end
 
 local if_percentage
 function DemoScreen:render(...)
-    if visible_when_not_focused then
+    if demos_are_visible() then
         local new_if_percentage = df.global.init.display.max_interface_percentage
         if new_if_percentage ~= if_percentage then
             if_percentage = new_if_percentage
