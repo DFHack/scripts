@@ -12,8 +12,10 @@ local utils = require('utils')
 ---@field views gui.View[] list of views to add to main ZScreen
 ---@field update fun() called by main window to recompute demo frames
 
-local visible_when_not_focused = true
-function demos_are_visible()
+if visible_when_not_focused == nil then
+    visible_when_not_focused = true
+end
+local function demos_are_visible()
     if not screen then return false end
     if visible_when_not_focused then return true end
     return screen:isActive() and screen:hasFocus()
