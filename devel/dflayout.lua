@@ -9,6 +9,7 @@ local utils = require('utils')
 ---@field active? boolean whether the main window has enabled this demo (managed by main window)
 ---@field views gui.View[] list of views to add to main ZScreen
 ---@field update fun() called by main window to recompute demo frames
+---@field on_render? fun() called by main window every render; useful to notice changes in overall UI state
 
 if visible_when_not_focused == nil then
     visible_when_not_focused = true
@@ -274,14 +275,12 @@ fort_toolbars_demo.update = function()
 end
 
 local secondary
-local center_render = center_toolbar_demo.render
-function center_toolbar_demo:render(...)
+fort_toolbars_demo.on_render = function()
     local new_secondary = active_secondary()
     if new_secondary ~= secondary then
         secondary = new_secondary
         update_fort_toolbars(secondary)
     end
-    return center_render(self, ...)
 end
 
 --- Demo Control Window and Screen ---
@@ -374,6 +373,11 @@ function DemoScreen:render(...)
         if new_if_percentage ~= if_percentage then
             if_percentage = new_if_percentage
             self:updateLayout()
+        end
+        for _, demo in ipairs(self.demos) do
+            if demo.on_render and demo.available() and demo.active then
+                demo.on_render()
+            end
         end
     end
     return DemoScreen.super.render(self, ...)
