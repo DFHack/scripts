@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `gui/adv-finder`: UI for tracking historical figures and artifacts in adventure mode
 
 ## New Features
 
