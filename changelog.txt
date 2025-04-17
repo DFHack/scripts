@@ -29,6 +29,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `gui/spectate`: added "Prefer nicknamed" to the list of options
 
 ## Fixes
 - `list-agreements`: fix date math when determining petition age
