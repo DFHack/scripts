@@ -46,7 +46,7 @@ end
 Spectate = defclass(Spectate, widgets.Window)
 Spectate.ATTRS {
     frame_title='Spectate',
-    frame={l=5, t=5, w=36, h=41},
+    frame={l=5, t=5, w=36, h=42},
 }
 
 local function create_toggle_button(frame, cfg_elem, hotkey, label, cfg_elem_key)
@@ -199,36 +199,37 @@ function Spectate:init()
         create_toggle_button({t=11}, 'include-wildlife', 'CUSTOM_ALT_W', rpad('Include wildlife', lWidth)),
         create_toggle_button({t=12}, 'prefer-conflict', 'CUSTOM_ALT_B', rpad('Prefer conflict', lWidth)),
         create_toggle_button({t=13}, 'prefer-new-arrivals', 'CUSTOM_ALT_N', rpad('Prefer new arrivals', lWidth)),
+        create_toggle_button({t=14}, 'prefer-nicknamed', 'CUSTOM_ALT_I', rpad('Prefer nicknamed', lWidth)),
         widgets.Divider{
-            frame={t=15, h=1},
+            frame={t=16, h=1},
             frame_style=gui.FRAME_THIN,
             frame_style_l=false,
             frame_style_r=false,
         },
         widgets.Label{
-            frame={t=17, l=0},
+            frame={t=18, l=0},
             text="Tooltips:"
         },
         ToggleLabel{
-            frame={t=17, l=12},
+            frame={t=18, l=12},
             initial_option=overlay.isOverlayEnabled(OVERLAY_NAME),
             on_change=function(val) dfhack.run_command('overlay', val and 'enable' or 'disable', OVERLAY_NAME) end,
             key='CUSTOM_ALT_O',
             label="Overlay ",
         },
         widgets.Label{
-            frame={t=19, l=colFollow},
+            frame={t=20, l=colFollow},
             text='Follow',
         },
         widgets.Label{
-            frame={t=19, l=colHover},
+            frame={t=20, l=colHover},
             text='Hover',
         },
-        create_row({t=21}, 'Enabled', 'E', '', colFollow, colHover),
+        create_row({t=22}, 'Enabled', 'E', '', colFollow, colHover),
 
-        create_numeric_edit_field({t=23}, 'tooltip-follow-blink-milliseconds', 'CUSTOM_B', 'Blink period (ms): '),
+        create_numeric_edit_field({t=24}, 'tooltip-follow-blink-milliseconds', 'CUSTOM_B', 'Blink period (ms): '),
         widgets.CycleHotkeyLabel{
-            frame={t=24},
+            frame={t=25},
             key='CUSTOM_C',
             label="Hold to show:",
             options={
@@ -241,11 +242,11 @@ function Spectate:init()
             on_change=function(new, _) dfhack.run_command('spectate', 'set', 'tooltip-follow-hold-to-show', new) end
         },
 
-        create_row({t=26}, 'Job', 'J', 'job', colFollow, colHover),
-        create_row({t=27}, 'Activity', 'A', 'activity', colFollow, colHover),
-        create_row({t=28}, 'Name', 'N', 'name', colFollow, colHover),
-        create_row({t=29}, 'Stress', 'S', 'stress', colFollow, colHover),
-        create_stress_list({t=30}, colFollow, colHover),
+        create_row({t=27}, 'Job', 'J', 'job', colFollow, colHover),
+        create_row({t=28}, 'Activity', 'A', 'activity', colFollow, colHover),
+        create_row({t=29}, 'Name', 'N', 'name', colFollow, colHover),
+        create_row({t=30}, 'Stress', 'S', 'stress', colFollow, colHover),
+        create_stress_list({t=31}, colFollow, colHover),
     }
 end
 

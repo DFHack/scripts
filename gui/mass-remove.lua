@@ -399,13 +399,54 @@ end
 -- MassRemoveToolbarOverlay
 --
 
+-- The overlay is positioned so that (by default) its button is placed next to
+-- the right-most button of the secondary toolbar displayed for the "erase" tool
+-- (used to remove designations).
+
+-- This would be straightforward in a full_interface overlay (just set its
+-- l/r/t/b frame positioning fields). However, to preserve player-positioning,
+-- we take a more circuitous route.
+
+-- In a minimum-size interface area, the player is allowed to place the overlay
+-- (a combination of the button and the tooltip) anywhere inside the interface
+-- area. When the interface area is resized (usually through window resizes, but
+-- also through interface percentage changes), placement is maintained relative
+-- to the "ideal" position of the button (i.e. positions are relative to the
+-- "ideal" position). When repositioning the overlay in a larger-than-minimum
+-- interface area the overlays size is artificially inflated so that the overlay
+-- can not be positioned (with respect to the "ideal" button position) farther
+-- away than is possible in a minimum-size interface area. This limits the
+-- positioning, but keeps the (relative) position consistent across all possible
+-- resizes.
+
+local tb = reqscript('internal/df-bottom-toolbars')
+
+local MR_BUTTON_WIDTH = 4
+local MR_BUTTON_HEIGHT = 3
+local MR_TOOLTIP_WIDTH = 26
+local MR_TOOLTIP_HEIGHT = 6
+local MR_WIDTH = math.max(MR_BUTTON_WIDTH, MR_TOOLTIP_WIDTH)
+local MR_HEIGHT = MR_TOOLTIP_HEIGHT + 1 --[[empty line]] + MR_BUTTON_HEIGHT
+
+local function mass_remove_button_offsets(interface_rect)
+    local remove_buttons = tb.fort.center:secondary_toolbar_frame(interface_rect, 'erase')
+    return {
+        l = remove_buttons.l + remove_buttons.w,
+        r = remove_buttons.r - MR_BUTTON_WIDTH,
+        t = remove_buttons.t,
+        b = remove_buttons.b,
+    }
+end
+
+local MR_MIN_OFFSETS = mass_remove_button_offsets(tb.MINIMUM_INTERFACE_RECT)
+
 MassRemoveToolbarOverlay = defclass(MassRemoveToolbarOverlay, overlay.OverlayWidget)
 MassRemoveToolbarOverlay.ATTRS{
     desc='Adds a button to the erase toolbar to open the mass removal tool.',
-    default_pos={x=42, y=-4},
+    default_pos={x=MR_MIN_OFFSETS.l+1, y=-(MR_MIN_OFFSETS.b+1)},
     default_enabled=true,
     viewscreens='dwarfmode/Designate/ERASE',
-    frame={w=26, h=10},
+    frame={w=MR_WIDTH, h=MR_HEIGHT},
 }
 
 function MassRemoveToolbarOverlay:init()
@@ -417,51 +458,57 @@ function MassRemoveToolbarOverlay:init()
 
     self:addviews{
         widgets.Panel{
-            frame={t=0, r=0, w=26, h=6},
-            frame_style=gui.FRAME_PANEL,
-            frame_background=gui.CLEAR_PEN,
-            frame_inset={l=1, r=1},
-            visible=function() return self.subviews.icon:getMousePos() end,
-            subviews={
-                widgets.Label{
-                    text={
-                        'Open mass removal', NEWLINE,
-                        'interface.', NEWLINE,
-                        NEWLINE,
-                        {text='Hotkey: ', pen=COLOR_GRAY}, {key='CUSTOM_M'},
-                    },
-                },
-            },
-        },
-        widgets.Panel{
-            view_id='icon',
-            frame={b=0, r=22, w=4, h=3},
-            subviews={
-                widgets.Label{
-                    text=widgets.makeButtonLabelText{
-                        chars=button_chars,
-                        pens=COLOR_GRAY,
-                        tileset=toolbar_textures,
-                        tileset_offset=1,
-                        tileset_stride=8,
-                    },
-                    on_click=launch_mass_remove,
-                    visible=function () return not self.subviews.icon:getMousePos() end,
-                },
-                widgets.Label{
-                    text=widgets.makeButtonLabelText{
-                        chars=button_chars,
-                        pens={
-                            {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE},
-                            {COLOR_WHITE, COLOR_GRAY,  COLOR_GRAY,  COLOR_WHITE},
-                            {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE},
-                        },
-                        tileset=toolbar_textures,
-                        tileset_offset=5,
-                        tileset_stride=8,
-                    },
-                    on_click=launch_mass_remove,
+            view_id='tt_and_icon',
+            frame={ r=0, t=0, w=MR_WIDTH, h=MR_HEIGHT },
+                subviews={
+                widgets.Panel{
+                    frame={t=0, l=0, w=MR_WIDTH, h=MR_TOOLTIP_HEIGHT},
+                    frame_style=gui.FRAME_PANEL,
+                    frame_background=gui.CLEAR_PEN,
+                    frame_inset={l=1, r=1},
                     visible=function() return self.subviews.icon:getMousePos() end,
+                    subviews={
+                        widgets.Label{
+                            text={
+                                'Open mass removal', NEWLINE,
+                                'interface.', NEWLINE,
+                                NEWLINE,
+                                {text='Hotkey: ', pen=COLOR_GRAY}, {key='CUSTOM_M'},
+                            },
+                        },
+                    },
+                },
+                widgets.Panel{
+                    view_id='icon',
+                    frame={b=0, l=0, w=MR_BUTTON_WIDTH, h=tb.SECONDARY_TOOLBAR_HEIGHT},
+                    subviews={
+                        widgets.Label{
+                            text=widgets.makeButtonLabelText{
+                                chars=button_chars,
+                                pens=COLOR_GRAY,
+                                tileset=toolbar_textures,
+                                tileset_offset=1,
+                                tileset_stride=8,
+                            },
+                            on_click=launch_mass_remove,
+                            visible=function () return not self.subviews.icon:getMousePos() end,
+                        },
+                        widgets.Label{
+                            text=widgets.makeButtonLabelText{
+                                chars=button_chars,
+                                pens={
+                                    {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE},
+                                    {COLOR_WHITE, COLOR_GRAY,  COLOR_GRAY,  COLOR_WHITE},
+                                    {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE},
+                                },
+                                tileset=toolbar_textures,
+                                tileset_offset=5,
+                                tileset_stride=8,
+                            },
+                            on_click=launch_mass_remove,
+                            visible=function() return self.subviews.icon:getMousePos() end,
+                        },
+                    },
                 },
             },
         },
@@ -469,12 +516,17 @@ function MassRemoveToolbarOverlay:init()
 end
 
 function MassRemoveToolbarOverlay:preUpdateLayout(parent_rect)
-    local w = parent_rect.width
-    if w <= 130 then
-        self.frame.w = 50
-    else
-        self.frame.w = (parent_rect.width+1)//2 - 15
-    end
+    local offsets = mass_remove_button_offsets(parent_rect)
+    local r = offsets.r - MR_MIN_OFFSETS.r
+    local l = offsets.l - MR_MIN_OFFSETS.l
+    local t = offsets.t - MR_MIN_OFFSETS.t
+    local b = offsets.b - MR_MIN_OFFSETS.b
+    self.frame.w = MR_WIDTH + l + r
+    self.frame.h = MR_HEIGHT + t + b
+    self.subviews.tt_and_icon.frame.l = l
+    self.subviews.tt_and_icon.frame.r = r
+    self.subviews.tt_and_icon.frame.t = t
+    self.subviews.tt_and_icon.frame.b = b
 end
 
 function MassRemoveToolbarOverlay:onInput(keys)
