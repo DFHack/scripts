@@ -8,6 +8,8 @@ local dialogs = require('gui.dialogs')
 local json = require('json')
 local utils = require('utils')
 
+local scriptmanager = require('script-manager')
+
 local presets_file = json.open("dfhack-config/mod-manager.json")
 local GLOBAL_KEY = 'mod-manager'
 
@@ -401,6 +403,107 @@ function ModmanageScreen:init()
     }
 end
 
+ModlistMenu = defclass(ModlistMenu, widgets.Window)
+ModlistMenu.ATTRS {
+    frame_title = "Active Modlist",
+
+    resize_min = { w = 30, h = 15 },
+    frame = { w = 40, h = 20 },
+
+    resizable = true,
+}
+
+local function getWorldModlist(detailed, include_vanilla)
+    -- ordered map of mod id -> {handled=bool, versions=map of version -> path}
+    local mods = utils.OrderedTable()
+    local mod_paths = {}
+
+    -- if a world is loaded, process active mods first, and lock to active version
+    if dfhack.isWorldLoaded() then
+        scriptmanager.getAllModsInfo(include_vanilla, mods, mod_paths)
+        local modlist = {}
+        for _,mod in ipairs(mod_paths) do
+            if detailed then
+                local url
+                if mods[mod.id].steam_id then
+                    url = ': https://steamcommunity.com/sharedfiles/filedetails/?id='.. mods[mod.id].steam_id
+                end
+                table.insert(modlist,('%s %s (%s)%s'):format(mods[mod.id].name or mod.id, mods[mod.id].version or '', mod.id, url or ''))
+            else
+                table.insert(modlist,mods[mod.id].name or mod.id)
+            end
+        end
+        return modlist
+    end
+    qerror('No world is loaded')
+end
+
+function ModlistMenu:init()
+    self.include_vanilla = self.include_vanilla or false
+    self:addviews{
+        widgets.Label{
+            frame = { l=0, t=0 },
+            text = {'Active mods:'},
+        },
+        widgets.HotkeyLabel{
+            view_id='copy_names',
+            frame={t=1, r=1},
+            label='Copy mod names to clipboard',
+            text_pen=COLOR_YELLOW,
+            auto_width=true,
+            on_activate=function()
+                local mods = table.concat(getWorldModlist(false, self.include_vanilla), ', ')
+                dfhack.internal.setClipboardTextCp437(mods)
+            end,
+            enabled=function() return #self.subviews.modlist:getChoices() > 0 end,
+        },
+        widgets.HotkeyLabel{
+            view_id='copy_list',
+            frame={t=2, r=1},
+            label='Copy list to clipboard',
+            text_pen=COLOR_YELLOW,
+            auto_width=true,
+            on_activate=function()
+                local mods = table.concat(getWorldModlist(true, self.include_vanilla), NEWLINE)
+                dfhack.internal.setClipboardTextCp437Multiline(mods)
+            end,
+            enabled=function() return #self.subviews.modlist:getChoices() > 0 end,
+        },
+        widgets.List{
+            view_id='modlist',
+            frame = {t=4,b=2},
+            choices = getWorldModlist(true,self.include_vanilla)
+        },
+        widgets.HotkeyLabel{
+            view_id='include_vanilla',
+            frame={b=0},
+            key='CUSTOM_V',
+            label='Include Vanilla Mods: ' .. ((self.include_vanilla and 'Yes') or 'No'),
+            on_activate=function ()
+                self.include_vanilla = not self.include_vanilla
+                self.subviews.include_vanilla:setLabel('Include Vanilla Mods: ' .. ((self.include_vanilla and 'Yes') or 'No'))
+                self.subviews.modlist:setChoices(getWorldModlist(true,self.include_vanilla))
+            end
+        }
+    }
+end
+
+
+ModlistScreen = defclass(ModlistScreen, gui.ZScreen)
+ModlistScreen.ATTRS {
+    focus_path = "modlist",
+}
+
+function ModlistScreen:init()
+    self:addviews{
+        ModlistMenu{}
+    }
+end
+
+function ModlistScreen:onDismiss()
+    view = nil
+end
+
 ModmanageOverlay = defclass(ModmanageOverlay, overlay.OverlayWidget)
 ModmanageOverlay.ATTRS {
     frame = { w=16, h=3 },
@@ -494,5 +597,4 @@ if dfhack_flags.module then
     return
 end
 
--- TODO: when invoked as a command, should show information on which mods are loaded
--- and give the player the option to export the list (or at least copy it to the clipboard)
+view = view and view:raise() or ModlistScreen{}:show()
