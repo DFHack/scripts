@@ -16,6 +16,8 @@ Template for new versions:
 
 ## New Features
 
+- `gui/design`: add option to draw N-point stars, hollow or filled or inverted, and change the main axis to orient in any direction
+
 ## Fixes
 
 ## Misc Improvements
