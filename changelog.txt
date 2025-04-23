@@ -32,14 +32,22 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 51.11-r1
+
+## Fixes
 - `list-agreements`: fix date math when determining petition age
 - `gui/petitions`: fix date math when determining petition age
+- `gui/rename`: fix commandline processing when manually specifying target ids
+- `gui/sandbox`: restore metal equipment options when spawning units
 
 ## Misc Improvements
 - `fix/loyaltycascade`: now also breaks up brawls and other intra-fort conflicts that *look* like loyalty cascades
 - `makeown`: remove selected unit from any current conflicts so they don't just start attacking other citizens when you make them a citizen of your fort
-
-## Removed
 
 # 51.09-r1
 

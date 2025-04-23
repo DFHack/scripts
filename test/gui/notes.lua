@@ -39,21 +39,21 @@ end
 local function arrange_gui_notes(options)
     options = options or {}
 
+    -- running tests removes all overlays because of IN_TEST reloading.
+    -- rescan so we can load the gui/notes widget for these tests
+    overlay.rescan()
+
     arrange_notes(options.notes)
 
     gui_notes.main()
 
-    local gui_notes = gui_notes.view
-    gui_notes.enable_selector_blink = false
+    local view = gui_notes.view
+    view.enable_selector_blink = false
 
-    gui_notes:updateLayout()
-    gui_notes:onRender()
+    view:updateLayout()
+    view:onRender()
 
-    -- for some reasons running tests remove all overlays,
-    -- but there are need for gui/notes tests
-    overlay.rescan()
-
-    return gui_notes, gui_notes.subviews.notes_window
+    return view, view.subviews.notes_window
 end
 
 local function cleanup(gui_notes)

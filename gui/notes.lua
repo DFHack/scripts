@@ -361,8 +361,7 @@ function main()
         qerror('notes requires a fortress map to be loaded')
     end
 
-    view = view and view:raise() or NotesScreen{
-    }:show()
+    view = view and view:raise() or NotesScreen{}:show()
 end
 
 if not dfhack_flags.module then

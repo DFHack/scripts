@@ -1022,14 +1022,14 @@ local function main(args)
         show_selector=true,
     }
     local positionals = argparse.processArgsGetopt(args, {
-        { 'a', 'artifact', handler=function(optarg) opts.item_id = argparse.nonnegativeInt(optarg, 'artifact') end },
-        { 'e', 'entity', handler=function(optarg) opts.entity_id = argparse.nonnegativeInt(optarg, 'entity') end },
-        { 'f', 'histfig', handler=function(optarg) opts.histfig_id = argparse.nonnegativeInt(optarg, 'histfig') end },
+        { 'a', 'artifact', hasArg=true, handler=function(optarg) opts.item_id = argparse.nonnegativeInt(optarg, 'artifact') end },
+        { 'e', 'entity', hasArg=true, handler=function(optarg) opts.entity_id = argparse.nonnegativeInt(optarg, 'entity') end },
+        { 'f', 'histfig', hasArg=true, handler=function(optarg) opts.histfig_id = argparse.nonnegativeInt(optarg, 'histfig') end },
         { 'h', 'help', handler = function() opts.help = true end },
-        { 'l', 'location', handler=function(optarg) opts.location_id = argparse.nonnegativeInt(optarg, 'location') end },
-        { 'q', 'squad', handler=function(optarg) opts.squad_id = argparse.nonnegativeInt(optarg, 'squad') end },
-        { 's', 'site', handler=function(optarg) opts.site_id = argparse.nonnegativeInt(optarg, 'site') end },
-        { 'u', 'unit', handler=function(optarg) opts.unit_id = argparse.nonnegativeInt(optarg, 'unit') end },
+        { 'l', 'location', hasArg=true, handler=function(optarg) opts.location_id = argparse.nonnegativeInt(optarg, 'location') end },
+        { 'q', 'squad', hasArg=true, handler=function(optarg) opts.squad_id = argparse.nonnegativeInt(optarg, 'squad') end },
+        { 's', 'site', hasArg=true, handler=function(optarg) opts.site_id = argparse.nonnegativeInt(optarg, 'site') end },
+        { 'u', 'unit', hasArg=true, handler=function(optarg) opts.unit_id = argparse.nonnegativeInt(optarg, 'unit') end },
         { 'w', 'world', handler=function() opts.world = true end },
         { '', 'no-target-selector', handler=function() opts.show_selector = false end },
     })

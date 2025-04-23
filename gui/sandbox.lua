@@ -458,7 +458,7 @@ local function init_arena()
             -- for i in ipairs(df.builtin_mats) do
             --     do_insert(MAT_TABLE.builtin[i], i, -1)
             -- end
-            for i, mat in ipairs(RAWS.inorganics) do
+            for i, mat in ipairs(RAWS.inorganics.all) do
                 do_insert(mat.material, 0, i)
                 -- stop at the first "special" metal. we don't need more than that
                 if mat.flags.DEEP_SPECIAL then break end
