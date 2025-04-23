@@ -407,35 +407,28 @@ local MR_TOOLTIP_HEIGHT = 6
 local MR_WIDTH = math.max(MR_TOOLTIP_WIDTH, MR_BUTTON_WIDTH)
 local MR_HEIGHT = MR_TOOLTIP_HEIGHT + 1 --[[ empty line ]] + MR_BUTTON_HEIGHT
 
-local erase_toolbar = layout.fort.secondary_toolbars.erase
+local MR_PLACEMENT = layout.getLeftOnlyOverlayPlacementInfo{
+    size = { w = MR_WIDTH, h = MR_HEIGHT },
 
--- one "gap column" past the right end of the erase secondary toolbar
-local function mass_remove_button_offsets(interface_size)
-    local erase_frame = erase_toolbar.frame(interface_size)
-    return {
-        l = erase_frame.l + erase_frame.w + 1,
-        w = erase_frame.w,
-        r = erase_frame.r - 1 - MR_BUTTON_WIDTH,
+    -- one "gap column" past the right end of the erase secondary toolbar
+    ui_element = layout.elements.fort.secondary_toolbars.ERASE,
+    h_placement = 'on right',
+    v_placement = 'align bottom edges',
+    offset = { x = 1 },
 
-        t = erase_frame.t,
-        h = erase_frame.h,
-        b = erase_frame.b,
-    }
-end
-
--- If the overlay version is bumped, this could be changed to
--- mass_remove_button_offsets(layout.MINIMUM_INTERFACE_RECT).l
--- Adopting the calculated value would let the overlay be moved all the way to
--- the left in a minimum-size interface.
-local MR_DEFAULT_L_OFFSET = 41
+    -- If the overlay version is bumped, this could be removed.
+    -- Using the automatic value would let the overlay be moved all the way to
+    -- the left in a minimum-size interface.
+    default_pos = { x = 42 },
+}
 
 MassRemoveToolbarOverlay = defclass(MassRemoveToolbarOverlay, overlay.OverlayWidget)
 MassRemoveToolbarOverlay.ATTRS{
     desc='Adds a button to the erase toolbar to open the mass removal tool.',
-    default_pos={x=(MR_DEFAULT_L_OFFSET+1), y=-(layout.TOOLBAR_HEIGHT+1)},
+    default_pos=MR_PLACEMENT.default_pos,
     default_enabled=true,
     viewscreens='dwarfmode/Designate/ERASE',
-    frame={w=MR_WIDTH, h=MR_HEIGHT},
+    frame=MR_PLACEMENT.frame,
 }
 
 function MassRemoveToolbarOverlay:init()
@@ -498,9 +491,7 @@ function MassRemoveToolbarOverlay:init()
     }
 end
 
-function MassRemoveToolbarOverlay:preUpdateLayout(parent_rect)
-    self.frame.w = MR_WIDTH + math.max(0, mass_remove_button_offsets(parent_rect).l - MR_DEFAULT_L_OFFSET)
-end
+MassRemoveToolbarOverlay.preUpdateLayout = MR_PLACEMENT.preUpdateLayout_fn
 
 function MassRemoveToolbarOverlay:onInput(keys)
     if keys.CUSTOM_M then
