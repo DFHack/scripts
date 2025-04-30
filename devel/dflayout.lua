@@ -384,7 +384,7 @@ end
 ---@param el DFLayout.DynamicUIElement
 ---@param item_count_fn fun(): integer
 ---@return Demo
-local function info_items_demo(text, focus_string, el, item_count_fn)
+local function info_items_demo(text, focus_string, el)
     local demo = {
         text = text,
         available = dfhack.world.isFortressMode,
@@ -402,11 +402,9 @@ local function info_items_demo(text, focus_string, el, item_count_fn)
 
     demo.views = { panel }
 
-    local item_count
+    local state_changed = layout.getUIElementStateChecker(el)
     function demo.on_render()
-        local new_count = item_count_fn()
-        if new_count ~= item_count then
-            item_count = new_count
+        if state_changed() then
             panel:updateLayout()
         end
     end
@@ -417,16 +415,12 @@ end
 local orders_demo = info_items_demo(
     'info Orders tab',
     'dwarfmode/Info/WORK_ORDERS/Default',
-    layout.experimental_elements.orders,
-    function() return #df.global.world.manager_orders.all end)
+    layout.experimental_elements.orders)
 
 local zones_demo = info_items_demo(
     'info Places/Zones tab',
     'dwarfmode/Info/BUILDINGS/ZONES',
-    layout.experimental_elements.zones,
-    function()
-        return #df.global.game.main_interface.info.buildings.list[df.buildings_mode_type.ZONES]
-    end)
+    layout.experimental_elements.zones)
 
 --- Demo Control Window and Screen ---
 
