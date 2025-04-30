@@ -703,7 +703,7 @@ end
 
 function EnRouteOverlay:get_builder_name()
     if not self.builder then return 'N/A' end
-    return dfhack.units.getReadableName(self.builder)
+    return dfhack.units.getReadableName(self.builder, true)
 end
 
 function EnRouteOverlay:get_builder_name_pen()

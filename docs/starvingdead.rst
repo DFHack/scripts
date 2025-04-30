@@ -10,11 +10,11 @@ gradually decay, losing strength, speed, and toughness. After six months,
 they collapse upon themselves, never to be reanimated.
 
 Strength lost is proportional to the time until death, all units will have
-roughly 10% of each of their attributes' values when close to being removed.
+roughly 10% of each of their attributes' values when they succumb to decay.
 
 In any game, this can be a welcome gameplay feature, but it is especially
-useful in preventing undead cascades in the caverns in reanimating biomes,
-where constant combat can lead to hundreds of undead roaming the caverns and
+useful in preventing undead cascades in the caverns in reanimating biomes.
+Constant combat can lead to hundreds of undead roaming the caverns and
 destroying your FPS.
 
 Usage

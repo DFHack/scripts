@@ -709,11 +709,11 @@ function Spreadsheet:init()
         },
         DataColumn{
             view_id='name',
-            frame={w=30},
+            frame={w=45},
             label='Name',
             label_inset=8,
             data_fn=dfhack.units.getReadableName,
-            data_width=30,
+            data_width=45,
             shared=self.shared,
         },
         cols,

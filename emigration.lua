@@ -9,7 +9,10 @@ local unit_link_utils = reqscript('internal/emigration/unit-link-utils')
 local GLOBAL_KEY = 'emigration' -- used for state change hooks and persistence
 
 local function get_default_state()
-    return {enabled=false, last_cycle_tick=0}
+    return {
+        enabled=false,
+        last_cycle_tick=0
+    }
 end
 
 state = state or get_default_state()
@@ -127,15 +130,15 @@ function checkmigrationnow()
 end
 
 local function event_loop()
-    if state.enabled then
-        local current_tick = dfhack.world.ReadCurrentTick() + TICKS_PER_YEAR * dfhack.world.ReadCurrentYear()
-        if current_tick - state.last_cycle_tick < TICKS_PER_MONTH then
-            local timeout_ticks = state.last_cycle_tick - current_tick + TICKS_PER_MONTH
-            dfhack.timeout(timeout_ticks, 'ticks', event_loop)
-        else
-            checkmigrationnow()
-            dfhack.timeout(1, 'months', event_loop)
-        end
+    if not state.enabled then return end
+
+    local current_tick = dfhack.world.ReadCurrentTick() + TICKS_PER_YEAR * dfhack.world.ReadCurrentYear()
+    if current_tick - state.last_cycle_tick < TICKS_PER_MONTH then
+        local timeout_ticks = state.last_cycle_tick - current_tick + TICKS_PER_MONTH
+        dfhack.timeout(timeout_ticks, 'ticks', event_loop)
+    else
+        checkmigrationnow()
+        dfhack.timeout(1, 'months', event_loop)
     end
 end
 

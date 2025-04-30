@@ -16,6 +16,8 @@ Template for new versions:
 
 ## New Features
 
+- `gui/design`: add option to draw N-point stars, hollow or filled or inverted, and change the main axis to orient in any direction
+
 ## Fixes
 
 ## Misc Improvements
@@ -28,10 +30,14 @@ Template for new versions:
 
 ## New Tools
 - `devel/dflayout`: demo and visually verify gui.dflayout module (fort toolbars)
+- `modtools/moddable-gods`: (reinstated) create new deities from scratch
 
 ## New Features
+- `gui/mod-manager`: when run in a loaded world, shows a list of active mods -- click to export the list to the clipboard for easy sharing or posting
 
 ## Fixes
+- `starvingdead`: properly restore to correct enabled state when loading a new game that is different from the first game loaded in this session
+- `starvingdead`: ensure undead decay does not happen faster than the declared decay rate when saving and loading the game
 
 ## Misc Improvements
 
