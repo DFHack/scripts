@@ -8,7 +8,6 @@ local utils = require('utils')
 ---@field available fun(): boolean? return true if demo is available in current context
 ---@field active? boolean whether the main window has enabled this demo (managed by main window)
 ---@field views gui.View[] list of views to add to main ZScreen
----@field update? fun() called by main window to recompute demo frames
 ---@field on_render? fun() called by main window every render; useful to notice changes in overall UI state
 
 if visible_when_not_focused == nil then
@@ -268,7 +267,7 @@ fort_toolbars_demo.views = {
 }
 
 ---@param secondary? DFLayout.Fort.SecondaryToolbar.Names
-local function update_fort_toolbars(secondary)
+local function update_secondary_toolbar(secondary)
     local function updateLayout(view)
         if view.frame_parent_rect then
             view:updateLayout()
@@ -291,6 +290,8 @@ local function update_fort_toolbars(secondary)
         secondary_visible = false
     end
 
+    -- update primary toolbar demos since their positions depends on whether a
+    -- secondary is active
     updateLayout(left_toolbar_demo)
     updateLayout(right_toolbar_demo)
     updateLayout(center_toolbar_demo)
@@ -367,16 +368,12 @@ local function active_secondary()
     end
 end
 
-fort_toolbars_demo.update = function()
-    update_fort_toolbars(active_secondary())
-end
-
 local secondary
 fort_toolbars_demo.on_render = function()
     local new_secondary = active_secondary()
     if new_secondary ~= secondary then
         secondary = new_secondary
-        update_fort_toolbars(secondary)
+        update_secondary_toolbar(secondary)
     end
 end
 
@@ -461,7 +458,6 @@ function DemoWindow:init(args)
             on_submit = function(index, item)
                 local demo = self.demos[index]
                 demo.active = demo.available() and not demo.active
-                if demo.update and demo.active then demo.update() end
                 self:refresh()
             end
         },
@@ -528,14 +524,6 @@ function DemoScreen:render(...)
         end
     end
     return DemoScreen.super.render(self, ...)
-end
-
-function DemoScreen:postComputeFrame(frame_body)
-    for _, demo in ipairs(self.demos) do
-        if demo.update and demo.available() and demo.active then
-            demo.update()
-        end
-    end
 end
 
 screen = screen and screen:raise() or DemoScreen{
