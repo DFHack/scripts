@@ -8,7 +8,7 @@ local utils = require('utils')
 ---@field available fun(): boolean? return true if demo is available in current context
 ---@field active? boolean whether the main window has enabled this demo (managed by main window)
 ---@field views gui.View[] list of views to add to main ZScreen
----@field update fun() called by main window to recompute demo frames
+---@field update? fun() called by main window to recompute demo frames
 ---@field on_render? fun() called by main window every render; useful to notice changes in overall UI state
 
 if visible_when_not_focused == nil then
@@ -20,6 +20,43 @@ local function demos_are_visible()
     return screen:isActive() and screen:hasFocus()
 end
 
+---@param demo Demo
+local function demo_active(demo)
+    return demos_are_visible() and demo.active
+end
+
+-- Generates a `view:computeFrame()` function that tracks the placement of the
+-- given `el`.
+--
+-- Note: The returned function does not return a separate body rect; subviews
+-- will be able to overwrite the normal UI-drawn frame!
+---@param el DFLayout.DynamicUIElement
+---@param dy_fn? fun(): integer
+---@return function
+local function get_computeFrame_fn(el, dy_fn)
+    return function(self, parent_rect)
+        local ir = gui.get_interface_rect()
+        local frame = layout.getUIElementFrame(el, ir)
+        return gui.mkdims_wh(
+            ir.x1 + frame.l,
+            ir.y1 + frame.t + (dy_fn and dy_fn() or 0),
+            frame.w,
+            frame.h)
+    end
+end
+
+local normal_frame_style = function(...)
+    local style = gui.FRAME_THIN(...)
+    style.signature_pen = false
+    return style
+end
+
+local hover_frame_style = function(...)
+    local style = gui.FRAME_BOLD(...)
+    style.signature_pen = false
+    return style
+end
+
 --- Fort Toolbar Demo ---
 
 ---@class FortToolbarsDemo: Demo
@@ -28,9 +65,7 @@ local fort_toolbars_demo = {
     available = dfhack.world.isFortressMode,
 }
 
-local function fort_toolbars_visible()
-    return demos_are_visible() and fort_toolbars_demo.active
-end
+local fort_toolbars_visible = curry(demo_active, fort_toolbars_demo)
 
 local secondary_visible = false
 
@@ -49,26 +84,6 @@ local function primary_toolbar_dy()
         -- {l demo}   {c demo}   {r demo}
         -- [l tool]   [c tool]   [r tool]  (bottom of UI)
         return -layout.TOOLBAR_HEIGHT
-    end
-end
-
--- Generates a `view:computeFrame()` function that tracks the placement of the
--- given `toolbar`.
---
--- Note: The returned function does not return a separate body rect; subviews
--- will be able to overwrite the normal UI-drawn frame!
----@param el DFLayout.DynamicUIElement
----@param dy_fn fun(): integer
----@return function
-local function get_computeFrame_fn(el, dy_fn)
-    return function(self, parent_rect)
-        local ir = gui.get_interface_rect()
-        local frame = el.frame_fn(ir)
-        return gui.mkdims_wh(
-            ir.x1 + frame.l,
-            ir.y1 + frame.t + dy_fn(),
-            frame.w,
-            frame.h)
     end
 end
 
@@ -100,18 +115,6 @@ local function buttons_tokens(buttons)
         tokens_by_name[button_info.name] = token
     end
     return sorted_button_names, tokens_by_name
-end
-
-local normal_frame_style = function(...)
-    local style = gui.FRAME_THIN(...)
-    style.signature_pen = false
-    return style
-end
-
-local hover_frame_style = function(...)
-    local style = gui.FRAME_BOLD(...)
-    style.signature_pen = false
-    return style
 end
 
 ---@class ToolbarDemo.ToolbarInfo
@@ -179,7 +182,7 @@ end
 function ToolbarDemo:postUpdateLayout()
     local ir = gui.get_interface_rect()
     local function vr(el)
-        local f = el.frame_fn(ir)
+        local f = layout.getUIElementFrame(el, ir)
         return gui.ViewRect{ rect = gui.mkdims_wh(ir.x1 + f.l, ir.y1 + f.t, f.w, f.h) }
     end
     if self.toolbar_el then
@@ -377,6 +380,57 @@ fort_toolbars_demo.on_render = function()
     end
 end
 
+--- experimental Info window Demos ---
+
+---@param text string
+---@param focus_string string
+---@param el DFLayout.DynamicUIElement
+---@param item_count_fn fun(): integer
+---@return Demo
+local function info_items_demo(text, focus_string, el, item_count_fn)
+    local demo = {
+        text = text,
+        available = dfhack.world.isFortressMode,
+    }
+    local panel = widgets.Panel{
+        frame_style = normal_frame_style,
+        frame_background = nil, -- do not fill panel interior, leave it "see through"
+        visible = function()
+            return demo_active(demo)
+                and dfhack.gui.matchFocusString(focus_string, dfhack.gui.getDFViewscreen(true))
+        end,
+    }
+    panel.computeFrame = get_computeFrame_fn(el)
+    panel.getMouseFramePos = function() end -- hide from ZScreen:isMouseOver(), so that mouse input passes through
+
+    demo.views = { panel }
+
+    local item_count
+    function demo.on_render()
+        local new_count = item_count_fn()
+        if new_count ~= item_count then
+            item_count = new_count
+            panel:updateLayout()
+        end
+    end
+
+    return demo
+end
+
+local orders_demo = info_items_demo(
+    'info Orders tab',
+    'dwarfmode/Info/WORK_ORDERS/Default',
+    layout.experimental_elements.orders,
+    function() return #df.global.world.manager_orders.all end)
+
+local zones_demo = info_items_demo(
+    'info Places/Zones tab',
+    'dwarfmode/Info/BUILDINGS/ZONES',
+    layout.experimental_elements.zones,
+    function()
+        return #df.global.game.main_interface.info.buildings.list[df.buildings_mode_type.ZONES]
+    end)
+
 --- Demo Control Window and Screen ---
 
 DemoWindow = defclass(DemoWindow, widgets.Window)
@@ -407,7 +461,7 @@ function DemoWindow:init(args)
             on_submit = function(index, item)
                 local demo = self.demos[index]
                 demo.active = demo.available() and not demo.active
-                if demo.active then demo.update() end
+                if demo.update and demo.active then demo.update() end
                 self:refresh()
             end
         },
@@ -436,7 +490,7 @@ end
 
 DemoScreen = defclass(DemoScreen, gui.ZScreen)
 DemoScreen.ATTRS{
-    focus_path = 'gui.dflayout-demo'
+    focus_path = 'gui.dflayout-demo',
 }
 
 function DemoScreen:init(args)
@@ -450,10 +504,9 @@ function DemoScreen:init(args)
         end
         return views
     end
-    self:addviews{
-        DemoWindow{ demos = self.demos }:refresh(),
-        table.unpack(demo_views())
-    }
+    self:addviews(demo_views())
+    -- put main window last so it is rendered "on top"
+    self:addviews{ DemoWindow{ demos = self.demos }:refresh() }
 end
 
 function DemoScreen:onDismiss()
@@ -479,7 +532,7 @@ end
 
 function DemoScreen:postComputeFrame(frame_body)
     for _, demo in ipairs(self.demos) do
-        if demo.available() and demo.active then
+        if demo.update and demo.available() and demo.active then
             demo.update()
         end
     end
@@ -488,5 +541,7 @@ end
 screen = screen and screen:raise() or DemoScreen{
     demos = {
         fort_toolbars_demo,
+        orders_demo,
+        zones_demo,
     },
 }:show()

@@ -408,6 +408,7 @@ local MR_WIDTH = math.max(MR_TOOLTIP_WIDTH, MR_BUTTON_WIDTH)
 local MR_HEIGHT = MR_TOOLTIP_HEIGHT + 1 --[[ empty line ]] + MR_BUTTON_HEIGHT
 
 local MR_PLACEMENT = layout.getLeftOnlyOverlayPlacementInfo{
+    name = 'MassRemoveToolbarOverlay',
     size = { w = MR_WIDTH, h = MR_HEIGHT },
 
     -- one "gap column" past the right end of the erase secondary toolbar
