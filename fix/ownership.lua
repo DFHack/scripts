@@ -33,7 +33,7 @@ local zone_vecs = {
 local function relink_zones()
     for _,zones in ipairs(zone_vecs) do
         for _,zone in ipairs(zones) do
-            local unit = zone.assigned_unit
+            local unit = dfhack.buildings.getOwner(zone)
             if not unit then goto continue end
             if not utils.linear_index(unit.owned_buildings, zone.id, 'id') then
                 print(('fix/ownership: Restoring %s ownership link for %s'):format(

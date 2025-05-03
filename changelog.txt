@@ -16,6 +16,8 @@ Template for new versions:
 
 ## New Features
 
+- `gui/design`: add option to draw N-point stars, hollow or filled or inverted, and change the main axis to orient in any direction
+
 ## Fixes
 
 ## Misc Improvements
@@ -27,19 +29,33 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `deteriorate`: (reinstated) allow corpses, body parts, food, and/or damaged clothes to rot away
+- `modtools/moddable-gods`: (reinstated) create new deities from scratch
 
 ## New Features
 - `gui/spectate`: added "Prefer nicknamed" to the list of options
+- `gui/mod-manager`: when run in a loaded world, shows a list of active mods -- click to export the list to the clipboard for easy sharing or posting
+
+## Fixes
+- `starvingdead`: properly restore to correct enabled state when loading a new game that is different from the first game loaded in this session
+- `starvingdead`: ensure undead decay does not happen faster than the declared decay rate when saving and loading the game
+
+## Misc Improvements
+- `remove-stress`: also applied to long-term stress, immediately removing stressed and haggard statuses
+
+## Removed
+
+# 51.11-r1
 
 ## Fixes
 - `list-agreements`: fix date math when determining petition age
 - `gui/petitions`: fix date math when determining petition age
+- `gui/rename`: fix commandline processing when manually specifying target ids
+- `gui/sandbox`: restore metal equipment options when spawning units
 
 ## Misc Improvements
 - `fix/loyaltycascade`: now also breaks up brawls and other intra-fort conflicts that *look* like loyalty cascades
 - `makeown`: remove selected unit from any current conflicts so they don't just start attacking other citizens when you make them a citizen of your fort
-
-## Removed
 
 # 51.09-r1
 

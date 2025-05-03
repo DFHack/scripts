@@ -14,6 +14,9 @@ function removeStress(unit,value)
         if unit.status.current_soul.personality.stress > value then
             unit.status.current_soul.personality.stress = value
         end
+        if unit.status.current_soul.personality.longterm_stress > value then
+            unit.status.current_soul.personality.longterm_stress =  value
+        end
     end
 end
 

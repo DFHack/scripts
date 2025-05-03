@@ -174,7 +174,7 @@ end
 
 local function get_name_chunk(unit)
     return {
-        text=dfhack.units.getReadableName(unit),
+        text=dfhack.units.getReadableName(unit, true),
         pen=dfhack.units.getProfessionColor(unit)
     }
 end
@@ -458,11 +458,13 @@ function UnitInfo:init()
     self:addviews{
         widgets.Label{
             view_id='nameprof',
-            frame={t=0, l=0},
+            frame={t=0, l=0, h=1},
+            auto_height=false,
         },
         widgets.Label{
             view_id='translated_name',
-            frame={t=1, l=0},
+            frame={t=1, l=0, h=1},
+            auto_height=false,
         },
         widgets.Label{
             view_id='chunks',

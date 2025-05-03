@@ -336,7 +336,16 @@ function Design:init()
         table.insert(mode_button_specs_selected, mode_option.value.button_selected_spec)
     end
 
-    local shape_tileset = dfhack.textures.loadTileset('hack/data/art/design.png', 8, 12, true)
+    local DESIGN_ICONS_WIDTH = 224 -- Must match design.png image width
+    local DESIGN_ICONS_HEIGHT = 72 -- Must match design.png image height
+    local DESIGN_ICON_ROW_COUNT = 2
+    local DESIGN_CHAR_WIDTH = 8
+    local DESIGN_CHAR_HEIGHT = 12
+    local shape_tileset = dfhack.textures.loadTileset('hack/data/art/design.png', DESIGN_CHAR_WIDTH, DESIGN_CHAR_HEIGHT, true)
+
+    local STRIDE = DESIGN_ICONS_WIDTH / DESIGN_CHAR_WIDTH
+    local CHARS_PER_ROW = DESIGN_ICONS_HEIGHT / (DESIGN_ICON_ROW_COUNT * DESIGN_CHAR_HEIGHT)
+
     local shape_options, shape_button_specs, shape_button_specs_selected = {}, {}, {}
     for _, shape in ipairs(shapes.all_shapes) do
         table.insert(shape_options, {label=shape.name, value=shape})
@@ -344,14 +353,14 @@ function Design:init()
             chars=shape.button_chars,
             tileset=shape_tileset,
             tileset_offset=shape.texture_offset,
-            tileset_stride=24,
+            tileset_stride=STRIDE,
         })
         table.insert(shape_button_specs_selected, {
             chars=shape.button_chars,
             pens=COLOR_YELLOW,
             tileset=shape_tileset,
-            tileset_offset=shape.texture_offset+(24*3),
-            tileset_stride=24,
+            tileset_offset=shape.texture_offset+(STRIDE*CHARS_PER_ROW),
+            tileset_stride=STRIDE,
         })
     end
 

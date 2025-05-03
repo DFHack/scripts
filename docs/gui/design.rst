@@ -17,6 +17,44 @@ Usage
 
     gui/design
 
+Shapes
+------
+
+- Rectangle
+    - They can be hollow or filled using 'h'.
+    - When hollow line thickness can be increased/decreased using 'T'/'t'.
+    - They can be inverted using 'i'.
+- Ellipse
+    - They can be hollow or filled using 'h'.
+    - When hollow line thickness can be increased/decreased using 'T'/'t'.
+    - They can be inverted using 'i'.
+- Star
+    - The default has 5 points, use 'B'/'b' to increase/decrease points.
+    - They can be hollow or filled using 'h'.
+    - When hollow line thickness can be increased/decreased using 'T'/'t'.
+    - They can be inverted using 'i'.
+    - The next-point offset can be increased/decreased using 'N'/'n' which
+      particularly affects 7 point stars and above to make them spikier or
+      smoother, but can also be used to decrease to 1 to make symmetrical
+      polygons or increase to N which only paints the vertexes.
+    - The orientation can be changed by adding a main axis point using 'v' and
+      moving this to point in the desired direction.
+- Rows
+    - Vertical rows can be toggled using 'v'.
+    - Horizontal rows can be toggled using 'h'.
+    - Spacing can be increased/decreased using 'T'/'t'.
+    - They can be inverted using 'i'.
+- Diagonal
+    - Direction can be reversed using 'r'.
+    - Spacing can be increased/decreased using 'T'/'t'.
+    - They can be inverted using 'i'.
+- Line
+    - Line thickness can be increased/decreased using 'T'/'t'.
+    - Can be curved by adding one or more control points using 'v'.
+- FreeForm
+    - Can be toggled open multi-line sequence or closed polygon using 'y'
+    - Line thickness can be increased/decreased using 'T'/'t'.
+
 Overlay
 -------
 

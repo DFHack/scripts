@@ -777,7 +777,7 @@ end
 FamilyAffairs = defclass(FamilyAffairs, widgets.Window)
 FamilyAffairs.ATTRS {
     frame_title='Family manager',
-    frame={w=50, h=30, r=2, t=18},
+    frame={w=65, h=30, r=2, t=18},
     frame_inset={t=1, l=1, r=1},
     resizable=true,
     initial_tab=DEFAULT_NIL,
