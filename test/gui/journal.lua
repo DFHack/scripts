@@ -237,6 +237,46 @@ function test.restore_text_between_sessions()
     journal:dismiss()
 end
 
+function test.restore_text_between_worldmap_sessions()
+    local journal, text_area = arrange_empty_journal({
+        w=80,
+        context_mode=gui_journal.JOURNAL_CONTEXT_MODE.WORLDMAP
+    })
+
+    simulate_input_keys('CUSTOM_CTRL_A')
+    simulate_input_keys('CUSTOM_DELETE')
+
+    local text = table.concat({
+        '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+        '112: Sed consectetur, urna sit amet aliquet egestas,',
+        '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    }, '\n')
+
+    simulate_input_text(text)
+    simulate_mouse_click(text_area, 10, 1)
+
+    expect.eq(read_rendered_text(text_area), table.concat({
+        '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+        '112: Sed c_nsectetur, urna sit amet aliquet egestas,',
+        '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    }, '\n'));
+
+    journal:dismiss()
+
+    journal, text_area = arrange_empty_journal({
+        w=80,
+        context_mode=gui_journal.JOURNAL_CONTEXT_MODE.WORLDMAP
+    })
+
+    expect.eq(read_rendered_text(text_area), table.concat({
+        '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+        '112: Sed c_nsectetur, urna sit amet aliquet egestas,',
+        '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    }, '\n'));
+
+    journal:dismiss()
+end
+
 function test.generate_table_of_contents()
     local journal, text_area = arrange_empty_journal({w=100, h=10})
 
@@ -635,4 +675,26 @@ function test.show_fortress_tutorials_on_first_use()
 
     expect.str_find('Section 1\n', read_rendered_text(toc_panel));
     journal:dismiss()
+end
+
+function test.dismiss_on_embark()
+    -- setupdwarfgame/Default
+    local journal, text_area, journal_window = arrange_empty_journal({w=125})
+
+    simulate_input_text(' ')
+
+    expect.eq(read_rendered_text(text_area), ' _');
+
+    mock.patch(dfhack.gui, 'getFocusStrings', function (pos)
+        return {'setupdwarfgame/Default'}
+    end, function ()
+        -- it would be preferable to trigger real view screen somehow,
+        -- but such simulation is better than nothing
+        gui_journal.dfhack.onStateChange['gui/journal'](SC_VIEWSCREEN_CHANGED)
+    end)
+
+    expect.eq(journal:isDismissed(), false)
+    gui_journal.dfhack.onStateChange['gui/journal'](SC_VIEWSCREEN_CHANGED)
+
+    expect.eq(journal:isDismissed(), true)
 end
