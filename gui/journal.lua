@@ -334,6 +334,23 @@ function main(options)
     }:show()
 end
 
+local last_viewscreen_focus = nil
+local SCREEN_SETUP_FORTRESS = 'setupdwarfgame/Default'
+
+dfhack.onStateChange['gui/journal'] = function (sc)
+    if sc == SC_VIEWSCREEN_CHANGED then
+        local scr = dfhack.gui.getDFViewscreen(true)
+        local curr_viewscreen_focus = dfhack.gui.getFocusStrings(scr)[1]
+        if last_viewscreen_focus == SCREEN_SETUP_FORTRESS and
+           curr_viewscreen_focus ~= last_viewscreen_focus then
+            -- hide worldmap journal when embark on fortress is done
+            view:dismiss()
+        end
+
+        last_viewscreen_focus = curr_viewscreen_focus
+    end
+end
+
 if not dfhack_flags.module then
     main()
 end
