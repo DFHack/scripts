@@ -36,6 +36,7 @@ Template for new versions:
 - `gui/spectate`: added "Prefer nicknamed" to the list of options
 - `gui/mod-manager`: when run in a loaded world, shows a list of active mods -- click to export the list to the clipboard for easy sharing or posting
 - `gui/blueprint`: now records zone designations
+- `gui/journal`: now working on worldmap, before embark -- journal is per world map, stored even if you decided to not embark
 
 ## Fixes
 - `starvingdead`: properly restore to correct enabled state when loading a new game that is different from the first game loaded in this session
