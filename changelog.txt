@@ -42,6 +42,12 @@ Template for new versions:
 ## Fixes
 - `starvingdead`: properly restore to correct enabled state when loading a new game that is different from the first game loaded in this session
 - `starvingdead`: ensure undead decay does not happen faster than the declared decay rate when saving and loading the game
+- `confirm`: only show pause option for pausable confirmations
+- `confirm`: when editing a uniform, confirm discard of changes when exiting with Escape
+- `confirm`: when removing a manager order, show correct order description when using non-100% interface setting
+- `confirm`: when removing a manager order, show correct order description after prior order removal or window resize (when scrolled to bottom of order list)
+- `confirm`: when removing a manager order, show specific item/job type for ammo, shield, helm, gloves, shoes, trap component, and meal orders
+- `confirm`: the pause option now pauses individual confirmation types, allowing multiple different confirmations to be paused independently
 
 ## Misc Improvements
 - `remove-stress`: also applied to long-term stress, immediately removing stressed and haggard statuses
