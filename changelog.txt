@@ -16,11 +16,7 @@ Template for new versions:
 
 ## New Features
 
-- `gui/design`: add option to draw N-point stars, hollow or filled or inverted, and change the main axis to orient in any direction
-
 ## Fixes
-
-- `gui/design`: prevent line thickness from extending outside the map boundary
 
 ## Misc Improvements
 
@@ -38,13 +34,16 @@ Template for new versions:
 - `gui/spectate`: added "Prefer nicknamed" to the list of options
 - `gui/mod-manager`: when run in a loaded world, shows a list of active mods -- click to export the list to the clipboard for easy sharing or posting
 - `gui/blueprint`: now records zone designations
+- `gui/design`: add option to draw N-point stars, hollow or filled or inverted, and change the main axis to orient in any direction
 
 ## Fixes
 - `starvingdead`: properly restore to correct enabled state when loading a new game that is different from the first game loaded in this session
 - `starvingdead`: ensure undead decay does not happen faster than the declared decay rate when saving and loading the game
+- `gui/design`: prevent line thickness from extending outside the map boundary
 
 ## Misc Improvements
 - `remove-stress`: also applied to long-term stress, immediately removing stressed and haggard statuses
+- `fix/stuck-squad`: don't require a returning army, verbose and quiet options
 
 ## Removed
 
