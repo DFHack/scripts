@@ -341,27 +341,20 @@ NOTIFICATIONS_BY_IDX = {
         desc='Notifies when a squad is stuck on the world map.',
         default=true,
         dwarf_fn=function()
-            local stuck_armies, outbound_army, returning_army = stuck_squad.scan_fort_armies()
-            if #stuck_armies == 0 then return end
-            if repeat_util.isScheduled('control-panel/fix/stuck-squad') and (outbound_army or returning_army) then
-                return
-            end
-            return ('%d squad%s need%s rescue'):format(
-                #stuck_armies,
-                #stuck_armies == 1 and '' or 's',
-                #stuck_armies == 1 and 's' or ''
-            )
+            local stuck_armies = stuck_squad.scan_fort_armies()
+            local n = #stuck_armies
+            if n == 0 then return end
+            return ('%d squad %s rescue'):format(n, n == 1 and 'army needs' or 'armies need')
         end,
         on_click=function()
-            local message = 'A squad is lost on the world map and needs rescue!\n\n' ..
-                'Please send a messenger to a holding or a squad out on a mission\n' ..
-                'that will return to the fort (e.g. a Demand one-time tribute mission,\n' ..
-                'but not a Conquer and occupy mission). They will rescue the stuck\n' ..
-                'squad on their way home.'
-            if not repeat_util.isScheduled('control-panel/fix/stuck-squad') then
-                message = message .. '\n\n' ..
-                    'Please enable fix/stuck-squad in the DFHack control panel to enable\n'..
-                    'missions to rescue stuck squads.'
+            local message = 'A squad is lost on the world map and needs rescue!\n\n'
+            if repeat_util.isScheduled('control-panel/fix/stuck-squad') then
+                message = message ..
+                    'fix/stuck-squad is enabled, and the squad will be directed home shortly.'
+            else
+                message = message ..
+                    'Please enable fix/stuck-squad in the DFHack control panel or\n' ..
+                    'run "fix/stuck-squad" manually.'
             end
             dlg.showMessage('Rescue stuck squads', message, COLOR_WHITE)
         end,
