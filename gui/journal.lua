@@ -338,7 +338,7 @@ local last_viewscreen_focus = nil
 local SCREEN_SETUP_FORTRESS = 'setupdwarfgame/Default'
 
 dfhack.onStateChange['gui/journal'] = function (sc)
-    if sc == SC_VIEWSCREEN_CHANGED then
+    if view and sc == SC_VIEWSCREEN_CHANGED then
         local scr = dfhack.gui.getDFViewscreen(true)
         local curr_viewscreen_focus = dfhack.gui.getFocusStrings(scr)[1]
         if last_viewscreen_focus == SCREEN_SETUP_FORTRESS and
