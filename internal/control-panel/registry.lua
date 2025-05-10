@@ -34,6 +34,8 @@ COMMANDS_BY_IDX = {
         desc='Automatically shear creatures that are ready for shearing.',
         params={'--time', '14', '--timeUnits', 'days', '--command', '[', 'workorder', 'ShearCreature', ']'}},
     {command='autoslab', group='automation', mode='enable'},
+    {command='autotraining', group='automation', mode='enable',
+        desc='Automatically assign units with training needs to training squads. '},
     {command='ban-cooking all', group='automation', mode='run'},
     {command='buildingplan set boulders false', group='automation', mode='run',
         desc='Enable if you usually don\'t want to use boulders for construction.'},
