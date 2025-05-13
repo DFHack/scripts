@@ -10,7 +10,8 @@ local AdventurerJournalContext = reqscript('internal/journal/contexts/adventure'
 JOURNAL_CONTEXT_MODE = {
   FORTRESS='fortress',
   ADVENTURE='adventure',
-  WORLDMAP='WORLDMAP',
+  WORLDMAP='worldmap',
+  LEGENDS='legends',
   DUMMY='dummy'
 }
 
@@ -21,8 +22,10 @@ function detect_journal_context_mode()
     return JOURNAL_CONTEXT_MODE.FORTRESS
   elseif dfhack.isMapLoaded() and dfhack.world.isAdventureMode() then
     return JOURNAL_CONTEXT_MODE.ADVENTURE
+  elseif dfhack.world.isLegends() then
+    return JOURNAL_CONTEXT_MODE.LEGENDS
   else
-    qerror('unsupported game mode')
+    return nil
   end
 end
 
@@ -42,6 +45,10 @@ function journal_context_factory(journal_context_mode, save_prefix)
       adventurer_id=adventurer_id
     }
   elseif journal_context_mode == JOURNAL_CONTEXT_MODE.WORLDMAP then
+    local world_id =  df.global.world.cur_savegame.world_header.id1
+
+    return WorldmapJournalContext{save_prefix=save_prefix, world_id=world_id}
+  elseif journal_context_mode == JOURNAL_CONTEXT_MODE.LEGENDS then
     local world_id =  df.global.world.cur_savegame.world_header.id1
 
     return WorldmapJournalContext{save_prefix=save_prefix, world_id=world_id}

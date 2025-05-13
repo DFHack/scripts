@@ -313,19 +313,17 @@ function JournalScreen:onDismiss()
 end
 
 function main(options)
-    local fortress_worldmap_mode = not dfhack.isMapLoaded() and dfhack.world.isFortressMode()
-    local fortress_mode = dfhack.isMapLoaded() and dfhack.world.isFortressMode()
-    local adventure_mode = dfhack.isMapLoaded() and dfhack.world.isAdventureMode()
+    local journal_context_mode = journal_context.detect_journal_context_mode()
 
-    if not fortress_mode and not adventure_mode and not fortress_worldmap_mode then
-        qerror('journal requires a fortress/adventure map to be loaded')
+    if journal_context_mode == nil then
+        qerror('journal requires a fortress/adventure/world/legends map to be loaded')
     end
 
     local save_layout = options and options.save_layout
     local overrided_context_mode = options and options.context_mode
 
     local context_mode = overrided_context_mode == nil and
-        journal_context.detect_journal_context_mode() or overrided_context_mode
+        journal_context_mode or overrided_context_mode
 
     view = view and view:raise() or JournalScreen{
         save_prefix=options and options.save_prefix or '',
