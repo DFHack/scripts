@@ -60,7 +60,7 @@ end
 function WorldmapJournalContext:delete_content()
   if dfhack.isWorldLoaded() then
     local key = get_worldmap_context_key(self.save_prefix, self.world_id)
-    table.remove(worldmap_config.data, key)
+    worldmap_config.data[key] = nil
     worldmap_config:write()
   end
 end

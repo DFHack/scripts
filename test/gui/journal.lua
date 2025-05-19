@@ -277,6 +277,48 @@ function test.restore_text_between_worldmap_sessions()
     journal:dismiss()
 end
 
+function test.load_worldmap_text_as_fortress_default()
+    local save_prefix = 'test:'
+    local fortress_context = journal_context.journal_context_factory(
+        gui_journal.JOURNAL_CONTEXT_MODE.FORTRESS,
+        save_prefix
+    )
+    -- reset saved data
+    fortress_context:delete_content()
+
+    local worldmap_journal, worldmap_text_area = arrange_empty_journal({
+        w=80,
+        context_mode=gui_journal.JOURNAL_CONTEXT_MODE.WORLDMAP
+    })
+
+    local text = table.concat({
+        '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+        '112: Sed c_nsectetur, urna sit amet aliquet egestas,',
+        '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    }, '\n')
+
+    simulate_input_keys('CUSTOM_CTRL_A')
+    simulate_input_keys('CUSTOM_DELETE')
+
+    simulate_input_text(text)
+    simulate_mouse_click(worldmap_text_area, 10, 1)
+
+    worldmap_journal:dismiss()
+
+    local journal, text_area = arrange_empty_journal({
+        w=80,
+        context_mode=gui_journal.JOURNAL_CONTEXT_MODE.FORTRESS
+    })
+
+    expect.eq(read_rendered_text(text_area), table.concat({
+        '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+        '112: Sed c_nsectetur, urna sit amet aliquet egestas,',
+        '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+    }, '\n'));
+
+    journal:dismiss()
+end
+
 function test.generate_table_of_contents()
     local journal, text_area = arrange_empty_journal({w=100, h=10})
 
@@ -650,6 +692,12 @@ function test.show_fortress_tutorials_on_first_use()
     )
     -- reset saved data
     context:delete_content()
+    local worldmap_context = journal_context.journal_context_factory(
+        gui_journal.JOURNAL_CONTEXT_MODE.WORLDMAP,
+        save_prefix
+    )
+    -- reset worldmap saved data
+    worldmap_context:delete_content()
 
     local journal, text_area, journal_window = arrange_empty_journal({
         w=125,
