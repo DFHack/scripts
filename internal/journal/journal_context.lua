@@ -30,8 +30,14 @@ function detect_journal_context_mode()
 end
 
 function journal_context_factory(journal_context_mode, save_prefix)
+  local world_id =  df.global.world.cur_savegame.world_header.id1
+  local worldmap_journal_context = WorldmapJournalContext{save_prefix=save_prefix, world_id=world_id}
+
   if journal_context_mode == JOURNAL_CONTEXT_MODE.FORTRESS then
-    return FortressJournalContext{save_prefix=save_prefix}
+    return FortressJournalContext{
+      save_prefix=save_prefix,
+      worldmap_journal_context=worldmap_journal_context
+    }
   elseif journal_context_mode == JOURNAL_CONTEXT_MODE.ADVENTURE then
     local interactions = df.global.adventure.interactions
     if #interactions.party_core_members == 0 or interactions.party_core_members[0] == nil then
@@ -42,16 +48,13 @@ function journal_context_factory(journal_context_mode, save_prefix)
 
     return AdventurerJournalContext{
       save_prefix=save_prefix,
-      adventurer_id=adventurer_id
+      adventurer_id=adventurer_id,
+      worldmap_journal_context=worldmap_journal_context
     }
   elseif journal_context_mode == JOURNAL_CONTEXT_MODE.WORLDMAP then
-    local world_id =  df.global.world.cur_savegame.world_header.id1
-
-    return WorldmapJournalContext{save_prefix=save_prefix, world_id=world_id}
+    return worldmap_journal_context
   elseif journal_context_mode == JOURNAL_CONTEXT_MODE.LEGENDS then
-    local world_id =  df.global.world.cur_savegame.world_header.id1
-
-    return WorldmapJournalContext{save_prefix=save_prefix, world_id=world_id}
+    return worldmap_journal_context
   elseif journal_context_mode == JOURNAL_CONTEXT_MODE.DUMMY then
     return DummyJournalContext{}
   else

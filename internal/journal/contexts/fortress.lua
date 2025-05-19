@@ -24,7 +24,8 @@ Those headers will appear here, and you can click on them to jump to them in the
 
 FortressJournalContext = defclass(FortressJournalContext)
 FortressJournalContext.ATTRS{
-  save_prefix=''
+  save_prefix='',
+  worldmap_journal_context=DEFAULT_NIL
 }
 
 function get_fort_context_key(prefix)
@@ -47,9 +48,14 @@ function FortressJournalContext:load_content()
     ) or {}
 
     if not site_data.text then
-        site_data.text={''}
-        site_data.show_tutorial = true
+      if self.worldmap_journal_context then
+        return self.worldmap_journal_context:load_content()
+      end
+
+      site_data.text={''}
+      site_data.show_tutorial = true
     end
+
     site_data.cursor = site_data.cursor or {#site_data.text[1] + 1}
     return site_data
   end
