@@ -25,7 +25,8 @@ Those headers will appear here, and you can click on them to jump to them in the
 AdventurerJournalContext = defclass(AdventurerJournalContext)
 AdventurerJournalContext.ATTRS{
   save_prefix='',
-  adventurer_id=DEFAULT_NIL
+  adventurer_id=DEFAULT_NIL,
+  worldmap_journal_context=DEFAULT_NIL
 }
 
 function get_adventurer_context_key(prefix, adventurer_id)
@@ -52,6 +53,10 @@ function AdventurerJournalContext:load_content()
     ) or {}
 
     if not world_data.text then
+        if self.worldmap_journal_context then
+          return self.worldmap_journal_context:load_content()
+        end
+
         world_data.text={''}
         world_data.show_tutorial = true
     end

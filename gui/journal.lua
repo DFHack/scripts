@@ -313,21 +313,40 @@ function JournalScreen:onDismiss()
 end
 
 function main(options)
-    if not dfhack.isMapLoaded() or (not dfhack.world.isFortressMode()
-        and not dfhack.world.isAdventureMode()) then
-        qerror('journal requires a fortress/adventure map to be loaded')
+    local journal_context_mode = journal_context.detect_journal_context_mode()
+
+    if journal_context_mode == nil then
+        qerror('journal requires a fortress/adventure/world/legends map to be loaded')
     end
 
     local save_layout = options and options.save_layout
     local overrided_context_mode = options and options.context_mode
+
     local context_mode = overrided_context_mode == nil and
-        journal_context.detect_journal_context_mode() or overrided_context_mode
+        journal_context_mode or overrided_context_mode
 
     view = view and view:raise() or JournalScreen{
         save_prefix=options and options.save_prefix or '',
         save_layout=save_layout == nil and true or save_layout,
         context_mode=context_mode,
     }:show()
+end
+
+local last_viewscreen_focus = nil
+local SCREEN_SETUP_FORTRESS = 'setupdwarfgame/Default'
+
+dfhack.onStateChange['gui/journal'] = function (sc)
+    if view and sc == SC_VIEWSCREEN_CHANGED then
+        local scr = dfhack.gui.getDFViewscreen(true)
+        local curr_viewscreen_focus = dfhack.gui.getFocusStrings(scr)[1]
+        if last_viewscreen_focus == SCREEN_SETUP_FORTRESS and
+           curr_viewscreen_focus ~= last_viewscreen_focus then
+            -- hide worldmap journal when embark on fortress is done
+            view:dismiss()
+        end
+
+        last_viewscreen_focus = curr_viewscreen_focus
+    end
 end
 
 if not dfhack_flags.module then
