@@ -20,4 +20,5 @@ To use this overlay:
      - `Ctrl+E` to export the current uniform
 
 Uniforms are saved to and loaded from the following folder:
+
 Dwarf Fortress\dfhack-config\squad_uniform
