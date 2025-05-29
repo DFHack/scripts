@@ -1,4 +1,5 @@
 local argparse = require('argparse')
+local guidm = require('gui.dwarfmode')
 local opts = {}
 local positionals = argparse.processArgsGetopt({...}, {
     {'h', 'help', handler = function() opts.help = true end},
@@ -60,7 +61,7 @@ local function cage_dump_armor(list)
             if df.general_ref_contains_unitst:is_instance(ref) then
                 local inventory = df.unit.find(ref.unit_id).inventory
                 for _, it in ipairs(inventory) do
-                    if it.mode == df.unit_inventory_item.T_mode.Worn then
+                    if it.mode == df.inv_item_role_type.Worn then
                         count = count + dump_item(it.item)
                     end
                 end
@@ -81,7 +82,7 @@ local function cage_dump_weapons(list)
             if df.general_ref_contains_unitst:is_instance(ref) then
                 local inventory = df.unit.find(ref.unit_id).inventory
                 for _, it in ipairs(inventory) do
-                    if it.mode == df.unit_inventory_item.T_mode.Weapon then
+                    if it.mode == df.inv_item_role_type.Weapon then
                         count = count + dump_item(it.item)
                     end
                 end
@@ -206,8 +207,8 @@ if positionals[2] == 'here' then
             end
         end
     -- Is the player trying to select a cage using the keyboard cursor?
-    elseif df.global.cursor.z > -10000 then -- cursor has values around -30000 if not valid/active.
-        local cursor = df.global.cursor
+    elseif guidm.getCursorPos() then
+        local cursor = guidm.getCursorPos()
         for _, cage in ipairs(df.global.world.items.other.ANY_CAGE_OR_TRAP) do
             if same_xyz(cursor, cage.pos) then
                 table.insert(list, cage)

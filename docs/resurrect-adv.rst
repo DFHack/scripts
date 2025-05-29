@@ -3,7 +3,7 @@ resurrect-adv
 
 .. dfhack-tool::
     :summary: Bring a dead adventurer back to life.
-    :tags: unavailable adventure armok
+    :tags: adventure armok units
 
 Have you ever died, but wish you hadn't? This tool can help : ) When you see the
 "You are deceased" message, run this command to be resurrected and fully healed.

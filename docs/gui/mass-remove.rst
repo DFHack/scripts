@@ -2,29 +2,16 @@ gui/mass-remove
 ===============
 
 .. dfhack-tool::
-    :summary: Mass select buildings and constructions to suspend or remove.
+    :summary: Mass select things to remove.
     :tags: fort design productivity buildings stockpiles
 
-This tool lets you remove buildings/constructions or suspend/unsuspend
-construction jobs using a mouse-driven box selection.
+This tool lets you remove buildings, constructions, stockpiles, and/or zones
+using a mouse-driven box selection. You can choose which you want to remove
+with the given filters, then box select to apply to the map.
 
-The following marking modes are available.
-
-:Suspend: Suspend the construction of a planned building/construction.
-:Unsuspend: Resume the construction of a suspended planned
-    building/construction. Note that buildings planned with `buildingplan`
-    that are waiting for items cannot be unsuspended until all pending items
-    are attached.
-:Remove Construction: Designate a construction (wall, floor, etc.) for removal.
-:Unremove Construction: Cancel removal of a construction (wall, floor, etc.).
-:Remove Building: Designate a building (door, workshop, etc) for removal.
-:Unremove Building: Cancel removal of a building (door, workshop, etc.).
-:Remove All: Designate both constructions and buildings for removal, and deletes
-    planned buildings/constructions.
-:Unremove All: Cancel removal designations for both constructions and buildings.
-
-Note: ``Unremove Construction`` and ``Unremove Building`` are not yet available
-for the latest release of Dwarf Fortress.
+Planned buildings, constructions, stockpiles, and zones will be removed
+immediately. Built buildings and constructions will be designated for
+deconstruction.
 
 Usage
 -----
@@ -32,3 +19,16 @@ Usage
 ::
 
     gui/mass-remove
+
+Overlay
+-------
+
+This tool also provides one overlay that is managed by the `overlay`
+framework.
+
+gui/mass-remove.toolbar
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``gui/mass-remove.toolbar`` overlay adds a button to the toolbar at the
+bottom of the screen when eraser mode is active. It allows you to conveniently
+open the ``gui/mass-remove`` interface.

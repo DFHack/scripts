@@ -12,4 +12,5 @@ Usage
 -----
 
 ::
+
     enable devel/click-monitor

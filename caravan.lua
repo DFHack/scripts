@@ -18,8 +18,10 @@ end
 OVERLAY_WIDGETS = {
     trade=trade.TradeOverlay,
     tradebanner=trade.TradeBannerOverlay,
+    tradeethics=trade.TradeEthicsWarningOverlay,
     tradeagreement=tradeagreement.TradeAgreementOverlay,
     movegoods=movegoods.MoveGoodsOverlay,
+    movegoods_hider=movegoods.MoveGoodsHiderOverlay,
     assigntrade=movegoods.AssignTradeOverlay,
     displayitemselector=pedestal.PedestalOverlay,
 }
@@ -60,7 +62,7 @@ function commands.list()
         print(dfhack.df2console(('%d: %s caravan from %s'):format(
             id,
             df.creature_raw.find(df.historical_entity.find(car.entity).race).name[2], -- adjective
-            dfhack.TranslateName(df.historical_entity.find(car.entity).name)
+            dfhack.translation.translateName(df.historical_entity.find(car.entity).name)
         )))
         print('  ' .. (df.caravan_state.T_trade_state[car.trade_state] or ('Unknown state: ' .. car.trade_state)))
         print(('  %d day(s) remaining'):format(math.floor(car.time_remaining / 120)))
@@ -124,15 +126,6 @@ local function isDisconnectedPackAnimal(unit)
     end
 end
 
-local function getPrintableUnitName(unit)
-    local visible_name = dfhack.units.getVisibleName(unit)
-    local profession_name = dfhack.units.getProfessionName(unit)
-    if visible_name.has_name then
-        return ('%s (%s)'):format(dfhack.TranslateName(visible_name), profession_name)
-    end
-    return profession_name  -- for unnamed animals
-end
-
 local function rejoin_pack_animals()
     print('Reconnecting disconnected pack animals...')
     local found = false
@@ -140,8 +133,8 @@ local function rejoin_pack_animals()
         if unit.flags1.merchant and isDisconnectedPackAnimal(unit) then
             local dragger = unit.following
             print(('  %s  <->  %s'):format(
-                dfhack.df2console(getPrintableUnitName(unit)),
-                dfhack.df2console(getPrintableUnitName(dragger))
+                dfhack.df2console(dfhack.units.getReadableName(unit)),
+                dfhack.df2console(dfhack.units.getReadableName(dragger))
             ))
             unit.relationship_ids[ df.unit_relationship_type.Dragger ] = dragger.id
             dragger.relationship_ids[ df.unit_relationship_type.Draggee ] = unit.id

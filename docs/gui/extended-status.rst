@@ -3,7 +3,7 @@ gui/extended-status
 
 .. dfhack-tool::
     :summary: Add information on beds and bedrooms to the status screen.
-    :tags: unavailable fort inspection interface
+    :tags: unavailable
 
 Adds an additional page to the ``z`` status screen where you can see information
 about beds, bedrooms, and whether your dwarves have bedrooms of their own.

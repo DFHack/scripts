@@ -4,8 +4,6 @@
 --@ enable=true
 --@ module=true
 
-local json = require("json")
-local persist = require("persist-table")
 local argparse = require("argparse")
 local repeatutil = require("repeat-util")
 
@@ -26,16 +24,19 @@ end
 
 --- Save the current state of the script
 local function persist_state()
-    persist.GlobalTable[GLOBAL_KEY] = json.encode({enabled=enabled,
-        s_maxFish=s_maxFish, s_minFish=s_minFish, s_useRaw=s_useRaw,
-        isFishing=isFishing
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, {
+        enabled=enabled,
+        s_maxFish=s_maxFish,
+        s_minFish=s_minFish,
+        s_useRaw=s_useRaw,
+        isFishing=isFishing,
     })
 end
 
 --- Load the saved state of the script
 local function load_state()
     -- load persistent data
-    local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or "") or {}
+    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
     enabled = persisted_data.enabled or false
     s_maxFish = persisted_data.s_maxFish or 100
     s_minFish = persisted_data.s_minFish or 75
@@ -73,15 +74,15 @@ end
 function toggle_fishing_labour(state)
     -- pass true to state to turn on, otherwise disable
     -- find all work details that have fishing enabled:
-    local work_details = df.global.plotinfo.hauling.work_details
+    local work_details = df.global.plotinfo.labor_info.work_details
     for _,v in pairs(work_details) do
         if v.allowed_labors.FISH then
-            -- set limited to true just in case a custom work detail is being
-            -- changed, to prevent *all* dwarves from fishing.
-            v.work_detail_flags.limited = true
-            v.work_detail_flags.enabled = state
+            v.flags.mode = state and
+                df.work_detail_mode.OnlySelectedDoesThis or df.work_detail_mode.NobodyDoesThis
 
-            -- workaround to actually enable labours
+            -- since the work details are not actually applied unless a button
+            -- is clicked on the work details screen, we have to manually set
+            -- unit labours
             for _,v2 in ipairs(v.assigned_units) do
                 -- find unit by ID and toggle fishing
                 local unit = df.unit.find(v2)
@@ -206,23 +207,17 @@ if dfhack_flags and dfhack_flags.enable then
     args = {dfhack_flags.enable_state and "enable" or "disable"}
 end
 
--- lookup to convert arguments to bool values.
-local toBool={["true"]=true,["yes"]=true,["y"]=true,["on"]=true,["1"]=true,
-              ["false"]=false,["no"]=false,["n"]=false,["off"]=false,["0"]=false}
-
+-- handle options flags
 local positionals = argparse.processArgsGetopt(args,
     {{"r", "raw", hasArg=true,
     handler=function(optArg)
-        optArg=string.lower(optArg)
-        if toBool[optArg] ~= nil then
-            set_useRaw(toBool[optArg])
-        else
-            qerror("Invalid argument to --raw \"".. optArg .."\". expected boolean")
-        end
+       local val = argparse.boolean(optArg, "raw")
+       set_useRaw(val)
     end}
 })
 
 load_state()
+-- handle the rest of the arguments
 if positionals[1] == "enable" then
     enabled = true
 

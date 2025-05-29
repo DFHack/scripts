@@ -11,7 +11,7 @@ end
 local PREDICATE_LIBRARY = {
     {name='weapons-grade metal', match=function(item)
         if item:getMaterial() ~= 0 then return false end
-        local flags = df.global.world.raws.inorganics[item:getMaterialIndex()].material.flags
+        local flags = df.global.world.raws.inorganics.all[item:getMaterialIndex()].material.flags
         return flags.IS_METAL and
             (flags.ITEMS_METAL or flags.ITEMS_WEAPON or flags.ITEMS_WEAPON_RANGED or flags.ITEMS_AMMO or flags.ITEMS_ARMOR)
     end},

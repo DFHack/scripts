@@ -1,15 +1,12 @@
---checks all wheelbarrows on map for rocks stuck in them. If a wheelbarrow isn't in use for a job (hauling) then there should be no rocks in them
---rocks will occasionally get stuck in wheelbarrows, and accumulate if the wheelbarrow gets used.
---this script empties all wheelbarrows which have rocks stuck in them.
+-- checks all wheelbarrows on map for rocks stuck in them and empties such rocks onto the ground. If a wheelbarrow
+-- isn't in use for a job (hauling) then there should be no rocks in them.
 
 local argparse = require("argparse")
-
-local args = {...}
 
 local quiet = false
 local dryrun = false
 
-local cmds = argparse.processArgsGetopt(args, {
+argparse.processArgsGetopt({...}, {
     {'q', 'quiet', handler=function() quiet = true end},
     {'d', 'dry-run', handler=function() dryrun = true end},
 })
@@ -17,24 +14,31 @@ local cmds = argparse.processArgsGetopt(args, {
 local i_count = 0
 local e_count = 0
 
-local function emptyContainedItems(e, outputCallback)
-    local items = dfhack.items.getContainedItems(e)
-    if #items > 0 then
-        outputCallback('Emptying wheelbarrow: ' .. dfhack.items.getDescription(e, 0))
-        e_count = e_count + 1
-        for _,i in ipairs(items) do
-            outputCallback('  ' .. dfhack.items.getDescription(i, 0))
-            if (not dryrun) then dfhack.items.moveToGround(i, e.pos) end
-            i_count = i_count + 1
+local function emptyContainedItems(wheelbarrow, outputCallback)
+    local items = dfhack.items.getContainedItems(wheelbarrow)
+    if #items == 0 then return end
+    outputCallback('Emptying wheelbarrow: ' .. dfhack.items.getReadableDescription(wheelbarrow))
+    e_count = e_count + 1
+    for _,item in ipairs(items) do
+        outputCallback('  ' .. dfhack.items.getReadableDescription(item))
+        if not dryrun then
+            if item.flags.in_job then
+                local job_ref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
+                if job_ref then
+                    dfhack.job.removeJob(job_ref.data.job)
+                end
+            end
+            dfhack.items.moveToGround(item, wheelbarrow.pos)
         end
+        i_count = i_count + 1
     end
 end
 
 local function emptyWheelbarrows(outputCallback)
-    for _,e in ipairs(df.global.world.items.other.TOOL) do
+    for _,item in ipairs(df.global.world.items.other.TOOL) do
         -- wheelbarrow must be on ground and not in a job
-        if ((not e.flags.in_job) and e.flags.on_ground and e:isWheelbarrow()) then
-           emptyContainedItems(e, outputCallback)
+        if ((not item.flags.in_job) and item.flags.on_ground and item:isWheelbarrow()) then
+           emptyContainedItems(item, outputCallback)
         end
     end
 end
@@ -44,6 +48,7 @@ if (quiet) then output = (function(...) end) else output = print end
 
 emptyWheelbarrows(output)
 
-if (i_count > 0 or (not quiet)) then
-    print(("fix/empty-wheelbarrows - removed %d items from %d wheelbarrows."):format(i_count, e_count))
+if i_count > 0 or not quiet then
+    local action = dryrun and 'would remove' or 'removed'
+    print(("fix/empty-wheelbarrows - %s %d item(s) from %d wheelbarrow(s)."):format(action, i_count, e_count))
 end

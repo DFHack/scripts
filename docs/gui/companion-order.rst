@@ -3,7 +3,7 @@ gui/companion-order
 
 .. dfhack-tool::
     :summary: Issue orders to companions.
-    :tags: unavailable adventure interface
+    :tags: unavailable
 
 This tool allows you to issue orders to your adventurer's companions. Select
 which companions to issue orders to with lower case letters (green when

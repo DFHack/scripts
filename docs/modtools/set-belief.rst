@@ -3,7 +3,7 @@ modtools/set-belief
 
 .. dfhack-tool::
     :summary: Change the beliefs/values of a unit.
-    :tags: unavailable dev
+    :tags: unavailable
 
 Changes the beliefs (values) of units.
 Requires a belief, modifier, and a target.

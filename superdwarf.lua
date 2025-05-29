@@ -21,12 +21,7 @@ local function getUnit(obj)
 end
 
 local function getName(unit)
-    local name = dfhack.TranslateName(unit.name)
-    -- Animals will have a profession name if they aren't named
-    if name == '' then
-        name = dfhack.units.getProfessionName(unit)
-    end
-    return name
+    return dfhack.df2console(dfhack.units.getReadableName(unit))
 end
 
 local function onTimer()
@@ -57,10 +52,8 @@ commands = {
         repeatUtil.scheduleEvery(timerId, 1, 'ticks', onTimer)
     end,
     all = function(arg)
-        for _, unit in pairs(df.global.world.units.active) do
-            if dfhack.units.isCitizen(unit) then
-                commands.add(unit)
-            end
+        for _, unit in pairs(dfhack.units.getCitizens()) do
+            commands.add(unit)
         end
     end,
     del = function(arg)

@@ -3,7 +3,7 @@ gui/choose-weapons
 
 .. dfhack-tool::
     :summary: Ensure military dwarves choose appropriate weapons.
-    :tags: unavailable fort productivity military
+    :tags: unavailable
 
 Activate in the :guilabel:`Equip->View/Customize` page of the military screen.
 

@@ -10,6 +10,8 @@ post-embark. Pre-embark, it changes all aquifers in the world to light ones,
 while post-embark it only modifies the active map tiles, leaving the rest of
 the world unchanged.
 
+For more powerful aquifer editing, please see `aquifer` and `gui/aquifer`.
+
 Usage
 -----
 

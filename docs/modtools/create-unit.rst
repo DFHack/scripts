@@ -3,9 +3,14 @@ modtools/create-unit
 
 .. dfhack-tool::
     :summary: Create arbitrary units.
-    :tags: unavailable dev
+    :tags: unavailable
 
-Creates a unit.  Usage::
+Creates a unit.
+
+Usage
+-----
+
+::
 
     -race raceName
         (obligatory)

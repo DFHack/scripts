@@ -19,6 +19,16 @@ for k, v in pairs(STATUS) do
     STATUS_REVMAP[v.value] = k
 end
 
+-- save filters (sans search string) between dialog invocations
+local filters = {
+    min_quality=0,
+    max_quality=6,
+    hide_unreachable=true,
+    hide_forbidden=false,
+    hide_written=false,
+    inside_containers=true,
+}
+
 -- -------------------
 -- AssignItems
 --
@@ -105,7 +115,7 @@ local function get_containing_temple_or_guildhall(display_bld)
         end
     end
     if not loc_id then return end
-    local site = df.global.world.world_data.active_site[0]
+    local site = dfhack.world.getCurrentSite()
     local location = utils.binsearch(site.buildings, loc_id, 'id')
     if not location then return end
     local loc_type = location:getType()
@@ -126,7 +136,7 @@ end
 local function get_pending_value(display_bld)
     local value = get_assigned_value(display_bld)
     for _, contained_item in ipairs(display_bld.contained_items) do
-        if contained_item.use_mode ~= 0 or
+        if contained_item.use_mode ~= df.building_item_role_type.TEMP or
             not contained_item.item.flags.in_building
         then
             goto continue
@@ -214,8 +224,9 @@ function AssignItems:init()
                                 {label=common.CH_MONEY..'Masterful'..common.CH_MONEY, value=5},
                                 {label='Artifact', value=6},
                             },
-                            initial_option=0,
+                            initial_option=filters.min_quality,
                             on_change=function(val)
+                                filters.min_quality = val
                                 if self.subviews.max_quality:getOptionValue() < val then
                                     self.subviews.max_quality:setOption(val)
                                 end
@@ -238,8 +249,9 @@ function AssignItems:init()
                                 {label=common.CH_MONEY..'Masterful'..common.CH_MONEY, value=5},
                                 {label='Artifact', value=6},
                             },
-                            initial_option=6,
+                            initial_option=filters.max_quality,
                             on_change=function(val)
+                                filters.max_quality = val
                                 if self.subviews.min_quality:getOptionValue() > val then
                                     self.subviews.min_quality:setOption(val)
                                 end
@@ -269,20 +281,43 @@ function AssignItems:init()
                         {label='Yes', value=true, pen=COLOR_GREEN},
                         {label='No', value=false}
                     },
-                    initial_option=true,
-                    on_change=function() self:refresh_list() end,
+                    initial_option=filters.hide_unreachable,
+                    on_change=function(val)
+                        filters.hide_unreachable = val
+                        self:refresh_list()
+                    end,
                 },
                 widgets.ToggleHotkeyLabel{
                     view_id='hide_forbidden',
-                    frame={t=2, l=40, w=28},
+                    frame={t=1, l=40, w=30},
                     label='Hide forbidden items:',
                     key='CUSTOM_SHIFT_F',
                     options={
                         {label='Yes', value=true, pen=COLOR_GREEN},
                         {label='No', value=false}
                     },
-                    initial_option=false,
-                    on_change=function() self:refresh_list() end,
+                    option_gap=3,
+                    initial_option=filters.hide_forbidden,
+                    on_change=function(val)
+                        filters.hide_forbidden = val
+                        self:refresh_list()
+                    end,
+                },
+                widgets.ToggleHotkeyLabel{
+                    view_id='hide_written',
+                    frame={t=3, l=40, w=30},
+                    label='Hide written items:',
+                    key='CUSTOM_SHIFT_W',
+                    options={
+                        {label='Yes', value=true, pen=COLOR_GREEN},
+                        {label='No', value=false}
+                    },
+                    option_gap=5,
+                    initial_option=filters.hide_written,
+                    on_change=function(val)
+                        filters.hide_written = val
+                        self:refresh_list()
+                    end,
                 },
             },
         },
@@ -353,7 +388,7 @@ function AssignItems:init()
         widgets.HotkeyLabel{
             frame={l=0, b=2},
             label='Select all/none',
-            key='CUSTOM_CTRL_A',
+            key='CUSTOM_CTRL_N',
             on_activate=self:callback('toggle_visible'),
             auto_width=true,
         },
@@ -366,8 +401,11 @@ function AssignItems:init()
                 {label='Yes', value=true, pen=COLOR_GREEN},
                 {label='No', value=false}
             },
-            initial_option=true,
-            on_change=function() self:refresh_list() end,
+            initial_option=filters.inside_containers,
+            on_change=function(val)
+                filters.inside_containers = val
+                self:refresh_list()
+            end,
         },
         widgets.WrappedLabel{
             frame={b=0, l=0, r=0},
@@ -416,13 +454,11 @@ local function is_displayable_item(item)
         item.flags.spider_web or
         item.flags.construction or
         item.flags.encased or
-        item.flags.unk12 or
         item.flags.murder or
         item.flags.trader or
         item.flags.owned or
         item.flags.garbage_collect or
-        item.flags.on_fire or
-        item.flags.in_chest
+        item.flags.on_fire
     then
         return false
     end
@@ -444,7 +480,7 @@ local function is_displayable_item(item)
         local bld = dfhack.items.getHolderBuilding(item)
         if not bld then return false end
         for _, contained_item in ipairs(bld.contained_items) do
-            if contained_item.use_mode == 0 then return true end
+            if contained_item.use_mode == df.building_item_role_type.TEMP then return true end
             -- building construction materials
             if item == contained_item.item then return false end
         end
@@ -479,7 +515,7 @@ local function make_container_search_key(item, desc)
     local words = {}
     common.add_words(words, desc)
     for _, contained_item in ipairs(dfhack.items.getContainedItems(item)) do
-        common.add_words(words, common.get_item_description(contained_item))
+        common.add_words(words, dfhack.items.getReadableDescription(contained_item))
     end
     return table.concat(words, ' ')
 end
@@ -495,7 +531,7 @@ function AssignItems:cache_choices(inside_containers, display_bld)
     if self.choices_cache[inside_containers] then return self.choices_cache[inside_containers] end
 
     local choices = {}
-    for _, item in ipairs(df.global.world.items.all) do
+    for _, item in ipairs(df.global.world.items.other.IN_PLAY) do
         if not is_displayable_item(item) then goto continue end
         if inside_containers and is_container(item) and contains_non_liquid_powder(item) then
             goto continue
@@ -503,7 +539,7 @@ function AssignItems:cache_choices(inside_containers, display_bld)
             goto continue
         end
         local value = common.get_perceived_value(item)
-        local desc = common.get_item_description(item)
+        local desc = dfhack.items.getReadableDescription(item)
         local status = get_status(item, self.bld)
         local reachable = dfhack.maps.canWalkBetween(xyz2pos(dfhack.items.getPosition(item)),
                 xyz2pos(display_bld.centerx, display_bld.centery, display_bld.z))
@@ -534,17 +570,24 @@ function AssignItems:cache_choices(inside_containers, display_bld)
     return choices
 end
 
+local function is_written_work(item)
+    if df.item_bookst:is_instance(item) then return true end
+    return df.item_toolst:is_instance(item) and item:hasToolUse(df.tool_uses.CONTAIN_WRITING)
+end
+
 function AssignItems:get_choices()
     local raw_choices = self:cache_choices(self.subviews.inside_containers:getOptionValue(), self.bld)
     local choices = {}
     local include_unreachable = not self.subviews.hide_unreachable:getOptionValue()
     local include_forbidden = not self.subviews.hide_forbidden:getOptionValue()
+    local include_written = not self.subviews.hide_written:getOptionValue()
     local min_quality = self.subviews.min_quality:getOptionValue()
     local max_quality = self.subviews.max_quality:getOptionValue()
     for _,choice in ipairs(raw_choices) do
         local data = choice.data
         if not include_unreachable and not data.reachable then goto continue end
         if not include_forbidden and data.item.flags.forbid then goto continue end
+        if not include_written and is_written_work(data.item) then goto continue end
         if min_quality > data.quality then goto continue end
         if max_quality < data.quality then goto continue end
         table.insert(choices, choice)
@@ -666,11 +709,11 @@ end
 
 PedestalOverlay = defclass(PedestalOverlay, overlay.OverlayWidget)
 PedestalOverlay.ATTRS{
+    desc='Adds link to the display furniture building panel to launch the DFHack display assignment UI.',
     default_pos={x=-40, y=34},
     default_enabled=true,
     viewscreens='dwarfmode/ViewSheets/BUILDING/DisplayFurniture',
     frame={w=23, h=1},
-    frame_background=gui.CLEAR_PEN,
 }
 
 local function is_valid_building()
@@ -682,7 +725,7 @@ function PedestalOverlay:init()
     self:addviews{
         widgets.TextButton{
             frame={t=0, l=0},
-            label='DFHack assign items',
+            label='DFHack assign',
             key='CUSTOM_CTRL_T',
             visible=is_valid_building,
             on_activate=function() AssignItemsModal{}:show() end,

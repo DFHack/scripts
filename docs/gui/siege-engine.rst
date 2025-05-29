@@ -3,7 +3,7 @@ gui/siege-engine
 
 .. dfhack-tool::
     :summary: Extend the functionality and usability of siege engines.
-    :tags: unavailable fort gameplay buildings
+    :tags: unavailable
 
 This tool is an in-game interface for `siege-engine`, which allows you to link
 siege engines to stockpiles, restrict operation to certain dwarves, fire a

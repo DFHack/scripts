@@ -6,11 +6,7 @@ if not dfhack_flags.module then
 end
 
 require('dfhack.buildings') -- loads additional functions into dfhack.buildings
-local utils = require('utils')
 local quickfort_command = reqscript('internal/quickfort/command')
-local quickfort_common = reqscript('internal/quickfort/common')
-local quickfort_building = reqscript('internal/quickfort/building')
-local quickfort_map = reqscript('internal/quickfort/map')
 local quickfort_parse = reqscript('internal/quickfort/parse')
 
 function normalize_data(data, pos)

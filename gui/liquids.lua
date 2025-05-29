@@ -50,6 +50,11 @@ function SpawnLiquid:init()
             on_activate = self:callback('decreaseLiquidLevel'),
             disabled = function() return self.level == 1 end
         },
+        widgets.Label{
+            frame = { l = 0, b = 1, w = 1},
+            text_pen=COLOR_LIGHTGREEN,
+            text=string.char(27),
+        },
         widgets.HotkeyLabel{
             frame = { l = 19, b = 1},
             label = 'Increase level',
@@ -57,6 +62,11 @@ function SpawnLiquid:init()
             key = 'KEYBOARD_CURSOR_RIGHT',
             on_activate = self:callback('increaseLiquidLevel'),
             disabled = function() return self.level == 7 end
+        },
+        widgets.Label{
+            frame = { l = 19, b = 1, w = 1},
+            text_pen=COLOR_LIGHTGREEN,
+            text=string.char(26),
         },
         widgets.CycleHotkeyLabel{
             frame = {l = 0, b = 2},
@@ -153,39 +163,43 @@ function SpawnLiquid:decreaseLiquidLevel()
     self.level = math.max(self.level - 1, 1)
 end
 
+local function isFlowPassable(pos)
+    local tt = dfhack.maps.getTileType(pos)
+    local tile = dfhack.maps.getTileFlags(pos)
+    return tt and tile and df.tiletype_shape.attrs[df.tiletype.attrs[tt].shape].passable_flow
+end
+
 function SpawnLiquid:spawn(pos)
-    if dfhack.maps.isValidTilePos(pos) and dfhack.maps.isTileVisible(pos) then
-        local map_block = dfhack.maps.getTileBlock(pos)
+    if not dfhack.maps.isValidTilePos(pos) or not dfhack.maps.isTileVisible(pos) or not isFlowPassable(pos) then
+        return
+    end
 
-        if self.mode == SpawnLiquidMode.CLEAN then
-            local tile = dfhack.maps.getTileFlags(pos)
+    local map_block = dfhack.maps.getTileBlock(pos)
 
-            tile.water_salt = false
-            tile.water_stagnant = false
-        elseif self.type == df.tiletype.RiverSource then
-            if self.mode == SpawnLiquidMode.REMOVE then
-                local commands = {
-                    'f', 'any', ';',
-                    'f', 'sp', 'river_source', ';',
-                    'p', 'any', ';',
-                    'p', 's', 'floor', ';',
-                    'p', 'sp', 'normal', ';',
-                    'p', 'm', 'stone', ';',
-                }
-                dfhack.run_command('tiletypes-command', table.unpack(commands))
-                dfhack.run_command('tiletypes-here', '--quiet', ('--cursor=%d,%d,%d'):format(pos2xyz(pos)))
-                liquids.spawnLiquid(pos, 0, df.tile_liquid.Water)
-            else
-                map_block.tiletype[pos.x % 16][pos.y % 16] = df.tiletype.RiverSource
-                liquids.spawnLiquid(pos, 7, df.tile_liquid.Water)
-            end
+    if self.mode == SpawnLiquidMode.CLEAN then
+        local tile = dfhack.maps.getTileFlags(pos)
+
+        tile.water_salt = false
+        tile.water_stagnant = false
+    elseif self.type == df.tiletype.RiverSource then
+        if self.mode == SpawnLiquidMode.REMOVE then
+            local commands = {
+                'f', 'any', ';',
+                'f', 'sp', 'river_source', ';',
+                'p', 'any', ';',
+                'p', 's', 'floor', ';',
+                'p', 'sp', 'normal', ';',
+                'p', 'm', 'stone', ';',
+            }
+            dfhack.run_command('tiletypes-command', table.unpack(commands))
+            dfhack.run_command('tiletypes-here', '--quiet', ('--cursor=%d,%d,%d'):format(pos2xyz(pos)))
+            liquids.spawnLiquid(pos, 0, df.tile_liquid.Water)
         else
-            liquids.spawnLiquid(pos, self:getLiquidLevel(pos), self.type)
+            map_block.tiletype[pos.x % 16][pos.y % 16] = df.tiletype.RiverSource
+            liquids.spawnLiquid(pos, 7, df.tile_liquid.Water)
         end
-
-        -- Regardless of spawning or removing liquids, we need to reindex to
-        -- ensure pathability is up to date.
-        df.global.world.reindex_pathfinding = true
+    else
+        liquids.spawnLiquid(pos, self:getLiquidLevel(pos), self.type)
     end
 end
 

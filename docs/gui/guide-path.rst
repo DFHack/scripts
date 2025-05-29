@@ -3,7 +3,7 @@ gui/guide-path
 
 .. dfhack-tool::
     :summary: Visualize minecart guide paths.
-    :tags: unavailable fort inspection map
+    :tags: unavailable
 
 This tool displays the cached path that will be used by the minecart guide
 order. The game computes this path when the order is executed for the first

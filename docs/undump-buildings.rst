@@ -3,7 +3,7 @@ undump-buildings
 
 .. dfhack-tool::
     :summary: Undesignate building base materials for dumping.
-    :tags: unavailable fort productivity buildings
+    :tags: fort productivity buildings
 
 If you designate a bunch of tiles in dump mode, all the items on those tiles
 will be marked for dumping. Unfortunately, if there are buildings on any of

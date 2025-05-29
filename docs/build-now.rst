@@ -3,7 +3,7 @@ build-now
 
 .. dfhack-tool::
     :summary: Instantly completes building construction jobs.
-    :tags: unavailable fort armok buildings
+    :tags: fort armok buildings
 
 By default, all unsuspended buildings on the map are completed, but the area of
 effect is configurable.
@@ -25,7 +25,7 @@ the building at that coordinate is built.
 
 The ``<pos>`` parameters can either be an ``<x>,<y>,<z>`` triple (e.g.
 ``35,12,150``) or the string ``here``, which means the position of the active
-game cursor.
+keyboard game cursor.
 
 Examples
 --------
@@ -40,3 +40,5 @@ Options
 
 ``-q``, ``--quiet``
     Suppress informational output (error messages are still printed).
+``-z``, ``--zlevel``
+    Restrict operation to the currently visible z-level

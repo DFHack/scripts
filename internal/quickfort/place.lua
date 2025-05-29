@@ -155,7 +155,7 @@ local function make_db_entry(keys)
         num_barrels=num_barrels,
         num_wheelbarrows=num_wheelbarrows,
         links={give_to={}, take_from={}},
-        props={},
+        props={storage={}},
         adjustments={},
         logistics={},
     }
@@ -163,41 +163,41 @@ local function make_db_entry(keys)
     return db_entry
 end
 
+local logistics_props = {
+    'automelt',
+    'autotrade',
+    'autodump',
+    'autotrain',
+    'autoforbid',
+    'autoclaim',
+}
+
 local function custom_stockpile(_, keys)
     local token_and_label, props, adjustments = parse_keys(keys)
     local db_entry = make_db_entry(token_and_label.token)
     if not db_entry then return nil end
     if token_and_label.label then
         db_entry.label = ('%s/%s'):format(db_entry.label, token_and_label.label)
+        db_entry.global_label = db_entry.label
     end
     if next(adjustments) then
         db_entry.adjustments[adjustments] = true
     end
 
     -- logistics properties
-    if props.automelt == 'true' then
-        db_entry.logistics.automelt = true
-        props.automelt = nil
-    end
-    if props.autotrade == 'true' then
-        db_entry.logistics.autotrade = true
-        props.autotrade = nil
-    end
-    if props.autodump == 'true' then
-        db_entry.logistics.autodump = true
-        props.autodump = nil
-    end
-    if props.autotrain == 'true' then
-        db_entry.logistics.autotrain = true
-        props.autotrain = nil
+    for _, logistics_prop in ipairs(logistics_props) do
+        if props[logistics_prop] == 'true' then
+            db_entry.logistics[logistics_prop] = true
+            props[logistics_prop] = nil
+        end
     end
 
-    -- convert from older parsing style to properties
-    db_entry.props.max_barrels = db_entry.num_barrels
+    -- convert to assign()able properties
+    db_entry.props.storage.max_barrels = db_entry.num_barrels
     db_entry.num_barrels = nil
-    db_entry.props.max_bins = db_entry.num_bins
+    db_entry.props.storage.max_bins = db_entry.num_bins
     db_entry.num_bins = nil
-    db_entry.props.max_wheelbarrows = db_entry.num_wheelbarrows
+    db_entry.props.storage.max_wheelbarrows = db_entry.num_wheelbarrows
     db_entry.num_wheelbarrows = nil
 
     -- alias properties
@@ -215,19 +215,19 @@ local function custom_stockpile(_, keys)
 
     -- actual properties
     if props.barrels then
-        db_entry.props.max_barrels = tonumber(props.barrels)
+        db_entry.props.storage.max_barrels = tonumber(props.barrels)
         props.barrels = nil
     end
     if props.bins then
-        db_entry.props.max_bins = tonumber(props.bins)
+        db_entry.props.storage.max_bins = tonumber(props.bins)
         props.bins = nil
     end
     if props.wheelbarrows then
-        db_entry.props.max_wheelbarrows = tonumber(props.wheelbarrows)
+        db_entry.props.storage.max_wheelbarrows = tonumber(props.wheelbarrows)
         props.wheelbarrows = nil
     end
     if props.links_only == 'true' then
-        db_entry.props.use_links_only = 1
+        ensure_key(db_entry.props, 'stockpile_flag').use_links_only = 1
         props.links_only = nil
     end
     if props.name then
@@ -257,35 +257,36 @@ local function configure_stockpile(bld, db_entry)
     for _,cat in ipairs(db_entry.categories) do
         local name = ('library/cat_%s'):format(cat)
         log('enabling stockpile category: %s', cat)
-        stockpiles.import_stockpile(name, {id=bld.id, mode='enable'})
+        stockpiles.import_settings(name, {id=bld.id, mode='enable'})
     end
     for adjlist in pairs(db_entry.adjustments or {}) do
         for _,adj in ipairs(adjlist) do
             log('applying stockpile preset: %s %s (filters=)', adj.mode, adj.name, table.concat(adj.filters or {}, ','))
-            stockpiles.import_stockpile(adj.name, {id=bld.id, mode=adj.mode, filters=adj.filters})
+            stockpiles.import_settings(adj.name, {id=bld.id, mode=adj.mode, filters=adj.filters})
         end
     end
 end
 
 local function init_containers(db_entry, ntiles)
-    if db_entry.want_barrels or db_entry.props.max_barrels then
-        local max_barrels = db_entry.props.max_barrels or
+    local storage = db_entry.props.storage
+    if db_entry.want_barrels or storage.max_barrels then
+        local max_barrels = storage.max_barrels or
                 quickfort_set.get_setting('stockpiles_max_barrels')
-        db_entry.props.max_barrels = (max_barrels < 0 or max_barrels >= ntiles) and ntiles or max_barrels
-        log('barrels set to %d', db_entry.props.max_barrels)
+        storage.max_barrels = (max_barrels < 0 or max_barrels >= ntiles) and ntiles or max_barrels
+        log('barrels set to %d', storage.max_barrels)
     end
-    if db_entry.want_bins or db_entry.props.max_bins then
-        local max_bins = db_entry.props.max_bins or
+    if db_entry.want_bins or storage.max_bins then
+        local max_bins = storage.max_bins or
                 quickfort_set.get_setting('stockpiles_max_bins')
-        db_entry.props.max_bins = (max_bins < 0 or max_bins >= ntiles) and ntiles or max_bins
-        log('bins set to %d', db_entry.props.max_bins)
+        storage.max_bins = (max_bins < 0 or max_bins >= ntiles) and ntiles or max_bins
+        log('bins set to %d', storage.max_bins)
     end
-    if db_entry.want_wheelbarrows or db_entry.props.max_wheelbarrows then
-        local max_wb = db_entry.props.max_wheelbarrows or
+    if db_entry.want_wheelbarrows or storage.max_wheelbarrows then
+        local max_wb = storage.max_wheelbarrows or
                 quickfort_set.get_setting('stockpiles_max_wheelbarrows')
         if max_wb < 0 then max_wb = 1 end
-        db_entry.props.max_wheelbarrows = (max_wb >= ntiles - 1) and ntiles-1 or max_wb
-        log('wheelbarrows set to %d', db_entry.props.max_wheelbarrows)
+        storage.max_wheelbarrows = (max_wb >= ntiles - 1) and ntiles-1 or max_wb
+        log('wheelbarrows set to %d', storage.max_wheelbarrows)
     end
 end
 
@@ -323,17 +324,8 @@ local function create_stockpile(s, link_data, dry_run)
     end
     if next(db_entry.logistics) then
         local logistics_command = {'logistics', 'add', '-s', tostring(bld.stockpile_number)}
-        if db_entry.logistics.automelt then
-            table.insert(logistics_command, 'melt')
-        end
-        if db_entry.logistics.autotrade then
-            table.insert(logistics_command, 'trade')
-        end
-        if db_entry.logistics.autodump then
-            table.insert(logistics_command, 'dump')
-        end
-        if db_entry.logistics.autotrain then
-            table.insert(logistics_command, 'train')
+        for logistics_prop in pairs(db_entry.logistics) do
+            table.insert(logistics_command, logistics_prop:sub(5))
         end
         log('running logistics command: "%s"', table.concat(logistics_command, ' '))
         dfhack.run_command(logistics_command)
@@ -465,7 +457,7 @@ function do_orders(zlevel, grid, ctx)
         local db_entry = s.db_entry
         local props = db_entry.props or {}
         quickfort_orders.enqueue_container_orders(ctx,
-            props.max_bins, props.max_barrels, props.max_wheelbarrows)
+            props.storage.max_bins, props.storage.max_barrels, props.storage.max_wheelbarrows)
     end
 end
 

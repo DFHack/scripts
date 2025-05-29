@@ -1,270 +1,597 @@
--- A GUI front-end for the autobutcher plugin.
-local gui = require 'gui'
-local utils = require 'utils'
-local widgets = require 'gui.widgets'
-local dlg = require 'gui.dialogs'
+local dlg = require('gui.dialogs')
+local gui = require('gui')
+local plugin = require('plugins.autobutcher')
+local widgets = require('gui.widgets')
 
-local plugin = require 'plugins.autobutcher'
+local CH_UP = string.char(30)
+local CH_DN = string.char(31)
+
+local racewidth = 25 -- width of the race name column in the UI
 
 WatchList = defclass(WatchList, gui.ZScreen)
 WatchList.ATTRS{
     focus_string='autobutcher',
 }
 
--- width of the race name column in the UI
-local racewidth = 25
+local function sort_noop(a, b)
+    -- this function is used as a marker and never actually gets called
+    error('sort_noop should not be called')
+end
 
-function nextAutowatchState()
-    if(plugin.autowatch_isEnabled()) then
-        return 'Stop '
+local function either_are_special(a, b)
+    return type(a.race) == 'number' or type(b.race) == 'number'
+end
+
+local function sort_by_race_desc(a, b)
+    if type(a.race) == 'number' then
+        if type(b.race) == 'number' then
+            return a.race < b.race
+        end
+        return true
+    elseif type(b.race) == 'number' then
+        return false
     end
-    return 'Start'
+    return a.race < b.race
 end
 
-function nextAutobutcherState()
-    if(plugin.isEnabled()) then
-        return 'Stop '
+local function sort_by_race_asc(a, b)
+    if type(a.race) == 'number' then
+        if type(b.race) == 'number' then
+            return a.race < b.race
+        end
+        return true
+    elseif type(b.race) == 'number' then
+        return false
     end
-    return 'Start'
+    return a.race > b.race
 end
 
-function getSleepTimer()
-    return plugin.autobutcher_getSleep()
+local function sort_by_total_desc(a, b)
+    if either_are_special(a, b) or a.total == b.total then
+        return sort_by_race_desc(a, b)
+    end
+    return a.total > b.total
 end
 
-function setSleepTimer(ticks)
-    plugin.autobutcher_setSleep(ticks)
+local function sort_by_total_asc(a, b)
+    if either_are_special(a, b) or a.total == b.total  then
+        return sort_by_race_desc(a, b)
+    end
+    return a.total < b.total
 end
 
-function WatchList:init(args)
-    local colwidth = 7
-    self:addviews{
-        widgets.Window{
-            view_id = 'main',
-            frame_title = 'Autobutcher Watchlist',
-            frame = { w=84, h=30 },
-            resizable = true,
-            subviews = {
-                widgets.Label{
-                    frame = { l = 0, t = 0 },
-                    text_pen = COLOR_CYAN,
-                    text = {
-                        { text = 'Race', width = racewidth }, ' ',
-                        { text = 'female', width = colwidth }, ' ',
-                        { text = ' male', width = colwidth }, ' ',
-                        { text = 'Female', width = colwidth }, ' ',
-                        { text = ' Male', width = colwidth }, ' ',
-                        { text = 'watch? ' },
-                        { text = ' butchering' },
-                        NEWLINE,
-                        { text = '', width = racewidth }, ' ',
-                        { text = ' kids', width = colwidth }, ' ',
-                        { text = ' kids', width = colwidth }, ' ',
-                        { text = 'adults', width = colwidth }, ' ',
-                        { text = 'adults', width = colwidth }, ' ',
-                        { text = '       ' },
-                        { text = '  ordered' },
-                    }
+local function sort_by_fk_desc(a, b)
+    if either_are_special(a, b) or a.data.fk_total == b.data.fk_total then
+        return sort_by_race_desc(a, b)
+    end
+    return a.data.fk_total > b.data.fk_total
+end
+
+local function sort_by_fk_asc(a, b)
+    if either_are_special(a, b) or a.data.fk_total == b.data.fk_total then
+        return sort_by_race_desc(a, b)
+    end
+    return a.data.fk_total < b.data.fk_total
+end
+
+local function sort_by_fa_desc(a, b)
+    if either_are_special(a, b) or a.data.fa_total == b.data.fa_total then
+        return sort_by_race_desc(a, b)
+    end
+    return a.data.fa_total > b.data.fa_total
+end
+
+local function sort_by_fa_asc(a, b)
+    if either_are_special(a, b) or a.data.fa_total == b.data.fa_total then
+        return sort_by_race_desc(a, b)
+    end
+    return a.data.fa_total < b.data.fa_total
+end
+
+local function sort_by_mk_desc(a, b)
+    if either_are_special(a, b) or a.data.mk_total == b.data.mk_total then
+        return sort_by_race_desc(a, b)
+    end
+    return a.data.mk_total > b.data.mk_total
+end
+
+local function sort_by_mk_asc(a, b)
+    if either_are_special(a, b) or a.data.mk_total == b.data.mk_total then
+        return sort_by_race_desc(a, b)
+    end
+    return a.data.mk_total < b.data.mk_total
+end
+
+local function sort_by_ma_desc(a, b)
+    if either_are_special(a, b) or a.data.ma_total == b.data.ma_total then
+        return sort_by_race_desc(a, b)
+    end
+    return a.data.ma_total > b.data.ma_total
+end
+
+local function sort_by_ma_asc(a, b)
+    if either_are_special(a, b) or a.data.ma_total == b.data.ma_total then
+        return sort_by_race_desc(a, b)
+    end
+    return a.data.ma_total < b.data.ma_total
+end
+
+local function sort_by_watched_desc(a, b)
+    if either_are_special(a, b) or a.data.watched == b.data.watched then
+        return sort_by_race_desc(a, b)
+    end
+    return a.data.watched
+end
+
+local function sort_by_watched_asc(a, b)
+    if either_are_special(a, b) or a.data.watched == b.data.watched then
+        return sort_by_race_desc(a, b)
+    end
+    return b.data.watched
+end
+
+local function sort_by_ordered_desc(a, b)
+    if either_are_special(a, b) or a.ordered == b.ordered then
+        return sort_by_race_desc(a, b)
+    end
+    return a.ordered > b.ordered
+end
+
+local function sort_by_ordered_asc(a, b)
+    if either_are_special(a, b) or a.ordered == b.ordered then
+        return sort_by_race_desc(a, b)
+    end
+    return a.ordered < b.ordered
+end
+
+function WatchList:init()
+    if plugin.isEnabled() then
+        -- ensure slaughter counts and autowatch are up to date
+        dfhack.run_command('autobutcher', 'now')
+    end
+
+    local window = widgets.Window{
+        frame_title='Autobutcher',
+        frame={w=97, h=31},
+        resizable=true,
+        subviews={
+            widgets.CycleHotkeyLabel{
+                view_id='sort',
+                frame={l=0, t=0, w=31},
+                label='Sort by:',
+                key='CUSTOM_SHIFT_S',
+                options={
+                    {label='Total stock'..CH_DN, value=sort_by_total_desc},
+                    {label='Total stock'..CH_UP, value=sort_by_total_asc},
+                    {label='Race'..CH_DN, value=sort_by_race_desc},
+                    {label='Race'..CH_UP, value=sort_by_race_asc},
+                    {label='female kids'..CH_DN, value=sort_by_fk_desc},
+                    {label='female kids'..CH_UP, value=sort_by_fk_asc},
+                    {label='male kids'..CH_DN, value=sort_by_mk_desc},
+                    {label='make kids'..CH_UP, value=sort_by_mk_asc},
+                    {label='Female adults'..CH_DN, value=sort_by_fa_desc},
+                    {label='Female adults'..CH_UP, value=sort_by_fa_asc},
+                    {label='Male adults'..CH_DN, value=sort_by_ma_desc},
+                    {label='Male adults'..CH_UP, value=sort_by_ma_asc},
+                    {label='Watch?'..CH_DN, value=sort_by_watched_desc},
+                    {label='Watch?'..CH_UP, value=sort_by_watched_asc},
+                    {label='Butchering ordered'..CH_DN, value=sort_by_ordered_desc},
+                    {label='Butchering ordered'..CH_UP, value=sort_by_ordered_asc},
                 },
-                widgets.List{
-                    view_id = 'list',
-                    frame = { t = 3, b = 5 },
-                    not_found_label = 'Watchlist is empty.',
-                    text_pen = { fg = COLOR_GREY, bg = COLOR_BLACK },
-                    cursor_pen = { fg = COLOR_BLACK, bg = COLOR_GREEN },
-                    --on_select = self:callback('onSelectEntry'),
+                initial_option=sort_by_total_desc,
+                on_change=self:callback('refresh', 'sort'),
+            },
+            widgets.ToggleHotkeyLabel{
+                view_id='hide_zero',
+                frame={t=0, l=35, w=49},
+                key='CUSTOM_CTRL_H',
+                label='Show only rows with non-zero targets',
+                on_change=self:callback('refresh', 'sort'),
+            },
+            widgets.Panel{
+                view_id='list_panel',
+                frame={t=2, l=0, r=0, b=8},
+                frame_style=gui.FRAME_INTERIOR,
+                subviews={
+                    widgets.CycleHotkeyLabel{
+                        view_id='sort_total',
+                        frame={t=0, l=0, w=6},
+                        options={
+                            {label='Total', value=sort_noop},
+                            {label='Total'..CH_DN, value=sort_by_total_desc},
+                            {label='Total'..CH_UP, value=sort_by_total_asc},
+                        },
+                        initial_option=sort_by_total_desc,
+                        option_gap=0,
+                        on_change=self:callback('refresh', 'sort_total'),
+                    },
+                    widgets.Label{
+                        frame={t=1, l=0},
+                        text='stock'
+                    },
+                    widgets.CycleHotkeyLabel{
+                        view_id='sort_race',
+                        frame={t=0, l=8, w=5},
+                        options={
+                            {label='Race', value=sort_noop},
+                            {label='Race'..CH_DN, value=sort_by_race_desc},
+                            {label='Race'..CH_UP, value=sort_by_race_asc},
+                        },
+                        option_gap=0,
+                        on_change=self:callback('refresh', 'sort_race'),
+                    },
+                    widgets.CycleHotkeyLabel{
+                        view_id='sort_fk',
+                        frame={t=0, l=37, w=7},
+                        options={
+                            {label='female', value=sort_noop},
+                            {label='female'..CH_DN, value=sort_by_fk_desc},
+                            {label='female'..CH_UP, value=sort_by_fk_asc},
+                        },
+                        option_gap=0,
+                        on_change=self:callback('refresh', 'sort_fk'),
+                    },
+                    widgets.Label{
+                        frame={t=1, l=38},
+                        text='kids'
+                    },
+                    widgets.CycleHotkeyLabel{
+                        view_id='sort_mk',
+                        frame={t=0, l=47, w=5},
+                        options={
+                            {label='male', value=sort_noop},
+                            {label='male'..CH_DN, value=sort_by_mk_desc},
+                            {label='male'..CH_UP, value=sort_by_mk_asc},
+                        },
+                        option_gap=0,
+                        on_change=self:callback('refresh', 'sort_mk'),
+                    },
+                    widgets.Label{
+                        frame={t=1, l=47},
+                        text='kids'
+                    },
+                    widgets.CycleHotkeyLabel{
+                        view_id='sort_fa',
+                        frame={t=0, l=55, w=7},
+                        options={
+                            {label='Female', value=sort_noop},
+                            {label='Female'..CH_DN, value=sort_by_fa_desc},
+                            {label='Female'..CH_UP, value=sort_by_fa_asc},
+                        },
+                        option_gap=0,
+                        on_change=self:callback('refresh', 'sort_fa'),
+                    },
+                    widgets.Label{
+                        frame={t=1, l=55},
+                        text='adults'
+                    },
+                    widgets.CycleHotkeyLabel{
+                        view_id='sort_ma',
+                        frame={t=0, l=65, w=5},
+                        options={
+                            {label='Male', value=sort_noop},
+                            {label='Male'..CH_DN, value=sort_by_ma_desc},
+                            {label='Male'..CH_UP, value=sort_by_ma_asc},
+                        },
+                        option_gap=0,
+                        on_change=self:callback('refresh', 'sort_ma'),
+                    },
+                    widgets.Label{
+                        frame={t=1, l=64},
+                        text='adults'
+                    },
+                    widgets.CycleHotkeyLabel{
+                        view_id='sort_watched',
+                        frame={t=0, l=72, w=7},
+                        options={
+                            {label='Watch?', value=sort_noop},
+                            {label='Watch?'..CH_DN, value=sort_by_watched_desc},
+                            {label='Watch?'..CH_UP, value=sort_by_watched_asc},
+                        },
+                        option_gap=0,
+                        on_change=self:callback('refresh', 'sort_watched'),
+                    },
+                    widgets.CycleHotkeyLabel{
+                        view_id='sort_ordered',
+                        frame={t=0, l=81, w=11},
+                        options={
+                            {label='Butchering', value=sort_noop},
+                            {label='Butchering'..CH_DN, value=sort_by_ordered_desc},
+                            {label='Butchering'..CH_UP, value=sort_by_ordered_asc},
+                        },
+                        option_gap=0,
+                        on_change=self:callback('refresh', 'sort_ordered'),
+                    },
+                    widgets.Label{
+                        frame={t=1, l=82},
+                        text='ordered'
+                    },
+                    widgets.Label{
+                        view_id='disabled_warning',
+                        visible=function() return not plugin.isEnabled() end,
+                        frame={t=3, l=8, h=1},
+                        text={"Enable autobutcher to change settings"},
+                        text_pen=COLOR_YELLOW
+                    },
+                    widgets.List{
+                        view_id='list',
+                        frame={t=3, b=0},
+                        visible=plugin.isEnabled,
+                        on_double_click = self:callback('onDoubleClick'),
+                        on_double_click2 = self:callback('zeroOut'),
+                    },
                 },
-                widgets.Label{
-                    view_id = 'bottom_ui',
-                    frame = { b = 0, h = 1 },
-                    text = 'filled by updateBottom()'
-                }
-            }
+            },
+            widgets.Panel{
+                view_id='footer',
+                frame={l=0, r=0, b=0, h=7},
+                subviews={
+                    widgets.Label{
+                        frame={t=0, l=0},
+                        text={
+                            'Columns show butcherable stock (+ protected stock, if any) / target: ', NEWLINE,
+                            'Double click on a value to edit/toggle or use the hotkeys listed below.'
+                        }
+                    },
+                    widgets.HotkeyLabel{
+                        view_id='fk',
+                        frame={t=3, l=0},
+                        key='CUSTOM_F',
+                        label='f kids',
+                        auto_width=true,
+                        on_activate=self:callback('editVal', 'female kids', 'fk'),
+                    },
+                    widgets.HotkeyLabel{
+                        view_id='mk',
+                        frame={t=4, l=0},
+                        key='CUSTOM_M',
+                        label='m kids',
+                        auto_width=true,
+                        on_activate=self:callback('editVal', 'male kids', 'mk'),
+                    },
+                    widgets.HotkeyLabel{
+                        view_id='fa',
+                        frame={t=3, l=17},
+                        key='CUSTOM_SHIFT_F',
+                        label='F adults',
+                        auto_width=true,
+                        on_activate=self:callback('editVal', 'female adults', 'fa'),
+                    },
+                    widgets.HotkeyLabel{
+                        view_id='ma',
+                        frame={t=4, l=17},
+                        key='CUSTOM_SHIFT_M',
+                        label='M adults',
+                        auto_width=true,
+                        on_activate=self:callback('editVal', 'male adults', 'ma'),
+                    },
+                    widgets.HotkeyLabel{
+                        view_id='butcher',
+                        frame={t=5, l=0},
+                        key='CUSTOM_B',
+                        label='Butcher race',
+                        auto_width=true,
+                        on_activate=self:callback('onButcherRace'),
+                    },
+                    widgets.HotkeyLabel{
+                        view_id='unbutcher',
+                        frame={t=5, l=17},
+                        key='CUSTOM_SHIFT_B',
+                        label='Unbutcher race',
+                        auto_width=true,
+                        on_activate=self:callback('onUnbutcherRace'),
+                    },
+                    widgets.HotkeyLabel{
+                        view_id='watch',
+                        frame={t=3, l=36},
+                        key='CUSTOM_W',
+                        label='Toggle watch',
+                        auto_width=true,
+                        on_activate=self:callback('onToggleWatching'),
+                    },
+                    widgets.HotkeyLabel{
+                        frame={t=4, l=36},
+                        key='CUSTOM_X',
+                        label='Delete row',
+                        auto_width=true,
+                        on_activate=self:callback('onDeleteEntry'),
+                    },
+                    widgets.HotkeyLabel{
+                        frame={t=3, l=54},
+                        key='CUSTOM_R',
+                        label='Set row targets to 0',
+                        auto_width=true,
+                        on_activate=self:callback('zeroOut'),
+                    },
+                    widgets.HotkeyLabel{
+                        frame={t=4, l=54},
+                        key='CUSTOM_SHIFT_R',
+                        label='Set row targets to N',
+                        auto_width=true,
+                        on_activate=self:callback('onSetRow'),
+                    },
+                    widgets.HotkeyLabel{
+                        view_id='butcher_all',
+                        frame={t=5, l=36},
+                        key='CUSTOM_E',
+                        label='Butcher all',
+                        auto_width=true,
+                        on_activate=self:callback('onButcherAll'),
+                    },
+                    widgets.HotkeyLabel{
+                        view_id='unbutcher_all',
+                        frame={t=5, l=54},
+                        key='CUSTOM_SHIFT_E',
+                        label='Unbutcher all',
+                        auto_width=true,
+                        on_activate=self:callback('onUnbutcherAll'),
+                    },
+                    widgets.ToggleHotkeyLabel{
+                        view_id='enable_toggle',
+                        frame={t=6, l=0, w=26},
+                        label='Autobutcher is',
+                        key='CUSTOM_SHIFT_A',
+                        options={{value=true, label='Enabled', pen=COLOR_GREEN},
+                                 {value=false, label='Disabled', pen=COLOR_RED}},
+                        on_change=function(val)
+                            plugin.setEnabled(val)
+                            self:refresh()
+                        end,
+                    },
+                    widgets.ToggleHotkeyLabel{
+                        view_id='autowatch_toggle',
+                        frame={t=6, l=36, w=24},
+                        label='Autowatch is',
+                        key='CUSTOM_SHIFT_W',
+                        options={{value=true, label='Enabled', pen=COLOR_GREEN},
+                                 {value=false, label='Disabled', pen=COLOR_RED}},
+                        on_change=function(val)
+                            plugin.autowatch_setEnabled(val)
+                            self:refresh()
+                        end,
+                    },
+                },
+            },
         },
     }
 
-    self:initListChoices()
-    self:updateBottom()
+    self:addviews{window}
+    self:refresh()
+    self.subviews.list:setSelected(#self.subviews.list:getChoices() > 2 and 3 or 2)
 end
 
--- change the viewmode for stock data displayed in left section of columns
-local viewmodes = { 'total stock', 'protected stock', 'butcherable', 'butchering ordered' }
-local viewmode = 1
-function WatchList:onToggleView()
-    if viewmode < #viewmodes then
-        viewmode = viewmode + 1
-    else
-        viewmode = 1
-    end
-    self:initListChoices()
-    self:updateBottom()
-end
-
--- update the bottom part of the UI (after sleep timer changed etc)
-function WatchList:updateBottom()
-    self.subviews.bottom_ui:setText(
-        {
-            { key = 'CUSTOM_SHIFT_V', text = ': View in colums shows: '..viewmodes[viewmode]..' / target max',
-              on_activate = self:callback('onToggleView') }, NEWLINE,
-            { key = 'CUSTOM_F', text = ': f kids',
-              on_activate = self:callback('onEditFK') }, ', ',
-            { key = 'CUSTOM_M', text = ': m kids',
-              on_activate = self:callback('onEditMK') }, ', ',
-            { key = 'CUSTOM_SHIFT_F', text = ': f adults',
-              on_activate = self:callback('onEditFA') }, ', ',
-            { key = 'CUSTOM_SHIFT_M', text = ': m adults',
-              on_activate = self:callback('onEditMA') }, '. ',
-            { key = 'CUSTOM_W', text = ': Toggle watch',
-              on_activate = self:callback('onToggleWatching') }, '. ',
-            { key = 'CUSTOM_X', text = ': Delete',
-              on_activate = self:callback('onDeleteEntry') }, '. ', NEWLINE,
-            --{ key = 'CUSTOM_A', text = ': Add race',
-            --  on_activate = self:callback('onAddRace') }, ', ',
-            { key = 'CUSTOM_SHIFT_R', text = ': Set whole row',
-              on_activate = self:callback('onSetRow') }, '.     ',
-            { key = 'CUSTOM_B', text = ': Remove butcher orders',
-              on_activate = self:callback('onUnbutcherRace') }, '. ',
-            { key = 'CUSTOM_SHIFT_B', text = ': Butcher race',
-              on_activate = self:callback('onButcherRace') }, '. ', NEWLINE,
-            { key = 'CUSTOM_SHIFT_A', text = ': '..nextAutobutcherState()..' Autobutcher',
-              on_activate = self:callback('onToggleAutobutcher') }, '. ',
-            { key = 'CUSTOM_SHIFT_W', text = ': '..nextAutowatchState()..' Autowatch',
-              on_activate = self:callback('onToggleAutowatch') }, '.       ',
-            { key = 'CUSTOM_SHIFT_S', text = ': Sleep ('..getSleepTimer()..' ticks)',
-              on_activate = self:callback('onEditSleepTimer') }, '. ',
-        })
+function WatchList:onRenderFrame(dc, rect)
+    self.subviews.enable_toggle:setOption(plugin.isEnabled())
+    self.subviews.autowatch_toggle:setOption(plugin.autowatch_isEnabled())
+    WatchList.super.onRenderFrame(self, dc, rect)
 end
 
 function stringify(number)
-    -- cap displayed number to 3 digits
-    -- after population of 50 per race is reached pets stop breeding anyways
-    -- so probably this could safely be reduced to 99
-    local max = 999
-    if number > max then number = max end
+    if not number then return '' end
+    -- cap displayed number to 2 characters to fit in the column width
+    if number > 99 then
+        return '++'
+    end
     return tostring(number)
 end
 
-function WatchList:initListChoices()
+local SORT_WIDGETS = {
+    'sort',
+    'sort_total',
+    'sort_race',
+    'sort_fk',
+    'sort_mk',
+    'sort_fa',
+    'sort_ma',
+    'sort_watched',
+    'sort_ordered'
+}
+
+local function make_count_text(butcherable, protected)
+    local str = protected and protected > 0 and ('+%s'):format(stringify(protected)) or ''
+    str = stringify(butcherable) .. str
+    return str .. (#str > 0 and '/' or ' ')
+end
+
+local function make_row_text(race, data, total, ordered)
+    -- highlight entries where the target quota can't be met because too many are protected
+    local fk_pen = (data.fk_protected or 0) > data.fk and COLOR_LIGHTRED or nil
+    local fa_pen = (data.fa_protected or 0) > data.fa and COLOR_LIGHTRED or nil
+    local mk_pen = (data.mk_protected or 0) > data.mk and COLOR_LIGHTRED or nil
+    local ma_pen = (data.ma_protected or 0) > data.ma and COLOR_LIGHTRED or nil
+
+    local watched = data.watched == nil and '' or (data.watched and 'yes' or 'no')
+
+    return {
+        {text=total or '', width=5, rjustify=true, pad_char=' '}, '   ',
+        {text=race, width=racewidth, pad_char=' '}, ' ',
+        {text=make_count_text(data.fk_butcherable, data.fk_protected), width=6, rjustify=true, pad_char=' '},
+        {text=data.fk, width=2, pen=fk_pen, pad_char=' '}, ' ',
+        {text=make_count_text(data.mk_butcherable, data.mk_protected), width=6, rjustify=true, pad_char=' '},
+        {text=data.mk, width=2, pen=mk_pen, pad_char=' '}, ' ',
+        {text=make_count_text(data.fa_butcherable, data.fa_protected), width=6, rjustify=true, pad_char=' '},
+        {text=data.fa, width=2, pen=fa_pen, pad_char=' '}, ' ',
+        {text=make_count_text(data.ma_butcherable, data.ma_protected), width=6, rjustify=true, pad_char=' '},
+        {text=data.ma, width=2, pen=ma_pen, pad_char=' '}, ' ',
+        {text=watched, width=7, rjustify=true, pad_char=' '}, ' ',
+        {text=ordered or '', width=8, rjustify=true, pad_char=' '},
+    }
+end
+
+function WatchList:refresh(sort_widget, sort_fn)
+    sort_widget = sort_widget or 'sort'
+    sort_fn = sort_fn or self.subviews.sort:getOptionValue()
+    if sort_fn == sort_noop then
+        self.subviews[sort_widget]:cycle()
+        return
+    end
+    for _,widget_name in ipairs(SORT_WIDGETS) do
+        self.subviews[widget_name]:setOption(sort_fn)
+    end
 
     local choices = {}
 
-    -- first two rows are for "edit all races" and "edit new races"
     local settings = plugin.autobutcher_getSettings()
-    local fk = stringify(settings.fk)
-    local fa = stringify(settings.fa)
-    local mk = stringify(settings.mk)
-    local ma = stringify(settings.ma)
 
-    local watched = ''
-
-    local colwidth = 7
-
-    table.insert (choices, {
-        text = {
-            { text = '!! ALL RACES PLUS NEW', width = racewidth, pad_char = ' ' }, --' ',
-            { text = '   ', width = 3, rjustify = true,  pad_char = ' ' }, ' ',
-            { text = fk,    width = 3, rjustify = false, pad_char = ' ' }, ' ',
-            { text = '   ', width = 3, rjustify = true,  pad_char = ' ' }, ' ',
-            { text = mk,    width = 3, rjustify = false, pad_char = ' ' }, ' ',
-            { text = '   ', width = 3, rjustify = true,  pad_char = ' ' }, ' ',
-            { text = fa,    width = 3, rjustify = false, pad_char = ' ' }, ' ',
-            { text = '   ', width = 3, rjustify = true,  pad_char = ' ' }, ' ',
-            { text = ma,    width = 3, rjustify = false, pad_char = ' ' }, ' ',
-            { text = watched, width = 6, rjustify = true }
-        }
+    -- first two rows are for "edit all races" and "edit new races"
+    table.insert(choices, {
+        text=make_row_text('!! ALL RACES PLUS NEW', settings),
+        race=1,
+        data=settings,
+    })
+    table.insert(choices, {
+        text=make_row_text('!! ONLY NEW RACES', settings),
+        race=2,
+        data=settings,
     })
 
-    table.insert (choices, {
-        text = {
-            { text = '!! ONLY NEW RACES', width = racewidth, pad_char = ' ' }, --' ',
-            { text = '   ', width = 3, rjustify = true,  pad_char = ' ' }, ' ',
-            { text = fk,    width = 3, rjustify = false, pad_char = ' ' }, ' ',
-            { text = '   ', width = 3, rjustify = true,  pad_char = ' ' }, ' ',
-            { text = mk,    width = 3, rjustify = false, pad_char = ' ' }, ' ',
-            { text = '   ', width = 3, rjustify = true,  pad_char = ' ' }, ' ',
-            { text = fa,    width = 3, rjustify = false, pad_char = ' ' }, ' ',
-            { text = '   ', width = 3, rjustify = true,  pad_char = ' ' }, ' ',
-            { text = ma,    width = 3, rjustify = false, pad_char = ' ' }, ' ',
-            { text = watched, width = 6, rjustify = true }
-        }
-    })
+    local hide_zero = self.subviews.hide_zero:getOptionValue()
 
-    local watchlist = plugin.autobutcher_getWatchList()
-
-    for i,entry in ipairs(watchlist) do
-        fk = stringify(entry.fk)
-        fa = stringify(entry.fa)
-        mk = stringify(entry.mk)
-        ma = stringify(entry.ma)
-        if viewmode == 1 then
-            fkc = stringify(entry.fk_total)
-            fac = stringify(entry.fa_total)
-            mkc = stringify(entry.mk_total)
-            mac = stringify(entry.ma_total)
+    for _, data in ipairs(plugin.autobutcher_getWatchList()) do
+        if hide_zero then
+            local target = data.fk + data.mk + data.fa + data.ma
+            if target == 0 then goto continue end
         end
-        if viewmode == 2 then
-            fkc = stringify(entry.fk_protected)
-            fac = stringify(entry.fa_protected)
-            mkc = stringify(entry.mk_protected)
-            mac = stringify(entry.ma_protected)
-        end
-        if viewmode == 3 then
-            fkc = stringify(entry.fk_butcherable)
-            fac = stringify(entry.fa_butcherable)
-            mkc = stringify(entry.mk_butcherable)
-            mac = stringify(entry.ma_butcherable)
-        end
-        if viewmode == 4 then
-            fkc = stringify(entry.fk_butcherflag)
-            fac = stringify(entry.fa_butcherflag)
-            mkc = stringify(entry.mk_butcherflag)
-            mac = stringify(entry.ma_butcherflag)
-        end
-        local butcher_ordered = entry.fk_butcherflag + entry.fa_butcherflag + entry.mk_butcherflag + entry.ma_butcherflag
-        local bo = ' '
-        if butcher_ordered > 0 then bo = stringify(butcher_ordered) end
-
-        local watched = 'no'
-        if entry.watched then watched = 'yes' end
-
-        local racestr = entry.name
-
-        -- highlight entries where the target quota can't be met because too many are protected
-        bad_pen = COLOR_LIGHTRED
-        good_pen = NONE -- this is stupid, but it works. sue me
-        fk_pen = good_pen
-        fa_pen = good_pen
-        mk_pen = good_pen
-        ma_pen = good_pen
-        if entry.fk_protected > entry.fk then fk_pen = bad_pen end
-        if entry.fa_protected > entry.fa then fa_pen = bad_pen end
-        if entry.mk_protected > entry.mk then mk_pen = bad_pen end
-        if entry.ma_protected > entry.ma then ma_pen = bad_pen end
-
-        table.insert (choices, {
-            text = {
-                { text = racestr, width = racewidth, pad_char = ' ' }, --' ',
-                { text = fkc, width = 3, rjustify = true,  pad_char = ' ' }, '/',
-                { text = fk,  width = 3, rjustify = false, pad_char = ' ', pen = fk_pen }, ' ',
-                { text = mkc, width = 3, rjustify = true,  pad_char = ' ' }, '/',
-                { text = mk,  width = 3, rjustify = false, pad_char = ' ', pen = mk_pen }, ' ',
-                { text = fac, width = 3, rjustify = true,  pad_char = ' ' }, '/',
-                { text = fa,  width = 3, rjustify = false, pad_char = ' ', pen = fa_pen }, ' ',
-                { text = mac, width = 3, rjustify = true,  pad_char = ' ' }, '/',
-                { text = ma,  width = 3, rjustify = false, pad_char = ' ', pen = ma_pen }, ' ',
-                { text = watched, width = 6, rjustify = true, pad_char = ' ' }, ' ',
-                { text = bo,  width = 8, rjustify = true, pad_char = ' ' }
-            },
-            obj = entry,
+        local total = data.fk_total + data.mk_total + data.fa_total + data.ma_total
+        local ordered = data.fk_butcherflag + data.fa_butcherflag + data.mk_butcherflag + data.ma_butcherflag
+        table.insert(choices, {
+            text=make_row_text(data.name, data, total, ordered ~= 0 and ordered or nil),
+            race=data.name,
+            total=total,
+            ordered=ordered,
+            data=data,
         })
+        ::continue::
     end
 
-    local list = self.subviews.list
-    list:setChoices(choices)
+    table.sort(choices, self.subviews.sort:getOptionValue())
+    self.subviews.list:setChoices(choices)
+end
+
+function WatchList:onDoubleClick(_, choice)
+    local x = self.subviews.list:getMousePos()
+    if x <= 32 then return
+    elseif x <= 41 then self.subviews.fk.on_activate()
+    elseif x <= 42 then return
+    elseif x <= 50 then self.subviews.mk.on_activate()
+    elseif x <= 51 then return
+    elseif x <= 59 then self.subviews.fa.on_activate()
+    elseif x <= 60 then return
+    elseif x <= 69 then self.subviews.ma.on_activate()
+    elseif x <= 70 then return
+    elseif x <= 76 then self.subviews.watch.on_activate()
+    elseif x <= 77 then return
+    elseif x <= 90 and choice.ordered then
+        if choice.ordered == 0 then
+            self.subviews.butcher.on_activate()
+        else
+            self.subviews.unbutcher.on_activate()
+        end
+    end
 end
 
 -- check the user input for target population values
-function WatchList:checkUserInput(count, text)
+local function checkUserInput(count, text)
     if count == nil then
         dlg.showMessage('Invalid Number', 'This is not a number: '..text..NEWLINE..'(for zero enter a 0)', COLOR_LIGHTRED)
         return false
@@ -276,251 +603,105 @@ function WatchList:checkUserInput(count, text)
     return true
 end
 
--- check the user input for sleep timer
-function WatchList:checkUserInputSleep(count, text)
-    if count == nil then
-        dlg.showMessage('Invalid Number', 'This is not a number: '..text..NEWLINE..'(for zero enter a 0)', COLOR_LIGHTRED)
-        return false
+local function get_race(choice)
+    if choice.race == 1 then
+        return 'ALL RACES PLUS NEW'
+    elseif choice.race == 2 then
+        return 'ONLY NEW RACES'
     end
-    if count < 1000 then
-        dlg.showMessage('Invalid Number',
-            'Minimum allowed timer value is 1000!'..NEWLINE..'Too low values could decrease performance'..NEWLINE..'and are not necessary!',
-            COLOR_LIGHTRED)
-        return false
-    end
-    return true
+    return choice.race
 end
 
-function WatchList:onEditFK()
-    local selidx,selobj = self.subviews.list:getSelected()
-    local settings = plugin.autobutcher_getSettings()
-    local fk = settings.fk
-    local mk = settings.mk
-    local fa = settings.fa
-    local ma = settings.ma
-    local race = 'ALL RACES PLUS NEW'
-    local id = -1
-    local watched = false
-
-    if selidx == 2 then
-        race = 'ONLY NEW RACES'
-    end
-
-    if selidx > 2 then
-        local entry = selobj.obj
-        fk = entry.fk
-        mk = entry.mk
-        fa = entry.fa
-        ma = entry.ma
-        race = entry.name
-        id = entry.id
-        watched = entry.watched
-    end
+function WatchList:editVal(desc, var)
+    local _, choice = self.subviews.list:getSelected()
+    local race = get_race(choice)
+    local data = choice.data
 
     dlg.showInputPrompt(
         'Race: '..race,
-        'Enter desired maximum of female kids:',
+        ('Enter desired target for %s:'):format(desc),
         COLOR_WHITE,
-        ' '..fk,
+        ' '..data[var],
         function(text)
             local count = tonumber(text)
-            if self:checkUserInput(count, text) then
-                fk = count
-                if selidx == 1 then
-                    plugin.autobutcher_setDefaultTargetAll( fk, mk, fa, ma )
+            if checkUserInput(count, text) then
+                data[var] = count
+                if choice.race == 1 then
+                    plugin.autobutcher_setDefaultTargetAll(data.fk, data.mk, data.fa, data.ma)
+                elseif choice.race == 2 then
+                    plugin.autobutcher_setDefaultTargetNew(data.fk, data.mk, data.fa, data.ma)
+                else
+                    plugin.autobutcher_setWatchListRace(data.id, data.fk, data.mk, data.fa, data.ma, data.watched)
                 end
-                if selidx == 2 then
-                    plugin.autobutcher_setDefaultTargetNew( fk, mk, fa, ma )
-                end
-                if selidx > 2 then
-                    plugin.autobutcher_setWatchListRace(id, fk, mk, fa, ma, watched)
-                end
-                self:initListChoices()
+                self:refresh()
             end
         end
     )
 end
 
-function WatchList:onEditMK()
-    local selidx,selobj = self.subviews.list:getSelected()
-    local settings = plugin.autobutcher_getSettings()
-    local fk = settings.fk
-    local mk = settings.mk
-    local fa = settings.fa
-    local ma = settings.ma
-    local race = 'ALL RACES PLUS NEW'
-    local id = -1
-    local watched = false
-
-    if selidx == 2 then
-        race = 'ONLY NEW RACES'
-    end
-
-    if selidx > 2 then
-        local entry = selobj.obj
-        fk = entry.fk
-        mk = entry.mk
-        fa = entry.fa
-        ma = entry.ma
-        race = entry.name
-        id = entry.id
-        watched = entry.watched
-    end
+-- set whole row (fk, mk, fa, ma) to one value
+function WatchList:onSetRow()
+    local _, choice = self.subviews.list:getSelected()
+    local race = get_race(choice)
+    local data = choice.data
 
     dlg.showInputPrompt(
-        'Race: '..race,
-        'Enter desired maximum of male kids:',
+        'Set whole row for '..race,
+        'Enter desired value for all targets:',
         COLOR_WHITE,
-        ' '..mk,
+        ' ',
         function(text)
             local count = tonumber(text)
-            if self:checkUserInput(count, text) then
-                mk = count
-                if selidx == 1 then
-                    plugin.autobutcher_setDefaultTargetAll( fk, mk, fa, ma )
+            if checkUserInput(count, text) then
+                if choice.race == 1 then
+                    plugin.autobutcher_setDefaultTargetAll(count, count, count, count)
+                elseif choice.race == 2 then
+                    plugin.autobutcher_setDefaultTargetNew(count, count, count, count)
+                else
+                    plugin.autobutcher_setWatchListRace(data.id, count, count, count, count, data.watched)
                 end
-                if selidx == 2 then
-                    plugin.autobutcher_setDefaultTargetNew( fk, mk, fa, ma )
-                end
-                if selidx > 2 then
-                    plugin.autobutcher_setWatchListRace(id, fk, mk, fa, ma, watched)
-                end
-                self:initListChoices()
+                self:refresh()
             end
         end
     )
 end
 
-function WatchList:onEditFA()
-    local selidx,selobj = self.subviews.list:getSelected()
-    local settings = plugin.autobutcher_getSettings()
-    local fk = settings.fk
-    local mk = settings.mk
-    local fa = settings.fa
-    local ma = settings.ma
-    local race = 'ALL RACES PLUS NEW'
-    local id = -1
-    local watched = false
+function WatchList:zeroOut()
+    local _, choice = self.subviews.list:getSelected()
+    local data = choice.data
 
-    if selidx == 2 then
-        race = 'ONLY NEW RACES'
-    end
-
-    if selidx > 2 then
-        local entry = selobj.obj
-        fk = entry.fk
-        mk = entry.mk
-        fa = entry.fa
-        ma = entry.ma
-        race = entry.name
-        id = entry.id
-        watched = entry.watched
-    end
-
-    dlg.showInputPrompt(
-        'Race: '..race,
-        'Enter desired maximum of female adults:',
-        COLOR_WHITE,
-        ' '..fa,
-        function(text)
-            local count = tonumber(text)
-            if self:checkUserInput(count, text) then
-                fa = count
-                if selidx == 1 then
-                    plugin.autobutcher_setDefaultTargetAll( fk, mk, fa, ma )
-                end
-                if selidx == 2 then
-                    plugin.autobutcher_setDefaultTargetNew( fk, mk, fa, ma )
-                end
-                if selidx > 2 then
-                    plugin.autobutcher_setWatchListRace(id, fk, mk, fa, ma, watched)
-                end
-                self:initListChoices()
+    local count = 0
+    if choice.race == 1 then
+        dlg.showYesNoPrompt(
+            'Are you sure?',
+            'Really set all targets for all races to 0?',
+            COLOR_YELLOW,
+            function()
+                plugin.autobutcher_setDefaultTargetAll(count, count, count, count)
+                self:refresh()
             end
-        end
-    )
-end
-
-function WatchList:onEditMA()
-    local selidx,selobj = self.subviews.list:getSelected()
-    local settings = plugin.autobutcher_getSettings()
-    local fk = settings.fk
-    local mk = settings.mk
-    local fa = settings.fa
-    local ma = settings.ma
-    local race = 'ALL RACES PLUS NEW'
-    local id = -1
-    local watched = false
-
-    if selidx == 2 then
-        race = 'ONLY NEW RACES'
+        )
+    elseif choice.race == 2 then
+        plugin.autobutcher_setDefaultTargetNew(count, count, count, count)
+        self:refresh()
+    else
+        plugin.autobutcher_setWatchListRace(data.id, count, count, count, count, data.watched)
+        self:refresh()
     end
-
-    if selidx > 2 then
-        local entry = selobj.obj
-        fk = entry.fk
-        mk = entry.mk
-        fa = entry.fa
-        ma = entry.ma
-        race = entry.name
-        id = entry.id
-        watched = entry.watched
-    end
-
-    dlg.showInputPrompt(
-        'Race: '..race,
-        'Enter desired maximum of male adults:',
-        COLOR_WHITE,
-        ' '..ma,
-        function(text)
-            local count = tonumber(text)
-            if self:checkUserInput(count, text) then
-                ma = count
-                if selidx == 1 then
-                    plugin.autobutcher_setDefaultTargetAll( fk, mk, fa, ma )
-                end
-                if selidx == 2 then
-                    plugin.autobutcher_setDefaultTargetNew( fk, mk, fa, ma )
-                end
-                if selidx > 2 then
-                    plugin.autobutcher_setWatchListRace(id, fk, mk, fa, ma, watched)
-                end
-                self:initListChoices()
-            end
-        end
-    )
-end
-
-function WatchList:onEditSleepTimer()
-    local sleep = getSleepTimer()
-    dlg.showInputPrompt(
-        'Edit Sleep Timer',
-        'Enter new sleep timer in ticks:'..NEWLINE..'(1 ingame day equals 1200 ticks)',
-        COLOR_WHITE,
-        ' '..sleep,
-        function(text)
-            local count = tonumber(text)
-            if self:checkUserInputSleep(count, text) then
-                sleep = count
-                setSleepTimer(sleep)
-                self:updateBottom()
-            end
-        end
-    )
 end
 
 function WatchList:onToggleWatching()
-    local selidx,selobj = self.subviews.list:getSelected()
-    if selidx > 2 then
-        local entry = selobj.obj
-        plugin.autobutcher_setWatchListRace(entry.id, entry.fk, entry.mk, entry.fa, entry.ma, not entry.watched)
+    local _, choice = self.subviews.list:getSelected()
+    if type(choice.race) == 'string' then
+        local data = choice.data
+        plugin.autobutcher_setWatchListRace(data.id, data.fk, data.mk, data.fa, data.ma, not data.watched)
     end
-    self:initListChoices()
+    self:refresh()
 end
 
 function WatchList:onDeleteEntry()
-    local selidx,selobj = self.subviews.list:getSelected()
-    if(selidx < 3 or selobj == nil) then
+    local _, choice = self.subviews.list:getSelected()
+    if type(choice.race) ~= 'string' then
         return
     end
     dlg.showYesNoPrompt(
@@ -528,100 +709,53 @@ function WatchList:onDeleteEntry()
         'Really delete the selected entry?'..NEWLINE..'(you could just toggle watch instead)',
         COLOR_YELLOW,
         function()
-            plugin.autobutcher_removeFromWatchList(selobj.obj.id)
-            self:initListChoices()
+            plugin.autobutcher_removeFromWatchList(choice.data.id)
+            self:refresh()
         end
     )
-end
-
-function WatchList:onAddRace()
-    print('onAddRace - not implemented yet')
 end
 
 function WatchList:onUnbutcherRace()
-    local selidx,selobj = self.subviews.list:getSelected()
-    if selidx < 3 then dlg.showMessage('Error', 'Select a specific race.',    COLOR_LIGHTRED)    end
-    if selidx > 2 then
-        local entry = selobj.obj
-        local race = entry.name
-        plugin.autobutcher_unbutcherRace(entry.id)
-        self:initListChoices()
-        self:updateBottom()
+    local _, choice = self.subviews.list:getSelected()
+    if type(choice.race) ~= 'string' then
+        dlg.showMessage('Error', 'Please select a specific race.', COLOR_LIGHTRED)
+        return
     end
+    plugin.autobutcher_unbutcherRace(choice.data.id)
+    self:refresh()
 end
 
 function WatchList:onButcherRace()
-    local selidx,selobj = self.subviews.list:getSelected()
-    if selidx < 3 then dlg.showMessage('Error', 'Select a specific race.',    COLOR_LIGHTRED) end
-    if selidx > 2 then
-        local entry = selobj.obj
-        local race = entry.name
-        plugin.autobutcher_butcherRace(entry.id)
-        self:initListChoices()
-        self:updateBottom()
+    local _, choice = self.subviews.list:getSelected()
+    if type(choice.race) ~= 'string' then
+        dlg.showMessage('Error', 'Please select a specific race.', COLOR_LIGHTRED)
+        return
     end
+    plugin.autobutcher_butcherRace(choice.data.id)
+    self:refresh()
 end
 
--- set whole row (fk, mk, fa, ma) to one value
-function WatchList:onSetRow()
-    local selidx,selobj = self.subviews.list:getSelected()
-    local race = 'ALL RACES PLUS NEW'
-    local id = -1
-    local watched = false
-
-    if selidx == 2 then
-        race = 'ONLY NEW RACES'
+function WatchList:onUnbutcherAll()
+    for _, data in ipairs(plugin.autobutcher_getWatchList()) do
+        plugin.autobutcher_unbutcherRace(data.id)
     end
 
-    local watchindex = selidx - 3
-    if selidx > 2 then
-        local entry = selobj.obj
-        race = entry.name
-        id = entry.id
-        watched = entry.watched
-    end
+    self:refresh()
+end
 
-    dlg.showInputPrompt(
-        'Set whole row for '..race,
-        'Enter desired maximum for all subtypes:',
-        COLOR_WHITE,
-        ' ',
-        function(text)
-            local count = tonumber(text)
-            if self:checkUserInput(count, text) then
-                if selidx == 1 then
-                    plugin.autobutcher_setDefaultTargetAll( count, count, count, count )
-                end
-                if selidx == 2 then
-                    plugin.autobutcher_setDefaultTargetNew( count, count, count, count )
-                end
-                if selidx > 2 then
-                    plugin.autobutcher_setWatchListRace(id, count, count, count, count, watched)
-                end
-                self:initListChoices()
+function WatchList:onButcherAll()
+    dlg.showYesNoPrompt(
+        'Butcher all animals',
+        'Warning! This will mark ALL animals for butchering.'..NEWLINE..'Proceed with caution.',
+        COLOR_YELLOW,
+        function()
+            for _, data in ipairs(plugin.autobutcher_getWatchList()) do
+                plugin.autobutcher_butcherRace(data.id)
             end
+
+            self:refresh()
         end
     )
-end
-
-function WatchList:onToggleAutobutcher()
-    if(plugin.isEnabled()) then
-        plugin.setEnabled(false)
-    else
-        plugin.setEnabled(true)
-    end
-    self:initListChoices()
-    self:updateBottom()
-end
-
-function WatchList:onToggleAutowatch()
-    if(plugin.autowatch_isEnabled()) then
-        plugin.autowatch_setEnabled(false)
-    else
-        plugin.autowatch_setEnabled(true)
-    end
-    self:initListChoices()
-    self:updateBottom()
 end
 
 function WatchList:onDismiss()

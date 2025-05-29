@@ -1,7 +1,6 @@
 -- GUI for exploring unit syndromes (and their effects).
 
 local gui = require('gui')
-local utils = require('utils')
 local widgets = require('gui.widgets')
 
 local function getEffectTarget(target)
@@ -24,18 +23,16 @@ end
 
 local function getEffectCreatureName(effect)
     if effect.race_str == "" then
-        return "UNKNOWN"
+        return "unknown"
     end
 
     local creature = df.global.world.raws.creatures.all[effect.race[0]]
 
     if effect.caste_str == "DEFAULT" then
-        return ("%s%s"):format(string.upper(creature.name[0]), (", %s"):format(effect.caste_str))
+        return creature.name[0]
     else
-        -- TODO: Caste seems to be entirely unused.
         local caste = creature.caste[effect.caste[0]]
-
-        return ("%s%s"):format(string.upper(creature.name[0]), (", %s"):format(string.upper(caste.name[0])))
+        return ("%s%s"):format(creature.name[0], (", %s"):format(caste.caste_name[0]))
     end
 end
 
@@ -161,7 +158,7 @@ local EffectFlagDescription = {
         return ("REMOVES: \n%s"):format(table.concat(tags, "  \n"))
     end,
     [df.creature_interaction_effect_type.DISPLAY_TILE] = function(effect)
-        return ("TILE: %s %s"):format(effect.color, effect.tile)
+        return ("TILE: %s (%s, %s, %s)"):format(effect.tile, effect.sym_color[0], effect.sym_color[1], effect.sym_color[2])
     end,
     [df.creature_interaction_effect_type.FLASH_TILE] = function(effect)
         return ("FLASH TILE: %s %s"):format(effect.sym_color[1], effect.sym_color[0])
@@ -179,11 +176,11 @@ local EffectFlagDescription = {
         return ("ABILITY: %s"):format(getEffectInteraction(effect))
     end,
     [df.creature_interaction_effect_type.SKILL_ROLL_ADJUST] = function(effect)
-        return ("MODIFIER=%s, CHANGE=%s"):format(effect.multiplier, effect.chance)
+        return ("MODIFIER=%s, CHANCE=%s"):format(effect.multiplier, effect.prob)
     end,
     [df.creature_interaction_effect_type.BODY_TRANSFORMATION] = function(effect)
-        if effect.chance > 0 then
-            return ("%s, CHANCE=%s%%"):format(getEffectCreatureName(effect), effect.chance)
+        if effect.prob > 0 then
+            return ("%s, CHANCE=%s%%"):format(getEffectCreatureName(effect), effect.prob)
         else
             return getEffectCreatureName(effect)
         end
@@ -200,19 +197,22 @@ local EffectFlagDescription = {
 
         return ("RECIEVED DAMAGE SCALED BY %s%%%s"):format(
             (effect.fraction_mul * 100 / effect.fraction_div * 100) / 100,
-            material and ("vs. %s"):format(material.stone_name)
+            material and ("vs. %s"):format(material.stone_name) or ''
         )
     end,
-    -- TODO: Unfinished, unknown fields from previous script.
     [df.creature_interaction_effect_type.BODY_MAT_INTERACTION] = function(effect)
         return ("%s %s"):format(effect.interaction_name, effect.interaction_id)
     end,
-    -- TODO: Unfinished.
     [df.creature_interaction_effect_type.BODY_APPEARANCE_MODIFIER] = function(effect)
-        return ("TODO"):format(effect.interaction_name, effect.interaction_id)
+        return ("VALUE=%s MODIFIER_TYPE=%s"):format(
+            effect.appearance_modifier_value,
+            df.appearance_modifier_type[effect.appearance_modifier])
     end,
     [df.creature_interaction_effect_type.BP_APPEARANCE_MODIFIER] = function(effect)
-        return ("VALUE=%s CHANGE_TYPE_ENUM=%s%s"):format(effect.value, effect.unk_6c, getEffectTarget(effect.target))
+        return ("VALUE=%s MODIFIER_TYPE=%s CHANGE_TYPE_ENUM=%s"):format(
+            effect.appearance_modifier_value,
+            df.appearance_modifier_type[effect.appearance_modifier],
+            getEffectTarget(effect.target))
     end,
     [df.creature_interaction_effect_type.DISPLAY_NAME] = function(effect)
         return ("SET NAME: %s"):format(effect.name)
@@ -236,28 +236,30 @@ local function getEffectDescription(effect)
 end
 
 local function getSyndromeName(syndrome_raw)
-    local is_transformation = false
+    local transform_creature_name
 
-    for _, effect in pairs(syndrome_raw.ce) do
+    for _, effect in ipairs(syndrome_raw.ce) do
         if df.creature_interaction_effect_body_transformationst:is_instance(effect) then
-            is_transformation = true
+            transform_creature_name = getEffectCreatureName(effect)
+        elseif df.creature_interaction_effect_display_namest:is_instance(effect) then
+            return effect.name:gsub("^%l", string.upper)
         end
     end
 
     if syndrome_raw.syn_name ~= "" then
-        syndrome_raw.syn_name:gsub("^%l", string.upper)
-    elseif is_transformation then
-        return "Body transformation"
+        return syndrome_raw.syn_name:gsub("^%l", string.upper)
+    elseif transform_creature_name then
+        return ("Body transformation: %s"):format(transform_creature_name)
     end
 
     return "Mystery"
 end
 
 local function getSyndromeEffects(syndrome_type)
-    local syndrome_raw = df.global.world.raws.syndromes.all[syndrome_type]
+    local syndrome_raw = df.global.world.raws.mat_table.syndromes.all[syndrome_type]
     local syndrome_effects = {}
 
-    for _, effect in pairs(syndrome_raw.ce) do
+    for _, effect in ipairs(syndrome_raw.ce) do
         table.insert(syndrome_effects, effect)
     end
 
@@ -269,7 +271,7 @@ local function getSyndromeDescription(syndrome_raw, syndrome)
     local syndrome_min_duration = nil
     local syndrome_max_duration = nil
 
-    for _, effect in pairs(syndrome_raw.ce) do
+    for _, effect in ipairs(syndrome_raw.ce) do
         syndrome_min_duration = math.min(syndrome_min_duration or effect["end"], effect["end"])
         syndrome_max_duration = math.max(syndrome_max_duration or effect["end"], effect["end"])
     end
@@ -282,7 +284,7 @@ local function getSyndromeDescription(syndrome_raw, syndrome)
         syndrome_duration = ("%s-%s"):format(syndrome_min_duration, syndrome_max_duration)
     end
 
-    return ("%-22s %s%s \n%s effects"):format(
+    return ("%-29s %s%s \n%s effects"):format(
         getSyndromeName(syndrome_raw),
         syndrome and ("%s of "):format(syndrome.ticks) or "",
         syndrome_duration,
@@ -300,23 +302,11 @@ local function getUnitSyndromes(unit)
     return unit_syndromes
 end
 
-local function getCitizens()
-    local units = {}
-
-    for _, unit in pairs(df.global.world.units.active) do
-        if dfhack.units.isCitizen(unit) and dfhack.units.isDwarf(unit) then
-            table.insert(units, unit)
-        end
-    end
-
-    return units
-end
-
 local function getLivestock()
     local units = {}
 
     for _, unit in pairs(df.global.world.units.active) do
-        local caste_flags = unit.caste and df.global.world.raws.creatures.all[unit.race].caste[unit.caste].flags
+        local caste_flags = dfhack.units.getCasteRaw(unit).flags
 
         if dfhack.units.isFortControlled(unit) and caste_flags and (caste_flags.PET or caste_flags.PET_EXOTIC) then
             table.insert(units, unit)
@@ -344,7 +334,7 @@ local function getHostiles()
     local units = {}
 
     for _, unit in pairs(df.global.world.units.active) do
-        if dfhack.units.isDanger(unit) or dfhack.units.isGreatDanger(unit) then
+        if dfhack.units.isDanger(unit) then
             table.insert(units, unit)
         end
     end
@@ -365,9 +355,9 @@ end
 UnitSyndromes = defclass(UnitSyndromes, widgets.Window)
 UnitSyndromes.ATTRS {
     frame_title='Unit Syndromes',
-    frame={w=50, h=30},
+    frame={w=54, h=30},
     resizable=true,
-    resize_min={w=43, h=20},
+    resize_min={w=30, h=20},
 }
 
 function UnitSyndromes:init()
@@ -382,7 +372,7 @@ function UnitSyndromes:init()
                     view_id = 'category',
                     frame = {t = 0, l = 0},
                     choices = {
-                        { text = "Dwarves", get_choices = getCitizens },
+                        { text = "Citizens and Residents", get_choices = dfhack.units.getCitizens },
                         { text = "Livestock", get_choices = getLivestock },
                         { text = "Wild animals", get_choices = getWildAnimals },
                         { text = "Hostile", get_choices = getHostiles },
@@ -448,11 +438,11 @@ function UnitSyndromes:onInput(keys)
     return UnitSyndromes.super.onInput(self, keys)
 end
 
-function UnitSyndromes:showUnits(index, choice)
+function UnitSyndromes:showUnits(_, choice)
     local choices = {}
 
     if choice.text == "All syndromes" then
-        for _, syndrome in pairs(df.global.world.raws.syndromes.all) do
+        for _, syndrome in pairs(df.global.world.raws.mat_table.syndromes.all) do
             if #syndrome.ce == 0 then
                 goto skipsyndrome
             end
@@ -478,9 +468,8 @@ function UnitSyndromes:showUnits(index, choice)
 
         table.insert(choices, {
             unit_id = unit.id,
-            text = ("%s %s \n%s syndromes"):format(
-                string.upper(df.global.world.raws.creatures.all[unit.race].name[0]),
-                dfhack.TranslateName(unit.name),
+            text = ("%s\n%s syndrome(s)"):format(
+                dfhack.units.getReadableName(unit),
                 #unit_syndromes
             ),
         })
@@ -493,7 +482,7 @@ function UnitSyndromes:showUnits(index, choice)
 end
 
 function UnitSyndromes:showUnitSyndromes(index, choice)
-    local unit = utils.binsearch(df.global.world.units.all, choice.unit_id, 'id')
+    local unit = df.unit.find(choice.unit_id)
     local unit_syndromes = getUnitSyndromes(unit)
     local choices = {}
 
@@ -502,7 +491,7 @@ function UnitSyndromes:showUnitSyndromes(index, choice)
     end
 
     for _, syndrome in pairs(unit_syndromes) do
-        local syndrome_raw = df.global.world.raws.syndromes.all[syndrome.type]
+        local syndrome_raw = df.global.world.raws.mat_table.syndromes.all[syndrome.type]
 
         if #syndrome_raw.ce == 0 then
             goto skipsyndrome

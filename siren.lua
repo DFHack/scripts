@@ -1,16 +1,6 @@
 -- Wakes up the sleeping, ends parties
---[====[
 
-siren
-=====
-Wakes up sleeping units and stops parties, either everywhere or in the burrows
-given as arguments. In return, adds bad thoughts about noise, tiredness and lack
-of protection. The script is intended for emergencies, e.g. when a siege
-appears, and all your military is partying.
-
-]====]
-
-local utils = require 'utils'
+local utils = require('utils')
 
 local args = {...}
 local burrows = {} --as:df.burrow[]
@@ -90,9 +80,9 @@ for _,v in ipairs(df.global.plotinfo.invasions.list) do
 end
 
 -- Stop rest
-for _,v in ipairs(df.global.world.units.active) do
+for _,v in ipairs(dfhack.units.getCitizens()) do
     local x,y,z = dfhack.units.getPosition(v)
-    if x and dfhack.units.isCitizen(v) and is_in_burrows(xyz2pos(x,y,z)) then
+    if x and is_in_burrows(xyz2pos(x,y,z)) then
         if not in_siege and v.military.squad_id < 0 then
             add_thought(v, df.emotion_type.Nervousness, df.unit_thought_type.LackProtection)
         end

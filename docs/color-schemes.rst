@@ -3,7 +3,7 @@ color-schemes
 
 .. dfhack-tool::
     :summary: Modify the colors used by the DF UI.
-    :tags: unavailable fort gameplay graphics
+    :tags: unavailable
 
 This tool allows you to set exactly which shades of colors should be used in the
 DF interface color palette.

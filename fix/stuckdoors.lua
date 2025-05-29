@@ -22,7 +22,7 @@ end
 -- one above like dfhack.items.getItemsInBox().
 function nonDoorItemOnTile(x, y, z)
     local count = 0
-    for _,item in ipairs(df.global.world.items.all) do
+    for _,item in ipairs(df.global.world.items.other.IN_PLAY) do
         if item.pos.x == x and item.pos.y == y and item.pos.z == z then
             count = count + 1
             if count > 1 then return true end

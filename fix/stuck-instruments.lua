@@ -10,7 +10,8 @@ function fixInstruments(opts)
             if ref:getType() == df.general_ref_type.ACTIVITY_EVENT then
                 local activity = df.activity_entry.find(ref.activity_id)
                 if not activity then
-                    print(('Found stuck instrument: %s'):format(dfhack.items.getDescription(item, 0, true)))
+                    print(dfhack.df2console(('Found stuck instrument: %s'):format(
+                        dfhack.items.getDescription(item, 0, true))))
                     if not opts.dry_run then
                         --remove dead activity reference
                         item.general_refs[i]:delete()
@@ -21,6 +22,16 @@ function fixInstruments(opts)
                     break
                 end
             end
+        end
+        -- instruments can also end up in the state where they are unreferenced, but
+        -- still have the in_job flag set
+        if item.flags.in_job and #item.general_refs == 0 then
+            print(dfhack.df2console(('Found stuck instrument: %s'):format(
+                dfhack.items.getDescription(item, 0, true))))
+            if not opts.dry_run then
+                item.flags.in_job = false
+            end
+            fixed = fixed + 1
         end
     end
 

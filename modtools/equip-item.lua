@@ -94,6 +94,6 @@ if not part then
 end
 
 local mode = args.mode
-mode = df.unit_inventory_item.T_mode[mode] --luacheck: retype
+mode = df.inv_item_role_type[mode] --luacheck: retype
 
 equipItem(unit, item, partId, mode)

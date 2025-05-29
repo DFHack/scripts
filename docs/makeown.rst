@@ -6,7 +6,8 @@ makeown
     :tags: fort armok units
 
 Select a unit in the UI and run this tool to converts that unit to be a fortress
-citizen (if sentient). It also removes their foreign affiliation, if any.
+citizen (if sentient). It also removes their foreign affiliation, if any, and
+removes the unit from any current conflict they are engaged in.
 
 This tool also fixes :bug:`10921`, where you request workers from your
 holdings, but they come with the "Merchant" profession and are unable to

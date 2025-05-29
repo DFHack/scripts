@@ -1,16 +1,5 @@
 -- an experimental lighting engine
---[====[
 
-devel/light
-===========
-An experimental lighting engine for DF, using the `rendermax` plugin.
-
-Call ``devel/light static`` to not recalculate lighting when in game.
-Press :kbd:`~` to recalculate lighting. Press :kbd:`\`` to exit.
-
-]====]
-
-local gui = require 'gui'
 local guidm = require 'gui.dwarfmode'
 local render = require 'plugins.rendermax'
 
@@ -26,12 +15,6 @@ function setCell(x,y,cell)
     cell.fo=cell.fo or {r=0,g=0,b=0}
     cell.bo=cell.bo or {r=0,g=0,b=0}
     render.setCell(x,y,cell)
-end
-function getCursorPos()
-    local g_cursor=df.global.cursor
-    if g_cursor.x ~= -30000 then
-        return copyall(g_cursor)
-    end
 end
 --luacheck: skip
 function falloff(color,sqDist,maxdist)
@@ -273,7 +256,7 @@ function LightOverlay:calculateLightSun()
     end
 end
 function LightOverlay:calculateLightCursor()
-    local c=getCursorPos()
+    local c=guidm.getCursorPos()
 
     if c then
 

@@ -3,7 +3,7 @@ modtools/syndrome-trigger
 
 .. dfhack-tool::
     :summary: Trigger DFHack commands when units acquire syndromes.
-    :tags: unavailable dev
+    :tags: unavailable
 
 This script helps you set up commands that trigger when syndromes are applied to
 units.
@@ -13,9 +13,9 @@ Usage
 
 ::
 
-    modutils/syndrome-trigger --clear
-    modutils/syndrome-trigger --syndrome <name> --command [ <command> ]
-    modutils/syndrome-trigger --synclass <class> --command [ <command> ]
+    modtools/syndrome-trigger --clear
+    modtools/syndrome-trigger --syndrome <name> --command [ <command> ]
+    modtools/syndrome-trigger --synclass <class> --command [ <command> ]
 
 Options
 -------
@@ -41,4 +41,4 @@ Examples
 
 ::
 
-    modutils/syndrome-trigger --synclass VAMPCURSE --command [ modtools/spawn-flow -flowType Dragonfire -location [ \\LOCATION ] ]
+    modtools/syndrome-trigger --synclass VAMPCURSE --command [ modtools/spawn-flow -flowType Dragonfire -location [ \\LOCATION ] ]

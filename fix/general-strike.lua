@@ -12,7 +12,7 @@ local function fix_seeds(quiet)
                 v.flags.in_building = true
                 for _,i in ipairs(bld.contained_items) do
                     if i.item.id == v.id then
-                        i.use_mode = 2
+                        i.use_mode = df.building_item_role_type.PERM
                     end
                 end
                 count = count + 1

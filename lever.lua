@@ -1,5 +1,5 @@
 -- Inspect and pull levers
-local argparse = require('argparse')
+--@ module = true
 
 function leverPullJob(lever, priority)
     local ref = df.general_ref_building_holderst:new()
@@ -18,8 +18,6 @@ function leverPullJob(lever, priority)
 
     dfhack.job.linkIntoWorld(job, true)
     dfhack.job.checkBuildingsNow()
-
-    print(leverDescribe(lever))
 end
 
 function leverPullInstant(lever)
@@ -35,9 +33,13 @@ function leverPullInstant(lever)
     else
         lever.state = 1
     end
-
-    print(leverDescribe(lever))
 end
+
+local flag_names = {
+    [df.building_type.Bridge]={closed="raised", closing="raising", opening="lowering"},
+    [df.building_type.Weapon]={closed="retracted", closing="retracting", opening="unretracting"},
+}
+setmetatable(flag_names, {__index=function() return {closed="closed", closing="closing", opening="opening"} end})
 
 function leverDescribe(lever)
     local lever_name = ''
@@ -74,23 +76,18 @@ function leverDescribe(lever)
     for _, m in ipairs(lever.linked_mechanisms) do
         local tref = dfhack.items.getGeneralRef(m, df.general_ref_type.BUILDING_HOLDER)
         if tref then
-            tg = tref:getBuilding()
+            local tg = tref:getBuilding()
             if pcall(function()
                 return tg.gate_flags
             end) then
-                if tg.gate_flags.closed then
-                    state = "closed"
-                else
-                    state = "opened"
-                end
+                local btype = tg:getType()
+                state = flag_names[btype].closed
 
-                if tg.gate_flags.closing then
-                    state = state .. (', closing (%d)'):format(tg.timer)
+                if tg.gate_flags[flag_names[btype].closing] then
+                    state = state .. (', %s (%d)'):format(flag_names[btype].closing, tg.timer)
+                elseif tg.gate_flags[flag_names[btype].opening] then
+                    state = state .. (', %s (%d)'):format(flag_names[btype].opening, tg.timer)
                 end
-                if tg.gate_flags.opening then
-                    state = state .. (', opening (%d)'):format(tg.timer)
-                end
-
             end
 
             t = t ..
@@ -146,7 +143,14 @@ function PullLever(opts)
     else
         leverPullJob(lever, opts.priority)
     end
+    print(leverDescribe(lever))
 end
+
+if dfhack_flags.module then
+    return
+end
+
+local argparse = require('argparse')
 
 local function parse_commandline(args)
     local opts = {}

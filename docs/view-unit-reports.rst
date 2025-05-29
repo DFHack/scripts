@@ -3,7 +3,7 @@ view-unit-reports
 
 .. dfhack-tool::
     :summary: Show combat reports for a unit.
-    :tags: unavailable fort inspection military
+    :tags: unavailable
 
 Show combat reports specifically for the selected unit. You can select a unit
 with the cursor in :kbd:`v` mode, from the list in :kbd:`u` mode, or from the

@@ -3,7 +3,7 @@ forum-dwarves
 
 .. dfhack-tool::
     :summary: Exports the text you see on the screen for posting to the forums.
-    :tags: unavailable dfhack
+    :tags: unavailable
 
 This tool saves a copy of a text screen, formatted in BBcode for posting to the
 Bay12 Forums. Text color and layout is preserved. See `markdown` if you want to

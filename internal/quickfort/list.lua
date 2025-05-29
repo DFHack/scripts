@@ -5,6 +5,7 @@ if not dfhack_flags.module then
     qerror('this script cannot be called directly')
 end
 
+local argparse = require('argparse')
 local scriptmanager = require('script-manager')
 local utils = require('utils')
 local xlsxreader = require('plugins.xlsxreader')
@@ -231,6 +232,7 @@ function do_list_internal(show_library, show_hidden)
         if not show_hidden and v.modeline.hidden then goto continue end
         local display_data = {
             id=i,
+            library=v.is_library,
             path=v.path,
             mode=v.modeline.mode,
             section_name=get_section_name(v.sheet_name, v.modeline.label),
@@ -253,7 +255,7 @@ end
 
 function do_list(args)
     local show_library, show_hidden, filter_mode = true, false, nil
-    local filter_strings = utils.processArgsGetopt(args, {
+    local filter_strings = argparse.processArgsGetopt(args, {
             {'u', 'useronly', handler=function() show_library = false end},
             {'h', 'hidden', handler=function() show_hidden = true end},
             {'m', 'mode', hasArg=true,
@@ -300,5 +302,22 @@ function do_list(args)
     if num_library_blueprints > 0 and not show_library then
         print(('  %d library blueprints not shown')
               :format(num_library_blueprints))
+    end
+end
+
+function do_delete(args)
+    local userpath_prefix = ('%s/'):format(quickfort_set.get_setting('blueprints_user_dir'))
+    for _, blueprint_name in ipairs(args) do
+        local path = get_blueprint_filepath(blueprint_name)
+        if not path:startswith(userpath_prefix) then
+            dfhack.printerr(
+                ('only player-owned blueprints can be deleted. not deleting library/mod blueprint: "%s"'):format(path))
+        else
+            if os.remove(path) then
+                print(('removed blueprint: "%s"'):format(path))
+            else
+                dfhack.printerr(('failed to remove blueprint: "%s"'):format(path))
+            end
+        end
     end
 end

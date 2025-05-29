@@ -17,19 +17,17 @@ function shouldRetrieve(unit)
 end
 
 function retrieveUnits()
-    for _, unit in pairs(df.global.world.units.all) do
+    for _, unit in ipairs(df.global.world.units.all) do
         if unit.flags1.inactive and shouldRetrieve(unit) then
-            print(("Retrieving from the abyss: %s (%s)"):format(
-                dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(unit))),
-                df.creature_raw.find(unit.race).name[0]
-            ))
+            print(("Retrieving from the abyss: %s (%d)"):format(
+                dfhack.df2console(dfhack.units.getReadableName(unit)), unit.id))
             unit.flags1.move_state = true
             unit.flags1.inactive = false
             unit.flags1.incoming = false
             unit.flags1.can_swap = true
             unit.flags1.hidden_in_ambush = false
             -- add to active if missing
-            if not utils.linear_index(df.global.world.units.active, unit, 'id') then
+            if not utils.linear_index(df.global.world.units.active, unit.id, 'id') then
                 df.global.world.units.active:insert('#', unit)
             end
         end

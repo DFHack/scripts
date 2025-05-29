@@ -9,9 +9,19 @@ This is the graphical interface for the `quickfort` script. Once you load a
 blueprint, you will see a highlight over the tiles that will be modified. You
 can use the mouse cursor to reposition the blueprint and the hotkeys to
 rotate and repeat the blueprint up or down z-levels. Once you are satisfied,
-click the mouse or hit :kbd:`Enter` to apply the blueprint to the map. You can
-apply the blueprint as many times as you wish to different spots on the map.
-Right click or hit :kbd:`Esc` to stop.
+click the mouse or hit :kbd:`Enter` to apply the blueprint to the map.
+
+You can apply the blueprint as many times as you wish to different spots on the
+map. If a blueprint that you designated was only partially applied (due to job
+cancellations, incomplete dig area, or any other reason) you can apply the
+blueprint a second time in the same spot to fill in any gaps. Any part of the
+blueprint that has already been completed will be harmlessly skipped. Right
+click or hit :kbd:`Esc` to close the `gui/quickfort` UI.
+
+Note that `quickfort` blueprints will use the DFHack building planner
+(`buildingplan`) material filter settings. If you want specific materials to be
+used, use the building planner UI to set the appropriate filters before
+applying a blueprint.
 
 Usage
 -----

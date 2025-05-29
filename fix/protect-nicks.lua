@@ -3,9 +3,6 @@
 --@ enable = true
 --@ module = true
 
-local json = require('json')
-local persist = require('persist-table')
-
 local GLOBAL_KEY = 'fix-protect-nicks'
 
 enabled = enabled or false
@@ -15,12 +12,12 @@ function isEnabled()
 end
 
 local function persist_state()
-    persist.GlobalTable[GLOBAL_KEY] = json.encode({enabled=enabled})
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, {enabled=enabled})
 end
 
 -- Reassign all the units nicknames with "dfhack.units.setNickname"
 local function save_nicks()
-    for _,unit in pairs(df.global.world.units.active) do
+    for _,unit in ipairs(df.global.world.units.active) do
         dfhack.units.setNickname(unit, unit.name.nickname)
     end
 end
@@ -42,8 +39,8 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
         return
     end
 
-    local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '')
-    enabled = (persisted_data or {enabled=false})['enabled']
+    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {enabled=false})
+    enabled = persisted_data.enabled
     event_loop()
 end
 

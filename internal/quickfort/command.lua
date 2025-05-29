@@ -49,7 +49,7 @@ local function make_ctx_base(prev_ctx)
 end
 
 local function make_ctx(prev_ctx, command, blueprint_name, cursor, aliases, quiet,
-                        dry_run, preview, preserve_engravings)
+                        marker, priority, dry_run, preview, preserve_engravings)
     local ctx = make_ctx_base(prev_ctx)
     local params = {
         command=command,
@@ -57,6 +57,8 @@ local function make_ctx(prev_ctx, command, blueprint_name, cursor, aliases, quie
         cursor=cursor,
         aliases=aliases,
         quiet=quiet,
+        marker=marker,
+        priority=priority,
         dry_run=dry_run,
         preview=preview,
         preserve_engravings=preserve_engravings,
@@ -84,6 +86,8 @@ function init_ctx(params, prev_ctx)
         copyall(params.cursor),  -- copy since we modify this during processing
         params.aliases or {},
         params.quiet,
+        params.marker or {blueprint=false, warm=false, damp=false},
+        params.priority or 4,
         params.dry_run,
         params.preview and
                 {tiles={}, bounds={}, invalid_tiles=0, total_tiles=0} or nil,
@@ -192,7 +196,7 @@ function finish_commands(ctx)
 end
 
 local function do_one_command(prev_ctx, command, cursor, blueprint_name, section_name,
-                              mode, quiet, dry_run, preserve_engravings,
+                              mode, quiet, marker, priority, dry_run, preserve_engravings,
                               modifiers)
     if not cursor then
         if command == 'orders' or mode == 'notes' then
@@ -209,6 +213,8 @@ local function do_one_command(prev_ctx, command, cursor, blueprint_name, section
         cursor=cursor,
         aliases=quickfort_list.get_aliases(blueprint_name),
         quiet=quiet,
+        marker=marker,
+        priority=priority,
         dry_run=dry_run,
         preserve_engravings=preserve_engravings}, prev_ctx)
 
@@ -221,20 +227,20 @@ local function do_one_command(prev_ctx, command, cursor, blueprint_name, section
     return ctx
 end
 
-local function do_bp_name(commands, cursor, bp_name, sec_names, quiet, dry_run,
-                          preserve_engravings, modifiers)
+local function do_bp_name(commands, cursor, bp_name, sec_names, quiet, marker, priority,
+                          dry_run, preserve_engravings, modifiers)
     local ctx
     for _,sec_name in ipairs(sec_names) do
         local mode = quickfort_list.get_blueprint_mode(bp_name, sec_name)
         for _,command in ipairs(commands) do
             ctx = do_one_command(ctx, command, cursor, bp_name, sec_name, mode, quiet,
-                           dry_run, preserve_engravings, modifiers)
+                    marker, priority, dry_run, preserve_engravings, modifiers)
         end
     end
     return ctx
 end
 
-local function do_list_num(commands, cursor, list_nums, quiet, dry_run,
+local function do_list_num(commands, cursor, list_nums, quiet, marker, priority, dry_run,
                            preserve_engravings, modifiers)
     local ctx
     for _,list_num in ipairs(list_nums) do
@@ -242,7 +248,7 @@ local function do_list_num(commands, cursor, list_nums, quiet, dry_run,
                 quickfort_list.get_blueprint_by_number(list_num)
         for _,command in ipairs(commands) do
             ctx = do_one_command(ctx,  command, cursor, bp_name, sec_name, mode, quiet,
-                           dry_run, preserve_engravings, modifiers)
+                    marker, priority, dry_run, preserve_engravings, modifiers)
         end
     end
     return ctx
@@ -256,6 +262,7 @@ function do_command(args)
     end
     local cursor = guidm.getCursorPos()
     local quiet, verbose, dry_run, section_names = false, false, false, {''}
+    local marker, priority = {blueprint=false, warm=false, damp=false}, 4
     local preserve_engravings = df.item_quality.Masterful
     local modifiers = quickfort_parse.get_modifiers_defaults()
     local other_args = argparse.processArgsGetopt(args, {
@@ -266,9 +273,24 @@ function do_command(args)
                 preserve_engravings = quickfort_parse.parse_preserve_engravings(
                                                                 optarg) end},
             {'d', 'dry-run', handler=function() dry_run = true end},
+            {'m', 'marker', hasArg=true, handler=function(optarg)
+                for _,m in ipairs(argparse.stringList(optarg)) do
+                    if m == 'blueprint' then marker.blueprint = true
+                    elseif m == 'warm' then marker.warm = true
+                    elseif m == 'damp' then marker.damp = true
+                    else
+                        qerror(('invalid marker type: "%s"'):format(m))
+                    end
+                end
+            end},
             {'n', 'name', hasArg=true,
              handler=function(optarg)
                 section_names = argparse.stringList(optarg) end},
+            {'p', 'priority', hasArg=true,
+             handler=function(optarg)
+                priority = argparse.positiveInt(optarg, 'priority')
+                priority = math.min(7, priority)
+             end},
             {'q', 'quiet', handler=function() quiet = true end},
             {'r', 'repeat', hasArg=true,
              handler=function(optarg)
@@ -299,11 +321,13 @@ function do_command(args)
             local ctx
             if not ok then
                 ctx = do_bp_name(args.commands, cursor, blueprint_name, section_names,
-                        quiet, dry_run, preserve_engravings, modifiers)
+                        quiet, marker, priority, dry_run, preserve_engravings, modifiers)
             else
-                ctx = do_list_num(args.commands, cursor, list_nums, quiet, dry_run,
-                        preserve_engravings, modifiers)
+                ctx = do_list_num(args.commands, cursor, list_nums, quiet, marker, priority,
+                        dry_run, preserve_engravings, modifiers)
             end
+            ctx.marker = marker
+            ctx.priority = priority
             finish_commands(ctx)
         end)
 end

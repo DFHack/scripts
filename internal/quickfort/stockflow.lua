@@ -116,7 +116,7 @@ function collect_reactions()
     reaction_entry(result, job_types.CatchLiveFish)
 
     -- Cutting, encrusting, and metal extraction.
-    local rock_types = df.global.world.raws.inorganics
+    local rock_types = df.global.world.raws.inorganics.all
     for rock_id = #rock_types-1, 0, -1 do
         local material = rock_types[rock_id].material
         local rock_name = material.state_adj.Solid
@@ -129,19 +129,19 @@ function collect_reactions()
             reaction_entry(result, job_types.EncrustWithGems, {
                 mat_type = 0,
                 mat_index = rock_id,
-                item_category = {finished_goods = true},
+                specflag = {encrust_flags={finished_goods=true}},
             }, "Encrust Finished Goods With "..rock_name)
 
             reaction_entry(result, job_types.EncrustWithGems, {
                 mat_type = 0,
                 mat_index = rock_id,
-                item_category = {furniture = true},
+                specflag = {encrust_flags={furniture=true}},
             }, "Encrust Furniture With "..rock_name)
 
             reaction_entry(result, job_types.EncrustWithGems, {
                 mat_type = 0,
                 mat_index = rock_id,
-                item_category = {ammo = true},
+                specflag = {encrust_flags={ammo=true}},
             }, "Encrust Ammo With "..rock_name)
         end
 
@@ -172,17 +172,17 @@ function collect_reactions()
 
             reaction_entry(result, job_types.EncrustWithGlass, {
                 mat_type = glass_id,
-                item_category = {finished_goods = true},
+                specflag = {encrust_flags={finished_goods=true}},
             }, "Encrust Finished Goods With "..glass_name)
 
             reaction_entry(result, job_types.EncrustWithGlass, {
                 mat_type = glass_id,
-                item_category = {furniture = true},
+                specflag = {encrust_flags={furniture=true}},
             }, "Encrust Furniture With "..glass_name)
 
             reaction_entry(result, job_types.EncrustWithGlass, {
                 mat_type = glass_id,
-                item_category = {ammo = true},
+                specflag = {encrust_flags={ammo=true}},
             }, "Encrust Ammo With "..glass_name)
         end
     end
@@ -634,7 +634,7 @@ function create_orders(order, amount)
     -- Todo: Create in a validated state if the fortress is small enough?
     new_order.status.validated = false
     new_order.status.active = false
-    new_order.id = df.global.world.manager_order_next_id
-    df.global.world.manager_order_next_id = df.global.world.manager_order_next_id + 1
-    df.global.world.manager_orders:insert('#', new_order)
+    new_order.id = df.global.world.manager_orders.manager_order_next_id
+    df.global.world.manager_orders.manager_order_next_id = df.global.world.manager_orders.manager_order_next_id + 1
+    df.global.world.manager_orders.all:insert('#', new_order)
 end

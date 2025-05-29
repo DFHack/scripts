@@ -3,7 +3,7 @@ devel/cmptiles
 
 .. dfhack-tool::
     :summary: List or compare two tiletype material groups.
-    :tags: unavailable dev
+    :tags: unavailable
 
 Lists and/or compares two tiletype material groups. You can see the list of
 valid material groups by running::

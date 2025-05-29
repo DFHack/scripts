@@ -3,7 +3,7 @@ gui/stamper
 
 .. dfhack-tool::
     :summary: Copy, paste, and transform dig designations.
-    :tags: unavailable fort design map
+    :tags: unavailable
 
 This tool allows you to copy and paste blocks of dig designations. You can also
 transform what you have copied by shifting it, reflecting it, rotating it,

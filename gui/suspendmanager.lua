@@ -2,7 +2,7 @@
 
 local gui = require("gui")
 local widgets = require("gui.widgets")
-local suspendmanager = reqscript("suspendmanager")
+local suspendmanager = require("plugins.suspendmanager")
 
 ---
 -- Suspendmanager
@@ -31,12 +31,11 @@ function SuspendmanagerWindow:init()
             key="CUSTOM_ALT_B",
             options={{value=true, label="Yes", pen=COLOR_GREEN},
                      {value=false, label="No", pen=COLOR_RED}},
-            initial_option = suspendmanager.preventBlockingEnabled(),
+            initial_option = suspendmanager.suspendmanager_preventBlockingEnabled(),
             on_change=function(val)
-                suspendmanager.update_setting("preventblocking", val)
+                dfhack.run_command('suspendmanager', 'set', 'preventblocking', tostring(val))
             end
         },
-
     }
 end
 

@@ -21,6 +21,10 @@ function spawnLiquid(position, liquid_level, liquid_type)
   local map_block = dfhack.maps.getTileBlock(position)
   local tile = dfhack.maps.getTileFlags(position)
 
+  if liquid_level == 0 then
+    liquid_type = df.tile_liquid.Water
+  end
+
   tile.flow_size = liquid_level or 3
   tile.liquid_type = liquid_type
   tile.flow_forbid = liquid_type == df.tile_liquid.Magma or liquid_level >= 4
@@ -33,6 +37,8 @@ function spawnLiquid(position, liquid_level, liquid_type)
   local z_level = df.global.world.map_extras.z_level_flags
   z_level.update = true
   z_level.update_twice = true
+
+  df.global.world.reindex_pathfinding = true
 
   resetTemperature(position)
 end

@@ -32,9 +32,10 @@ activate the civ alert right away with the button in the upper right corner.
 You can also access this button at any time from the squads panel.
 
 When danger appears, open up the squads menu and click on the new "Activate
-civilian alert" button in the lower left corner. It's big and red; you can't
-miss it. Your civilians will rush off to safety and you can concentrate on
-dealing with the incursion without Urist McArmorsmith getting in the way.
+civilian alert" button in the lower left corner of the panel. It's big and red;
+you can't miss it. Your civilians will rush off to safety and you can
+concentrate on dealing with the incursion without Urist McArmorsmith getting in
+the way.
 
 When the civ alert is active, the civilian alert button will stay on the
 screen, even if the squads menu is closed. After the danger has passed,
@@ -47,8 +48,8 @@ Overlay
 
 The position of the "Activate civilian alert" button that appears when the
 squads panel is open is configurable via `gui/overlay`. The overlay panel also
-gives you a way to launch `gui/civ-alert` if you need to change which burrow
-civilians should be gathering at.
+gives you a way to launch `gui/civ-alert` if you need to change which burrow(s)
+civilians should be gathering in.
 
 Technical notes
 ---------------

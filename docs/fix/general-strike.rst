@@ -8,8 +8,7 @@ fix/general-strike
 This script attempts to fix known causes of the "general strike bug", where
 dwarves just stop accepting work and stand around with "No job".
 
-You can enable automatic running of this fix in the "Maintenance" tab of
-`gui/control-panel`.
+This script is set to run periodically by default in `gui/control-panel`.
 
 Usage
 -----

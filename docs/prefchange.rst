@@ -3,7 +3,7 @@ prefchange
 
 .. dfhack-tool::
     :summary: Set strange mood preferences.
-    :tags: unavailable fort armok units
+    :tags: unavailable
 
 This tool sets preferences for strange moods to include a weapon type, equipment
 type, and material. If you also wish to trigger a mood, see `strangemood`.

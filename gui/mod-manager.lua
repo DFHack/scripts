@@ -1,22 +1,25 @@
--- Save and restore lists of active mods.
+-- Show, save, and restore lists of active mods.
 --@ module = true
 
-local overlay = require('plugins.overlay')
-local gui = require('gui')
-local widgets = require('gui.widgets')
 local dialogs = require('gui.dialogs')
+local gui = require('gui')
 local json = require('json')
+local overlay = require('plugins.overlay')
+local scriptmanager = require('script-manager')
 local utils = require('utils')
+local widgets = require('gui.widgets')
 
 local presets_file = json.open("dfhack-config/mod-manager.json")
 local GLOBAL_KEY = 'mod-manager'
 
-local function get_newregion_viewscreen()
+-- get_newregion_viewscreen and get_modlist_fields are declared as global functions
+-- so external tools can call them to get the DF mod list
+function get_newregion_viewscreen()
     local vs = dfhack.gui.getViewscreenByType(df.viewscreen_new_regionst, 0)
     return vs
 end
 
-local function get_modlist_fields(kind, viewscreen)
+function get_modlist_fields(kind, viewscreen)
     if kind == "available" then
         return {
             id = viewscreen.available_id,
@@ -117,6 +120,9 @@ local function swap_modlist(viewscreen, modlist)
     return failures
 end
 
+--------------------
+-- ModmanageMenu
+
 ModmanageMenu = defclass(ModmanageMenu, widgets.Window)
 ModmanageMenu.ATTRS {
     view_id = "modman_menu",
@@ -157,7 +163,7 @@ local function overwrite_preset(idx)
     presets_file:write()
 end
 
-local function load_preset(idx)
+local function load_preset(idx, unset_default_on_failure)
     if idx > #presets_file.data then
         return
     end
@@ -167,14 +173,39 @@ local function load_preset(idx)
     local failures = swap_modlist(viewscreen, modlist)
 
     if #failures > 0 then
-        local failures_str = ""
-        for _, v in ipairs(failures) do
-            failures_str = failures_str .. v .. "\n"
+        local text = {}
+        if unset_default_on_failure then
+            presets_file.data[idx].default = false
+            presets_file:write()
+
+            table.insert(text, {
+                text='Failed to load some mods from your default preset.',
+                pen=COLOR_LIGHTRED,
+            })
+            table.insert(text, NEWLINE)
+            table.insert(text, {
+                text='Preset is being unmarked as the default for safety.',
+                pen=COLOR_LIGHTRED,
+            })
+        else
+            table.insert(text, {
+                text='Failed to load some mods from the preset.',
+                pen=COLOR_LIGHTRED,
+            })
         end
-        dialogs.showMessage("Warning",
-            "Failed to load some mods. Please re-create your default preset.",
-            COLOR_LIGHTRED)
-    end
+        table.insert(text, NEWLINE)
+        table.insert(text, NEWLINE)
+        table.insert(text, 'Please re-create your preset with mods you currently have installed.')
+        table.insert(text, NEWLINE)
+        table.insert(text, 'Here are the mods that failed to load:')
+        table.insert(text, NEWLINE)
+        table.insert(text, NEWLINE)
+        for _, v in ipairs(failures) do
+            table.insert(text, ('- %s'):format(v))
+            table.insert(text, NEWLINE)
+        end
+        dialogs.showMessage("Warning", text)
+end
 end
 
 local function find_preset_by_name(name)
@@ -362,6 +393,9 @@ function ModmanageMenu:init()
     }
 end
 
+--------------------
+-- ModmanageScreen
+
 ModmanageScreen = defclass(ModmanageScreen, gui.ZScreen)
 ModmanageScreen.ATTRS {
     focus_path = "mod-manager",
@@ -374,11 +408,170 @@ function ModmanageScreen:init()
     }
 end
 
+--------------------
+-- ModlistWindow
+
+ModlistWindow = defclass(ModlistWindow, widgets.Window)
+ModlistWindow.ATTRS{
+    frame_title="Active Mods",
+    frame={w=55, h=20},
+    resizable=true,
+}
+
+local function get_num_vanilla_mods()
+    local count = 0
+    for _,mod in ipairs(scriptmanager.get_active_mods()) do
+        if mod.vanilla then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function get_num_non_vanilla_mods()
+    local count = 0
+    for _,mod in ipairs(scriptmanager.get_active_mods()) do
+        if not mod.vanilla then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function ModlistWindow:init()
+    self:addviews{
+        widgets.CycleHotkeyLabel{
+            view_id='vanilla',
+            frame={l=0, t=0, w=24},
+            key='CUSTOM_V',
+            label='Vanilla mods:',
+            options={
+                {label='Include', value=true, pen=COLOR_LIGHTBLUE},
+                {label='Exclude', value=false, pen=COLOR_LIGHTRED},
+            },
+            initial_option=false,
+            on_change=function() self:refresh_list() end,
+        },
+        widgets.Divider{
+            frame={t=2, h=1},
+            frame_style=gui.FRAME_THIN,
+            frame_style_l=false,
+            frame_style_r=false,
+        },
+        widgets.HotkeyLabel{
+            frame={t=4, r=0},
+            label='Export to clipboard (single line)',
+            text_pen=COLOR_YELLOW,
+            auto_width=true,
+            on_activate=function()
+                local text = {}
+                for _,choice in ipairs(self.subviews.list:getChoices()) do
+                    table.insert(text, ('%s %s'):format(choice.data.name, choice.data.version))
+                end
+                dfhack.internal.setClipboardTextCp437Multiline(table.concat(text, ', '))
+            end,
+            enabled=function() return #self.subviews.list:getChoices() > 0 end,
+        },
+        widgets.HotkeyLabel{
+            frame={t=5, r=0},
+            label='Export to clipboard (with links)',
+            text_pen=COLOR_YELLOW,
+            auto_width=true,
+            on_activate=function()
+                local text = {}
+                for _,choice in ipairs(self.subviews.list:getChoices()) do
+                    table.insert(text, choice.export_text)
+                end
+                dfhack.internal.setClipboardTextCp437Multiline(table.concat(text, NEWLINE))
+            end,
+            enabled=function() return #self.subviews.list:getChoices() > 0 end,
+        },
+        widgets.Label{
+            frame={l=0, t=4},
+            text={
+                'Load',
+                NEWLINE,
+                'order',
+            },
+        },
+        widgets.Label{
+            frame={l=7, t=5},
+            text='Mod',
+        },
+        widgets.List{
+            view_id='list',
+            frame={t=7, b=2},
+        },
+        widgets.Label{
+            frame={l=0, b=0},
+            text={
+                {text=('%d'):format(get_num_vanilla_mods()), pen=COLOR_LIGHTBLUE},
+                ' vanilla mods',
+                {text=function() return self.subviews.vanilla:getOptionValue() and '' or ' (hidden)' end},
+                ', ',
+                {text=('%d'):format(get_num_non_vanilla_mods()), pen=COLOR_BROWN},
+                ' non-vanilla mods',
+            },
+        },
+    }
+
+    self:refresh_list()
+end
+
+function ModlistWindow:refresh_list()
+    local include_vanilla = self.subviews.vanilla:getOptionValue()
+
+    local choices = {}
+    for idx,mod in ipairs(scriptmanager.get_active_mods()) do
+        if not include_vanilla and mod.vanilla then goto continue end
+        local steam_id = scriptmanager.get_mod_info_metadata(mod.path, 'STEAM_FILE_ID').STEAM_FILE_ID
+        local url = steam_id and (': https://steamcommunity.com/sharedfiles/filedetails/?id=%s'):format(steam_id) or ''
+        table.insert(choices, {
+            text={
+                {text=idx, width=2, rjustify=true},
+                ') ',
+                {text=mod.name, gap=3},
+                ' (',
+                {text=mod.version, pen=COLOR_LIGHTGREEN},
+                ')',
+            },
+            data=mod,
+            export_text=('- %s (%s)%s'):format(mod.name, mod.version, url),
+        })
+        ::continue::
+    end
+
+    self.subviews.list:setChoices(choices)
+end
+
+--------------------
+-- ModlistScreen
+
+ModlistScreen = defclass(ModlistScreen, gui.ZScreen)
+ModlistScreen.ATTRS{
+    focus_path="mod-manager",
+}
+
+function ModlistScreen:init()
+    self:addviews{
+        ModlistWindow{}
+    }
+end
+
+function ModlistScreen:onDismiss()
+    view = nil
+end
+
+--------------------
+-- Overlays
+
 ModmanageOverlay = defclass(ModmanageOverlay, overlay.OverlayWidget)
 ModmanageOverlay.ATTRS {
     frame = { w=16, h=3 },
     frame_style = gui.MEDIUM_FRAME,
-    default_pos = { x=5, y=-5 },
+    desc = "Adds a link to the mod selection screen for accessing the mod manager.",
+    default_pos = { x=5, y=-6 },
+    version = 2,
     viewscreens = { "new_region/Mods" },
     default_enabled=true,
 }
@@ -400,7 +593,9 @@ end
 NotificationOverlay = defclass(NotificationOverlay, overlay.OverlayWidget)
 NotificationOverlay.ATTRS {
     frame = { w=60, h=1 },
-    default_pos = { x=3, y=-2 },
+    desc = "Displays a message when a mod preset has been automatically applied.",
+    default_pos = { x=3, y=-6 },
+    version = 2,
     viewscreens = { "new_region" },
     default_enabled=true,
 }
@@ -445,7 +640,7 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
             default_applied = true
             for i, v in ipairs(presets_file.data) do
                 if v.default then
-                    load_preset(i)
+                    load_preset(i, true)
 
                     notification_message = "*** Loaded mod list '" .. v.name .. "'!"
                     notification_overlay_end = dfhack.getTickCount() + 5000
@@ -462,3 +657,9 @@ end
 if dfhack_flags.module then
     return
 end
+
+if not dfhack.isWorldLoaded() then
+    qerror("Please load a game before using the mod manager to see active mods.")
+end
+
+view = view and view:raise() or ModlistScreen{}:show()

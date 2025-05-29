@@ -50,7 +50,7 @@ function createUnit(raceStr, casteStr, pos, locationRange, locationType, age, do
 
   if entityRawName and entityRawName~="" then
     local isValidRawName
-    for k,v in ipairs(df.global.world.raws.entities) do
+    for k,v in ipairs(df.global.world.raws.entities.all) do
       if v.code == entityRawName then
         isValidRawName = true
         break
@@ -517,10 +517,8 @@ function createFigure(unit,he_civ,he_group)
 
   df.global.world.history.figures:insert("#", hf)
 
-  hf.info = df.historical_figure_info:new()
-  hf.info.whereabouts = df.historical_figure_info.T_whereabouts:new()
-  hf.info.whereabouts.death_condition_parameter_1 = -1
-  hf.info.whereabouts.death_condition_parameter_2 = -1
+  hf.info = {new=true}
+  hf.info.whereabouts = {new=true}
   -- set values that seem related to state and do event
   --change_state(hf, dfg.ui.site_id, region_pos)
 
@@ -603,7 +601,7 @@ function nameUnit(unit, entityRawName)
   --choose three random words in the appropriate things
   local entity_raw
   if entityRawName and entityRawName~="" then
-    for k,v in ipairs(df.global.world.raws.entities) do
+    for k,v in ipairs(df.global.world.raws.entities.all) do
       if v.code == entityRawName then
         entity_raw = v
         break
@@ -905,7 +903,7 @@ function domesticateUnit(unit)
     unit.animal.population.region_y = -1
     unit.animal.population.unk_28 = -1
     unit.animal.population.population_idx = -1
-    unit.animal.population.depth = -1
+    unit.animal.population.layer_depth = -1
 
     -- And make them tame (from Dirst)
     unit.flags1.tame = true
@@ -915,17 +913,18 @@ end
 
 function wildUnit(unit)
   local casteFlags = unit.enemy.caste_flags
-  -- x = df.global.world.world_data.active_site[0].pos.x
-  -- y = df.global.world.world_data.active_site[0].pos.y
+  -- x = dfhack.world.getCurrentSite().pos.x
+  -- y = dfhack.world.getCurrentSite().pos.y
   -- region = df.global.map.map_blocks[df.global.map.x_count_block*x+y]
   if not(casteFlags.CAN_SPEAK or casteFlags.CAN_LEARN) then
-    if #df.global.world.world_data.active_site > 0 then -- empty in adventure mode
-      unit.animal.population.region_x = df.global.world.world_data.active_site[0].pos.x
-      unit.animal.population.region_y = df.global.world.world_data.active_site[0].pos.y
+    if dfhack.isSiteLoaded() then
+      local site = dfhack.world.getCurrentSite()
+      unit.animal.population.region_x = site.pos.x
+      unit.animal.population.region_y = site.pos.y
     end
     unit.animal.population.unk_28 = -1
     unit.animal.population.population_idx = -1  -- Eventually want to make a real population
-    unit.animal.population.depth = -1  -- Eventually this should be a parameter
+    unit.animal.population.layer_depth = -1  -- Eventually this should be a parameter
     unit.animal.leave_countdown = 99999  -- Eventually this should be a parameter
     unit.flags2.roaming_wilderness_population_source = true
     unit.flags2.roaming_wilderness_population_source_not_a_map_feature = true
@@ -957,7 +956,6 @@ function enableUnitLabors(unit, default, skilled)
       labors.HANDLE_VEHICLES = true
       labors.HAUL_TRADE = true
       labors.PULL_LEVER = true
-      labors.REMOVE_CONSTRUCTION = true
       labors.HAUL_WATER = true
       labors.BUILD_ROAD = true
       labors.BUILD_CONSTRUCTION = true

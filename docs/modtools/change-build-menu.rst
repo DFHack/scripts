@@ -3,7 +3,7 @@ modtools/change-build-menu
 
 .. dfhack-tool::
     :summary: Add or remove items from the build sidebar menus.
-    :tags: unavailable dev
+    :tags: unavailable
 
 Change the build sidebar menus.
 
@@ -17,7 +17,8 @@ your changes each time the world loads.
 Just to be clear: You CANNOT use this script AT ALL if there is no world
 loaded!
 
-**Usage:**
+Usage
+-----
 
 ``enable modtools/change-build-menu``:
 
@@ -92,7 +93,8 @@ loaded!
     changes you no longer want/need.
 
 
-**Module Usage:**
+Module Usage
+------------
 
 To use this script as a module put the following somewhere in your own script:
 

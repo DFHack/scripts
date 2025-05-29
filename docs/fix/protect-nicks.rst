@@ -2,7 +2,7 @@ fix/protect-nicks
 =================
 
 .. dfhack-tool::
-    :summary: Fix nicknames being erased or not displayed
+    :summary: Fix nicknames being erased or not displayed.
     :tags: fort bugfix units
 
 Due to a bug, units nicknames are not displayed everywhere and are occasionally

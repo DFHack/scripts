@@ -12,18 +12,15 @@ function isEnabled()
     return enabled
 end
 
-local function is_fort_map_loaded()
-    return df.global.gamemode == df.game_mode.DWARF and dfhack.isMapLoaded()
-end
-
 local help = df.global.game.main_interface.help
 
 local function close_help()
     help.open = false
 end
 
-function skip_tutorial_prompt(scr)
+function skip_tutorial_prompt()
     if not help.open then return end
+    local scr = dfhack.gui.getDFViewscreen(true)
     local mouse_y = 23
     if help.context == df.help_context_type.EMBARK_TUTORIAL_CHOICE then
         help.context = df.help_context_type.EMBARK_MESSAGE
@@ -36,13 +33,38 @@ function skip_tutorial_prompt(scr)
         df.global.gps.mouse_y = mouse_y
         gui.simulateInput(scr, '_MOUSE_L')
     end
+    if help.open then
+        -- retry later
+        help.context = df.help_context_type.EMBARK_TUTORIAL_CHOICE
+    end
+end
+
+local function get_prefix()
+    if dfhack.world.isFortressMode() then
+        return 'POPUP_'
+    elseif dfhack.world.isAdventureMode() then
+        return 'ADVENTURE_POPUP_'
+    end
 end
 
 local function hide_all_popups()
+    local prefix = get_prefix()
+    if not prefix then return end
     for i,name in ipairs(df.help_context_type) do
-        if not name:startswith('POPUP_') then goto continue end
+        if not name:startswith(prefix) then goto continue end
         utils.insert_sorted(df.global.plotinfo.tutorial_seen, i)
         utils.insert_sorted(df.global.plotinfo.tutorial_hide, i)
+        ::continue::
+    end
+end
+
+local function show_all_popups()
+    local prefix = get_prefix()
+    if not prefix then return end
+    for i,name in ipairs(df.help_context_type) do
+        if not name:startswith(prefix) then goto continue end
+        utils.erase_sorted(df.global.plotinfo.tutorial_seen, i)
+        utils.erase_sorted(df.global.plotinfo.tutorial_hide, i)
         ::continue::
     end
 end
@@ -55,9 +77,12 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
         if df.viewscreen_new_regionst:is_instance(scr) then
             close_help()
         elseif df.viewscreen_choose_start_sitest:is_instance(scr) then
-            skip_tutorial_prompt(scr)
+            skip_tutorial_prompt()
+            dfhack.timeout(10, 'frames', skip_tutorial_prompt)
+            dfhack.timeout(100, 'frames', skip_tutorial_prompt)
+            dfhack.timeout(1000, 'frames', skip_tutorial_prompt)
         end
-    elseif sc == SC_MAP_LOADED and df.global.gamemode == df.game_mode.DWARF then
+    elseif sc == SC_MAP_LOADED then
         hide_all_popups()
     end
 end
@@ -73,13 +98,15 @@ end
 
 if args[1] == "enable" then
     enabled = true
-    if is_fort_map_loaded() then
+    if dfhack.isMapLoaded() then
         hide_all_popups()
     end
 elseif args[1] == "disable" then
     enabled = false
-elseif is_fort_map_loaded() then
+elseif args[1] == "reset" then
+    show_all_popups()
+elseif dfhack.isMapLoaded() then
     hide_all_popups()
 else
-    qerror('hide-tutorials needs a loaded fortress map to work')
+    qerror('hide-tutorials needs a loaded fortress or adventure map to work')
 end

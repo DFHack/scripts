@@ -3,7 +3,7 @@ siren
 
 .. dfhack-tool::
     :summary: Wake up sleeping units and stop parties.
-    :tags: unavailable fort armok units
+    :tags: unavailable
 
 Sound the alarm! This tool can shake your sleeping units awake and knock some
 sense into your party animal military dwarves so they can address a siege.

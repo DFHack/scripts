@@ -3,7 +3,7 @@ bodyswap
 
 .. dfhack-tool::
     :summary: Take direct control of any visible unit.
-    :tags: unavailable adventure armok units
+    :tags: adventure armok units
 
 This script allows the player to take direct control of any unit present in
 adventure mode whilst giving up control of their current player character.

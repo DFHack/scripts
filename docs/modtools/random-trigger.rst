@@ -3,7 +3,7 @@ modtools/random-trigger
 
 .. dfhack-tool::
     :summary: Randomly select DFHack scripts to run.
-    :tags: unavailable dev
+    :tags: unavailable
 
 Trigger random dfhack commands with specified probabilities.
 Register a few scripts, then tell it to "go" and it will pick one

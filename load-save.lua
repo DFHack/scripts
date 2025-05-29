@@ -12,7 +12,7 @@ if not loadgame_screen then
     end
     local found = false
     for idx, item in ipairs(title_screen.menu_line_id) do
-        if item == df.viewscreen_titlest.T_menu_line_id.Continue then
+        if item == df.main_choice_type.Continue then
             found = true
             title_screen.sel_menu_line = idx
             break

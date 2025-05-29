@@ -2,13 +2,6 @@ local gui = require('gui')
 local guidm = require('gui.dwarfmode')
 local widgets = require('gui.widgets')
 
-local function get_dims(pos1, pos2)
-    local width, height, depth = math.abs(pos1.x - pos2.x) + 1,
-            math.abs(pos1.y - pos2.y) + 1,
-            math.abs(pos1.z - pos2.z) + 1
-    return width, height, depth
-end
-
 local function is_good_item(item, include)
     if not item then return false end
     if not item.flags.on_ground or item.flags.garbage_collect or
@@ -29,7 +22,7 @@ end
 Autodump = defclass(Autodump, widgets.Window)
 Autodump.ATTRS {
     frame_title='Autodump',
-    frame={w=48, h=18, r=2, t=18},
+    frame={w=48, h=16, r=2, t=18},
     resizable=true,
     resize_min={h=10},
     autoarrange_subviews=true,
@@ -49,19 +42,6 @@ function Autodump:init()
             text_to_wrap=self:callback('get_help_text'),
         },
         widgets.Panel{frame={h=1}},
-        widgets.Panel{
-            frame={h=2},
-            subviews={
-                widgets.Label{
-                    frame={l=0, t=0},
-                    text={
-                        'Selected area: ',
-                        {text=self:callback('get_selection_area_text')}
-                    },
-                },
-            },
-            visible=function() return self.mark end,
-        },
         widgets.HotkeyLabel{
             frame={l=0},
             label='Dump to tile under mouse cursor',
@@ -174,7 +154,7 @@ end
 function Autodump:refresh_dump_items()
     local dump_items = {}
     local include = self:get_include()
-    for _,item in ipairs(df.global.world.items.all) do
+    for _,item in ipairs(df.global.world.items.other.IN_PLAY) do
         if not is_good_item(item, include) then goto continue end
         if item.flags.dump then
             table.insert(dump_items, item)
@@ -198,13 +178,6 @@ function Autodump:get_help_text()
         self.prev_help_text = ret
     end
     return ret
-end
-
-function Autodump:get_selection_area_text()
-    local mark = self.mark
-    if not mark then return '' end
-    local cursor = dfhack.gui.getMousePos() or {x=mark.x, y=mark.y, z=df.global.window_z}
-    return ('%dx%dx%d'):format(get_dims(mark, cursor))
 end
 
 function Autodump:get_bounds(cursor, mark)
@@ -256,7 +229,7 @@ function Autodump:select_box(bounds)
             for x=bounds.x1,bounds.x2 do
                 local block = dfhack.maps.getTileBlock(xyz2pos(x, y, z))
                 local block_str = tostring(block)
-                if not seen_blocks[block_str] then
+                if block and not seen_blocks[block_str] then
                     seen_blocks[block_str] = true
                     self:select_items_in_block(block, bounds)
                 end
@@ -280,7 +253,7 @@ function Autodump:onInput(keys)
         end
         local now_ms = dfhack.getTickCount()
         if same_xyz(pos, self.last_map_click_pos) and
-                now_ms - self.last_map_click_ms <= widgets.DOUBLE_CLICK_MS then
+                now_ms - self.last_map_click_ms <= widgets.getDoubleClickMs() then
             self:reset_double_click()
             self:do_dump(pos)
             self.mark = nil
@@ -335,12 +308,26 @@ end
 
 function Autodump:do_dump(pos)
     pos = pos or dfhack.gui.getMousePos()
-    if not pos then return end
-    local tileattrs = df.tiletype.attrs[dfhack.maps.getTileType(pos)]
-    local basic_shape = df.tiletype_shape.attrs[tileattrs.shape].basic_shape
-    local on_ground = basic_shape == df.tiletype_shape_basic.Floor or
-            basic_shape == df.tiletype_shape_basic.Stair or
-            basic_shape == df.tiletype_shape_basic.Ramp
+    if not pos then --We check this before calling
+        qerror('Autodump:do_dump called with bad pos!')
+    end
+
+    local tt = dfhack.maps.getTileType(pos)
+    if not (tt and dfhack.maps.isTileVisible(pos)) then
+        dfhack.printerr('Dump tile not visible! Must be in a revealed area of map.')
+        return
+    end
+
+    local on_ground
+    local shape = df.tiletype.attrs[tt].shape
+    local shape_attrs = df.tiletype_shape.attrs[shape]
+    if shape_attrs.walkable or shape == df.tiletype_shape.FORTIFICATION then
+        on_ground = true --Floor, stair, ramp, or fortification
+    elseif shape_attrs.basic_shape == df.tiletype_shape_basic.Wall then
+        dfhack.printerr('Dump tile blocked! Can\'t dump inside walls.') --Wall or brook bed
+        return
+    end
+
     local items = #self.selected_items.list > 0 and self.selected_items.list or self.dump_items
     local mark_as_forbidden = self.subviews.mark_as_forbidden:getOptionValue()
     print(('teleporting %d items'):format(#items))
@@ -358,7 +345,15 @@ function Autodump:do_dump(pos)
                 item.flags.forbid = true
             end
             if not on_ground then
-                dfhack.items.makeProjectile(item)
+                local proj = dfhack.items.makeProjectile(item)
+                if proj then
+                    proj.flags.no_impact_destroy = true
+                    proj.flags.bouncing = true
+                    proj.flags.piercing = true
+                    proj.flags.parabolic = true
+                    proj.flags.no_adv_pause = true
+                    proj.flags.no_collide = true
+                end
             end
         else
             print(('Could not move item: %s from (%d, %d, %d)'):format(
@@ -377,7 +372,6 @@ function Autodump:do_destroy()
     print(('destroying %d items'):format(#items))
     for _,item in ipairs(items) do
         table.insert(self.destroyed_items, {item=item, flags=copyall(item.flags)})
-        item.flags.garbage_collect = true
         item.flags.forbid = true
         item.flags.hidden = true
     end
@@ -390,7 +384,6 @@ function Autodump:undo_destroy()
     print(('undestroying %d items'):format(#self.destroyed_items))
     for _,item_spec in ipairs(self.destroyed_items) do
         local item = item_spec.item
-        item.flags.garbage_collect = false
         item.flags.forbid = item_spec.flags.forbid
         item.flags.hidden = item_spec.flags.hidden
     end
@@ -411,10 +404,19 @@ AutodumpScreen.ATTRS {
 }
 
 function AutodumpScreen:init()
-    self:addviews{Autodump{}}
+    self.window = Autodump{}
+    self:addviews{
+        self.window,
+        widgets.DimensionsTooltip{
+            get_anchor_pos_fn=function() return self.window.mark end,
+        },
+    }
 end
 
 function AutodumpScreen:onDismiss()
+    for _,item_spec in ipairs(self.window.destroyed_items) do
+        dfhack.items.remove(item_spec.item)
+    end
     view = nil
 end
 

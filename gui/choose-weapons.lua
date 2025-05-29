@@ -71,7 +71,7 @@ function unassign_wrong_items(unit,position,spec,subtype)
                 utils.insert_sorted(equipment.items_unassigned.WEAPON,item,'id')
             end
             equipment.update.weapon = true
-            unit.military.pickup_flags.update = true
+            unit.uniform.pickup_flags.update = true
         end
     end
 end

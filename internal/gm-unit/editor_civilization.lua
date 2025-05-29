@@ -66,7 +66,7 @@ function civ_name(id,format_name,format_no_name,name_other,name_invalid)
             return name_invalid or "<invalid>"
         end
     end
-    local t={NAME=dfhack.TranslateName(civ.name),ENGLISH=dfhack.TranslateName(civ.name,true),ID=civ.id} --TODO race?, maybe something from raws?
+    local t={NAME=dfhack.translation.translateName(civ.name),ENGLISH=dfhack.translation.translateName(civ.name,true),ID=civ.id} --TODO race?, maybe something from raws?
     if t.NAME=="" then
         return string.gsub(format_no_name or "<unnamed> ($ID)", "%$(%w+)", t)
     end
@@ -107,7 +107,7 @@ function CivBox:choose_race()
 end
 function CivBox:init(info)
     self.subviews.list.frame={t=3,r=0,l=0}
-    self.subviews.list.edit.ignore_keys={"STRING_A047"},
+    self.subviews.list.edit.text_area.text_area.ignore_keys={"STRING_A047"}
     self:addviews{
         widgets.Label{frame={t=1,l=0},text={
         {text="Filter race ",key="STRING_A047",key_sep="()",on_activate=self:callback("choose_race")},

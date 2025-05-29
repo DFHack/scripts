@@ -6,7 +6,8 @@ catsplosion
     :tags: fort armok animals
 
 This tool makes cats (or anything else) immediately pregnant. If you value your
-fps, it is a good idea to use this tool sparingly.
+fps, it is a good idea to use this tool sparingly. Only adult females of the
+chosen race(s) will become pregnant.
 
 Usage
 -----

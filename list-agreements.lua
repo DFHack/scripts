@@ -1,38 +1,6 @@
+--@module = true
+
 -- list location agreements with guilds or religions
-
---[====[
-
-list-agreements
-===============
-
-Lists Guildhall and Temple agreements in fortress mode.
-In addition:
-
-* Translates names of the associated Guilds and Orders respectively
-* Displays worshiped Professions and Deities respectively
-* Petition age and status satisfied, denied or expired, or blank for outstanding
-
-Usage::
-
-    list-agreements [options]
-
-Examples:
-
-    ``list-agreements``
-        List outstanding, unfullfilled location agreements.
-
-    ``list-agreements all``
-        Lists all location agreements, whether satisfied, denied, or expired.
-
-Options:
-
-:all:   list all agreements; past and present
-:help:  shows this help screen
-
-]====]
-local playerfortid = df.global.plotinfo.site_id -- Player fortress id
-local templeagreements = {} -- Table of agreements for temples in player fort
-local guildhallagreements = {} -- Table of agreements for guildhalls in player fort
 
 function get_location_name(loctier,loctype)
     local locstr = "Unknown Location"
@@ -67,16 +35,14 @@ function get_petition_age(agr)
     local agr_year = agr.details[0].year
     local cur_year_tick = df.global.cur_year_tick
     local cur_year = df.global.cur_year
-    local del_year, del_year_tick
-    --delta, check to prevent off by 1 error, not validated
-    if cur_year_tick > agr_year_tick then
-        del_year = cur_year - agr_year
-        del_year_tick = cur_year_tick - agr_year_tick
-    else
-        del_year = cur_year - agr_year - 1
-        del_year_tick = agr_year_tick - cur_year_tick
+    local del_year = cur_year - agr_year
+    local del_year_tick = cur_year_tick - agr_year_tick
+    if del_year_tick < 0 then
+        del_year = del_year - 1
+        del_year_tick = del_year_tick + 403200
     end
-    local julian_day = math.floor(del_year_tick / 1200) + 1
+    -- Round up to the nearest day, since we don't do fractions
+    local julian_day = math.ceil(del_year_tick / 1200)
     local del_month = math.floor(julian_day / 28)
     local del_day = julian_day % 28
     return {del_year,del_month,del_day}
@@ -98,7 +64,7 @@ end
 function get_agr_party_name(agr)
     --assume party 0 is guild/order, 1 is local government as siteid = playerfortid
     local party_id = agr.parties[0].entity_ids[0]
-    local party_name = dfhack.TranslateName(df.global.world.entities.all[party_id].name, true)
+    local party_name = dfhack.translation.translateName(df.global.world.entities.all[party_id].name, true)
     if not party_name then
         party_name = 'An Unknown Entity or Group'
     end
@@ -109,7 +75,7 @@ function get_deity_name(agr)
     local religion_id = agr.details[0].data.Location.deity_data.Religion
     local deities = df.global.world.entities.all[religion_id].relations.deities
     if #deities == 0 then return 'An Unknown Deity' end
-    return dfhack.TranslateName(df.global.world.history.figures[deities[0]].name,true)
+    return dfhack.translation.translateName(df.global.world.history.figures[deities[0]].name,true)
 end
 
 --get resolution status, and string
@@ -156,6 +122,29 @@ function generate_output(agr,loctype)
     end
 end
 
+function get_fort_agreements(cull_resolved)
+    local t_agr, g_agr = {}, {}
+    local playerfortid = df.global.plotinfo.site_id -- Player fortress id
+
+    for _, agr in pairs(df.agreement.get_vector()) do
+        if agr.details[0].data.Location.site == playerfortid then
+            if not is_resolved(agr) or not cull_resolved then
+                if get_location_type(agr) == df.abstract_building_type.TEMPLE then
+                    table.insert(t_agr, agr)
+                elseif get_location_type(agr) == df.abstract_building_type.GUILDHALL then
+                    table.insert(g_agr, agr)
+                end
+            end
+        end
+    end
+
+    return t_agr, g_agr
+end
+
+if dfhack_flags.module then
+    return
+end
+
 ---------------------------------------------------------------------------
 -- Main Script operation
 ---------------------------------------------------------------------------
@@ -178,17 +167,7 @@ if cmd then
     end
 end
 
-for _, agr in pairs(df.agreement.get_vector()) do
-    if agr.details[0].data.Location.site == playerfortid then
-        if not is_resolved(agr) or not cull_resolved then
-            if get_location_type(agr) == df.abstract_building_type.TEMPLE then
-                table.insert(templeagreements, agr)
-            elseif get_location_type(agr) == df.abstract_building_type.GUILDHALL then
-                table.insert(guildhallagreements, agr)
-            end
-        end
-    end
-end
+local templeagreements, guildhallagreements = get_fort_agreements(cull_resolved)
 
 print "-----------------------"
 print "Agreements for Temples:"

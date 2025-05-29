@@ -19,6 +19,7 @@ function refresh_scripts()
     reqscript('internal/quickfort/api')
     reqscript('internal/quickfort/build')
     reqscript('internal/quickfort/building')
+    reqscript('internal/quickfort/burrow')
     reqscript('internal/quickfort/command')
     reqscript('internal/quickfort/common')
     reqscript('internal/quickfort/dig')
@@ -54,11 +55,6 @@ function apply_blueprint(params)
     return quickfort_api.clean_stats(ctx.stats)
 end
 
--- interactive script
-if dfhack_flags.module then
-    return
-end
-
 local function do_help()
     print(dfhack.script_help())
 end
@@ -78,10 +74,16 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     end
 end
 
+-- interactive script
+if dfhack_flags.module then
+    return
+end
+
 local action_switch = {
     set=quickfort_set.do_set,
     reset=do_reset,
     list=quickfort_list.do_list,
+    delete=quickfort_list.do_delete,
     gui=do_gui,
     run=quickfort_command.do_command,
     orders=quickfort_command.do_command,

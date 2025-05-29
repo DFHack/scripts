@@ -316,7 +316,7 @@ sub generate_dt_ini($$$$) {
     emit_addr 'specific_refs',%all,'unit','specific_refs';
     emit_addr 'squad_id',%all,'unit','military.squad_id';
     emit_addr 'squad_position',%all,'unit','military.squad_position';
-    emit_addr 'recheck_equipment',%all,'unit','military.pickup_flags';
+    emit_addr 'recheck_equipment',%all,'unit','uniform.pickup_flags';
     emit_addr 'mood',%all,'unit','mood';
     emit_addr 'birth_year',%all,'unit','birth_year';
     emit_addr 'birth_time',%all,'unit','birth_time';

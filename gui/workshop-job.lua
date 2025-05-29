@@ -75,7 +75,7 @@ function JobDetails:init(args)
     if self.job.flags.suspend then
         status = { text = 'Suspended', pen = COLOR_RED }
     elseif worker then
-        status = { text = dfhack.TranslateName(dfhack.units.getVisibleName(worker)), pen = COLOR_GREEN }
+        status = { text = dfhack.units.getReadableName(worker), pen = COLOR_GREEN }
     end
 
     self:addviews{
@@ -175,7 +175,7 @@ function JobDetails:initListChoices()
     end
 
     local choices = {}
-    for i,iobj in ipairs(self.job.job_items) do
+    for i,iobj in ipairs(self.job.job_items.elements) do
         local head = 'Item '..(i+1)..': '..(items[i] or 0)..' of '..iobj.quantity
         if iobj.min_dimension > 0 then
             head = head .. '(size '..iobj.min_dimension..')'

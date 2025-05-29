@@ -3,7 +3,7 @@ fix-ster
 
 .. dfhack-tool::
     :summary: Toggle infertility for units.
-    :tags: unavailable fort armok animals
+    :tags: unavailable
 
 Now you can restore fertility to infertile creatures or inflict infertility on
 creatures that you do not want to breed.

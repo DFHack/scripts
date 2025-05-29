@@ -1,41 +1,6 @@
--- Sets a unit's combat-hardened value to a given percent
 --@ module = true
 
-local help = [====[
-
-combat-harden
-=============
-Sets the combat-hardened value on a unit, making them care more/less about seeing corpses.
-Requires a value and a target.
-
-Valid values:
-
-:``-value <0-100>``:
-    A percent value to set combat hardened to.
-:``-tier <1-4>``:
-    Choose a tier of hardenedness to set it to.
-      1 = No hardenedness.
-      2 = "is getting used to tragedy"
-      3 = "is a hardened individual"
-      4 = "doesn't really care about anything anymore" (max)
-
-If neither are provided, the script defaults to using a value of 100.
-
-Valid targets:
-
-:``-all``:
-    All active units will be affected.
-:``-citizens``:
-    All (sane) citizens of your fort will be affected. Will do nothing in adventure mode.
-:``-unit <UNIT ID>``:
-    The given unit will be affected.
-
-If no target is given, the provided unit can't be found, or no unit id is given with the unit
-argument, the script will try and default to targeting the currently selected unit.
-
-]====]
-
-local utils = require 'utils'
+local utils = require('utils')
 
 local validArgs = utils.invert({
     'help',
@@ -49,83 +14,81 @@ local validArgs = utils.invert({
 local tiers = {0, 33, 67, 100}
 
 function setUnitCombatHardened(unit, value)
-    if unit.status.current_soul ~= nil then
-        -- Ensure value is in the bounds of 0-100
-        local value = math.max(0, math.min(100, value))
+    if not unit.status.current_soul then return end
 
-        unit.status.current_soul.personality.combat_hardened = value
-    end
+    -- Ensure value is in the bounds of 0-100
+    value = math.max(0, math.min(100, value))
+    unit.status.current_soul.personality.combat_hardened = value
+
+    print(('set hardness value for %s to %d'):format(
+        dfhack.df2console(dfhack.units.getReadableName(unit)),
+        value))
 end
 
-function main(...)
-    local args = utils.processArgs({...}, validArgs)
+function main(args)
+    local opts = utils.processArgs(args, validArgs)
 
-    if args.help then
-        print(help)
+    if opts.help then
+        print(dfhack.script_help())
         return
     end
 
     local value
-    if not args.tier and not args.value then
+    if not opts.tier and not opts.value then
         -- Default to 100
         value = 100
-    elseif args.tier then
+    elseif opts.tier then
         -- Bound between 1-4
-        local tierNum = math.max(1, math.min(4, tonumber(args.tier)))
+        local tierNum = math.max(1, math.min(4, tonumber(opts.tier)))
         value = tiers[tierNum]
-    elseif args.value then
+    elseif opts.value then
         -- Function ensures value is bound, so no need to bother here
         -- Will check it's a number, though
-        value = tonumber(args.value) or 100
+        value = tonumber(opts.value) or 100
     end
 
     local unitsList = {} --as:df.unit[]
 
-    if not args.all and not args.citizens then
+    if not opts.all and not opts.citizens then
         -- Assume trying to target a unit
         local unit
-        if args.unit then
-            if tonumber(args.unit) then
-                unit = df.unit.find(args.unit)
+        if opts.unit then
+            if tonumber(opts.unit) then
+                unit = df.unit.find(opts.unit)
             end
         end
 
         -- If unit ID wasn't provided / unit couldn't be found,
         -- Try getting selected unit
-        if unit == nil then
+        if not unit then
             unit = dfhack.gui.getSelectedUnit(true)
         end
 
-        if unit == nil then
-            qerror("Couldn't find unit. If you don't want to target a specific unit, use -all or -citizens.")
+        if not unit then
+            qerror("Couldn't find unit. If you don't want to target a specific unit, use --all or --citizens.")
         else
             table.insert(unitsList, unit)
         end
-    elseif args.all then
+    elseif opts.all then
         for _, unit in pairs(df.global.world.units.active) do
             table.insert(unitsList, unit)
         end
-    elseif args.citizens then
-        -- Technically this will exclude insane citizens, but this is the
-        -- easiest thing that dfhack provides
-
+    elseif opts.citizens then
         -- Abort if not in Fort mode
         if not dfhack.world.isFortressMode() then
-            qerror('-citizens requires fortress mode')
+            qerror('--citizens requires fortress mode')
         end
 
-        for _, unit in pairs(df.global.world.units.active) do
-            if dfhack.units.isCitizen(unit) then
-                table.insert(unitsList, unit)
-            end
+        for _, unit in ipairs(dfhack.units.getCitizens()) do
+            table.insert(unitsList, unit)
         end
     end
 
-    for index, unit in ipairs(unitsList) do
+    for _, unit in ipairs(unitsList) do
         setUnitCombatHardened(unit, value)
     end
 end
 
 if not dfhack_flags.module then
-    main(...)
+    main{...}
 end

@@ -3,7 +3,7 @@ do-job-now
 
 .. dfhack-tool::
     :summary: Mark the job related to what you're looking at as high priority.
-    :tags: unavailable fort productivity jobs
+    :tags: unavailable
 
 The script will try its best to find a job related to the selected entity (which
 can be a job, dwarf, animal, item, building, plant or work order) and then mark

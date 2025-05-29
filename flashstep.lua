@@ -1,19 +1,26 @@
---Teleports adventurer to cursor
---[====[
+local function reveal_tile(pos)
+    local block = dfhack.maps.getTileBlock(pos)
+    local des = block.designation[pos.x%16][pos.y%16]
+    des.hidden = false
+    des.pile = true  -- reveal the tile on the map
+end
 
-flashstep
-=========
-A hotkey-friendly teleport that places your adventurer where your cursor is.
-
-]====]
-
-function flashstep()
-    local unit = df.global.world.units.active[0]
-    if df.global.adventure.menu ~= df.ui_advmode_menu.Look then
-        qerror("No [l] cursor located! You kinda need it for this script.")
+local function flashstep()
+    local unit = dfhack.world.getAdventurer()
+    if not unit then return end
+    local pos = dfhack.gui.getMousePos()
+    if not pos then return end
+    if dfhack.units.teleport(unit, pos) then
+        reveal_tile(xyz2pos(pos.x-1, pos.y-1, pos.z))
+        reveal_tile(xyz2pos(pos.x,   pos.y-1, pos.z))
+        reveal_tile(xyz2pos(pos.x+1, pos.y-1, pos.z))
+        reveal_tile(xyz2pos(pos.x-1, pos.y,   pos.z))
+        reveal_tile(pos)
+        reveal_tile(xyz2pos(pos.x+1, pos.y,   pos.z))
+        reveal_tile(xyz2pos(pos.x-1, pos.y+1, pos.z))
+        reveal_tile(xyz2pos(pos.x,   pos.y+1, pos.z))
+        reveal_tile(xyz2pos(pos.x+1, pos.y+1, pos.z))
     end
-    dfhack.units.teleport(unit, xyz2pos(pos2xyz(df.global.cursor)))
-    dfhack.maps.getTileBlock(unit.pos).designation[unit.pos.x%16][unit.pos.y%16].hidden = false
 end
 
 flashstep()

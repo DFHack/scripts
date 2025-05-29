@@ -1,25 +1,4 @@
 -- Script to add unknown crafting recipes to the player's civ.
---[====[
-add-recipe
-==========
-Adds unknown weapon and armor crafting recipes to your civ.
-E.g. some civilizations never learn to craft high boots. This script can
-help with that, and more. Only weapons, armor, and tools are currently supported;
-things such as instruments are not. Available options:
-
-* ``add-recipe all`` adds *all* available weapons and armor, including exotic items
-  like blowguns, two-handed swords, and capes.
-
-* ``add-recipe native`` adds only native (but unknown) crafting recipes. Civilizations
-  pick randomly from a pool of possible recipes, which means not all civs get
-  high boots, for instance. This command gives you all the recipes your
-  civilisation could have gotten.
-
-* ``add-recipe single <item token>`` adds a single item by the given
-  item token. For example::
-
-    add-recipe single SHOES:ITEM_SHOES_BOOTS
-]====]
 
 local itemDefs = df.global.world.raws.itemdefs
 local resources = df.historical_entity.find(df.global.plotinfo.civ_id).resources
@@ -125,7 +104,6 @@ function addItems(category, exotic)
   return added
 end
 
-
 function printItems(itemList)
   for _, v in ipairs(itemList) do
     local v = v --as:df.itemdef_weaponst
@@ -192,10 +170,5 @@ elseif (cmd == "native") then
 elseif (cmd == "single") then
   addSingleItem(args[2])
 else
-  print("Available options:\n"
-        .."all:    adds all supported crafting recipes.\n"
-        .."native: adds only unknown native recipes (eg. high boots for "
-        .."some dwarves)\n"
-        .."single: adds a specific item by itemstring (eg. "
-        .."SHOES:ITEM_SHOES_BOOTS)")
+  print(dfhack.script_help())
 end

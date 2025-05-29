@@ -2,24 +2,55 @@ pop-control
 ===========
 
 .. dfhack-tool::
-    :summary: Controls population and migration caps persistently per-fort.
-    :tags: unavailable fort auto gameplay
+    :summary: Limit the maximum size of migrant waves.
+    :tags: fort gameplay
 
-This script controls `hermit` and the various population caps per-fortress.
-It is intended to be run from ``dfhack-config/init/onMapLoad.init`` as
-``pop-control on-load``.
+This tool dynamically adjusts the game population caps to limit the number of
+migrants that can arrive in a single wave. This prevents migration waves from
+getting too large and overwhelming a fort's infrastructure.
 
-If you edit the population caps using `gui/settings-manager` after
-running this script, your population caps will be reset and you may
-get more migrants than you expect.
+.. warning::
+
+    This tool will change the population cap in the game settings. If you exit
+    out of a fort that has this tool enabled and then load a fort that doesn't
+    have this tool enabled, or if you start a new fort and `pop-control` is not
+    set for autostart, your population cap will be set to whatever value was
+    currently used for the previously loaded fort.
+
+If you want to more severely limit immigration and other "people" events, see
+`hermit`.
 
 Usage
 -----
 
-``pop-control on-load``
-    Load population settings for this site or prompt the user for settings
-    if not present.
-``pop-control reenter-settings``
-    Revise settings for this site.
-``pop-control view-settings``
-    Show the current settings for this site.
+::
+
+    enable pop-control
+    pop-control [status]
+    pop-control set wave-size <wave_size>
+    pop-control set max-pop <max_pop>
+    pop-control reset
+
+By default, migration waves are capped at 10 migrants and the fort max
+population is set at 200.
+
+When `pop-control` is disabled, the game population cap is set to the value
+configured for ``max-pop``. If you have manually adjusted the population caps
+outside of this tool, the value that is restored may differ from what you had
+originally set.
+
+Likewise, if you manually adjust the population caps while this tool is
+enabled, your manual settings will be overwritten when `pop-control` next
+compares your fort population to the settings configured for `pop-control`.
+
+Examples
+--------
+
+``enable pop-control``
+    Dynamically adjust the population cap for this fort so all future migrant waves are no larger than the configured ``wave-size``.
+``pop-control``
+    Show currently configured settings.
+``pop-control set wave-size 5``
+    Ensure future migration waves have 5 or fewer members.
+``pop-control reset``
+    Reset the wave size and max population to defaults.

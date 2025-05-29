@@ -8,19 +8,11 @@ if args[1] == 'help' then
 end
 
 if not dfhack.isWorldLoaded() then
-    qerror("Error: This script requires a world to be loaded.")
+    qerror('This script requires a world to be loaded.')
 end
 
 if dfhack.isMapLoaded() then
-    for _, block in ipairs(df.global.world.map.map_blocks) do
-        if block.flags.has_aquifer then
-            for k = 0, 15 do
-                for l = 0, 15 do
-                    block.occupancy[k][l].heavy_aquifer = false
-                end
-            end
-        end
-    end
+    dfhack.run_command('aquifer', 'convert', 'light', '--all')
     return
 end
 

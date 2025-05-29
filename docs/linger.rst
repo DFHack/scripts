@@ -3,7 +3,7 @@ linger
 
 .. dfhack-tool::
     :summary: Take control of your adventurer's killer.
-    :tags: unavailable adventure armok
+    :tags: unavailable
 
 Run this script after being presented with the "You are deceased." message to
 abandon your dead adventurer and take control of your adventurer's killer.

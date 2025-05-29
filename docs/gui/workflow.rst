@@ -3,7 +3,7 @@ gui/workflow
 
 .. dfhack-tool::
     :summary: Manage automated item production rules.
-    :tags: unavailable fort auto jobs
+    :tags: unavailable
 
 This tool provides a simple interface to item production constraints managed by
 `workflow`. When a workshop job is selected in :kbd:`q` mode and this tool is

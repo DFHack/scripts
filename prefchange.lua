@@ -4,35 +4,7 @@
 -- updated with print all and clear all functions on the 11th of April 2015
 -- Praise Armok!
 
---[====[
-
-prefchange
-==========
-Sets preferences for mooding to include a weapon type, equipment type,
-and material.  If you also wish to trigger a mood, see
-`strangemood`.
-
-Valid options:
-
-:show:  show preferences of all units
-:c:     clear preferences of selected unit
-:all:   clear preferences of all units
-:axp:   likes axes, breastplates, and steel
-:has:   likes hammers, mail shirts, and steel
-:swb:   likes short swords, high boots, and steel
-:spb:   likes spears, high boots, and steel
-:mas:   likes maces, shields, and steel
-:xbh:   likes crossbows, helms, and steel
-:pig:   likes picks, gauntlets, and steel
-:log:   likes long swords, gauntlets, and steel
-:dap:   likes daggers, greaves, and steel
-
-Feel free to adjust the values as you see fit, change the has steel to
-platinum, change the axp axes to great axes, whatnot.
-
-]====]
-
-local utils = require 'utils'
+local utils = require('utils')
 
 -- ---------------------------------------------------------------------------
 function axeplate()
@@ -46,7 +18,7 @@ function axeplate()
     local pss_counter=31415926
 
     local prefcount = #(unit.status.current_soul.preferences)
-    print ("Before, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("Before, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
     -- axes and breastplates
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 4 , item_type = df.item_type.WEAPON , creature_id = df.item_type.WEAPON , color_id = df.item_type.WEAPON , shape_id = df.item_type.WEAPON , plant_id = df.item_type.WEAPON , item_subtype = 1 , mattype = -1 , matindex = -1 , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
@@ -57,7 +29,7 @@ function axeplate()
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 0 , item_type = -1 , creature_id = -1 , color_id = -1 , shape_id = -1 , plant_id = -1 , item_subtype = -1 , mattype = 0 , matindex = dfhack.matinfo.find("STEEL").index , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
 
     prefcount = #(unit.status.current_soul.preferences)
-    print ("After, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("After, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
 end
 -- ---------------------------------------------------------------------------
@@ -72,7 +44,7 @@ function hammershirt()
     local pss_counter=31415926
 
     local prefcount = #(unit.status.current_soul.preferences)
-    print ("Before, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("Before, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
     -- hammers and mail shirts
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 4 , item_type = df.item_type.WEAPON , creature_id = df.item_type.WEAPON , color_id = df.item_type.WEAPON , shape_id = df.item_type.WEAPON , plant_id = df.item_type.WEAPON , item_subtype = 2 , mattype = -1 , matindex = -1 , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
@@ -83,7 +55,7 @@ function hammershirt()
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 0 , item_type = -1 , creature_id = -1 , color_id = -1 , shape_id = -1 , plant_id = -1 , item_subtype = -1 , mattype = 0 , matindex = dfhack.matinfo.find("STEEL").index , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
 
     prefcount = #(unit.status.current_soul.preferences)
-    print ("After, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("After, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
 end
 -- ---------------------------------------------------------------------------
@@ -98,7 +70,7 @@ function swordboot()
     local pss_counter=31415926
 
     local prefcount = #(unit.status.current_soul.preferences)
-    print ("Before, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("Before, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
     -- short swords and high boots
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 4 , item_type = df.item_type.WEAPON , creature_id = df.item_type.WEAPON , color_id = df.item_type.WEAPON , shape_id = df.item_type.WEAPON , plant_id = df.item_type.WEAPON , item_subtype = 3 , mattype = -1 , matindex = -1 , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
@@ -109,7 +81,7 @@ function swordboot()
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 0 , item_type = -1 , creature_id = -1 , color_id = -1 , shape_id = -1 , plant_id = -1 , item_subtype = -1 , mattype = 0 , matindex = dfhack.matinfo.find("STEEL").index , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
 
     prefcount = #(unit.status.current_soul.preferences)
-    print ("After, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("After, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
 end
 -- ---------------------------------------------------------------------------
@@ -124,7 +96,7 @@ function spearboot()
     local pss_counter=31415926
 
     local prefcount = #(unit.status.current_soul.preferences)
-    print ("Before, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("Before, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
     -- spears and high boots
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 4 , item_type = df.item_type.WEAPON , creature_id = df.item_type.WEAPON , color_id = df.item_type.WEAPON , shape_id = df.item_type.WEAPON , plant_id = df.item_type.WEAPON , item_subtype = 4 , mattype = -1 , matindex = -1 , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
@@ -135,7 +107,7 @@ function spearboot()
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 0 , item_type = -1 , creature_id = -1 , color_id = -1 , shape_id = -1 , plant_id = -1 , item_subtype = -1 , mattype = 0 , matindex = dfhack.matinfo.find("STEEL").index , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
 
     prefcount = #(unit.status.current_soul.preferences)
-    print ("After, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("After, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
 end
 -- ---------------------------------------------------------------------------
@@ -150,7 +122,7 @@ function maceshield()
     local pss_counter=31415926
 
     local prefcount = #(unit.status.current_soul.preferences)
-    print ("Before, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("Before, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
     -- maces and shields
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 4 , item_type = df.item_type.WEAPON , creature_id = df.item_type.WEAPON , color_id = df.item_type.WEAPON , shape_id = df.item_type.WEAPON , plant_id = df.item_type.WEAPON , item_subtype = 5 , mattype = -1 , matindex = -1 , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
@@ -161,7 +133,7 @@ function maceshield()
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 0 , item_type = -1 , creature_id = -1 , color_id = -1 , shape_id = -1 , plant_id = -1 , item_subtype = -1 , mattype = 0 , matindex = dfhack.matinfo.find("STEEL").index , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
 
     prefcount = #(unit.status.current_soul.preferences)
-    print ("After, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("After, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
 end
 -- ---------------------------------------------------------------------------
@@ -176,7 +148,7 @@ function xbowhelm()
     local pss_counter=31415926
 
     local prefcount = #(unit.status.current_soul.preferences)
-    print ("Before, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("Before, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
     -- crossbows and helms
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 4 , item_type = df.item_type.WEAPON , creature_id = df.item_type.WEAPON , color_id = df.item_type.WEAPON , shape_id = df.item_type.WEAPON , plant_id = df.item_type.WEAPON , item_subtype = 6 , mattype = -1 , matindex = -1 , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
@@ -187,7 +159,7 @@ function xbowhelm()
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 0 , item_type = -1 , creature_id = -1 , color_id = -1 , shape_id = -1 , plant_id = -1 , item_subtype = -1 , mattype = 0 , matindex = dfhack.matinfo.find("STEEL").index , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
 
     prefcount = #(unit.status.current_soul.preferences)
-    print ("After, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("After, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
 end
 -- ---------------------------------------------------------------------------
@@ -202,7 +174,7 @@ function pickglove()
     local pss_counter=31415926
 
     local prefcount = #(unit.status.current_soul.preferences)
-    print ("Before, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("Before, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
     -- picks and gauntlets
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 4 , item_type = df.item_type.WEAPON , creature_id = df.item_type.WEAPON , color_id = df.item_type.WEAPON , shape_id = df.item_type.WEAPON , plant_id = df.item_type.WEAPON , item_subtype = 7 , mattype = -1 , matindex = -1 , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
@@ -213,7 +185,7 @@ function pickglove()
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 0 , item_type = -1 , creature_id = -1 , color_id = -1 , shape_id = -1 , plant_id = -1 , item_subtype = -1 , mattype = 0 , matindex = dfhack.matinfo.find("STEEL").index , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
 
     prefcount = #(unit.status.current_soul.preferences)
-    print ("After, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("After, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
 end
 -- ---------------------------------------------------------------------------
@@ -228,7 +200,7 @@ function longglove()
     local pss_counter=31415926
 
     local prefcount = #(unit.status.current_soul.preferences)
-    print ("Before, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("Before, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
     -- long swords and gauntlets, skipped bows and whatnot
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 4 , item_type = df.item_type.WEAPON , creature_id = df.item_type.WEAPON , color_id = df.item_type.WEAPON , shape_id = df.item_type.WEAPON , plant_id = df.item_type.WEAPON , item_subtype = 13 , mattype = -1 , matindex = -1 , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
@@ -239,7 +211,7 @@ function longglove()
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 0 , item_type = -1 , creature_id = -1 , color_id = -1 , shape_id = -1 , plant_id = -1 , item_subtype = -1 , mattype = 0 , matindex = dfhack.matinfo.find("STEEL").index , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
 
     prefcount = #(unit.status.current_soul.preferences)
-    print ("After, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("After, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
 end
 -- ---------------------------------------------------------------------------
@@ -254,7 +226,7 @@ function daggerpants()
     local pss_counter=31415926
 
     local prefcount = #(unit.status.current_soul.preferences)
-    print ("Before, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("Before, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
     -- daggers and greaves, skipped the weapons which are too large for most dwarves
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 4 , item_type = df.item_type.WEAPON , creature_id = df.item_type.WEAPON , color_id = df.item_type.WEAPON , shape_id = df.item_type.WEAPON , plant_id = df.item_type.WEAPON , item_subtype = 16 , mattype = -1 , matindex = -1 , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
@@ -265,7 +237,7 @@ function daggerpants()
     utils.insert_or_update(unit.status.current_soul.preferences, { new = true, type = 0 , item_type = -1 , creature_id = -1 , color_id = -1 , shape_id = -1 , plant_id = -1 , item_subtype = -1 , mattype = 0 , matindex = dfhack.matinfo.find("STEEL").index , active = true, prefstring_seed = pss_counter }, 'prefstring_seed')
 
     prefcount = #(unit.status.current_soul.preferences)
-    print ("After, unit "..dfhack.TranslateName(dfhack.units.getVisibleName(unit)).." has "..prefcount.." preferences")
+    print ("After, unit "..dfhack.df2console(dfhack.units.getReadableName(unit)).." has "..prefcount.." preferences")
 
 end
 -- ---------------------------------------------------------------------------
@@ -302,20 +274,16 @@ function clear_all(v)
 end
 -- ---------------------------------------------------------------------------
 function printpref_all_dwarves()
-    for _,v in ipairs(df.global.world.units.active) do
-        if v.race == df.global.plotinfo.race_id then
-            print("Showing Preferences for "..dfhack.TranslateName(dfhack.units.getVisibleName(v)))
-            print_all(v)
-        end
+    for _,unit in ipairs(dfhack.units.getCitizens()) do
+        print("Showing Preferences for "..dfhack.df2console(dfhack.units.getReadableName(unit)))
+        print_all(unit)
     end
 end
 -- ---------------------------------------------------------------------------
 function clearpref_all_dwarves()
-    for _,v in ipairs(df.global.world.units.active) do
-        if v.race == df.global.plotinfo.race_id then
-            print("Clearing Preferences for "..dfhack.TranslateName(dfhack.units.getVisibleName(v)))
-            clear_all(v)
-        end
+    for _,unit in ipairs(dfhack.units.getCitizens()) do
+        print("Clearing Preferences for "..dfhack.df2console(dfhack.units.getReadableName(unit)))
+        clear_all(unit)
     end
 end
 -- ---------------------------------------------------------------------------

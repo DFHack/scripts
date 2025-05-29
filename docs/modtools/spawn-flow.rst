@@ -3,7 +3,7 @@ modtools/spawn-flow
 
 .. dfhack-tool::
     :summary: Creates flows at the specified location.
-    :tags: unavailable dev
+    :tags: unavailable
 
 Creates flows at the specified location.
 

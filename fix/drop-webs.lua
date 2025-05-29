@@ -32,7 +32,7 @@ function drop_webs(all_webs)
                 proj.flags.bouncing = true
                 proj.flags.piercing = true
                 proj.flags.parabolic = true
-                proj.flags.unk9 = true
+                proj.flags.no_adv_pause = true
                 proj.flags.no_collide = true
                 count = count+1
             end

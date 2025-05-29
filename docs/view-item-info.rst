@@ -3,7 +3,7 @@ view-item-info
 
 .. dfhack-tool::
     :summary: Extend item and unit descriptions with more information.
-    :tags: unavailable adventure fort interface
+    :tags: unavailable
 
 This tool extends the item or unit description viewscreen with additional
 information, including a custom description of each item (when available), and

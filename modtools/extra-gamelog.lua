@@ -1,17 +1,4 @@
 -- Regularly writes extra info to gamelog.txt
-local help = [====[
-
-modtools/extra-gamelog
-======================
-This script writes extra information to the gamelog.
-This is useful for tools like :forums:`Soundsense <106497>`.
-
-Usage::
-
-    modtools/extra-gamelog enable
-    modtools/extra-gamelog disable
-
-]====]
 
 local msg = dfhack.gui.writeToGamelog
 
@@ -48,7 +35,7 @@ function log_on_load(op)
     local fort_ent = df.global.plotinfo.main.fortress_entity
     local civ_ent = df.historical_entity.find(df.global.plotinfo.civ_id)
     local function fullname(item)
-        return dfhack.TranslateName(item.name)..' ('..dfhack.TranslateName(item.name ,true)..')'
+        return dfhack.translation.translateName(item.name)..' ('..dfhack.translation.translateName(item.name ,true)..')'
     end
     msg('Loaded '..df.global.world.cur_savegame.save_dir..', '..fullname(df.global.world.world_data)..
         ' at coordinates ('..site.pos.x..','..site.pos.y..')')
@@ -64,7 +51,6 @@ function log_nobles()
     local expedition_leader = nil
     local mayor = nil
     local function check(unit)
-        if not dfhack.units.isCitizen(unit) then return end
         for _, pos in ipairs(dfhack.units.getNoblePositions(unit) or {}) do
             if pos.position.name[0] == "expedition leader" then
                 expedition_leader = unit
@@ -73,7 +59,7 @@ function log_nobles()
             end
         end
     end
-    for _, unit in ipairs(df.global.world.units.active) do
+    for _, unit in ipairs(dfhack.units.getCitizens()) do
         check(unit)
     end
 
@@ -85,7 +71,7 @@ function log_nobles()
         if expedition_leader == nil then
             msg("Expedition leader position is now vacant.")
         else
-            msg(dfhack.TranslateName(dfhack.units.getVisibleName(expedition_leader)).." became expedition leader.")
+            msg(dfhack.translation.translateName(dfhack.units.getVisibleName(expedition_leader)).." became expedition leader.")
         end
     end
 
@@ -93,7 +79,7 @@ function log_nobles()
         if mayor == nil then
             msg("Mayor position is now vacant.")
         else
-            msg(dfhack.TranslateName(dfhack.units.getVisibleName(mayor)).." became mayor.")
+            msg(dfhack.translation.translateName(dfhack.units.getVisibleName(mayor)).." became mayor.")
         end
     end
     old_mayor = mayor
@@ -194,5 +180,5 @@ elseif args[1] == 'enable' then
     extra_gamelog_enabled = true
     event_loop()
 else
-    print(help)
+    print(dfhack.script_help())
 end

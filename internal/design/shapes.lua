@@ -1,7 +1,9 @@
 -- shape definitions for gui/dig
 --@ module = true
 
-local Point = reqscript("internal/design/util").Point
+local util = reqscript("internal/design/util")
+
+local Point = util.Point
 
 if not dfhack_flags.module then
     qerror("this script cannot be called directly")
@@ -213,6 +215,8 @@ end
 Ellipse = defclass(Ellipse, Shape)
 Ellipse.ATTRS {
     name = "Ellipse",
+    texture_offset = 5,
+    button_chars = util.make_ascii_button(9, 248)
 }
 
 function Ellipse:init()
@@ -224,7 +228,7 @@ function Ellipse:init()
             key = "CUSTOM_H",
         },
         thickness = {
-            name = "Thickness",
+            name = "Line thickness",
             type = "plusminus",
             value = 2,
             enabled = { "hollow", true },
@@ -241,41 +245,42 @@ function Ellipse:init()
     }
 end
 
+-- move the test point slightly closer to the circle center for a more pleasing curvature
+local bias = 0.4
+
 function Ellipse:has_point(x, y)
     local center_x, center_y = self.width / 2, self.height / 2
-    local point_x, point_y = x - center_x, y - center_y
-    local is_inside =
-    (point_x / (self.width / 2)) ^ 2 + (point_y / (self.height / 2)) ^ 2 <= 1
+    local point_x, point_y = math.abs(x-center_x)-bias, math.abs(y-center_y)-bias
+    local is_inside = 1 >= (point_x / center_x) ^ 2 + (point_y / center_y) ^ 2
 
-    if self.options.hollow.value and is_inside then
-        local all_points_inside = true
-        for dx = -self.options.thickness.value, self.options.thickness.value do
-            for dy = -self.options.thickness.value, self.options.thickness.value do
-                if dx ~= 0 or dy ~= 0 then
-                    local surrounding_x, surrounding_y = x + dx, y + dy
-                    local surrounding_point_x, surrounding_point_y =
-                    surrounding_x - center_x,
-                        surrounding_y - center_y
-                    if (surrounding_point_x / (self.width / 2)) ^ 2 + (surrounding_point_y / (self.height / 2)) ^ 2 >
-                        1 then
-                        all_points_inside = false
-                        break
-                    end
-                end
-            end
-            if not all_points_inside then
-                break
-            end
-        end
-        return not all_points_inside
-    else
+    if not self.options.hollow.value or not is_inside then
         return is_inside
     end
+
+    local all_points_inside = true
+    for dx = -self.options.thickness.value, self.options.thickness.value do
+        for dy = -self.options.thickness.value, self.options.thickness.value do
+            if dx ~= 0 or dy ~= 0 then
+                local surr_x, surr_y = x + dx, y + dy
+                local surr_point_x, surr_point_y = math.abs(surr_x-center_x)-bias, math.abs(surr_y-center_y)-bias
+                if 1 <= (surr_point_x / center_x) ^ 2 + (surr_point_y / center_y) ^ 2 then
+                    all_points_inside = false
+                    break
+                end
+            end
+        end
+        if not all_points_inside then
+            break
+        end
+    end
+    return not all_points_inside
 end
 
 Rectangle = defclass(Rectangle, Shape)
 Rectangle.ATTRS {
     name = "Rectangle",
+    texture_offset = 1,
+    button_chars = util.make_ascii_button(222, 221)
 }
 
 function Rectangle:init()
@@ -287,7 +292,7 @@ function Rectangle:init()
             key = "CUSTOM_H",
         },
         thickness = {
-            name = "Thickness",
+            name = "Line thickness",
             type = "plusminus",
             value = 2,
             enabled = { "hollow", true },
@@ -322,6 +327,8 @@ end
 Rows = defclass(Rows, Shape)
 Rows.ATTRS {
     name = "Rows",
+    texture_offset = 9,
+    button_chars = util.make_ascii_button(197, 197)
 }
 
 function Rows:init()
@@ -360,6 +367,8 @@ end
 Diag = defclass(Diag, Shape)
 Diag.ATTRS {
     name = "Diagonal",
+    texture_offset = 13,
+    button_chars = util.make_ascii_button('/', '/')
 }
 
 function Diag:init()
@@ -393,18 +402,66 @@ function Diag:has_point(x, y)
     end
 end
 
-Line = defclass(Line, Shape)
+LineDrawer = defclass(LineDrawer, Shape)
+
+function LineDrawer:plot_thickness(x, y, thickness)
+    local map_width, map_height = dfhack.maps.getTileSize()
+    for i = math.max(y - math.floor(thickness / 2), 0), math.min(y + math.ceil(thickness / 2) - 1, map_height - 1) do
+        for j = math.max(x - math.floor(thickness / 2), 0), math.min(x + math.ceil(thickness / 2) - 1, map_width - 1) do
+            if not self.arr[j] then self.arr[j] = {} end
+            if not self.arr[j][i] then
+                self.arr[j][i] = true
+                self.num_tiles = self.num_tiles + 1
+            end
+        end
+    end
+end
+
+function LineDrawer:plot_bresenham(x0, y0, x1, y1, thickness)
+    local dx = math.abs(x1 - x0)
+    local dy = math.abs(y1 - y0)
+    local sx = x0 < x1 and 1 or -1
+    local sy = y0 < y1 and 1 or -1
+    local e2, x, y
+
+    x = x0
+    y = y0
+    local err = dx - dy
+    while true do
+        self:plot_thickness(x, y, thickness)
+
+        if sx * x >= sx * x1 and sy * y >= sy * y1 then
+            break
+        end
+
+        e2 = 2 * err
+
+        if e2 > -dy then
+            err = err - dy
+            x = x + sx
+        end
+
+        if e2 < dx then
+            err = err + dx
+            y = y + sy
+        end
+    end
+end
+
+Line = defclass(Line, LineDrawer)
 Line.ATTRS {
     name = "Line",
     extra_points = { { label = "Curve Point" }, { label = "Second Curve Point" } },
-    invertable = false, -- Doesn't support invert
-    basic_shape = false -- Driven by points, not rectangle bounds
+    invertable = false,  -- Doesn't support invert
+    basic_shape = false, -- Driven by points, not rectangle bounds
+    texture_offset = 17,
+    button_chars = util.make_ascii_button(250, '(')
 }
 
 function Line:init()
     self.options = {
         thickness = {
-            name = "Thickness",
+            name = "Line thickness",
             type = "plusminus",
             value = 1,
             min = 1,
@@ -420,63 +477,26 @@ function Line:init()
     }
 end
 
-function Line:plot_bresenham(x0, y0, x1, y1, thickness)
-    local dx = math.abs(x1 - x0)
-    local dy = math.abs(y1 - y0)
-    local sx = x0 < x1 and 1 or -1
-    local sy = y0 < y1 and 1 or -1
-    local err = dx - dy
-    local e2, x, y
-
-    for i = 0, thickness - 1 do
-        x = x0
-        y = y0 + i
-        while true do
-            for j = -math.floor(thickness / 2), math.ceil(thickness / 2) - 1 do
-                if not self.arr[x + j] then self.arr[x + j] = {} end
-                self.arr[x + j][y] = true
-                self.num_tiles = self.num_tiles + 1
-            end
-
-            if x == x1 and y == y1 + i then
-                break
-            end
-
-            e2 = 2 * err
-
-            if e2 > -dy then
-                err = err - dy
-                x = x + sx
-            end
-
-            if e2 < dx then
-                err = err + dx
-                y = y + sy
-            end
-        end
-    end
-
+local function get_granularity(x0, y0, x1, y1, bezier_point1, bezier_point2)
+    local spread_x = math.max(x0, x1,  bezier_point1.x, bezier_point2 and bezier_point2.x or 0) -
+        math.min(x0, x1,  bezier_point1.x, bezier_point2 and bezier_point2.x or math.huge)
+    local spread_y = math.max(y0, y1,  bezier_point1.y, bezier_point2 and bezier_point2.y or 0) -
+        math.min(y0, y1,  bezier_point1.y, bezier_point2 and bezier_point2.y or math.huge)
+    return 1 / ((spread_x + spread_y) * 10)
 end
 
 function Line:cubic_bezier(x0, y0, x1, y1, bezier_point1, bezier_point2, thickness)
     local t = 0
     local x2, y2 = bezier_point1.x, bezier_point1.y
     local x3, y3 = bezier_point2.x, bezier_point2.y
+    local granularity = get_granularity(x0, y0, x1, y1, bezier_point1, bezier_point2)
     while t <= 1 do
         local x = math.floor(((1 - t) ^ 3 * x0 + 3 * (1 - t) ^ 2 * t * x2 + 3 * (1 - t) * t ^ 2 * x3 + t ^ 3 * x1) +
             0.5)
         local y = math.floor(((1 - t) ^ 3 * y0 + 3 * (1 - t) ^ 2 * t * y2 + 3 * (1 - t) * t ^ 2 * y3 + t ^ 3 * y1) +
             0.5)
-        for i = 0, thickness - 1 do
-            for j = -math.floor(thickness / 2), math.ceil(thickness / 2) - 1 do
-                if not self.arr[x + j] then self.arr[x + j] = {} end
-                if not self.arr[x + j][y + i] then
-                    self.arr[x + j][y + i] = true
-                    self.num_tiles = self.num_tiles + 1
-                end
-            end
-        end
-        t = t + 0.01
+        self:plot_thickness(x, y, thickness)
+        t = t + granularity
     end
 
     -- Get the last point
@@ -484,33 +504,19 @@ function Line:cubic_bezier(x0, y0, x1, y1, bezier_point1, bezier_point2, thickne
         0.5)
     local y_end = math.floor(((1 - 1) ^ 3 * y0 + 3 * (1 - 1) ^ 2 * 1 * y2 + 3 * (1 - 1) * 1 ^ 2 * y3 + 1 ^ 3 * y1) +
         0.5)
-    for i = 0, thickness - 1 do
-        for j = -math.floor(thickness / 2), math.ceil(thickness / 2) - 1 do
-            if not self.arr[x_end + j] then self.arr[x_end + j] = {} end
-            if not self.arr[x_end + j][y_end + i] then
-                self.arr[x_end + j][y_end + i] = true
-                self.num_tiles = self.num_tiles + 1
-            end
-        end
-    end
+
+    self:plot_thickness(x_end, y_end, thickness)
 end
 
 function Line:quadratic_bezier(x0, y0, x1, y1, bezier_point1, thickness)
     local t = 0
     local x2, y2 = bezier_point1.x, bezier_point1.y
+    local granularity = get_granularity(x0, y0, x1, y1, bezier_point1)
     while t <= 1 do
         local x = math.floor(((1 - t) ^ 2 * x0 + 2 * (1 - t) * t * x2 + t ^ 2 * x1) + 0.5)
         local y = math.floor(((1 - t) ^ 2 * y0 + 2 * (1 - t) * t * y2 + t ^ 2 * y1) + 0.5)
-        for i = 0, thickness - 1 do
-            for j = -math.floor(thickness / 2), math.ceil(thickness / 2) - 1 do
-                if not self.arr[x + j] then self.arr[x + j] = {} end
-                if not self.arr[x + j][y + i] then
-                    self.arr[x + j][y + i] = true
-                    self.num_tiles = self.num_tiles + 1
-                end
-            end
-        end
-        t = t + 0.01
+        self:plot_thickness(x, y, thickness)
+        t = t + granularity
     end
 end
 
@@ -551,13 +557,15 @@ FreeForm.ATTRS = {
     min_points = 1,
     max_points = DEFAULT_NIL,
     basic_shape = false,
-    can_mirror = true
+    can_mirror = true,
+    texture_offset = 21,
+    button_chars = util.make_ascii_button('?', '*')
 }
 
 function FreeForm:init()
     self.options = {
         thickness = {
-            name = "Thickness",
+            name = "Line thickness",
             type = "plusminus",
             value = 1,
             min = 1,
@@ -618,8 +626,10 @@ function FreeForm:update(points, extra_points)
         for x, y_row in pairs(line_class.arr) do
             for y, _ in pairs(y_row) do
                 if not self.arr[x] then self.arr[x] = {} end
-                self.arr[x][y] = true
-                self.num_tiles = self.num_tiles + 1
+                if not self.arr[x][y] then
+                    self.arr[x][y] = true
+                    self.num_tiles = self.num_tiles + 1
+                end
             end
         end
     end
@@ -657,7 +667,139 @@ function FreeForm:point_in_polygon(x, y)
     return inside
 end
 
+Star = defclass(Star, LineDrawer)
+Star.ATTRS {
+    name = "Star",
+    texture_offset = 25,
+    button_chars = util.make_ascii_button('*', 15),
+    extra_points = { { label = "Main Axis" } }
+}
+
+function Star:init()
+    self.options = {
+        hollow = {
+            name = "Hollow",
+            type = "bool",
+            value = false,
+            key = "CUSTOM_H",
+        },
+        thickness = {
+            name = "Line thickness",
+            type = "plusminus",
+            value = 1,
+            enabled = { "hollow", true },
+            min = 1,
+            max = function(shape) if not shape.height or not shape.width then
+                    return nil
+                else
+                    return math.ceil(math.min(shape.height, shape.width) / 2)
+
+                end
+            end,
+            keys = { "CUSTOM_T", "CUSTOM_SHIFT_T" },
+        },
+        total_points = {
+            name = "Total points",
+            type = "plusminus",
+            value = 5,
+            min = 3,
+            max = 100,
+            keys = { "CUSTOM_B", "CUSTOM_SHIFT_B" },
+        },
+        next_point_offset = {
+            name = "Next point offset",
+            type = "plusminus",
+            value = 2,
+            min = 1,
+            max = 100,
+            keys = { "CUSTOM_N", "CUSTOM_SHIFT_N" },
+        },
+    }
+end
+
+function Star:has_point(x, y)
+    if 1 < ((x-self.center.x) / self.center.x) ^ 2 + ((y-self.center.y) / self.center.y) ^ 2 then return false end
+
+    local inside = 0
+    for l = 1, self.options.total_points.value do
+        if x * self.lines[l].slope.x - self.lines[l].intercept.x < y * self.lines[l].slope.y - self.lines[l].intercept.y then
+            inside = inside + 1
+        else
+            inside = inside - 1
+        end
+    end
+    return self.threshold > 0 and inside > self.threshold or inside < self.threshold
+end
+
+function vmagnitude(point)
+    return math.sqrt(point.x * point.x + point.y * point.y)
+end
+
+function vnormalize(point)
+    local magnitude = vmagnitude(point)
+    return { x = point.x / magnitude, y = point.y / magnitude }
+end
+
+function add_offset(coord, offset)
+    return coord + (offset > 0 and math.floor(offset+0.5) or math.ceil(offset-0.5))
+end
+
+function Star:update(points, extra_points)
+    self.num_tiles = 0
+    self.points = copyall(points)
+    self.arr = {}
+    if #points < self.min_points then return end
+    self.threshold = self.options.total_points.value - 2 * self.options.next_point_offset.value
+
+    local thickness = 1
+    if self.options.hollow.value then
+        thickness = self.options.thickness.value
+    end
+
+    local top_left, bot_right = self:get_point_dims()
+    self.height = bot_right.y - top_left.y - thickness + 1
+    self.width = bot_right.x - top_left.x - thickness + 1
+    if self.height < 2 or self.width < 2 then return end
+    self.center = { x = (bot_right.x - top_left.x + ((thickness - 1) % 2)) * 0.5, y = (bot_right.y - top_left.y + ((thickness - 1) % 2)) * 0.5 }
+    local axes = {}
+
+    axes[1] = (#extra_points > 0) and { x = extra_points[1].x - self.center.x - top_left.x, y = extra_points[1].y - self.center.y - top_left.y } or { x = 0, y = -self.center.y }
+    if vmagnitude(axes[1]) < 0.5 then axes[1].y = -self.center.y end
+    axes[1] = vnormalize(axes[1])
+
+    for a = 2, self.options.total_points.value do
+        local angle = math.pi * (a - 1.0) * 2.0 / self.options.total_points.value
+        axes[a] = { x = math.cos(angle) * axes[1].x - math.sin(angle) * axes[1].y, y = math.sin(angle) * axes[1].x + math.cos(angle) * axes[1].y }
+    end
+
+
+    self.lines = {}
+    for l = 1, self.options.total_points.value do
+        local p1 = { x = self.center.x + axes[l].x * self.width * 0.5, y = self.center.y + axes[l].y * self.height * 0.5 }
+        local next_axis = axes[(l-1+self.options.next_point_offset.value) % self.options.total_points.value + 1]
+        local p2 = { x = self.center.x + next_axis.x * self.width * 0.5, y = self.center.y + next_axis.y * self.height * 0.5 }
+        self.lines[l] = { slope = { x = p2.y - p1.y, y = p2.x - p1.x }, intercept = { x = (p2.y - p1.y) * p1.x, y = (p2.x - p1.x) * p1.y } }
+        self:plot_bresenham(add_offset(top_left.x, p1.x), add_offset(top_left.y, p1.y), add_offset(top_left.x, p2.x), add_offset(top_left.y, p2.y), thickness)
+        self:plot_bresenham(add_offset(top_left.x, p2.x), add_offset(top_left.y, p2.y), add_offset(top_left.x, p1.x), add_offset(top_left.y, p1.y), thickness)
+    end
+
+    if not self.options.hollow.value or self.invert then
+        for x = top_left.x, bot_right.x do
+            if not self.arr[x] then self.arr[x] = {} end
+            for y = top_left.y, bot_right.y do
+                local value = self.arr[x][y] or (not self.options.hollow.value and self:has_point(x - top_left.x, y - top_left.y))
+                if self.invert then
+                    self.arr[x][y] = not value
+                else
+                    self.arr[x][y] = value
+                end
+
+                self.num_tiles = self.num_tiles + (self.arr[x][y] and 1 or 0)
+            end
+        end
+    end
+end
 -- module users can get shapes through this global, shape option values
 -- persist in these as long as the module is loaded
 -- idk enough lua to know if this is okay to do or not
-all_shapes = { Rectangle {}, Ellipse {}, Rows {}, Diag {}, Line {}, FreeForm {} }
+all_shapes = { Rectangle {}, Ellipse {}, Star {}, Rows {}, Diag {}, Line {}, FreeForm {} }

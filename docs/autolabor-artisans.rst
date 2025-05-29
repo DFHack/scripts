@@ -3,7 +3,7 @@ autolabor-artisans
 
 .. dfhack-tool::
     :summary: Configures autolabor to produce artisan dwarves.
-    :tags: unavailable fort labors
+    :tags: unavailable
 
 This script runs an `autolabor` command for all labors where skill level
 influences output quality (e.g. Carpentry, Stone detailing, Weaponsmithing,

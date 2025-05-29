@@ -218,7 +218,7 @@ professions = {
 
 --Arts & Crafts & Dwarfism
     CRAFTSMAN =         { skills = {WOODCRAFT=2, STONECRAFT=2, METALCRAFT=2} },
-    ENGRAVER =          { skills = {DETAILSTONE=5} },
+    ENGRAVER =          { skills = {ENGRAVE_STONE=5} },
     MECHANIC =          { skills = {MECHANICS=5} },
 
 --Plants & Animals

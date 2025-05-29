@@ -3,7 +3,7 @@ assign-profile
 
 .. dfhack-tool::
     :summary: Adjust characteristics of a unit according to saved profiles.
-    :tags: unavailable fort armok units
+    :tags: unavailable
 
 This tool can load a profile stored in a JSON file and apply the
 characteristics to a unit.

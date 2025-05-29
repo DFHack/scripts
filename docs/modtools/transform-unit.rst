@@ -3,7 +3,7 @@ modtools/transform-unit
 
 .. dfhack-tool::
     :summary: Transform a unit into another unit type.
-    :tags: unavailable dev
+    :tags: unavailable
 
 This tool transforms a unit into another unit type, either temporarily or
 permanently.

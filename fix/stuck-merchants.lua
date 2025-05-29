@@ -1,26 +1,7 @@
--- Dismisses stuck merchants that haven't entered the map yet
--- Based on "dismissmerchants" by PatrikLundell:
--- http://www.bay12forums.com/smf/index.php?topic=159297.msg7257447#msg7257447
-
-local help = [====[
-
-fix/stuck-merchants
-===================
-
-Dismisses merchants that haven't entered the map yet. This can fix :bug:`9593`.
-This script should probably not be run if any merchants are on the map, so using
-it with `repeat` is not recommended.
-
-Run ``fix/stuck-merchants -n`` or ``fix/stuck-merchants --dry-run`` to list all
-merchants that would be dismissed but make no changes.
-
-]====]
-
-
 function getEntityName(u)
     local civ = df.historical_entity.find(u.civ_id)
     if not civ then return 'unknown civ' end
-    return dfhack.TranslateName(civ.name)
+    return dfhack.translation.translateName(civ.name)
 end
 
 function getEntityRace(u)
@@ -38,7 +19,7 @@ function dismissMerchants(args)
     local dry_run = false
     for _, arg in pairs(args) do
         if args[1]:match('-h') or args[1]:match('help') then
-            print(help)
+            print(dfhack.script_help())
             return
         elseif args[1]:match('-n') or args[1]:match('dry') then
             dry_run = true
@@ -49,7 +30,7 @@ function dismissMerchants(args)
             print(('%s unit %d: %s (%s), civ %d (%s, %s)'):format(
                 dry_run and 'Would remove' or 'Removing',
                 u.id,
-                dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(u))),
+                dfhack.df2console(dfhack.units.getReadableName(u)),
                 df.creature_raw.find(u.race).name[0],
                 u.civ_id,
                 dfhack.df2console(getEntityName(u)),
@@ -62,6 +43,4 @@ function dismissMerchants(args)
     end
 end
 
-if not dfhack_flags.module then
-    dismissMerchants{...}
-end
+dismissMerchants{...}

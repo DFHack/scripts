@@ -47,15 +47,6 @@ local function getTileType(cursor)
     end
 end
 
-local function getTileWalkable(cursor)
-    local block = dfhack.maps.getTileBlock(cursor)
-    if block then
-        return block.walkable[cursor.x%16][cursor.y%16]
-    else
-        return 0
-    end
-end
-
 local function paintMapTile(dc, vp, cursor, pos, ...)
     if not same_xyz(cursor, pos) then
         local stile = vp:tileToScreen(pos)
@@ -115,7 +106,7 @@ function UnitPathUI:renderPath(dc,vp,cursor)
                     end
                 end
                 local color = COLOR_LIGHTGREEN
-                if getTileWalkable(pt) == 0 then color = COLOR_LIGHTRED end
+                if dfhack.maps.getWalkableGroup(pt) == 0 then color = COLOR_LIGHTRED end
                 paintMapTile(dc, vp, cursor, pt, char, color)
             end
         end
@@ -136,7 +127,7 @@ function UnitPathUI:onRenderBody(dc)
 
     dc:seek(2,3):pen(COLOR_BLUE):string(prof)
     if name and name.has_name then
-        dc:seek(2,4):pen(COLOR_BLUE):string(dfhack.TranslateName(name))
+        dc:seek(2,4):pen(COLOR_BLUE):string(dfhack.translation.translateName(name))
     end
 
     local cursor = guidm.getCursorPos()

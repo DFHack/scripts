@@ -3,7 +3,7 @@ growcrops
 
 .. dfhack-tool::
     :summary: Instantly grow planted seeds into crops.
-    :tags: unavailable fort armok plants
+    :tags: unavailable
 
 With no parameters, this command lists the seed types currently planted in your
 farming plots. With a seed type, the script will grow those seeds, ready to be

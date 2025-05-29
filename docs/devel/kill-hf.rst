@@ -3,7 +3,7 @@ devel/kill-hf
 
 .. dfhack-tool::
     :summary: Kill a historical figure.
-    :tags: unavailable dev
+    :tags: unavailable
 
 This tool can kill the specified historical figure, even if off-site, or
 terminate a pregnancy. Useful for working around :bug:`11549`.

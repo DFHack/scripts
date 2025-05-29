@@ -3,7 +3,7 @@ gui/power-meter
 
 .. dfhack-tool::
     :summary: Allow pressure plates to measure power.
-    :tags: unavailable fort gameplay buildings
+    :tags: unavailable
 
 If you run this tool after selecting :guilabel:`Pressure Plate` in the build
 menu, you will build a power meter building instead of a regular pressure plate.

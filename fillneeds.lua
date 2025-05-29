@@ -1,15 +1,3 @@
--- Use with a unit selected to make them focused and unstressed.
---[====[
-
-fillneeds
-=========
-Use with a unit selected to make them focused and unstressed.
-
-Alternatively, a unit can be specified by passing ``-unit UNIT_ID``
-
-Use ``-all`` to apply to all units on the map.
-
-]====]
 local utils = require('utils')
 local validArgs = utils.invert({'all', 'unit'})
 local args = utils.processArgs({...}, validArgs)
@@ -26,7 +14,7 @@ function satisfyNeeds(unit)
 end
 
 if args.all then
-    for _, unit in ipairs(df.global.world.units.all) do
+    for _, unit in ipairs(dfhack.units.getCitizens()) do
         satisfyNeeds(unit)
     end
 else

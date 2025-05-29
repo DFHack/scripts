@@ -3,7 +3,7 @@ combat-harden
 
 .. dfhack-tool::
     :summary: Set the combat-hardened value on a unit.
-    :tags: unavailable fort armok military units
+    :tags: fort armok units
 
 This tool can make a unit care more/less about seeing corpses.
 
@@ -12,7 +12,7 @@ Usage
 
 ::
 
-    combat-harden [<unit>] [<hardness>]
+    combat-harden [<unit option>] [<hardness option>]
 
 Examples
 --------
@@ -28,8 +28,8 @@ Unit options
 ``--all``
     All active units will be affected.
 ``--citizens``
-    All (sane) citizens of your fort will be affected. Will do nothing in
-    adventure mode.
+    All citizens and residents of your fort will be affected. Will do nothing
+    in adventure mode.
 ``--unit <id>``
     The given unit will be affected.
 

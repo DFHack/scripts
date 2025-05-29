@@ -3,7 +3,7 @@ forget-dead-body
 
 .. dfhack-tool::
     :summary: Removes emotions associated with seeing a dead body.
-    :tags: unavailable fort armok units
+    :tags: unavailable
 
 This tool can help your dwarves recover from seeing a massacre. It removes all
 emotions associated with seeing a dead body. If your dwarves are traumatized and

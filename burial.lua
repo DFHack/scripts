@@ -1,27 +1,31 @@
--- allows burial in unowned coffins
--- by Putnam https://gist.github.com/Putnam3145/e7031588f4d9b24b9dda
---[====[
+-- Allows burial in unowned coffins.
+-- Based on Putnam's work (https://gist.github.com/Putnam3145/e7031588f4d9b24b9dda)
 
-burial
-======
-Sets all unowned coffins to allow burial.  ``burial -pets`` also allows burial
-of pets.
+local argparse = require('argparse')
+local quickfort = reqscript('quickfort')
 
-]====]
-
-local utils=require('utils')
-
-local validArgs = utils.invert({
- 'pets'
+local cur_zlevel, citizens, pets = false, true, true
+argparse.processArgsGetopt({...}, {
+    {'z', 'cur-zlevel', handler=function() cur_zlevel = true end},
+    {'c', 'citizens-only', handler=function() pets = false end},
+    {'p', 'pets-only', handler=function() citizens = false end},
 })
+local tomb_blueprint = {
+    mode = 'zone',
+    pos = nil,
+    -- Don't pass properties with default values to avoid 'unhandled property' warning
+    data = ('T{%s %s}'):format(citizens and '' or 'citizens=false', pets and 'pets=true' or ''),
+}
 
-local args = utils.processArgs({...}, validArgs)
-
-for k,v in ipairs(df.global.world.buildings.other.COFFIN) do --as:df.building_coffinst
-    if v.owner_id==-1 then
-        v.burial_mode.allow_burial=true
-        if not args.pets then
-            v.burial_mode.no_pets=true
-        end
+local tomb_count = 0
+for _, coffin in pairs(df.global.world.buildings.other.COFFIN) do
+    if #coffin.relations > 0 or cur_zlevel and coffin.z ~= df.global.window_z then
+        goto skip
     end
+    tomb_blueprint.pos = xyz2pos(coffin.x1, coffin.y1, coffin.z)
+    quickfort.apply_blueprint(tomb_blueprint)
+    tomb_count = tomb_count + 1
+    ::skip::
 end
+
+print(('Created %s tomb(s).'):format(tomb_count))

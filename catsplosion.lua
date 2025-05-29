@@ -28,7 +28,11 @@ local males = {} --as:df.unit[][]
 local females = {} --as:df.unit[][]
 
 for _, unit in pairs(world.units.active) do
-    if dfhack.units.isDead(unit) then
+    if not dfhack.units.isActive(unit) or
+        dfhack.units.isDead(unit) or
+        dfhack.units.isBaby(unit) or
+        dfhack.units.isChild(unit)
+    then
         goto continue
     end
     local id = world.raws.creatures.all[unit.race].creature_id

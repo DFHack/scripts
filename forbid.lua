@@ -5,7 +5,7 @@ local argparse = require('argparse')
 local function getForbiddenItems()
     local items = {}
 
-    for _, item in pairs(df.global.world.items.all) do
+    for _, item in pairs(df.global.world.items.other.IN_PLAY) do
         if item.flags.forbid then
             local item_type = df.item_type[item:getType()]
 
@@ -59,7 +59,7 @@ if positionals[1] == "all" then
     print("Forbidding all items on the map...")
 
     local count = 0
-    for _, item in pairs(df.global.world.items.all) do
+    for _, item in pairs(df.global.world.items.other.IN_PLAY) do
         item.flags.forbid = true
         count = count + 1
     end
@@ -70,10 +70,10 @@ end
 if positionals[1] == "unreachable" then
     print("Forbidding all unreachable items on the map...")
 
-    local citizens = dfhack.units.getCitizens()
+    local citizens = dfhack.units.getCitizens(true)
     local count = 0
 
-    for _, item in pairs(df.global.world.items.all) do
+    for _, item in pairs(df.global.world.items.other.IN_PLAY) do
         if item.flags.construction or item.flags.in_building or item.flags.artifact then
             goto skipitem
         end

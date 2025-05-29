@@ -1,108 +1,123 @@
-local script = require("gui.script")
-local persistTable = require("persist-table")
+--@module = true
+--@enable = true
 
--- (Hopefully) get original settings
-originalPopCap = originalPopCap or df.global.d_init.population_cap
-originalStrictPopCap = originalStrictPopCap or df.global.d_init.strict_population_cap
-originalVisitorCap = originalVisitorCap or df.global.d_init.visitor_cap
+local argparse = require('argparse')
+local repeatutil = require('repeat-util')
+local utils = require('utils')
 
-local function popControl(forceEnterSettings)
-    if df.global.gamemode ~= df.game_mode.DWARF then
-        if forceEnterSettings then
-            -- did reenter-settings, show an error
-            qerror("Not in fort mode")
-            return
-        else
-            -- silent automatic behaviour
-            return
-        end
-    end
+local GLOBAL_KEY = 'pop-control'
 
-    if not persistTable.GlobalTable.fortPopInfo then
-        persistTable.GlobalTable.fortPopInfo = {}
-    end
-
-    local siteId = df.global.plotinfo.site_id
-
-    script.start(function()
-        local siteInfo = persistTable.GlobalTable.fortPopInfo[siteId]
-        if not siteInfo or forceEnterSettings then
-            -- get new settings
-            persistTable.GlobalTable.fortPopInfo[siteId] = nil -- i don't know if persist-table works well with reassignent
-            persistTable.GlobalTable.fortPopInfo[siteId] = {}
-            siteInfo = persistTable.GlobalTable.fortPopInfo[siteId]
-            if script.showYesNoPrompt("Hermit", "Hermit mode?") then
-                siteInfo.hermit = "true"
-            else
-                siteInfo.hermit = "false"
-                local _ -- ignore
-                -- migrant cap
-                local migrantCapInput
-                while not tonumber(migrantCapInput) do
-                    _, migrantCapInput = script.showInputPrompt("Migrant cap", "Maximum migrants per wave?")
-                end
-                siteInfo.migrantCap = migrantCapInput
-                -- pop cap
-                local popCapInput
-                while not tonumber(popCapInput) or popCapInput == "" do
-                    _, popCapInput = script.showInputPrompt("Population cap", "Maximum population? Settings population cap: " .. originalPopCap .. "\n(assuming wasn't changed before first call of this script)")
-                end
-                siteInfo.popCap = tostring(tonumber(popCapInput) or originalPopCap)
-                -- strict pop cap
-                local strictPopCapInput
-                while not tonumber(strictPopCapInput) or strictPopCapInput == "" do
-                    _, strictPopCapInput = script.showInputPrompt("Strict population cap", "Strict maximum population? Settings strict population cap " .. originalStrictPopCap .. "\n(assuming wasn't changed before first call of this script)")
-                end
-                siteInfo.strictPopCap = tostring(tonumber(strictPopCapInput) or originalStrictPopCap)
-                -- visitor cap
-                local visitorCapInput
-                while not tonumber(visitorCapInput) or visitorCapInput == "" do
-                    _, visitorCapInput = script.showInputPrompt("Visitors", "Vistitor cap? Settings visitor cap " .. originalVisitorCap .. "\n(assuming wasn't changed before first call of this script)")
-                end
-                siteInfo.visitorCap = tostring(tonumber(visitorCap) or originalVisitorCap)
-            end
-        end
-        -- use settings
-        if siteInfo.hermit == "true" then
-            dfhack.run_command("hermit enable")
-            -- NOTE: could, maybe should cancel max-wave repeat here
-        else
-            dfhack.run_command("hermit disable")
-            dfhack.run_command("repeat -name max-wave -timeUnits months -time 1 -command [ max-wave " .. siteInfo.migrantCap .. " " .. siteInfo.popCap .. " ]")
-            df.global.d_init.strict_population_cap = tonumber(siteInfo.strictPopCap)
-            df.global.d_init.visitor_cap = tonumber(siteInfo.visitorCap)
-        end
-    end)
+local function get_default_state()
+    return {
+        enabled=false,
+        max_wave=10,
+        max_pop=200,
+    }
 end
 
-local function viewSettings()
-    local siteId = df.global.plotinfo.site_id
-    if not persistTable.GlobalTable.fortPopInfo or not persistTable.GlobalTable.fortPopInfo[siteId] then
-        print("Could not find site information")
+state = state or get_default_state()
+
+function isEnabled()
+    return state.enabled
+end
+
+local function persist_state()
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, state)
+end
+
+local function adjust_caps()
+    if not state.enabled then return end
+    local new_cap = math.min(state.max_pop, #dfhack.units.getCitizens() + state.max_wave)
+    if new_cap ~= df.global.d_init.dwarf.population_cap then
+        df.global.d_init.dwarf.population_cap = new_cap
+        print('pop-control: Population cap set to ' .. new_cap)
+    end
+end
+
+local function do_enable()
+    state.enabled = true
+    repeatutil.scheduleEvery(GLOBAL_KEY, 1, "months", adjust_caps)
+end
+
+local function do_disable()
+    state.enabled = false
+    repeatutil.cancel(GLOBAL_KEY)
+    df.global.d_init.dwarf.population_cap = state.max_pop
+    print('pop-control: Population cap reset to ' .. state.max_pop)
+end
+
+local function do_set(which, val)
+    local num = argparse.positiveInt(val, which)
+    if which == 'wave-size' then
+        state.max_wave = num
+    elseif which == 'max-pop' then
+        state.max_pop = num
+    else
+        qerror(('unknown setting: "%s"'):format(which))
+    end
+    adjust_caps()
+end
+
+local function do_reset()
+    local enabled = state.enabled
+    state = get_default_state()
+    state.enabled = enabled
+    adjust_caps()
+end
+
+local function print_status()
+    print(('pop-control is %s.'):format(state.enabled and 'enabled' or 'disabled'))
+    print()
+    print('Settings:')
+    print(('  wave-size: %3d'):format(state.max_wave))
+    print(('  max-pop:   %3d'):format(state.max_pop))
+    print()
+    print('Current game caps:')
+    print(('  population cap: %3d'):format(df.global.d_init.dwarf.population_cap))
+    print(('  strict pop cap: %3d'):format(df.global.d_init.dwarf.strict_population_cap))
+    print(('  visitor cap:    %3d'):format(df.global.d_init.dwarf.visitor_cap))
+end
+
+--- Handles automatic loading
+dfhack.onStateChange[GLOBAL_KEY] = function(sc)
+    if sc ~= SC_MAP_LOADED or not dfhack.world.isFortressMode() then
         return
     end
-    local siteInfo = persistTable.GlobalTable.fortPopInfo[siteId]
-    if siteInfo.hermit == "true" then
-       print("Hermit: true")
-       return
+
+    state = get_default_state()
+    utils.assign(state, dfhack.persistent.getSiteData(GLOBAL_KEY, state))
+    if state.enabled then
+        do_enable()
     end
-    print("Hermit: false")
-    print("Migrant cap: " .. siteInfo.migrantCap)
-    print("Population cap: " .. siteInfo.popCap)
-    print("Strict population cap: " .. siteInfo.strictPopCap)
-    print("Visitor cap: " .. siteInfo.visitorCap)
 end
 
-local function help()
-    print("syntax: pop-control [on-load|reenter-settings|view-settings]")
+if dfhack_flags.module then
+    return
 end
 
-local action_switch = {
-    ["on-load"] = function() popControl(false) end,
-    ["reenter-settings"] = function() popControl(true) end,
-    ["view-settings"] = function() viewSettings() end
-}
-setmetatable(action_switch, {__index = function() return help end})
+if not dfhack.world.isFortressMode() or not dfhack.isMapLoaded() then
+    qerror('needs a loaded fortress map to work')
+end
 
 local args = {...}
-action_switch[args[1] or "help"]()
+local command = table.remove(args, 1)
+
+if dfhack_flags and dfhack_flags.enable then
+    if dfhack_flags.enable_state then
+        do_enable()
+    else
+        do_disable()
+    end
+elseif command == 'set' then
+    do_set(args[1], args[2])
+elseif command == 'reset' then
+    do_reset()
+elseif not command or command == 'status' then
+    print_status()
+    return
+else
+    print(dfhack.script_help())
+    return
+end
+
+persist_state()

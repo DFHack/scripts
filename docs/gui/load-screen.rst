@@ -3,7 +3,7 @@ gui/load-screen
 
 .. dfhack-tool::
     :summary: Replace DF's continue game screen with a searchable list.
-    :tags: unavailable dfhack
+    :tags: unavailable
 
 If you tend to have many ongoing games, this tool can make it much easier to
 load the one you're looking for. It replaces DF's "continue game" screen with

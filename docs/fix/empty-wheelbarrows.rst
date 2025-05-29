@@ -9,8 +9,8 @@ Empties all wheelbarrows which contain rocks that have become 'stuck' in them.
 
 This works around the issue encountered with :bug:`6074`, and should be run
 if you notice wheelbarrows lying around with rocks in them that aren't
-being used in a task. This script can also be set to run periodically in
-the background by toggling the Maintenance task in `gui/control-panel`.
+being used in a task. This script is set to run periodically by default in
+`gui/control-panel`.
 
 Usage
 -----
@@ -26,12 +26,12 @@ Examples
 ``fix/empty-wheelbarrows --dry-run``
     Lists all wheelbarrows that would be emptied and their contents without performing the action.
 ``fix/empty-wheelbarrows --quiet``
-    Does the action while surpressing output to console.
+    Does the action while suppressing output to console.
 
 Options
 -------
 
 ``-q``, ``--quiet``
-    Surpress console output (final status update is still printed if at least one item was affected).
+    Suppress console output (final status update is still printed if at least one item was affected).
 ``-d``, ``--dry-run``
     Dry run, don't commit changes.

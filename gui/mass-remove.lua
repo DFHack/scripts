@@ -1,18 +1,22 @@
 -- building/construction mass removal/suspension tool
 
+--@ module = true
+
+local toolbar_textures = dfhack.textures.loadTileset('hack/data/art/mass_remove_toolbar.png', 8, 12)
+
 local gui = require('gui')
 local guidm = require('gui.dwarfmode')
 local utils = require('utils')
 local widgets = require('gui.widgets')
-local suspendmanager = reqscript('suspendmanager')
+local overlay = require('plugins.overlay')
 
-local ok, buildingplan = pcall(require, 'plugins.buildingplan')
-if not ok then
-    buildingplan = nil
+local function noop()
 end
 
-local function remove_building(bld)
-    dfhack.buildings.deconstruct(bld)
+function launch_mass_remove()
+    local vs = dfhack.gui.getDFViewscreen(true)
+    gui.simulateInput(vs,'LEAVESCREEN')
+    dfhack.run_script('gui/mass-remove')
 end
 
 local function get_first_job(bld)
@@ -21,68 +25,77 @@ local function get_first_job(bld)
     return bld.jobs[0]
 end
 
-local function unremove_building(bld)
-    local job = get_first_job(bld)
-    if not job or job.job_type ~= df.job_type.DestroyBuilding then return end
-    dfhack.job.removeJob(job)
+local function process_building(built, planned, remove, bld)
+    if (built and bld:getBuildStage() == bld:getMaxBuildStage()) or
+        (planned and bld:getBuildStage() ~= bld:getMaxBuildStage())
+    then
+        if remove then
+            dfhack.buildings.deconstruct(bld)
+        else
+            local job = get_first_job(bld)
+            if not job or job.job_type ~= df.job_type.DestroyBuilding then return end
+            dfhack.job.removeJob(job)
+        end
+    end
 end
 
-local function remove_construction(pos)
-    dfhack.constructions.designateRemove(pos)
+local function process_construction(built, planned, remove, grid, pos, bld)
+    if planned and bld then
+        process_building(false, true, remove, bld)
+    elseif built and not bld then
+        if remove then
+            dfhack.constructions.designateRemove(pos)
+        else
+            local tileFlags = dfhack.maps.getTileFlags(pos)
+            tileFlags.dig = df.tile_dig_designation.No
+            dfhack.maps.getTileBlock(pos).flags.designated = true
+            local job = safe_index(grid, pos.z, pos.y, pos.x)
+            if job then dfhack.job.removeJob(job) end
+        end
+    end
 end
 
-local function unremove_construction(pos, grid)
-    local tileFlags = dfhack.maps.getTileFlags(pos)
-    tileFlags.dig = df.tile_dig_designation.No
-    dfhack.maps.getTileBlock(pos).flags.designated = true
-    local job = safe_index(grid, pos.z, pos.y, pos.x)
-    if job then dfhack.job.removeJob(job) end
+local function remove_stockpile(bld)
+    dfhack.buildings.deconstruct(bld)
+end
+
+local function remove_zone(pos)
+    for _, bld in ipairs(dfhack.buildings.findCivzonesAt(pos) or {}) do
+        dfhack.buildings.deconstruct(bld)
+    end
 end
 
 --
--- ActionPanel
+-- DimsPanel
 --
 
-local function get_dims(pos1, pos2)
-    local width, height, depth = math.abs(pos1.x - pos2.x) + 1,
-            math.abs(pos1.y - pos2.y) + 1,
-            math.abs(pos1.z - pos2.z) + 1
-    return width, height, depth
-end
-
-ActionPanel = defclass(ActionPanel, widgets.ResizingPanel)
-ActionPanel.ATTRS{
+DimsPanel = defclass(DimsPanel, widgets.ResizingPanel)
+DimsPanel.ATTRS{
     get_mark_fn=DEFAULT_NIL,
     autoarrange_subviews=true,
 }
 
-function ActionPanel:init()
+function DimsPanel:init()
     self:addviews{
         widgets.WrappedLabel{
             text_to_wrap=self:callback('get_action_text')
         },
-        widgets.TooltipLabel{
-            indent=1,
-            text={{text=self:callback('get_area_text')}},
-            show_tooltip=self.get_mark_fn
-        },
     }
 end
 
-function ActionPanel:get_action_text()
+function DimsPanel:get_action_text()
     local str = self.get_mark_fn() and 'second' or 'first'
     return ('Select the %s corner with the mouse.'):format(str)
 end
 
-function ActionPanel:get_area_text()
-    local mark = self.get_mark_fn()
-    if not mark then return '' end
-    local other = dfhack.gui.getMousePos()
-            or {x=mark.x, y=mark.y, z=df.global.window_z}
-    local width, height, depth = get_dims(mark, other)
-    local tiles = width * height * depth
-    local plural = tiles > 1 and 's' or ''
-    return ('%dx%dx%d (%d tile%s)'):format(width, height, depth, tiles, plural)
+local function is_something_selected()
+    return dfhack.gui.getSelectedBuilding(true) or
+        dfhack.gui.getSelectedStockpile(true) or
+        dfhack.gui.getSelectedCivZone(true)
+end
+
+local function not_is_something_selected()
+    return not is_something_selected()
 end
 
 --
@@ -92,9 +105,9 @@ end
 MassRemove = defclass(MassRemove, widgets.Window)
 MassRemove.ATTRS{
     frame_title='Mass Remove',
-    frame={w=47, h=16, r=2, t=18},
+    frame={w=47, h=18, r=2, t=18},
     resizable=true,
-    resize_min={h=10},
+    resize_min={h=9},
     autoarrange_subviews=true,
     autoarrange_gap=1,
 }
@@ -102,44 +115,106 @@ MassRemove.ATTRS{
 function MassRemove:init()
     self:addviews{
         widgets.WrappedLabel{
-            text_to_wrap='Designate multiple buildings and/or constructions (built or planned) for removal.'
+            view_id='warning',
+            text_to_wrap='Please deselect any selected buildings, stockpiles or zones before attempting to remove them.',
+            text_pen=COLOR_RED,
+            visible=is_something_selected,
         },
-        ActionPanel{
-            get_mark_fn=function() return self.mark end
+        widgets.WrappedLabel{
+            text_to_wrap='Designate buildings, constructions, stockpiles, and/or zones for removal.',
+            visible=function() return not_is_something_selected() and self.subviews.remove:getOptionValue() end,
+        },
+        widgets.WrappedLabel{
+            text_to_wrap='Designate buildings or constructions to cancel removal.',
+            visible=function() return not_is_something_selected() and not self.subviews.remove:getOptionValue() end,
+        },
+        DimsPanel{
+            get_mark_fn=function() return self.mark end,
+            visible=not_is_something_selected,
         },
         widgets.CycleHotkeyLabel{
             view_id='buildings',
             label='Buildings:',
             key='CUSTOM_B',
             key_back='CUSTOM_SHIFT_B',
+            option_gap=5,
             options={
-                {label='Leave alone', value=function() end},
-                {label='Remove', value=remove_building},
-                -- {label='Unremove', value=unremove_building},
+                {label='Leave alone', value=noop, pen=COLOR_BLUE},
+                {label='Affect built and planned', value=curry(process_building, true, true), pen=COLOR_RED},
+                {label='Affect built', value=curry(process_building, true, false), pen=COLOR_LIGHTRED},
+                {label='Affect planned', value=curry(process_building, false, true), pen=COLOR_YELLOW},
             },
-            initial_option=remove_building,
+            initial_option=2,
+            enabled=not_is_something_selected,
         },
         widgets.CycleHotkeyLabel{
             view_id='constructions',
             label='Constructions:',
             key='CUSTOM_V',
             key_back='CUSTOM_SHIFT_V',
+            option_gap=1,
             options={
-                {label='Leave alone', value=function() end},
-                {label='Remove', value=remove_construction},
-                -- {label='Unremove', value=unremove_construction},
+                {label='Leave alone', value=noop, pen=COLOR_BLUE},
+                {label='Affect built and planned', value=curry(process_construction, true, true), pen=COLOR_RED},
+                {label='Affect built', value=curry(process_construction, true, false), pen=COLOR_LIGHTRED},
+                {label='Affect planned', value=curry(process_construction, false, true), pen=COLOR_YELLOW},
             },
+            enabled=not_is_something_selected,
         },
         widgets.CycleHotkeyLabel{
-            view_id='suspend',
-            label='Suspend:',
-            key='CUSTOM_X',
-            key_back='CUSTOM_SHIFT_X',
+            view_id='stockpiles',
+            label='Stockpiles:',
+            key='CUSTOM_T',
+            key_sep=':  ',
+            option_gap=4,
             options={
-                {label='Leave alone', value=function() end},
-                {label='Suspend', value=suspendmanager.suspend},
-                {label='Unsuspend', value=suspendmanager.unsuspend},
+                {label='Leave alone', value=noop, pen=COLOR_BLUE},
+                {label='Remove', value=remove_stockpile, pen=COLOR_RED},
             },
+            enabled=not_is_something_selected,
+            visible=function() return self.subviews.remove:getOptionValue() end,
+        },
+        widgets.CycleHotkeyLabel{
+            label='Stockpiles:',
+            key='CUSTOM_T',
+            key_sep=':  ',
+            option_gap=4,
+            options={{label='Leave alone', value=noop}},
+            enabled=false,
+            visible=function() return not self.subviews.remove:getOptionValue() end,
+        },
+        widgets.CycleHotkeyLabel{
+            view_id='zones',
+            label='Zones:',
+            key='CUSTOM_Z',
+            key_sep=':  ',
+            option_gap=9,
+            options={
+                {label='Leave alone', value=noop, pen=COLOR_BLUE},
+                {label='Remove', value=remove_zone, pen=COLOR_RED},
+            },
+            enabled=not_is_something_selected,
+            visible=function() return self.subviews.remove:getOptionValue() end,
+        },
+        widgets.CycleHotkeyLabel{
+            label='Zones:',
+            key='CUSTOM_Z',
+            key_sep=':  ',
+            option_gap=9,
+            options={{label='Leave alone', value=noop}},
+            enabled=false,
+            visible=function() return not self.subviews.remove:getOptionValue() end,
+        },
+        widgets.CycleHotkeyLabel{
+            view_id='remove',
+            label='Mode:',
+            key='CUSTOM_R',
+            options={
+                {label='Remove or schedule for removal', value=true, pen=COLOR_RED},
+                {label='Cancel removal', value=false, pen=COLOR_GREEN},
+            },
+            on_change=function() self:updateLayout() end,
+            enabled=not_is_something_selected,
         },
     }
 
@@ -190,6 +265,12 @@ function MassRemove:onInput(keys)
     end
     if not pos then return false end
 
+    if is_something_selected() then
+        self.mark = nil
+        self:updateLayout()
+        return true
+    end
+
     if self.mark then
         self:commit(get_bounds(self.mark, pos))
         self.mark = nil
@@ -205,8 +286,6 @@ end
 local to_pen = dfhack.pen.parse
 local SELECTION_PEN = to_pen{ch='X', fg=COLOR_GREEN,
                        tile=dfhack.screen.findGraphicsTile('CURSORS', 1, 2)}
-local SUSPENDED_PEN = to_pen{ch='s', fg=COLOR_YELLOW,
-                       tile=dfhack.screen.findGraphicsTile('CURSORS', 0, 0)}
 local DESTROYING_PEN = to_pen{ch='d', fg=COLOR_LIGHTRED,
                        tile=dfhack.screen.findGraphicsTile('CURSORS', 3, 0)}
 
@@ -222,10 +301,6 @@ local function is_destroying_construction(pos, grid)
         dfhack.maps.getTileFlags(pos).dig == df.tile_dig_designation.Default
 end
 
-local function can_suspend(bld)
-    return not buildingplan or not buildingplan.isPlannedBuilding(bld)
-end
-
 local function get_job_pen(pos, grid)
     if is_destroying_construction(pos) then
         return DESTROYING_PEN
@@ -237,9 +312,6 @@ local function get_job_pen(pos, grid)
     if jt == df.job_type.DestroyBuilding
             or jt == df.job_type.RemoveConstruction then
         return DESTROYING_PEN
-    elseif jt == df.job_type.ConstructBuilding and job.flags.suspend
-            and can_suspend(bld) then
-        return SUSPENDED_PEN
     end
 end
 
@@ -268,25 +340,30 @@ end
 function MassRemove:commit(bounds)
     local bld_fn = self.subviews.buildings:getOptionValue()
     local constr_fn = self.subviews.constructions:getOptionValue()
-    local susp_fn = self.subviews.suspend:getOptionValue()
+    local stockpile_fn = self.subviews.stockpiles:getOptionValue()
+    local zones_fn = self.subviews.zones:getOptionValue()
+    local remove = self.subviews.remove:getOptionValue()
 
     self:refresh_grid()
-    local grid = self.grid
 
     for z=bounds.z1,bounds.z2 do
         for y=bounds.y1,bounds.y2 do
             for x=bounds.x1,bounds.x2 do
                 local pos = xyz2pos(x, y, z)
                 local bld = dfhack.buildings.findAtTile(pos)
-                if bld then bld_fn(bld)  end
-                if is_construction(pos) then
-                    constr_fn(pos, grid)
+                if bld then
+                    if bld:getType() == df.building_type.Stockpile then
+                        stockpile_fn(bld)
+                    elseif bld:getType() == df.building_type.Construction then
+                        constr_fn(remove, self.grid, pos, bld)
+                    else
+                        bld_fn(remove, bld)
+                    end
                 end
-                local job = get_first_job(bld)
-                if job and job.job_type == df.job_type.ConstructBuilding
-                        and can_suspend(bld) then
-                    susp_fn(job)
+                if not dfhack.buildings.findAtTile(pos) and is_construction(pos) then
+                    constr_fn(remove, self.grid, pos)
                 end
+                zones_fn(pos)
             end
         end
     end
@@ -304,12 +381,111 @@ MassRemoveScreen.ATTRS {
 }
 
 function MassRemoveScreen:init()
-    self:addviews{MassRemove{}}
+    local window = MassRemove{}
+    self:addviews{
+        window,
+        widgets.DimensionsTooltip{
+            get_anchor_pos_fn=function() return window.mark end,
+        },
+    }
 end
 
 function MassRemoveScreen:onDismiss()
     view = nil
 end
+
+
+-- --------------------------------
+-- MassRemoveToolbarOverlay
+--
+
+MassRemoveToolbarOverlay = defclass(MassRemoveToolbarOverlay, overlay.OverlayWidget)
+MassRemoveToolbarOverlay.ATTRS{
+    desc='Adds a button to the erase toolbar to open the mass removal tool.',
+    default_pos={x=42, y=-4},
+    default_enabled=true,
+    viewscreens='dwarfmode/Designate/ERASE',
+    frame={w=26, h=10},
+}
+
+function MassRemoveToolbarOverlay:init()
+    local button_chars = {
+        {218, 196, 196, 191},
+        {179, 'M', 'R', 179},
+        {192, 196, 196, 217},
+    }
+
+    self:addviews{
+        widgets.Panel{
+            frame={t=0, r=0, w=26, h=6},
+            frame_style=gui.FRAME_PANEL,
+            frame_background=gui.CLEAR_PEN,
+            frame_inset={l=1, r=1},
+            visible=function() return self.subviews.icon:getMousePos() end,
+            subviews={
+                widgets.Label{
+                    text={
+                        'Open mass removal', NEWLINE,
+                        'interface.', NEWLINE,
+                        NEWLINE,
+                        {text='Hotkey: ', pen=COLOR_GRAY}, {key='CUSTOM_M'},
+                    },
+                },
+            },
+        },
+        widgets.Panel{
+            view_id='icon',
+            frame={b=0, r=22, w=4, h=3},
+            subviews={
+                widgets.Label{
+                    text=widgets.makeButtonLabelText{
+                        chars=button_chars,
+                        pens=COLOR_GRAY,
+                        tileset=toolbar_textures,
+                        tileset_offset=1,
+                        tileset_stride=8,
+                    },
+                    on_click=launch_mass_remove,
+                    visible=function () return not self.subviews.icon:getMousePos() end,
+                },
+                widgets.Label{
+                    text=widgets.makeButtonLabelText{
+                        chars=button_chars,
+                        pens={
+                            {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE},
+                            {COLOR_WHITE, COLOR_GRAY,  COLOR_GRAY,  COLOR_WHITE},
+                            {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE},
+                        },
+                        tileset=toolbar_textures,
+                        tileset_offset=5,
+                        tileset_stride=8,
+                    },
+                    on_click=launch_mass_remove,
+                    visible=function() return self.subviews.icon:getMousePos() end,
+                },
+            },
+        },
+    }
+end
+
+function MassRemoveToolbarOverlay:preUpdateLayout(parent_rect)
+    local w = parent_rect.width
+    if w <= 130 then
+        self.frame.w = 50
+    else
+        self.frame.w = (parent_rect.width+1)//2 - 15
+    end
+end
+
+function MassRemoveToolbarOverlay:onInput(keys)
+    if keys.CUSTOM_M then
+        launch_mass_remove()
+        return true
+    end
+    return MassRemoveToolbarOverlay.super.onInput(self, keys)
+end
+
+OVERLAY_WIDGETS = {toolbar=MassRemoveToolbarOverlay}
 
 if dfhack_flags.module then
     return

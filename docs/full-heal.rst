@@ -22,7 +22,7 @@ Usage
 ``full-heal --all [-r] [--keep_corpse]``
     Heal all units on the map, optionally resurrecting them if dead.
 ``full-heal --all_citizens [-r] [--keep_corpse]``
-    Heal all fortress citizens on the map. Does not include pets.
+    Heal all fortress citizens and residents on the map. Does not include pets.
 ``full-heal --all_civ [-r] [--keep_corpse]``
     Heal all units belonging to your parent civilization, including pets and
     visitors.
@@ -35,3 +35,13 @@ Examples
 ``full-heal -r --keep_corpse --unit 23273``
     Fully heal unit 23273. If this unit was dead, it will be resurrected without
     removing the corpse - creepy!
+
+Notes
+-----
+
+If you have to repeatedly use `full-heal` on a dwarf only to have that dwarf's
+syndrome return seconds later, then it's likely because said dwarf still has a
+syndrome-causing residue on their body. To deal with this, either use
+``clean units`` to decontaminate the dwarf or let a hospital worker wash the
+residue off the dwarf and THEN do a `full-heal`. Syndromes like Beast Sickness
+and Demon Sickness can by VERY NASTY, causing maladies like tissue necrosis.

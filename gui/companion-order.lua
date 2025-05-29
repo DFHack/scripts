@@ -1,34 +1,11 @@
 -- Issue orders to companions in Adventure mode
---[====[
-
-gui/companion-order
-===================
-A script to issue orders for companions. Select companions with lower case chars (green when selected), issue orders with upper
-case. Must be in look or talk mode to issue command on tile (e.g. move/equip/pick-up).
-
-.. image:: /docs/images/companion-order.png
-
-* move - orders selected companions to move to location. If companions are following they will move no more than 3 tiles from you.
-* equip - try to equip items on the ground.
-* pick-up - try to take items into hand (also wield)
-* unequip - remove and drop equipment
-* unwield - drop held items
-* wait - temporarily remove from party
-* follow - rejoin the party after "wait"
-* leave - remove from party (can be rejoined by talking)
-
-Can be called with '-c' flag to display "cheating" commands.
-
-* patch up - fully heals the companion
-* get in - rides e.g. minecart at cursor. Bit buggy as unit will teleport to the item when e.g. pushing it.
-
-]====]
 
 local gui = require 'gui'
+local guidm = require 'gui.dwarfmode'
 local dlg = require 'gui.dialogs'
 local args={...}
 local is_cheat=(#args>0 and args[1]=="-c")
-local cursor=xyz2pos(df.global.cursor.x,df.global.cursor.y,df.global.cursor.z)
+local cursor=guidm.getCursorPos()
 local permited_equips={}
 
 permited_equips[df.item_backpackst]="UPPERBODY"
@@ -46,7 +23,7 @@ function DoesHaveSubtype(item)
     return true
 end
 function CheckCursor(p)
-    if p.x==-30000 then
+    if not p then
         dlg.showMessage(
                 'Companion orders',
                 'You must have a cursor on some tile!', COLOR_LIGHTRED
@@ -55,20 +32,9 @@ function CheckCursor(p)
     end
     return true
 end
-function getxyz() -- this will return pointers x,y and z coordinates.
-    local x=df.global.cursor.x
-    local y=df.global.cursor.y
-    local z=df.global.cursor.z
-    return x,y,z -- return the coords
-end
-
-function GetCaste(race_id,caste_id)
-    local race=df.creature_raw.find(race_id)
-    return race.caste[caste_id]
-end
 
 function EnumBodyEquipable(race_id,caste_id)
-    local caste=GetCaste(race_id,caste_id)
+    local caste=dfhack.units.getCasteRaw(race_id,caste_id)
     local bps=caste.body_info.body_parts
     local ret={}
     for k,v in pairs(bps) do
@@ -149,7 +115,7 @@ function AddIfFits(body_equip,unit,item)
     return false
 end
 function EnumGrasps(race_id,caste_id)
-    local caste=GetCaste(race_id,caste_id)
+    local caste=dfhack.units.getCasteRaw(race_id,caste_id)
     local bps=caste.body_info.body_parts
     local ret={}
     for k,v in pairs(bps) do
@@ -194,8 +160,8 @@ function AddBackpackItems(backpack,items)
 end
 function GetItemsAtPos(pos)
     local ret={}
-    for k,v in pairs(df.global.world.items.all) do
-        if v.flags.on_ground and v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
+    for k,v in pairs(df.global.world.items.other.IN_PLAY) do
+        if v.flags.on_ground and same_xyz(v.pos, pos) then
             table.insert(ret,v)
         end
     end
@@ -237,7 +203,7 @@ function move_unit( unit,tx,ty,tz ) --copied from http/commands.lua with minor m
     unit.idle_area_threshold=0
     unit.follow_distance=50
     --invalidate old path
-    unit.path.dest={x=unit.idle_area.x,y=unit.idle_area.y,z=unit.idle_area.z}
+    unit.path.dest=copyall(unit.idle_area)
     unit.path.goal=df.unit_path_goal.SeekStation
     unit.path.path.x:resize(0)
     unit.path.path.y:resize(0)
@@ -346,14 +312,14 @@ end},
     return true
 end},
 {name="follow",f=function (unit_list)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     for k,v in pairs(unit_list) do
         v.relationship_ids.GroupLeader=adv.id
     end
     return true
 end},
 {name="leave",f=function (unit_list)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local t_nem=dfhack.units.getNemesis(adv)
     for k,v in pairs(unit_list) do
 
@@ -398,8 +364,8 @@ end},
     if not CheckCursor(pos) then
         return false
     end
-    adv=df.global.world.units.active[0]
-    item=GetItemsAtPos(df.global.cursor)[1]
+    adv=dfhack.world.getAdventurer()
+    item=GetItemsAtPos(cursor)[1]
     print(item.id)
     for k,v in pairs(unit_list) do
         v.riding_item_id=item.id
@@ -413,7 +379,7 @@ end},
 }
 
 function getCompanions(unit)
-    unit=unit or df.global.world.units.active[0]
+    unit=unit or dfhack.world.getAdventurer()
     local t_nem=dfhack.units.getNemesis(unit)
     if t_nem==nil then
         qerror("Invalid unit! No nemesis record")
@@ -499,7 +465,7 @@ function CompanionUi:onRenderBody( dc)
         else
             dc:pen(COLOR_GREY)
         end
-        dc:newline(1):string(string.char(k+char_a)..". "):string(dfhack.TranslateName(v.name));
+        dc:newline(1):string(string.char(k+char_a)..". "):string(dfhack.translation.translateName(v.name));
     end
     dc:pen(COLOR_GREY)
     local w,h=self:getWindowSize()

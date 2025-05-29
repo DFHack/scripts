@@ -15,6 +15,7 @@ valid_modes = utils.invert({
     'build',
     'place',
     'zone',
+    'burrow',
     'meta',
     'notes',
     'ignore',

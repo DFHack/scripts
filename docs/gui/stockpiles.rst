@@ -3,7 +3,7 @@ gui/stockpiles
 
 .. dfhack-tool::
     :summary: Import and export stockpile settings.
-    :tags: unavailable fort design stockpiles
+    :tags: unavailable
 
 With a stockpile selected in :kbd:`q` mode, you can use this tool to load
 stockpile settings from a file or save them to a file for later loading, in

@@ -31,7 +31,8 @@ Options
 ``--target <id>``
     The unit id of the target unit.
 ``--syndrome <name>|<id>``
-    The syndrome to work with.
+    The syndrome to work with. You can browse syndromes and look up their ids
+    with `gui/unit-syndromes`. Click on ``All syndromes`` to the the full list.
 ``--resetPolicy <policy>``
     Specify a policy of what to do if the unit already has an
     instance of the syndrome, one of: ``NewInstance``, ``DoNothing``,

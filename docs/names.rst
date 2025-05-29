@@ -3,7 +3,7 @@ names
 
 .. dfhack-tool::
     :summary: Rename units or items with the DF name generator.
-    :tags: unavailable fort productivity units
+    :tags: unavailable
 
 This tool allows you to rename the selected unit or item (including artifacts)
 with the native Dwarf Fortress name generation interface.

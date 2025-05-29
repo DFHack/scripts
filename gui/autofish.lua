@@ -14,7 +14,6 @@ Autofish = defclass(Autofish, widgets.Window)
 Autofish.ATTRS{
     frame_title = "Autofish",
     frame = {w=35, h=11},
-    resizable = false
 }
 
 function Autofish:init()
@@ -108,10 +107,11 @@ function Autofish:refresh_data()
     self.next_refresh_ms = dfhack.getTickCount() + REFRESH_MS
 end
 
-function Autofish:onRenderBody()
+function Autofish:render(dc)
     if self.next_refresh_ms <= dfhack.getTickCount() then
         self:refresh_data()
     end
+    Autofish.super.render(self, dc)
 end
 
 

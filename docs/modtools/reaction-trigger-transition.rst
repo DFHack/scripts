@@ -3,7 +3,7 @@ modtools/reaction-trigger-transition
 
 .. dfhack-tool::
     :summary: Help create reaction triggers.
-    :tags: unavailable dev
+    :tags: unavailable
 
 Prints useful things to the console and a file to help modders
 transition from ``autoSyndrome`` to `modtools/reaction-trigger`.

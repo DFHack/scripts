@@ -22,18 +22,9 @@ if not dfhack.world.isFortressMode() then
     qerror('This script can only be used in fortress mode')
 end
 
-local ui_main = df.global.plotinfo.main
-local flags4 = df.global.d_init.flags4
-
-local function restore_autobackup()
-    if ui_main.autosave_request and dfhack.isMapLoaded() then
-        dfhack.timeout(10, 'frames', restore_autobackup)
-    else
-        flags4.AUTOBACKUP = true
-    end
-end
-
 function save()
+    local ui_main = df.global.plotinfo.main
+
     -- Request auto-save (preparation steps below discovered from rev eng)
     ui_main.autosave_request = true
     ui_main.autosave_timer = 5
@@ -45,13 +36,6 @@ function save()
     ui_main.save_progress.info.cur_unit_chunk = nil
     ui_main.save_progress.info.cur_unit_chunk_num = -1
     ui_main.save_progress.info.units_offloaded = -1
-
-    -- And since it will overwrite the backup, disable it temporarily
-    if flags4.AUTOBACKUP then
-        flags4.AUTOBACKUP = false
-        restore_autobackup()
-    end
-
     print 'The game should autosave now.'
 end
 

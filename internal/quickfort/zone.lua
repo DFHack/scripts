@@ -6,32 +6,33 @@ if not dfhack_flags.module then
 end
 
 require('dfhack.buildings') -- loads additional functions into dfhack.buildings
-local utils = require('utils')
+local preserve_rooms = require('plugins.preserve-rooms')
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_parse = reqscript('internal/quickfort/parse')
+local utils = require('utils')
 
 local log = quickfort_common.log
 local logfn = quickfort_common.logfn
 
 local function parse_pit_pond_props(zone_data, props)
     if props.pond == 'true' then
-        ensure_key(zone_data, 'zone_settings').pit_pond = df.building_civzonest.T_zone_settings.T_pit_pond.top_of_pond
+        ensure_keys(zone_data, 'zone_settings', 'pond', 'flag').keep_filled = true
         props.pond = nil
     end
 end
 
 local function parse_gather_props(zone_data, props)
     if props.pick_trees == 'false' then
-        ensure_keys(zone_data, 'zone_settings', 'gather').pick_trees = false
+        ensure_keys(zone_data, 'zone_settings', 'gather', 'flags').pick_trees = false
         props.pick_trees = nil
     end
     if props.pick_shrubs == 'false' then
-        ensure_keys(zone_data, 'zone_settings', 'gather').pick_shrubs = false
+        ensure_keys(zone_data, 'zone_settings', 'gather', 'flags').pick_shrubs = false
         props.pick_shrubs = nil
     end
     if props.gather_fallen == 'false' then
-        ensure_keys(zone_data, 'zone_settings', 'gather').gather_fallen = false
+        ensure_keys(zone_data, 'zone_settings', 'gather', 'flags').gather_fallen = false
         props.gather_fallen = nil
     end
 end
@@ -60,11 +61,11 @@ end
 
 local function parse_tomb_props(zone_data, props)
     if props.pets == 'true' then
-        ensure_keys(zone_data, 'zone_settings', 'tomb').no_pets = false
+        ensure_keys(zone_data, 'zone_settings', 'tomb', 'flags').no_pets = false
         props.pets = nil
     end
     if props.citizens == 'false' then
-        ensure_keys(zone_data, 'zone_settings', 'tomb').no_citizens = true
+        ensure_keys(zone_data, 'zone_settings', 'tomb', 'flags').no_citizens = true
         props.citizens = nil
     end
 end
@@ -105,9 +106,9 @@ local zone_db_raw = {
     b={label='Bedroom', default_data={type=df.civzone_type.Bedroom}},
     h={label='Dining Hall', default_data={type=df.civzone_type.DiningHall}},
     n={label='Pen/Pasture', default_data={type=df.civzone_type.Pen,
-       assign={zone_settings={pen={unk=1}}}}},
+       assign={zone_settings={pen={flags={check_occupants=true}}}}}},
     p={label='Pit/Pond', props_fn=parse_pit_pond_props, default_data={type=df.civzone_type.Pond,
-       assign={zone_settings={pit_pond=df.building_civzonest.T_zone_settings.T_pit_pond.top_of_pit}}}},
+       assign={zone_settings={pond={flag={keep_filled=true}}}}}},
     w={label='Water Source', default_data={type=df.civzone_type.WaterSource}},
     j={label='Dungeon', default_data={type=df.civzone_type.Dungeon}},
     f={label='Fishing', default_data={type=df.civzone_type.FishingArea}},
@@ -120,14 +121,15 @@ local zone_db_raw = {
     d={label='Garbage Dump', default_data={type=df.civzone_type.Dump}},
     t={label='Animal Training', default_data={type=df.civzone_type.AnimalTraining}},
     T={label='Tomb', props_fn=parse_tomb_props, default_data={type=df.civzone_type.Tomb,
-       assign={zone_settings={tomb={whole=1}}}}},
+       assign={zone_settings={tomb={flags={whole=1}}}}}},
     g={label='Gather/Pick Fruit', props_fn=parse_gather_props, default_data={type=df.civzone_type.PlantGathering,
-       assign={zone_settings={gather={pick_trees=true, pick_shrubs=true, gather_fallen=true}}}}},
+       assign={zone_settings={gather={flags={pick_trees=true, pick_shrubs=true, gather_fallen=true}}}}}},
     c={label='Clay', default_data={type=df.civzone_type.ClayCollection}},
 }
 for _, v in pairs(zone_db_raw) do
     utils.assign(v, zone_template)
-    ensure_key(v.default_data, 'assign').is_active = 8 -- set to active by default
+    -- set to active by default
+    ensure_keys(v.default_data, 'assign', 'spec_sub_flag').active = true
 end
 
 -- we may want to offer full name aliases for the single letter ones above
@@ -135,7 +137,7 @@ local aliases = {}
 
 local valid_locations = {
     tavern={new=df.abstract_building_inn_tavernst,
-        assign={name={type=df.language_name_type.SymbolFood},
+        assign={name={type=df.language_name_type.FoodStore},
                 contents={desired_goblets=10, desired_instruments=5,
                 need_more={goblets=true, instruments=true}}}},
     hospital={new=df.abstract_building_hospitalst,
@@ -156,10 +158,10 @@ local valid_locations = {
                 contents={desired_instruments=5, need_more={instruments=true}}}},
 }
 local valid_restrictions = {
-    visitors={AllowVisitors=true, AllowResidents=true, OnlyMembers=false},
-    residents={AllowVisitors=false, AllowResidents=true, OnlyMembers=false},
-    citizens={AllowVisitors=false, AllowResidents=false, OnlyMembers=false},
-    members={AllowVisitors=false, AllowResidents=false, OnlyMembers=true},
+    visitors={VISITORS_ALLOWED=true, NON_CITIZENS_ALLOWED=true, MEMBERS_ONLY=false},
+    residents={VISITORS_ALLOWED=false, NON_CITIZENS_ALLOWED=true, MEMBERS_ONLY=false},
+    citizens={VISITORS_ALLOWED=false, NON_CITIZENS_ALLOWED=false, MEMBERS_ONLY=false},
+    members={VISITORS_ALLOWED=false, NON_CITIZENS_ALLOWED=false, MEMBERS_ONLY=true},
 }
 for _, v in pairs(valid_locations) do
     ensure_key(v, 'assign').flags = valid_restrictions.visitors
@@ -226,12 +228,6 @@ local function parse_location_props(props)
     return location_data
 end
 
-local function get_noble_unit(noble)
-    local unit = dfhack.units.getUnitByNobleRole(noble)
-    if not unit then log('could not find a noble position for: "%s"', noble) end
-    return unit
-end
-
 local function parse_zone_config(c, props)
     if not rawget(zone_db_raw, c) then
         return 'Invalid', nil
@@ -241,7 +237,7 @@ local function parse_zone_config(c, props)
     utils.assign(zone_data, db_entry.default_data)
     zone_data.location = parse_location_props(props)
     if props.active == 'false' then
-        zone_data.is_active = 0
+        ensure_key(zone_data, 'spec_sub_flag').active = false
         props.active = nil
     end
     if props.name then
@@ -249,13 +245,7 @@ local function parse_zone_config(c, props)
         props.name = nil
     end
     if props.assigned_unit then
-        zone_data.assigned_unit = get_noble_unit(props.assigned_unit)
-        if not zone_data.assigned_unit and props.assigned_unit:lower() == 'sheriff' then
-            zone_data.assigned_unit = get_noble_unit('captain_of_the_guard')
-        end
-        if not zone_data.assigned_unit then
-            dfhack.printerr(('could not find a unit assigned to noble position: "%s"'):format(props.assigned_unit))
-        end
+        zone_data.assigned_unit = props.assigned_unit
         props.assigned_unit = nil
     end
     if db_entry.props_fn then db_entry.props_fn(zone_data, props) end
@@ -312,7 +302,7 @@ local function set_location(zone, location, ctx)
         dfhack.printerr('cannot create a guildhall without a specified profession')
         return
     end
-    local site = df.global.world.world_data.active_site[0]
+    local site = dfhack.world.getCurrentSite()
     local loc_id = nil
     if location.label and safe_index(ctx, 'zone', 'locations', location.label) then
         local cached_loc = ctx.zone.locations[location.label]
@@ -386,11 +376,12 @@ local function create_zone(zone, data, ctx)
         set_location(bld, data.location, ctx)
         data.location = nil
     end
-    if data.assigned_unit then
-        dfhack.buildings.setOwner(bld, data.assigned_unit)
-        data.assigned_unit = nil
-    end
+    local assigned_unit = data.assigned_unit
+    data.assigned_unit = nil
     utils.assign(bld, data)
+    if assigned_unit then
+        preserve_rooms.assignToRole(assigned_unit, bld)
+    end
     return ntiles
 end
 

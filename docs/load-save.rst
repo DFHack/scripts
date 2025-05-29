@@ -3,7 +3,7 @@ load-save
 
 .. dfhack-tool::
     :summary: Load a savegame.
-    :tags: unavailable dfhack
+    :tags: unavailable
 
 When run on the Dwarf Fortress title screen or "load game" screen, this script
 will load the save with the given folder name without requiring interaction.

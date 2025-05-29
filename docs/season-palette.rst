@@ -3,7 +3,7 @@ season-palette
 
 .. dfhack-tool::
     :summary: Swap color palettes when the seasons change.
-    :tags: unavailable fort auto graphics
+    :tags: unavailable
 
 For this tool to work you need to add *at least* one color palette file to your
 save raw directory. These files must be in the same format as

@@ -69,14 +69,15 @@ build_filter.HUMANish={
 --[[ FIXME: maybe let player select which to disable?]]
 for k,v in ipairs(df.global.plotinfo.economic_stone) do df.global.plotinfo.economic_stone[k]=0 end
 
-local gui = require 'gui'
-local wid=require 'gui.widgets'
-local dialog=require 'gui.dialogs'
-local buildings=require 'dfhack.buildings'
-local bdialog=require 'gui.buildings'
-local workshopJobs=require 'dfhack.workshops'
-local utils=require 'utils'
-local gscript=require 'gui.script'
+local gui = require('gui')
+local guidm = require('gui.dwarfmode')
+local wid = require('gui.widgets')
+local dialog = require('gui.dialogs')
+local buildings = require('dfhack.buildings')
+local bdialog = require('gui.buildings')
+local workshopJobs = require('dfhack.workshops')
+local utils = require('utils')
+local gscript = require('gui.script')
 
 local advfort_items = reqscript('internal/advfort/advfort_items')
 
@@ -97,7 +98,7 @@ function reverseRaceLookup(id)
 end
 function deon_filter(name,type_id,subtype_id,custom_id, parent)
     --print(name)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local race_filter=build_filter[reverseRaceLookup(adv.race)]
     if race_filter then
         if race_filter.forbid_all then
@@ -195,12 +196,12 @@ end
 function advGlobalPos()
     local map=df.global.world.map
     local wd=df.global.world.world_data
-    local adv=df.global.world.units.active[0]
-    --wd.adv_region_x*16+wd.adv_emb_x,wd.adv_region_y*16+wd.adv_emb_y
-    --return wd.adv_region_x*16+wd.adv_emb_x,wd.adv_region_y*16+wd.adv_emb_y
-    --return wd.adv_region_x*16+wd.adv_emb_x+adv.pos.x/16,wd.adv_region_y*16+wd.adv_emb_y+adv.pos.y/16
+    local adv=dfhack.world.getAdventurer()
+    --wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y
+    --return wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y
+    --return wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x+adv.pos.x/16,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y+adv.pos.y/16
     --print(map.region_x,map.region_y,adv.pos.x,adv.pos.y)
-    --print(map.region_x+adv.pos.x/48, map.region_y+adv.pos.y/48,wd.adv_region_x*16+wd.adv_emb_x,wd.adv_region_y*16+wd.adv_emb_y)
+    --print(map.region_x+adv.pos.x/48, map.region_y+adv.pos.y/48,wd.midmap_data.adv_region_x*16+wd.midmap_data.adv_emb_x,wd.midmap_data.adv_region_y*16+wd.midmap_data.adv_emb_y)
     return math.floor(map.region_x+adv.pos.x/48), math.floor(map.region_y+adv.pos.y/48)
 end
 function inSite()
@@ -242,7 +243,7 @@ function addJobAction(job,unit) --what about job2?
     if job==nil then
         error("invalid job")
     end
-    if findAction(unit,df.unit_action_type.Job) or findAction(unit,df.unit_action_type.Job2) then
+    if findAction(unit,df.unit_action_type.Job) or findAction(unit,df.unit_action_type.JobRecover) then
         print("Already has job action")
         return
     end
@@ -253,7 +254,7 @@ function addJobAction(job,unit) --what about job2?
     --job
     local data={type=df.unit_action_type.Job,data={job={x=pos.x,y=pos.y,z=pos.z,timer=10}}}
     --job2:
-    --local data={type=df.unit_action_type.Job2,data={job2={timer=10}}}
+    --local data={type=df.unit_action_type.JobRecover,data={job2={timer=10}}}
     add_action(unit,data)
     --add_action(unit,{type=df.unit_action_type.Unsteady,data={unsteady={timer=5}}})
 end
@@ -375,7 +376,7 @@ end
 function AssignUnitToJob(job,unit,unit_pos)
     job.general_refs:insert("#",{new=df.general_ref_unit_workerst,unit_id=unit.id})
     unit.job.current_job=job
-    unit_pos=unit_pos or {x=job.pos.x,y=job.pos.y,z=job.pos.z}
+    unit_pos=unit_pos or copyall(job.pos)
     unit.path.dest:assign(unit_pos)
     return true
 end
@@ -383,7 +384,7 @@ function SetCreatureRef(args)
     local job=args.job
     local pos=args.pos
     for k,v in pairs(df.global.world.units.active) do
-        if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
+        if same_xyz(v.pos, pos) then
             job.general_refs:insert("#",{new=df.general_ref_unit_cageest,unit_id=v.id})
             return
         end
@@ -393,7 +394,7 @@ end
 function SetWebRef(args)
     local pos=args.pos
     for k,v in pairs(df.global.world.items.other.ANY_WEBS) do
-        if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
+        if same_xyz(v.pos, pos) then
             args.job.general_refs:insert("#",{new=df.general_ref_item,item_id=v.id})
             return
         end
@@ -403,7 +404,7 @@ function SetPatientRef(args)
     local job=args.job
     local pos=args.pos
     for k,v in pairs(df.global.world.units.active) do
-        if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
+        if same_xyz(v.pos, pos) then
             job.general_refs:insert("#",{new=df.general_ref_unit_patientst,unit_id=v.id})
             return
         end
@@ -413,15 +414,14 @@ function SetCarveDir(args)
     local job=args.job
     local pos=args.pos
     local from_pos=args.from_pos
-    local dirs={up=18,down=19,right=20,left=21}
     if pos.x>from_pos.x then
-        job.item_category[dirs.right]=true
+        job.specflag.carve_track_flags.carve_track_east=true
     elseif pos.x<from_pos.x then
-        job.item_category[dirs.left]=true
+        job.specflag.carve_track_flags.carve_track_west=true
     elseif pos.y>from_pos.y then
-        job.item_category[dirs.down]=true
+        job.specflag.carve_track_flags.carve_track_south=true
     elseif pos.y<from_pos.y then
-        job.item_category[dirs.up]=true
+        job.specflag.carve_track_flags.carve_track_north=true
     end
 end
 function is_grasping_item( item_bp,unit )
@@ -482,7 +482,7 @@ end
 function SameSquare(args)
     local pos1=args.pos
     local pos2=args.from_pos
-    if pos1.x==pos2.x and pos1.y==pos2.y and pos1.z==pos2.z then
+    if same_xyz(pos1, pos2) then
        return true
     else
         return false, "Can only do it on same square"
@@ -548,7 +548,7 @@ end
 function IsUnit(args)
     local pos=args.pos
     for k,v in pairs(df.global.world.units.active) do
-        if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z then
+        if same_xyz(v.pos, pos) then
             return true
         end
     end
@@ -556,8 +556,8 @@ function IsUnit(args)
 end
 function itemsAtPos(pos,tbl)
     local ret=tbl or {}
-    for k,v in pairs(df.global.world.items.all) do
-        if v.pos.x==pos.x and v.pos.y==pos.y and v.pos.z==pos.z and v.flags.on_ground then
+    for k,v in pairs(df.global.world.items.other.IN_PLAY) do
+        if v.flags.on_ground and same_xyz(v.pos, pos) then
             table.insert(ret,v)
         end
     end
@@ -770,14 +770,14 @@ end
 function EnumItems(args)
     local ret=args.table or {}
     if args.all then
-        for k,v in pairs(df.global.world.items.all) do
+        for k,v in pairs(df.global.world.items.other.IN_PLAY) do
             if v.flags.on_ground then
                 AddItem(ret,v,args.deep)
             end
         end
     elseif args.pos~=nil then
-        for k,v in pairs(df.global.world.items.all) do
-            if v.pos.x==args.pos.x and v.pos.y==args.pos.y and v.pos.z==args.pos.z and v.flags.on_ground then
+        for k,v in pairs(df.global.world.items.other.IN_PLAY) do
+            if v.flags.on_ground and same_xyz(v.pos, args.pos) then
                 AddItem(ret,v,args.deep)
             end
         end
@@ -799,7 +799,7 @@ function putItemsInBuilding(building,job_item_refs)
         if not dfhack.items.moveToBuilding(v.item,building,0) then
             print("Could not put item:",k,v.item)
         end
-        v.is_fetching=0
+        v.flags.is_fetching=false
     end
 end
 function putItemsInHauling(unit,job_item_refs)
@@ -810,7 +810,7 @@ function putItemsInHauling(unit,job_item_refs)
         if not dfhack.items.moveToInventory(v.item,unit,0,0) then
             print("Could not put item:",k,v.item)
         end
-        v.is_fetching=0
+        v.flags.is_fetching=false
     end
 end
 function finish_item_assign(args)
@@ -832,20 +832,20 @@ function finish_item_assign(args)
         end
     else
         job.flags.fetching=true
-        uncollected[1].is_fetching=1
+        uncollected[1].flags.is_fetching=true
     end
 end
 function EnumItems_with_settings( args )
     if settings.check_inv then
         return EnumItems{pos=args.from_pos,unit=args.unit,
-                inv={[df.unit_inventory_item.T_mode.Hauled]=settings.use_worn,[df.unit_inventory_item.T_mode.Worn]=settings.use_worn,
-                [df.unit_inventory_item.T_mode.Weapon]=settings.use_worn,},deep=true}
+                inv={[df.inv_item_role_type.Hauled]=settings.use_worn,[df.inv_item_role_type.Worn]=settings.use_worn,
+                [df.inv_item_role_type.Weapon]=settings.use_worn,},deep=true}
     else
         return EnumItems{pos=args.from_pos}
     end
 end
 function find_suitable_items(job,items,job_items)
-    job_items=job_items or job.job_items
+    job_items=job_items or job.job_items.elements
 
     local item_counts={}
     for job_id, trg_job_item in ipairs(job_items) do
@@ -873,7 +873,7 @@ function find_suitable_items(job,items,job_items)
                 if not settings.gui_item_select then
                     if (item_counts[job_id]>0 and item_suitable) or settings.build_by_items then
                         --cur_item.flags.in_job=true
-                        job.items:insert("#",{new=true,item=cur_item,role=df.job_item_ref.T_role.Reagent,job_item_idx=job_id})
+                        job.items:insert("#",{new=true,item=cur_item,role=df.job_role_type.Reagent,job_item_idx=job_id})
                         item_counts[job_id]=item_counts[job_id]-cur_item:getTotalDimension()
                         --print(string.format("item added, job_item_id=%d, item %s, quantity left=%d",job_id,tostring(cur_item),item_counts[job_id]))
                         used_item_id[cur_item.id]=true
@@ -899,7 +899,7 @@ function AssignJobItems(args)
         job.items:erase(#job.items-1)
     end]]
 
-    if settings.gui_item_select and #job.job_items>0 then
+    if settings.gui_item_select and #job.job_items.elements>0 then
         if settings.quick then --TODO not so nice hack. instead of rewriting logic for job item filling i'm using one in gui dialog...
             local item_editor=advfort_items.jobitemEditor{
                 job = job,
@@ -925,7 +925,7 @@ function AssignJobItems(args)
         end
     else
         if not settings.build_by_items then
-            for job_id, trg_job_item in ipairs(job.job_items) do
+            for job_id, trg_job_item in ipairs(job.job_items.elements) do
                 if item_counts[job_id]>0 then
                     print("Not enough items for this job")
                     return false, "Not enough items for this job"
@@ -1001,7 +1001,7 @@ function ContinueJob(unit)
     --reset suspends...
     c_job.flags.suspend=false
     for k,v in pairs(c_job.items) do --try fetching missing items
-        if v.is_fetching==1 then
+        if v.flags.is_fetching then
             unit.path.dest:assign(v.item.pos)
             return
         end
@@ -1022,8 +1022,8 @@ end
 --         print("AAA FAILED!")
 --         return false
 --     end
---     args.job.items[0].role=df.job_item_ref.T_role.LinkToTarget
---     args.job.items[1].role=df.job_item_ref.T_role.LinkToTrigger
+--     args.job.items[0].role=df.job_role_type.LinkToTarget
+--     args.job.items[1].role=df.job_role_type.LinkToTrigger
 -- end
 function fake_linking(lever,building,slots)
     local item1=slots[1].items[1]
@@ -1179,7 +1179,7 @@ usetool=defclass(usetool,gui.Screen)
 usetool.focus_path = 'advfort'
 --luacheck: out=string
 function usetool:getModeName()
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local ret
     if adv.job.current_job then
         ret= string.format("%s working(%d) ",(actions[(mode or 0)+1][1] or ""),adv.job.current_job.completion_timer)
@@ -1198,7 +1198,7 @@ function usetool:update_site()
     local site_label=self.subviews.siteLabel --as:wid.Label
     if site then
 
-        site_label:itemById("site").text=dfhack.TranslateName(site.name)
+        site_label:itemById("site").text=dfhack.translation.translateName(site.name)
     else
         if settings.safe then
             site_label:itemById("site").text="<none, advfort disabled>"
@@ -1233,7 +1233,7 @@ function usetool:init(args)
                   }
             }
             }
-    local labors=df.global.world.units.active[0].status.labors
+    local labors=dfhack.world.getAdventurer().status.labors
     for i,v in ipairs(labors) do
         labors[i]=true
     end
@@ -1277,7 +1277,7 @@ function setFiltersUp(specific,args)
         --printall(v)
         local filter=v
         filter.new=true
-        job.job_items:insert("#",filter)
+        job.job_items.elements:insert("#",filter)
     end
     return true
 end
@@ -1303,8 +1303,8 @@ function siegeWeaponActionChosen(args,actionid)
             args.pre_actions={dfhack.curry(setFiltersUp,{items={{quantity=1,item_type=df.SIEGEAMMO}}}),AssignJobItems}
         end
         args.job_type=action
-        args.unit=df.global.world.units.active[0]
-        local from_pos={x=args.unit.pos.x,y=args.unit.pos.y, z=args.unit.pos.z}
+        args.unit=dfhack.world.getAdventurer()
+        local from_pos=copyall(args.unit.pos)
         args.from_pos=from_pos
         args.pos=from_pos
     elseif actionid==3 then --Fire
@@ -1313,8 +1313,8 @@ function siegeWeaponActionChosen(args,actionid)
             action=df.job_type.FireCatapult
         end
         args.job_type=action
-        args.unit=df.global.world.units.active[0]
-        local from_pos={x=args.unit.pos.x,y=args.unit.pos.y, z=args.unit.pos.z}
+        args.unit=dfhack.world.getAdventurer()
+        local from_pos=copyall(args.unit.pos)
         args.from_pos=from_pos
         args.pos=from_pos
     end
@@ -1330,10 +1330,10 @@ function putItemToBuilding(building,item)
     end
 end
 function usetool:openPutWindow(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local items=EnumItems{pos=adv.pos,unit=adv,
-        inv={[df.unit_inventory_item.T_mode.Hauled]=true,--[df.unit_inventory_item.T_mode.Worn]=true,
-             [df.unit_inventory_item.T_mode.Weapon]=true,},deep=true}
+        inv={[df.inv_item_role_type.Hauled]=true,--[df.inv_item_role_type.Worn]=true,
+             [df.inv_item_role_type.Weapon]=true,},deep=true}
     local choices={}
     for k,v in pairs(items) do
         table.insert(choices,{text=dfhack.items.getDescription(v,0),item=v})
@@ -1346,7 +1346,7 @@ function usetool:openSiegeWindow(building)
         dfhack.curry(siegeWeaponActionChosen,args))
 end
 function usetool:onWorkShopButtonClicked(building,index,choice)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local args={unit=adv,building=building}
     if df.interface_button_building_new_jobst:is_instance(choice.button) then
         choice.button:click()
@@ -1394,11 +1394,11 @@ function usetool:openShopWindowButtoned(building,no_reset)
             ,nil, nil,true)
 end
 function usetool:openShopWindow(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
 
     local filter_pile=workshopJobs.getJobs(building:getType(),building:getSubtype(),building:getCustomType())
     if filter_pile then
-        local state={unit=adv,from_pos={x=adv.pos.x,y=adv.pos.y, z=adv.pos.z},building=building,screen=self,bld=building}
+        local state={unit=adv,from_pos=copyall(adv.pos),building=building,screen=self,bld=building}
         local choices={}
         for k,v in pairs(filter_pile) do
             table.insert(choices,{job_id=0,text=v.name:lower(),filter=v})
@@ -1421,20 +1421,20 @@ function track_stop_configure(bld) --TODO: dedicated widget with nice interface 
     local choices={"Friction","Dumping"}
     local function chosen(index,choice)
         if choice.text=="Friction" then
-            dialog.showInputPrompt("Choose friction","Friction",nil,tostring(bld.friction),function ( txt )
+            dialog.showInputPrompt("Choose friction","Friction",nil,tostring(bld.track_stop_info.friction),function ( txt )
                 local num=tonumber(txt) --TODO allow only vanilla friction settings
                 if num then
-                    bld.friction=num
+                    bld.track_stop_info.friction=num
                 end
             end)
         else
             dialog.showListPrompt("Dumping direction", "Choose dumping:",COLOR_WHITE,dump_choices,function ( index,choice)
                 if choice.x then
-                    bld.use_dump=1 --??
-                    bld.dump_x_shift=choice.x
-                    bld.dump_y_shift=choice.y
+                    bld.track_stop_info.track_flags.use_dump=true
+                    bld.track_stop_info.dump_x_shift=choice.x
+                    bld.track_stop_info.dump_y_shift=choice.y
                 else
-                    bld.use_dump=0
+                    bld.track_stop_info.track_flags.use_dump=false
                 end
             end)
         end
@@ -1442,7 +1442,7 @@ function track_stop_configure(bld) --TODO: dedicated widget with nice interface 
     dialog.showListPrompt("Track stop configure", "Choose what to change:",COLOR_WHITE,choices,chosen)
 end
 function usetool:armCleanTrap(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     --[[
     Lever,
         PressurePlate,
@@ -1488,7 +1488,7 @@ function usetool:armCleanTrap(building)
 end
 --luacheck: in=df.building_hivest out=none
 function usetool:hiveActions(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local args={unit=adv,post_actions={AssignBuildingRef},pos=adv.pos,
     from_pos=adv.pos,job_type=df.job_type.InstallColonyInHive,building=building,screen=self}
     local job_filter={items={{quantity=1,item_type=df.item_type.VERMIN}} }
@@ -1499,14 +1499,14 @@ function usetool:hiveActions(building)
 end
 function usetool:operatePump(building)
     --TODO: low priotity, but would be nice to have the job auto cleanup (i.e. one work would only pump and then you could press it again)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local set_operate=function ( args )
         args.building.pump_manually=true
     end
     makeJob{unit=adv,building=building,post_actions={AssignBuildingRef,set_operate},pos=adv.pos,from_pos=adv.pos,job_type=df.job_type.OperatePump,screen=self}
 end
 function usetool:farmPlot(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local do_harvest=false
     for id, con_item in pairs(building.contained_items) do
         if con_item.use_mode==2 and con_item.item:getType()==df.item_type.PLANT then
@@ -1532,14 +1532,14 @@ function usetool:farmPlot(building)
 end
 --luacheck: in=df.building_bedst out=none
 function usetool:bedActions(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local args={unit=adv,pos=adv.pos,from_pos=adv.pos,screen=self,building=building,
     job_type=df.job_type.Sleep,post_actions={AssignBuildingRef}}
     makeJob(args)
 end
 --luacheck: in=df.building_chairst out=none
 function usetool:chairActions(building)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local eatjob={items={{quantity=1,item_type=df.item_type.FOOD}}}
     local args={unit=adv,pos=adv.pos,from_pos=adv.pos,screen=self,job_type=df.job_type.Eat,building=building,
         pre_actions={dfhack.curry(setFiltersUp,eatjob),AssignJobItems},post_actions={AssignBuildingRef}}
@@ -1641,7 +1641,7 @@ end
 function usetool:setupFields()
     local ui=df.global.plotinfo
 
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     if settings.set_civ==true then
         ui.civ_id=adv.civ_id
         ui.race_id=adv.race
@@ -1677,7 +1677,7 @@ function usetool:siteCheck()
 end
 --movement and co... Also passes on allowed keys
 function usetool:fieldInput(keys)
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local cur_mode=actions[(mode or 0)+1]
     local failed=false
     for code,_ in pairs(keys) do
@@ -1688,15 +1688,16 @@ function usetool:fieldInput(keys)
                 unit=adv,
                 pos=moddedpos(adv.pos,MOVEMENT_KEYS[code]),
                 dir=MOVEMENT_KEYS[code],
-                from_pos={x=adv.pos.x,y=adv.pos.y, z=adv.pos.z},
+                from_pos=copyall(adv.pos),
                 post_actions=cur_mode[4],
                 pre_actions=cur_mode[5],
                 job_type=cur_mode[2],
                 screen=self}
 
             if code=="SELECT" then --do job in the distance, TODO: check if you can still cheat-mine (and co.) remotely
-                if df.global.cursor.x~=-30000 then
-                    state.pos={x=df.global.cursor.x,y=df.global.cursor.y,z=df.global.cursor.z}
+                local cursor=guidm.getCursorPos()
+                if cursor then
+                    state.pos=cursor
                 else
                     break
                 end
@@ -1745,10 +1746,10 @@ function usetool:onInput(keys)
 
     self:update_site()
 
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
 
     if keys.LEAVESCREEN  then
-        if df.global.cursor.x~=-30000 then --if not poiting at anything
+        if guidm.getCursorPos() then --if not poiting at anything
             self:sendInputToParent("LEAVESCREEN") --leave poiting
         else
             self:dismiss() --leave the adv-tools all together
@@ -1787,7 +1788,7 @@ function usetool:cancel_wait()
     self.long_wait=false
 end
 function usetool:onIdle()
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local job_ptr=adv.job.current_job
     local job_action=findAction(adv,df.unit_action_type.Job)
 
@@ -1826,7 +1827,7 @@ function usetool:onIdle()
     self._native.parent:logic()
 end
 function usetool:isOnBuilding()
-    local adv=df.global.world.units.active[0]
+    local adv=dfhack.world.getAdventurer()
     local bld=dfhack.buildings.findAtTile(adv.pos)
     if bld and MODES[bld:getType()]~=nil and bld:getBuildStage()==bld:getMaxBuildStage() then
         return true,MODES[bld:getType()],bld
@@ -1838,7 +1839,7 @@ function usetool:onRenderBody(dc)
     self:shopMode(self:isOnBuilding())
     self:renderParent()
 end
-if not (dfhack.gui.getCurFocus()=="dungeonmode/Look" or dfhack.gui.getCurFocus()=="dungeonmode/Default") then
+if not (dfhack.gui.matchFocusString('dungeonmode/Look') or dfhack.gui.matchFocusString('dungeonmode/Default')) then
     qerror("This script requires an adventurer mode with (l)ook or default mode.")
 end
 usetool():show()

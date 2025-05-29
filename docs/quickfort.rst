@@ -7,9 +7,8 @@ quickfort
 
 Quickfort reads stored blueprint files and applies them to the game map.
 You can apply blueprints that designate digging, build buildings, place
-stockpiles, mark zones, and/or configure settings. If you find yourself spending
-time doing similar or repetitive things in your forts, this tool can be an
-immense help.
+stockpiles, mark zones, and more. If you find yourself spending time doing
+similar or repetitive designs in your forts, this tool can be an immense help.
 
 Note that this is the commandline tool. Please see `gui/quickfort` if you'd like
 a graphical in-game UI for selecting, previewing, and applying blueprints.
@@ -17,7 +16,8 @@ a graphical in-game UI for selecting, previewing, and applying blueprints.
 You can create the blueprints by hand (see the `quickfort-blueprint-guide` for
 details) or you can build your plan "for real" in Dwarf Fortress, and then
 export your map using `gui/blueprint`. This way you can effectively copy and
-paste sections of your fort if you need to.
+paste sections of your fort. Player-created blueprints are stored in the
+``dfhack-config/blueprints`` directory.
 
 There are many ready-to-use blueprints in the
 `blueprint library <blueprint-library-guide>` that is distributed with DFHack,
@@ -29,17 +29,21 @@ Usage
 -----
 
 ``quickfort list [-m|--mode <mode>] [-u|--useronly] [-h|--hidden] [<search string>]``
-    Lists blueprints in the ``blueprints`` folder. Blueprints are ``.csv`` files
-    or sheets within ``.xlsx`` files that contain a ``#<mode>`` comment in the
-    upper-left cell (please see `quickfort-blueprint-guide` for more information
-    on modes). By default, library blueprints in the ``hack/data/blueprints/`` subfolder
-    are included and blueprints that contain a ``hidden()`` marker in their
-    modeline are excluded from the returned list. Specify ``-u`` or ``-h`` to
-    exclude library or include hidden blueprints, respectively. The list can
-    additionally be filtered by a specified mode (e.g. ``-m build``) and/or
-    strings to search for in a path, filename, mode, or comment. The id numbers
-    in the reported list may not be contiguous if there are hidden or filtered
-    blueprints that are not being shown.
+    Lists available blueprints. Blueprints are ``.csv`` files or sheets within
+    ``.xlsx`` files that contain a ``#<mode>`` comment in the upper-left cell
+    (please see `quickfort-blueprint-guide` for more information on modes). By
+    default, library blueprints are included and blueprints that contain a
+    ``hidden()`` marker in their modeline are excluded from the returned list.
+    Specify ``-u`` or ``-h`` to exclude library or include hidden blueprints,
+    respectively. The list can additionally be filtered by a specified mode
+    (e.g. ``-m build``) and/or strings to search for in a path, filename, mode,
+    or comment. The id numbers in the reported list may not be contiguous if
+    there are hidden or filtered blueprints that are not being shown.
+``quickfort delete <filename> [<filename> ...]``
+    Delete the specified blueprint file(s). Only player-owned blueprints (stored
+    in the ``dfhack-config/blueprints`` directory) can be deleted. Blueprints
+    provided by mods or the standard DFHack library cannot be deleted by this
+    command.
 ``quickfort gui [<filename or search terms>]``
     Invokes the quickfort UI with the specified parameters, giving you an
     interactive blueprint preview to work with before you apply it to the map.
@@ -93,9 +97,9 @@ Examples
     z-levels). Also transform the blueprint by rotating counterclockwise and
     flipping vertically in order to fit the pump stack through some
     tricky-shaped caverns 50 z-levels above. Note that this kind of careful
-    positioning is much easier to do with `gui/quickfort`, but it can be done
-    via the commandline as well if you know exactly what transformations and
-    positioning you need.
+    positioning is much easier to do interactively with `gui/quickfort`, but it
+    can be done via the commandline as well if you know exactly what
+    transformations and positioning you need.
 ``quickfort orders 10,11,12 --dry-run``
     Process the blueprints with ids ``10``, ``11``, and ``12`` (run
     ``quickfort list`` to see which blueprints these are for you) and calculate
@@ -116,6 +120,18 @@ Command options
 ``-d``, ``--dry-run``
     Go through all the motions and print statistics on what would be done, but
     don't actually change any game state.
+``-m``, ``--marker <type>[,<type>...]``
+    Apply the given marker(s) to the tiles designated by the ``#dig`` blueprint
+    that you are applying. Valid marker types are: ``blueprint`` (designate but
+    don't dig), ``warm`` (dig even if the tiles are warm), and ``damp`` (dig
+    even if the tiles are damp). ``warm`` and ``damp`` markers are interpreted
+    by the `dig` tool for interruption-free digging through warm and damp tiles.
+``-p``, ``--priority <num>``
+    Set the priority to the given number (1-7) for tiles designated by the
+    ``#dig`` blueprint that you are applying. That is, tiles that normally have
+    a priority of ``4`` will instead have the priority you specify. If the
+    blueprint uses other explicit priorities, they will be shifted up or down
+    accordingly.
 ``--preserve-engravings <quality>``
     Don't designate tiles for digging/carving if they have an engraving with at
     least the specified quality. Valid values for ``quality`` are: ``None``,
@@ -174,9 +190,9 @@ for the current session and will be reset when you restart DF.
 ``blueprints_library_dir`` (default: ``hack/data/blueprints``)
     Directory tree to search for library blueprints.
 ``force_marker_mode`` (default: ``false``)
-    If true, will designate all dig blueprints in marker mode. If false, only
-    cells with dig codes explicitly prefixed with ``m`` will be designated in
-    marker mode.
+    If true, will designate all dig blueprints in marker=blueprint mode. If
+    false, only cells with dig codes explicitly prefixed with ``mb`` in the
+    blueprint cell will be designated in marker mode.
 ``stockpiles_max_barrels``, ``stockpiles_max_bins``, and ``stockpiles_max_wheelbarrows`` (defaults: ``-1``, ``-1``, ``0``)
     Set to the maximum number of resources you want assigned to stockpiles of
     the relevant types. Set to ``-1`` for DF defaults (number of stockpile tiles
@@ -202,7 +218,7 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
 ``params`` is a table with the following fields:
 
 ``mode`` (required)
-    The name of the blueprint mode, e.g. ``dig``, ``build``, etc.
+    The blueprint mode, e.g. ``dig``, ``build``, etc.
 ``data`` (required)
     A sparse map populated such that ``data[z][y][x]`` yields the blueprint text
     that should be applied to the tile at map coordinate ``(x, y, z)``. You can
@@ -220,6 +236,13 @@ statistics structure is a map of stat ids to ``{label=string, value=number}``.
 ``aliases``
     A map of blueprint alias names to their expansions. If not specified,
     defaults to ``{}``.
+``marker``
+    A map of strings to booleans indicating which markers should be applied to
+    this ``dig`` mode blueprint. See `Command options`_ above for details. If
+    not specified, defaults to ``{blueprint=false, warm=false, damp=false}``.
+``priority``
+    An integer between ``1`` and ``7``, inclusive, indicating the base priority
+    for this ``dig`` blueprint. If not specified, defaults to ``4``.
 ``preserve_engravings``
     Don't designate tiles for digging or carving if they have an engraving with
     at least the specified quality. Value is a ``df.item_quality`` enum name or

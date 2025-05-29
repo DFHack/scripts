@@ -9,21 +9,13 @@ local common = reqscript('internal/caravan/common')
 local gui = require('gui')
 local overlay = require('plugins.overlay')
 local predicates = reqscript('internal/caravan/predicates')
+local utils = require('utils')
 local widgets = require('gui.widgets')
 
 trader_selected_state = trader_selected_state or {}
 broker_selected_state = broker_selected_state or {}
 handle_ctrl_click_on_render = handle_ctrl_click_on_render or false
 handle_shift_click_on_render = handle_shift_click_on_render or false
-
-local GOODFLAG = {
-    UNCONTAINED_UNSELECTED = 0,
-    UNCONTAINED_SELECTED = 1,
-    CONTAINED_UNSELECTED = 2,
-    CONTAINED_SELECTED = 3,
-    CONTAINER_COLLAPSED_UNSELECTED = 4,
-    CONTAINER_COLLAPSED_SELECTED = 5,
-}
 
 local trade = df.global.game.main_interface.trade
 
@@ -34,55 +26,18 @@ local trade = df.global.game.main_interface.trade
 Trade = defclass(Trade, widgets.Window)
 Trade.ATTRS {
     frame_title='Select trade goods',
-    frame={w=84, h=47},
+    frame={w=86, h=47},
     resizable=true,
-    resize_min={w=48, h=27},
-}
-
-local TOGGLE_MAP = {
-    [GOODFLAG.UNCONTAINED_UNSELECTED] = GOODFLAG.UNCONTAINED_SELECTED,
-    [GOODFLAG.UNCONTAINED_SELECTED] = GOODFLAG.UNCONTAINED_UNSELECTED,
-    [GOODFLAG.CONTAINED_UNSELECTED] = GOODFLAG.CONTAINED_SELECTED,
-    [GOODFLAG.CONTAINED_SELECTED] = GOODFLAG.CONTAINED_UNSELECTED,
-    [GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED] = GOODFLAG.CONTAINER_COLLAPSED_SELECTED,
-    [GOODFLAG.CONTAINER_COLLAPSED_SELECTED] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED,
-}
-
-local TARGET_MAP = {
-    [true]={
-        [GOODFLAG.UNCONTAINED_UNSELECTED] = GOODFLAG.UNCONTAINED_SELECTED,
-        [GOODFLAG.UNCONTAINED_SELECTED] = GOODFLAG.UNCONTAINED_SELECTED,
-        [GOODFLAG.CONTAINED_UNSELECTED] = GOODFLAG.CONTAINED_SELECTED,
-        [GOODFLAG.CONTAINED_SELECTED] = GOODFLAG.CONTAINED_SELECTED,
-        [GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED] = GOODFLAG.CONTAINER_COLLAPSED_SELECTED,
-        [GOODFLAG.CONTAINER_COLLAPSED_SELECTED] = GOODFLAG.CONTAINER_COLLAPSED_SELECTED,
-    },
-    [false]={
-        [GOODFLAG.UNCONTAINED_UNSELECTED] = GOODFLAG.UNCONTAINED_UNSELECTED,
-        [GOODFLAG.UNCONTAINED_SELECTED] = GOODFLAG.UNCONTAINED_UNSELECTED,
-        [GOODFLAG.CONTAINED_UNSELECTED] = GOODFLAG.CONTAINED_UNSELECTED,
-        [GOODFLAG.CONTAINED_SELECTED] = GOODFLAG.CONTAINED_UNSELECTED,
-        [GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED,
-        [GOODFLAG.CONTAINER_COLLAPSED_SELECTED] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED,
-    },
-}
-
-local TARGET_REVMAP = {
-    [GOODFLAG.UNCONTAINED_UNSELECTED] = false,
-    [GOODFLAG.UNCONTAINED_SELECTED] = true,
-    [GOODFLAG.CONTAINED_UNSELECTED] = false,
-    [GOODFLAG.CONTAINED_SELECTED] = true,
-    [GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED] = false,
-    [GOODFLAG.CONTAINER_COLLAPSED_SELECTED] = true,
+    resize_min={w=48, h=40},
 }
 
 local function get_entry_icon(data)
-    if TARGET_REVMAP[trade.goodflag[data.list_idx][data.item_idx]] then
+    if trade.goodflag[data.list_idx][data.item_idx].selected then
         return common.ALL_PEN
     end
 end
 
-local function sort_noop(a, b)
+local function sort_noop()
     -- this function is used as a marker and never actually gets called
     error('sort_noop should not be called')
 end
@@ -139,7 +94,7 @@ end
 
 local STATUS_COL_WIDTH = 7
 local VALUE_COL_WIDTH = 6
-local FILTER_HEIGHT = 15
+local FILTER_HEIGHT = 18
 
 function Trade:init()
     self.cur_page = 1
@@ -174,8 +129,8 @@ function Trade:init()
             label='Bins:',
             key='CUSTOM_SHIFT_B',
             options={
-                {label='trade bin with contents', value=true},
-                {label='trade contents only', value=false},
+                {label='Trade bin with contents', value=true, pen=COLOR_YELLOW},
+                {label='Trade contents only', value=false, pen=COLOR_GREEN},
             },
             initial_option=false,
             on_change=function() self:refresh_list() end,
@@ -215,23 +170,24 @@ function Trade:init()
         },
         widgets.Panel{
             frame={t=7, l=0, r=0, h=FILTER_HEIGHT},
+            frame_style=gui.FRAME_INTERIOR,
             visible=function() return self.subviews.filters:getOptionValue() end,
             on_layout=function()
                 local panel_frame = self.subviews.list_panel.frame
                 if self.subviews.filters:getOptionValue() then
-                    panel_frame.t = 7 + FILTER_HEIGHT
+                    panel_frame.t = 7 + FILTER_HEIGHT + 1
                 else
                     panel_frame.t = 7
                 end
             end,
             subviews={
                 widgets.Panel{
-                    frame={t=0, l=0, w=38, h=FILTER_HEIGHT},
+                    frame={t=0, l=0, w=38},
                     visible=function() return self.cur_page == 1 end,
                     subviews=common.get_slider_widgets(self, '1'),
                 },
                 widgets.Panel{
-                    frame={t=0, l=0, w=38, h=FILTER_HEIGHT},
+                    frame={t=0, l=0, w=38},
                     visible=function() return self.cur_page == 2 end,
                     subviews=common.get_slider_widgets(self, '2'),
                 },
@@ -241,15 +197,15 @@ function Trade:init()
                     subviews=common.get_advanced_filter_widgets(self, self.predicate_contexts[1]),
                 },
                 widgets.Panel{
-                    frame={t=2, l=40, r=0, h=FILTER_HEIGHT-2},
+                    frame={t=1, l=40, r=0},
                     visible=function() return self.cur_page == 2 end,
-                    subviews=common.get_info_widgets(self, {trade.mer.buy_prices}, self.predicate_contexts[2]),
+                    subviews=common.get_info_widgets(self, {trade.mer.buy_prices}, true, self.predicate_contexts[2]),
                 },
             },
         },
         widgets.Panel{
             view_id='list_panel',
-            frame={t=7, l=0, r=0, b=4},
+            frame={t=7, l=0, r=0, b=5},
             subviews={
                 widgets.CycleHotkeyLabel{
                     view_id='sort_status',
@@ -295,16 +251,22 @@ function Trade:init()
                 },
             }
         },
+        widgets.Divider{
+            frame={b=4, h=1},
+            frame_style=gui.FRAME_INTERIOR,
+            frame_style_l=false,
+            frame_style_r=false,
+        },
+        widgets.Label{
+            frame={b=2, l=0, r=0},
+            text='Click to mark/unmark for trade. Shift click to mark/unmark a range of items.',
+        },
         widgets.HotkeyLabel{
-            frame={l=0, b=2},
+            frame={l=0, b=0},
             label='Select all/none',
-            key='CUSTOM_CTRL_A',
+            key='CUSTOM_CTRL_N',
             on_activate=self:callback('toggle_visible'),
             auto_width=true,
-        },
-        widgets.WrappedLabel{
-            frame={b=0, l=0, r=0},
-            text_to_wrap='Click to mark/unmark for trade. Shift click to mark/unmark a range of items.',
         },
     }
 
@@ -368,13 +330,13 @@ function Trade:cache_choices(list_idx, trade_bins)
     local parent_data
     for item_idx, item in ipairs(trade.good[list_idx]) do
         local goodflag = goodflags[item_idx]
-        if goodflag ~= GOODFLAG.CONTAINED_UNSELECTED and goodflag ~= GOODFLAG.CONTAINED_SELECTED then
+        if not goodflag.contained then
             parent_data = nil
         end
         local is_banned, is_risky = common.scan_banned(item, self.risky_items)
         local is_requested = dfhack.items.isRequestedTradeGood(item, trade.mer)
         local wear_level = item:getWear()
-        local desc = common.get_item_description(item)
+        local desc = dfhack.items.getReadableDescription(item)
         local is_ethical = is_ethical_product(item, self.animal_ethics, self.wood_ethics)
         local data = {
             desc=desc,
@@ -384,10 +346,12 @@ function Trade:cache_choices(list_idx, trade_bins)
             item_idx=item_idx,
             quality=item.flags.artifact and 6 or item:getQuality(),
             wear=wear_level,
+            has_foreign=item.flags.foreign,
             has_banned=is_banned,
             has_risky=is_risky,
             has_requested=is_requested,
-            ethical=is_ethical,
+            has_ethical=is_ethical,
+            ethical_mixed=false,
         }
         if parent_data then
             data.update_container_fn = function(from, to)
@@ -396,15 +360,22 @@ function Trade:cache_choices(list_idx, trade_bins)
             parent_data.has_banned = parent_data.has_banned or is_banned
             parent_data.has_risky = parent_data.has_risky or is_risky
             parent_data.has_requested = parent_data.has_requested or is_requested
-            parent_data.ethical = parent_data.ethical and is_ethical
+            parent_data.ethical_mixed = parent_data.ethical_mixed or (parent_data.has_ethical ~= is_ethical)
+            parent_data.has_ethical = parent_data.has_ethical or is_ethical
+        end
+        local is_container = df.item_binst:is_instance(item)
+        local search_key
+        if (trade_bins and is_container) or item:isFoodStorage() then
+            search_key = common.make_container_search_key(item, desc)
+        else
+            search_key = common.make_search_key(desc)
         end
         local choice = {
-            search_key=common.make_search_key(desc),
+            search_key=search_key,
             icon=curry(get_entry_icon, data),
             data=data,
             text=make_choice_text(data.value, desc),
         }
-        local is_container = df.item_binst:is_instance(item)
         if not data.update_container_fn then
             table.insert(trade_bins_choices, choice)
         end
@@ -421,9 +392,11 @@ end
 
 function Trade:get_choices()
     local raw_choices = self:cache_choices(self.cur_page-1, self.subviews.trade_bins:getOptionValue())
+    local provenance = self.subviews.provenance:getOptionValue()
     local banned = self.cur_page == 1 and 'ignore' or self.subviews.banned:getOptionValue()
     local only_agreement = self.cur_page == 2 and self.subviews.only_agreement:getOptionValue() or false
     local ethical = self.cur_page == 1 and 'show' or self.subviews.ethical:getOptionValue()
+    local strict_ethical_bins = self.subviews.strict_ethical_bins:getOptionValue()
     local min_condition = self.subviews['min_condition'..self.cur_page]:getOptionValue()
     local max_condition = self.subviews['max_condition'..self.cur_page]:getOptionValue()
     local min_quality = self.subviews['min_quality'..self.cur_page]:getOptionValue()
@@ -434,8 +407,16 @@ function Trade:get_choices()
     for _,choice in ipairs(raw_choices) do
         local data = choice.data
         if ethical ~= 'show' then
-            if ethical == 'hide' and data.ethical then goto continue end
-            if ethical == 'only' and not data.ethical then goto continue end
+            if strict_ethical_bins and data.ethical_mixed then goto continue end
+            if ethical == 'hide' and data.has_ethical then goto continue end
+            if ethical == 'only' and not data.has_ethical then goto continue end
+        end
+        if provenance ~= 'all' then
+            if (provenance == 'local' and data.has_foreign) or
+                (provenance == 'foreign' and not data.has_foreign)
+            then
+                goto continue
+            end
         end
         if min_condition < data.wear then goto continue end
         if max_condition > data.wear then goto continue end
@@ -461,11 +442,13 @@ end
 
 local function toggle_item_base(choice, target_value)
     local goodflag = trade.goodflag[choice.data.list_idx][choice.data.item_idx]
-    local goodflag_map = target_value == nil and TOGGLE_MAP or TARGET_MAP[target_value]
-    trade.goodflag[choice.data.list_idx][choice.data.item_idx] = goodflag_map[goodflag]
-    target_value = TARGET_REVMAP[trade.goodflag[choice.data.list_idx][choice.data.item_idx]]
+    if target_value == nil then
+        target_value = not goodflag.selected
+    end
+    local prev_value = goodflag.selected
+    goodflag.selected = target_value
     if choice.data.update_container_fn then
-        choice.data.update_container_fn(TARGET_REVMAP[goodflag], target_value)
+        choice.data.update_container_fn(prev_value, target_value)
     end
     return target_value
 end
@@ -510,7 +493,7 @@ end
 -- TradeScreen
 --
 
-view = view or nil
+trade_view = trade_view or nil
 
 TradeScreen = defclass(TradeScreen, gui.ZScreen)
 TradeScreen.ATTRS {
@@ -534,15 +517,18 @@ end
 
 function TradeScreen:onRenderFrame()
     if not df.global.game.main_interface.trade.open then
-        if view then view:dismiss() end
-    elseif self.reset_pending then
+        if trade_view then trade_view:dismiss() end
+    elseif self.reset_pending and
+        (dfhack.gui.matchFocusString('dfhack/lua/caravan/trade') or
+         dfhack.gui.matchFocusString('dwarfmode/Trade/Default'))
+    then
         self.reset_pending = nil
         self.trade_window:reset_cache()
     end
 end
 
 function TradeScreen:onDismiss()
-    view = nil
+    trade_view = nil
 end
 
 -- -------------------
@@ -562,39 +548,40 @@ local function set_height(list_idx, delta)
                      trade.i_height[list_idx] - page_height))
 end
 
-local function select_shift_clicked_container_items(new_state, old_state, list_idx)
+local function flags_match(goodflag1, goodflag2)
+    return goodflag1.selected == goodflag2.selected and
+        goodflag1.contained == goodflag2.contained and
+        goodflag1.container_collapsed == goodflag2.container_collapsed and
+        goodflag1.filtered_off == goodflag2.filtered_off
+end
+
+local function select_shift_clicked_container_items(new_state, old_state_fn, list_idx)
     -- if ctrl is also held, collapse the container too
     local also_collapse = dfhack.internal.getModifiers().ctrl
-    local collapsed_item_count, collapsing_container, in_container = 0, false, false
+    local collapsed_item_count, collapsing_container, in_target_container = 0, false, false
     for k, goodflag in ipairs(new_state) do
-        if in_container then
-            if goodflag <= GOODFLAG.UNCONTAINED_SELECTED
-                    or goodflag >= GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED then
-                break
-            end
-
-            new_state[k] = GOODFLAG.CONTAINED_SELECTED
-
+        if in_target_container then
+            if not goodflag.contained then break end
+            goodflag.selected = true
             if collapsing_container then
                 collapsed_item_count = collapsed_item_count + 1
             end
             goto continue
         end
 
-        if goodflag == old_state[k] then goto continue end
+        local old_goodflag = old_state_fn(k)
+        if flags_match(goodflag, old_goodflag) then goto continue end
         local is_container = df.item_binst:is_instance(trade.good[list_idx][k])
         if not is_container then goto continue end
 
         -- deselect the container itself
-        if also_collapse or
-                old_state[k] == GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED or
-                old_state[k] == GOODFLAG.CONTAINER_COLLAPSED_SELECTED then
-            collapsing_container = goodflag == GOODFLAG.UNCONTAINED_SELECTED
-            new_state[k] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED
-        else
-            new_state[k] = GOODFLAG.UNCONTAINED_UNSELECTED
+        goodflag.selected = false
+
+        if also_collapse or old_goodflag.container_collapsed then
+            goodflag.container_collapsed = true
+            collapsing_container = not old_goodflag.container_collapsed
         end
-        in_container = true
+        in_target_container = true
 
         ::continue::
     end
@@ -604,37 +591,27 @@ local function select_shift_clicked_container_items(new_state, old_state, list_i
     end
 end
 
-local CTRL_CLICK_STATE_MAP = {
-    [GOODFLAG.UNCONTAINED_UNSELECTED] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED,
-    [GOODFLAG.UNCONTAINED_SELECTED] = GOODFLAG.CONTAINER_COLLAPSED_SELECTED,
-    [GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED] = GOODFLAG.UNCONTAINED_UNSELECTED,
-    [GOODFLAG.CONTAINER_COLLAPSED_SELECTED] = GOODFLAG.UNCONTAINED_SELECTED,
-}
-
 -- collapses uncollapsed containers and restores the selection state for the container
 -- and contained items
-local function toggle_ctrl_clicked_containers(new_state, old_state, list_idx)
-    local toggled_item_count, in_container, is_collapsing = 0, false, false
+local function toggle_ctrl_clicked_containers(new_state, old_state_fn, list_idx)
+    local toggled_item_count, in_target_container, is_collapsing = 0, false, false
     for k, goodflag in ipairs(new_state) do
-        if in_container then
-            if goodflag <= GOODFLAG.UNCONTAINED_SELECTED
-                    or goodflag >= GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED then
-                break
-            end
+        local old_goodflag = old_state_fn(k)
+        if in_target_container then
+            if not goodflag.contained then break end
             toggled_item_count = toggled_item_count + 1
-            new_state[k] = old_state[k]
+            utils.assign(goodflag, old_goodflag)
             goto continue
         end
 
-        if goodflag == old_state[k] then goto continue end
-        local is_contained = goodflag == GOODFLAG.CONTAINED_UNSELECTED or goodflag == GOODFLAG.CONTAINED_SELECTED
-        if is_contained then goto continue end
+        if flags_match(goodflag, old_goodflag) or goodflag.contained then goto continue end
         local is_container = df.item_binst:is_instance(trade.good[list_idx][k])
         if not is_container then goto continue end
 
-        new_state[k] = CTRL_CLICK_STATE_MAP[old_state[k]]
-        in_container = true
-        is_collapsing = goodflag == GOODFLAG.UNCONTAINED_UNSELECTED or goodflag == GOODFLAG.UNCONTAINED_SELECTED
+        goodflag.selected = old_goodflag.selected
+        goodflag.container_collapsed = not old_goodflag.container_collapsed
+        in_target_container = true
+        is_collapsing = goodflag.container_collapsed
 
         ::continue::
     end
@@ -667,27 +644,17 @@ end
 local function collapseContainers(item_list, list_idx)
     local num_items_collapsed = 0
     for k, goodflag in ipairs(item_list) do
-        if goodflag == GOODFLAG.CONTAINED_UNSELECTED
-                or goodflag == GOODFLAG.CONTAINED_SELECTED then
-            goto continue
-        end
+        if goodflag.contained then goto continue end
 
         local item = trade.good[list_idx][k]
         local is_container = df.item_binst:is_instance(item)
         if not is_container then goto continue end
 
-        local collapsed_this_container = false
-        if goodflag == GOODFLAG.UNCONTAINED_SELECTED then
-            item_list[k] = GOODFLAG.CONTAINER_COLLAPSED_SELECTED
-            collapsed_this_container = true
-        elseif goodflag == GOODFLAG.UNCONTAINED_UNSELECTED then
-            item_list[k] = GOODFLAG.CONTAINER_COLLAPSED_UNSELECTED
-            collapsed_this_container = true
-        end
-
-        if collapsed_this_container then
+        if not goodflag.container_collapsed then
+            goodflag.container_collapsed = true
             num_items_collapsed = num_items_collapsed + #dfhack.items.getContainedItems(item)
         end
+
         ::continue::
     end
 
@@ -707,12 +674,19 @@ local function collapseEverything()
 end
 
 local function copyGoodflagState()
-    trader_selected_state = copyall(trade.goodflag[0])
-    broker_selected_state = copyall(trade.goodflag[1])
+    -- utils.clone will return a lua table, with indices offset by 1
+    -- we'll use getSavedGoodflag to map the index back to the original value
+    trader_selected_state = utils.clone(trade.goodflag[0], true)
+    broker_selected_state = utils.clone(trade.goodflag[1], true)
+end
+
+local function getSavedGoodflag(saved_state, k)
+    return saved_state[k+1]
 end
 
 TradeOverlay = defclass(TradeOverlay, overlay.OverlayWidget)
 TradeOverlay.ATTRS{
+    desc='Adds convenience functions for working with bins to the trade screen.',
     default_pos={x=-3,y=-12},
     default_enabled=true,
     viewscreens='dwarfmode/Trade/Default',
@@ -768,12 +742,12 @@ end
 function TradeOverlay:onRenderBody(dc)
     if handle_shift_click_on_render then
         handle_shift_click_on_render = false
-        select_shift_clicked_container_items(trade.goodflag[0], trader_selected_state, 0)
-        select_shift_clicked_container_items(trade.goodflag[1], broker_selected_state, 1)
+        select_shift_clicked_container_items(trade.goodflag[0], curry(getSavedGoodflag, trader_selected_state), 0)
+        select_shift_clicked_container_items(trade.goodflag[1], curry(getSavedGoodflag, broker_selected_state), 1)
     elseif handle_ctrl_click_on_render then
         handle_ctrl_click_on_render = false
-        toggle_ctrl_clicked_containers(trade.goodflag[0], trader_selected_state, 0)
-        toggle_ctrl_clicked_containers(trade.goodflag[1], broker_selected_state, 1)
+        toggle_ctrl_clicked_containers(trade.goodflag[0], curry(getSavedGoodflag, trader_selected_state), 0)
+        toggle_ctrl_clicked_containers(trade.goodflag[1], curry(getSavedGoodflag, broker_selected_state), 1)
     end
 end
 
@@ -797,6 +771,7 @@ end
 
 TradeBannerOverlay = defclass(TradeBannerOverlay, overlay.OverlayWidget)
 TradeBannerOverlay.ATTRS{
+    desc='Adds link to the trade screen to launch the DFHack trade UI.',
     default_pos={x=-31,y=-7},
     default_enabled=true,
     viewscreens='dwarfmode/Trade/Default',
@@ -811,7 +786,7 @@ function TradeBannerOverlay:init()
             label='DFHack trade UI',
             key='CUSTOM_CTRL_T',
             enabled=function() return trade.stillunloading == 0 and trade.havetalker == 1 end,
-            on_activate=function() view = view and view:raise() or TradeScreen{}:show() end,
+            on_activate=function() trade_view = trade_view and trade_view:raise() or TradeScreen{}:show() end,
         },
     }
 end
@@ -820,8 +795,208 @@ function TradeBannerOverlay:onInput(keys)
     if TradeBannerOverlay.super.onInput(self, keys) then return true end
 
     if keys._MOUSE_R or keys.LEAVESCREEN then
-        if view then
-            view:dismiss()
+        if trade_view then
+            trade_view:dismiss()
+        end
+    end
+end
+
+-- -------------------
+-- Ethics
+--
+
+Ethics = defclass(Ethics, widgets.Window)
+Ethics.ATTRS {
+    frame_title='Ethical transgressions',
+    frame={w=45, h=30},
+    resizable=true,
+}
+
+function Ethics:init()
+    self.choices = {}
+    self.animal_ethics = common.is_animal_lover_caravan(trade.mer)
+    self.wood_ethics = common.is_tree_lover_caravan(trade.mer)
+
+    self:addviews{
+        widgets.Label{
+            frame={l=0, t=0},
+            text={
+                'You have ',
+                {text=self:callback('get_transgression_count'), pen=self:callback('get_transgression_color')},
+                ' item',
+                {text=function() return self:get_transgression_count() == 1 and '' or 's' end},
+                ' selected for trade', NEWLINE,
+                'that would offend the merchants:',
+            },
+        },
+        widgets.List{
+            view_id='list',
+            frame={l=0, r=0, t=3, b=2},
+        },
+        widgets.HotkeyLabel{
+            frame={l=0, b=0},
+            key='CUSTOM_CTRL_N',
+            label='Deselect items in trade list',
+            auto_width=true,
+            on_activate=self:callback('deselect_transgressions'),
+        },
+    }
+
+    self:rescan()
+end
+
+function Ethics:get_transgression_count()
+    return #self.choices
+end
+
+function Ethics:get_transgression_color()
+    return next(self.choices) and COLOR_LIGHTRED or COLOR_LIGHTGREEN
+end
+
+-- also used by confirm
+function for_selected_item(list_idx, fn)
+    local goodflags = trade.goodflag[list_idx]
+    local in_selected_container = false
+    for item_idx, item in ipairs(trade.good[list_idx]) do
+        local goodflag = goodflags[item_idx]
+        if not goodflag.contained then
+            in_selected_container = goodflag.selected
+        end
+        if in_selected_container or goodflag.selected then
+            if fn(item_idx, item) then
+                return
+            end
+        end
+    end
+end
+
+local function for_ethics_violation(fn, animal_ethics, wood_ethics)
+    if not animal_ethics and not wood_ethics then return end
+    for_selected_item(1, function(item_idx, item)
+        if not is_ethical_product(item, animal_ethics, wood_ethics) then
+            if fn(item_idx, item) then return true end
+        end
+    end)
+end
+
+function Ethics:rescan()
+    local choices = {}
+    for_ethics_violation(function(item_idx, item)
+        local choice = {
+            text=dfhack.items.getReadableDescription(item),
+            data={item_idx=item_idx},
+        }
+        table.insert(choices, choice)
+    end, self.animal_ethics, self.wood_ethics)
+
+    self.subviews.list:setChoices(choices)
+    self.choices = choices
+end
+
+function Ethics:deselect_transgressions()
+    local goodflags = trade.goodflag[1]
+    for _,choice in ipairs(self.choices) do
+        goodflags[choice.data.item_idx].selected = false
+    end
+    self:rescan()
+end
+
+-- -------------------
+-- EthicsScreen
+--
+
+ethics_view = ethics_view or nil
+
+EthicsScreen = defclass(EthicsScreen, gui.ZScreen)
+EthicsScreen.ATTRS {
+    focus_path='caravan/trade/ethics',
+}
+
+function EthicsScreen:init()
+    self.ethics_window = Ethics{}
+    self:addviews{self.ethics_window}
+end
+
+function EthicsScreen:onInput(keys)
+    if self.reset_pending then return false end
+    local handled = EthicsScreen.super.onInput(self, keys)
+    if keys._MOUSE_L and not self.ethics_window:getMouseFramePos() then
+        -- check for modified selection
+        self.reset_pending = true
+    end
+    return handled
+end
+
+function EthicsScreen:onRenderFrame()
+    if not df.global.game.main_interface.trade.open then
+        if ethics_view then ethics_view:dismiss() end
+    elseif self.reset_pending and
+        (dfhack.gui.matchFocusString('dfhack/lua/caravan/trade') or
+         dfhack.gui.matchFocusString('dwarfmode/Trade/Default'))
+    then
+        self.reset_pending = nil
+        self.ethics_window:rescan()
+    end
+end
+
+function EthicsScreen:onDismiss()
+    ethics_view = nil
+end
+
+-- --------------------------
+-- TradeEthicsWarningOverlay
+--
+
+-- also called by confirm
+function has_ethics_violation()
+    local violated = false
+    for_ethics_violation(function()
+        violated = true
+        return true
+    end, common.is_animal_lover_caravan(trade.mer), common.is_tree_lover_caravan(trade.mer))
+    return violated
+end
+
+TradeEthicsWarningOverlay = defclass(TradeEthicsWarningOverlay, overlay.OverlayWidget)
+TradeEthicsWarningOverlay.ATTRS{
+    desc='Adds warning to the trade screen when you are about to offend the elves.',
+    default_pos={x=-54,y=-5},
+    default_enabled=true,
+    viewscreens='dwarfmode/Trade/Default',
+    frame={w=9, h=2},
+    visible=has_ethics_violation,
+}
+
+function TradeEthicsWarningOverlay:init()
+    self:addviews{
+        widgets.BannerPanel{
+            frame={l=0, w=9},
+            subviews={
+                widgets.Label{
+                    frame={l=1, r=1},
+                    text={
+                        'Ethics', NEWLINE,
+                        'warning',
+                    },
+                    on_click=function() ethics_view = ethics_view and ethics_view:raise() or EthicsScreen{}:show() end,
+                    text_pen=COLOR_LIGHTRED,
+                    auto_width=false,
+                },
+            },
+        },
+    }
+end
+
+function TradeEthicsWarningOverlay:preUpdateLayout(rect)
+    self.frame.w = (rect.width - 95) // 2
+end
+
+function TradeEthicsWarningOverlay:onInput(keys)
+    if TradeEthicsWarningOverlay.super.onInput(self, keys) then return true end
+
+    if keys._MOUSE_R or keys.LEAVESCREEN then
+        if ethics_view then
+            ethics_view:dismiss()
         end
     end
 end

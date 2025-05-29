@@ -3,9 +3,10 @@ fix/population-cap
 
 .. dfhack-tool::
     :summary: Ensure the population cap is respected.
-    :tags: unavailable fort bugfix units
+    :tags: fort bugfix
 
-Run this after every migrant wave to ensure your population cap is not exceeded.
+Run this if you continue to get migrant waves even after you have exceeded your
+set population cap.
 
 The reason this tool is needed is that the game only updates the records of your
 current population when a dwarven caravan successfully leaves for the
@@ -26,10 +27,3 @@ Usage
 ::
 
     fix/population-cap
-
-Examples
---------
-
-``repeat --time 1 --timeUnits months --command [ fix/population-cap ]``
-    Automatically run this fix after every migrant wave to keep the population
-    values up to date.

@@ -1,193 +1,12 @@
 -- Change the preferences of a unit.
 --@ module = true
 
-local help = [====[
-
-assign-preferences
-==================
-A script to change the preferences of a unit.
-
-Preferences are classified into 12 types. The first 9 are:
-
-* like material;
-* like creature;
-* like food;
-* hate creature;
-* like item;
-* like plant;
-* like tree;
-* like colour;
-* like shape.
-
-These can be changed using this script.
-
-The remaining three are not currently managed by this script,
-and are: like poetic form, like musical form, like dance form.
-
-To produce the correct description in the "thoughts and preferences"
-page, you must specify the particular type of preference. For
-each type, a description is provided in the section below.
-
-You will need to know the token of the object you want your dwarf to like.
-You can find them in the wiki, otherwise in the folder "/raw/objects/" under
-the main DF directory you will find all the raws defined in the game.
-
-For more information:
-https://dwarffortresswiki.org/index.php/DF2014:Preferences
-
-Usage:
-
-``-help``:
-                    print the help page.
-
-``-unit <UNIT_ID>``:
-                    set the target unit ID. If not present, the
-                    currently selected unit will be the target.
-
-``-likematerial [ <TOKEN> <TOKEN> <...> ]``:
-                    usually a type of stone, a type of metal and a type
-                    of gem, plus it can also be a type of wood, a type of
-                    glass, a type of leather, a type of horn, a type of
-                    pearl, a type of ivory, a decoration material - coral
-                    or amber, a type of bone, a type of shell, a type
-                    of silk, a type of yarn, or a type of plant cloth.
-                    Write the full tokens.
-                    There must be a space before and after each square
-                    bracket.
-
-``-likecreature [ <TOKEN> <TOKEN> <...> ]``:
-                    one or more creatures liked by the unit. You can
-                    just list the species: the creature token will be
-                    something similar to ``CREATURE:SPARROW:SKIN``,
-                    so the name of the species will be ``SPARROW``. Nothing
-                    will stop you to write the full token, if you want: the
-                    script will just ignore the first and the last parts.
-                    There must be a space before and after each square
-                    bracket.
-
-``-likefood [ <TOKEN> <TOKEN> <...> ]``:
-                    usually a type of alcohol, plus it can be a type of
-                    meat, a type of fish, a type of cheese, a type of edible
-                    plant, a cookable plant/creature extract, a cookable
-                    mill powder, a cookable plant seed or a cookable plant
-                    leaf. Write the full tokens.
-                    There must be a space before and after each square
-                    bracket.
-
-``-hatecreature [ <TOKEN> <TOKEN> <...> ]``:
-                    works the same way as ``-likecreature``, but this time
-                    it's one or more creatures that the unit detests. They
-                    should be a type of ``HATEABLE`` vermin which isn't already
-                    explicitly liked, but no check is performed about this.
-                    Like before, you can just list the creature species.
-                    There must be a space before and after each square
-                    bracket.
-
-``-likeitem [ <TOKEN> <TOKEN> <...> ]``:
-                    a kind of weapon, a kind of ammo, a kind of piece of
-                    armor, a piece of clothing (including backpacks or
-                    quivers), a type of furniture (doors, floodgates, beds,
-                    chairs, windows, cages, barrels, tables, coffins,
-                    statues, boxes, armor stands, weapon racks, cabinets,
-                    bins, hatch covers, grates, querns, millstones, traction
-                    benches, or slabs), a kind of craft (figurines, amulets,
-                    scepters, crowns, rings, earrings, bracelets, or large
-                    gems), or a kind of miscellaneous item (catapult parts,
-                    ballista parts, a type of siege ammo, a trap component,
-                    coins, anvils, totems, chains, flasks, goblets,
-                    buckets, animal traps, an instrument, a toy, splints,
-                    crutches, or a tool). The item tokens can be found here:
-                    https://dwarffortresswiki.org/index.php/DF2014:Item_token
-                    If you want to specify an item subtype, look into the files
-                    listed under the column "Subtype" of the wiki page (they are
-                    in the "/raw/ojects/" folder), then specify the items using
-                    the full tokens found in those files (see examples below).
-                    There must be a space before and after each square
-                    bracket.
-
-``-likeplant [ <TOKEN> <TOKEN> <...> ]``:
-                    works in a similar way as ``-likecreature``, this time
-                    with plants. You can just List the plant species (the
-                    middle part of the token).
-                    There must be a space before and after each square
-                    bracket.
-
-``-liketree [ <TOKEN> <TOKEN> <...> ]``:
-                    works exactly as ``-likeplant``. I think this
-                    preference type is here for backward compatibility (?).
-                    You can still use it, however. As before,
-                    you can just list the tree (plant) species.
-                    There must be a space before and after each square
-                    bracket.
-
-``-likecolor [ <TOKEN> <TOKEN> <...> ]``:
-                    you can find the color tokens here:
-                    https://dwarffortresswiki.org/index.php/DF2014:Color#Color_tokens
-                    or inside the "descriptor_color_standard.txt" file
-                    (in the "/raw/ojects/" folder). You can use the full token or
-                    just the color name.
-                    There must be a space before and after each square
-                    bracket.
-
-``-likeshape [ <TOKEN> <TOKEN> <...> ]``:
-                    I couldn't find a list of shape tokens in the wiki, but you
-                    can find them inside the "descriptor_shape_standard.txt"
-                    file (in the "/raw/ojects/" folder). You can
-                    use the full token or just the shape name.
-                    There must be a space before and after each square
-                    bracket.
-
-``-reset``:
-                    clear all preferences. If the script is called
-                    with both this option and one or more preferences,
-                    first all the unit preferences will be cleared
-                    and then the listed preferences will be added.
-
-Examples:
-
-* "likes alabaster and willow wood"::
-
-    assign-preferences -reset -likematerial [ INORGANIC:ALABASTER PLANT:WILLOW:WOOD ]
-
-* "likes sparrows for their ..."::
-
-    assign-preferences -reset -likecreature SPARROW
-
-* "prefers to consume dwarven wine and olives"::
-
-    assign-preferences -reset -likefood [ PLANT:MUSHROOM_HELMET_PLUMP:DRINK PLANT:OLIVE:FRUIT ]
-
-* "absolutely detests jumping spiders::
-
-    assign-preferences -reset -hatecreature SPIDER_JUMPING
-
-* "likes logs and battle axes"::
-
-    assign-preferences -reset -likeitem [ WOOD ITEM_WEAPON:ITEM_WEAPON_AXE_BATTLE ]
-
-* "likes straberry plants for their ..."::
-
-    assign-preferences -reset -likeplant BERRIES_STRAW
-
-* "likes oaks for their ..."::
-
-    assign-preferences -reset -liketree OAK
-
-* "likes the color aqua"::
-
-    assign-preferences -reset -likecolor AQUA
-
-* "likes stars"::
-
-    assign-preferences -reset -likeshape STAR
-
-]====]
-
 local utils = require("utils")
 
 local valid_args = utils.invert({
                                     'help',
                                     'unit',
+                                    'show',
                                     'likematerial',
                                     'likecreature',
                                     'likefood',
@@ -205,6 +24,38 @@ local function print_yellow(text)
     dfhack.color(COLOR_YELLOW)
     print(text)
     dfhack.color(-1)
+end
+
+local function format_preference(pref, index)
+    print(string.format("Preference #%d:", index))
+
+    local pref_type = df.unitpref_type[pref.type]
+    local description = ""
+    if pref_type == "LikeMaterial" then
+        description = "Likes material: " .. dfhack.matinfo.getToken(pref.mattype, pref.matindex)
+    elseif pref_type == "LikeFood" then
+        description = "Likes food: " .. dfhack.matinfo.getToken(pref.mattype, pref.matindex)
+    elseif pref_type == "LikeItem" then
+        description = "Likes item type: " .. tostring(pref.item_type)
+    elseif pref_type == "LikePlant" then
+        description = "Likes plant: " .. dfhack.matinfo.getToken(pref.mattype, pref.matindex)
+    elseif pref_type == "HateCreature" then
+        description = "Hates creature: " .. df.global.world.raws.creatures.all[pref.creature_id].creature_id
+    elseif pref_type == "LikeColor" then
+        description = "Likes color: " .. df.global.world.raws.descriptors.colors[pref.color_id].id
+    elseif pref_type == "LikeShape" then
+        description = "Likes shape: " .. df.global.world.raws.descriptors.shapes[pref.shape_id].id
+    elseif pref_type == "LikePoeticForm" then
+        description = "Likes poetic form: " .. dfhack.translation.translateName(df.global.world.poetic_forms.all[pref.poetic_form_id].name, true)
+    elseif pref_type == "LikeMusicalForm" then
+        description = "Likes musical form: " .. dfhack.translation.translateName(df.global.world.musical_forms.all[pref.musical_form_id].name, true)
+    elseif pref_type == "LikeDanceForm" then
+        description = "Likes dance form: " .. dfhack.translation.translateName(df.global.world.dance_forms.all[pref.dance_form_id].name, true)
+    else
+        description = "Unknown preference type: " .. tostring(pref.type)
+    end
+
+    print(description)
 end
 
 -- initialise random number generator
@@ -225,7 +76,7 @@ local preference_functions = {
         local ret = {}
         if mat_info then
             ret = { --luacheck:retype
-                type = df.unit_preference.T_type.LikeMaterial,
+                type = df.unitpref_type.LikeMaterial,
                 item_type = -1,
                 creature_id = -1,
                 color_id = -1,
@@ -238,7 +89,7 @@ local preference_functions = {
                 mattype = mat_info.type,
                 matindex = mat_info.index,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -258,7 +109,7 @@ local preference_functions = {
         local index = utils.linear_index(df.global.world.raws.creatures.all, creature_id, "creature_id")
         if index then
             return {
-                type = df.unit_preference.T_type.LikeCreature,
+                type = df.unitpref_type.LikeCreature,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -271,7 +122,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -305,7 +156,7 @@ local preference_functions = {
                 item_type = df.item_type.POWDER_MISC
             elseif food_mat_index.CookableSeed > -1 then
                 item_type = df.item_type.SEEDS
-            elseif food_mat_index.CookableLeaf > -1 then
+            elseif food_mat_index.CookablePlantGrowth > -1 then
                 --[[
                 In case of plant growths, "mat_info" stores the item type as a specific subtype ("FLOWER", or "FRUIT",
                 etc.) instead of the generic "PLANT_GROWTH" item type. Also, the IDs of the different types of growths
@@ -335,7 +186,7 @@ local preference_functions = {
 
             if item_type then
                 return {
-                    type = df.unit_preference.T_type.LikeFood,
+                    type = df.unitpref_type.LikeFood,
                     item_type = item_type,
                     creature_id = item_type,
                     color_id = item_type,
@@ -348,7 +199,7 @@ local preference_functions = {
                     mattype = mat_info.type,
                     matindex = mat_info.index,
                     mat_state = 1,
-                    active = true,
+                    flags = {visible = true},
                     prefstring_seed = rng:random()
                 }
             end
@@ -370,7 +221,7 @@ local preference_functions = {
         local index = utils.linear_index(df.global.world.raws.creatures.all, creature_id, "creature_id")
         if index then
             return {
-                type = df.unit_preference.T_type.HateCreature,
+                type = df.unitpref_type.HateCreature,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -383,7 +234,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -411,7 +262,7 @@ local preference_functions = {
         do
             if item_type then
                 return {
-                    type = df.unit_preference.T_type.LikeItem,
+                    type = df.unitpref_type.LikeItem,
                     item_type = item_type,
                     creature_id = item_type,
                     color_id = item_type,
@@ -424,7 +275,7 @@ local preference_functions = {
                     mattype = -1,
                     matindex = -1,
                     mat_state = 0,
-                    active = true,
+                    flags = {visible = true},
                     prefstring_seed = rng:random()
                 }
             end
@@ -446,7 +297,7 @@ local preference_functions = {
         local index = utils.linear_index(df.global.world.raws.plants.all, plant_id, "id")
         if index then
             return {
-                type = df.unit_preference.T_type.LikePlant,
+                type = df.unitpref_type.LikePlant,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -459,7 +310,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -479,7 +330,7 @@ local preference_functions = {
         local index = utils.linear_index(df.global.world.raws.plants.all, plant_id, "id")
         if index then
             return {
-                type = df.unit_preference.T_type.LikeTree,
+                type = df.unitpref_type.LikeTree,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -492,7 +343,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -513,7 +364,7 @@ local preference_functions = {
         local _, found, index = utils.binsearch(df.global.world.raws.descriptors.colors, color_name, "id")
         if found then
             return {
-                type = df.unit_preference.T_type.LikeColor,
+                type = df.unitpref_type.LikeColor,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -526,7 +377,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -546,7 +397,7 @@ local preference_functions = {
         local index, _ = utils.linear_index(df.global.world.raws.descriptors.shapes, shape_name, "id")
         if index then
             return {
-                type = df.unit_preference.T_type.LikeShape,
+                type = df.unitpref_type.LikeShape,
                 item_type = index,
                 creature_id = index,
                 color_id = index,
@@ -559,7 +410,7 @@ local preference_functions = {
                 mattype = -1,
                 matindex = -1,
                 mat_state = 0,
-                active = true,
+                flags = {visible = true},
                 prefstring_seed = rng:random()
             }
         else
@@ -624,12 +475,25 @@ function assign(preferences, unit, reset)
     end
 end
 
+-- ----------------------------------------------- SHOW PREF UTILITY ------------------------------------------------ --
+local function showPreferences(unit)
+    assert(not unit or type(unit) == "number" or df.unit:is_instance(unit))
+    unit = unit or dfhack.gui.getSelectedUnit(true)
+    if not unit then
+        qerror("No unit found.")
+    end
+
+    for i, pref in ipairs(unit.status.current_soul.preferences) do
+        format_preference(pref, i)
+    end
+end
+
 -- ------------------------------------------------------ MAIN ------------------------------------------------------ --
 local function main(...)
     local args = utils.processArgs({ ... }, valid_args)
 
     if args.help then
-        print(help)
+        print(dfhack.script_help())
         return
     end
 
@@ -646,9 +510,15 @@ local function main(...)
         reset = true
     end
 
+    if args.show then
+        showPreferences(unit)
+        return
+    end
+
     -- parse preferences
     args.unit = nil -- remove from args table
     args.reset = nil -- remove from args table
+    args.show = nil -- remove from args table
     local preferences = {}
     utils.assign(preferences, args)
 

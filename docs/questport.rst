@@ -3,7 +3,7 @@ questport
 
 .. dfhack-tool::
     :summary: Teleport to your quest log map cursor.
-    :tags: unavailable adventure armok
+    :tags: unavailable
 
 If you open the quest log map and move the cursor to your target location, you
 can run this command to teleport straight there. This can be done both within

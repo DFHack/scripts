@@ -166,6 +166,8 @@ local function get_ui_report(show_empty)
     add_texpos_report_line(report, gps, 'screentexpos_lower', index, show_empty)
     add_texpos_report_line(report, gps, 'screentexpos', index, show_empty)
     add_texpos_report_line(report, gps, 'screentexpos_anchored', index, show_empty)
+    add_texpos_report_line(report, gps, 'screentexpos_anchored_x', index, show_empty)
+    add_texpos_report_line(report, gps, 'screentexpos_anchored_y', index, show_empty)
     add_texpos_flag_report_line(report, gps, 'screentexpos_flag', index,
                                 screentexpos_flags, show_empty)
 
@@ -174,6 +176,8 @@ local function get_ui_report(show_empty)
         add_texpos_report_line(report, gps, 'screentexpos_top_lower', index, show_empty)
         add_texpos_report_line(report, gps, 'screentexpos_top', index, show_empty)
         add_texpos_report_line(report, gps, 'screentexpos_top_anchored', index, show_empty)
+        add_texpos_report_line(report, gps, 'screentexpos_top_anchored_x', index, show_empty)
+        add_texpos_report_line(report, gps, 'screentexpos_top_anchored_y', index, show_empty)
         add_texpos_flag_report_line(report, gps, 'screentexpos_top_flag', index,
                                     screentexpos_flags, show_empty)
     end

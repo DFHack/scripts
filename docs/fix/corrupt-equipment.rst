@@ -3,7 +3,7 @@ fix/corrupt-equipment
 
 .. dfhack-tool::
     :summary: Fixes some game crashes caused by corrupt military equipment.
-    :tags: unavailable fort bugfix military
+    :tags: unavailable
 
 This fix corrects some kinds of corruption that can occur in equipment lists, as
 in :bug:`11014`. Run this script at least every time a squad comes back from a

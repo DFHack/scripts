@@ -1,39 +1,17 @@
--- Gelds or ungelds animals
--- Written by Josh Cooper(cppcooper) on 2019-12-10, last modified: 2020-02-23
-
-utils = require('utils')
+local utils = require('utils')
 
 local validArgs = utils.invert({
     'unit',
     'toggle',
     'ungeld',
     'help',
-    'find',
 })
 local args = utils.processArgs({...}, validArgs)
-local help = [====[
 
-geld
-====
-Geld allows the user to geld and ungeld animals.
-
-Valid options:
-
-``-unit <id>``: Gelds the unit with the specified ID.
-                This is optional; if not specified, the selected unit is used instead.
-
-``-ungeld``:    Ungelds the specified unit instead (see also `ungeld`).
-
-``-toggle``:    Toggles the gelded status of the specified unit.
-
-``-help``:      Shows this help information
-
-]====]
-
-unit=nil
+local unit = nil
 
 if args.help then
-    print(help)
+    print(dfhack.script_help())
     return
 end
 
@@ -42,7 +20,7 @@ if args.unit then
     if id then
         unit = df.unit.find(id)
     else
-        qerror("Invalid ID provided.")
+        qerror("Invalid unit ID provided.")
     end
 else
     unit = dfhack.gui.getSelectedUnit()
@@ -53,55 +31,75 @@ if not unit then
 end
 
 if unit.sex == df.pronoun_type.she then
-    qerror("Cannot geld female animals")
-    return
+    qerror("Cannot geld female animals.")
 end
 
-function FindBodyPart(unit,newstate)
-    bfound = false
-    for i,wound in ipairs(unit.body.wounds) do
-        for j,part in ipairs(wound.parts) do
-            if unit.body.wounds[i].parts[j].flags2.gelded ~= newstate then
-                bfound = true
-                if newstate ~= nil then
-                    unit.body.wounds[i].parts[j].flags2.gelded = newstate
-                end
+-- Find the geldable body part id, returns -1 on failure
+local function FindBodyPartId(unit)
+    for i,part in ipairs(unit.body.body_plan.body_parts) do
+        if part.flags.GELDABLE then
+            return i
+        end
+    end
+    return -1
+end
+
+-- Sets the gelded status of a unit, returns false on failure
+local function SetGelded(unit, state)
+    -- Gelded status is set in a number of places:
+    -- unit.flags3
+    -- unit.body.wounds
+    -- unit.body.components.body_part_status
+
+    local part_id = FindBodyPartId(unit)
+    if part_id == -1 then
+        print("Could not find a geldable body part.")
+        return false
+    end
+
+    unit.flags3.gelded = state
+
+    if state then
+        -- Create new wound
+        local _,wound,_ = utils.insert_or_update(unit.body.wounds, { new = true, id = unit.body.wound_next_id }, 'id')
+        unit.body.wound_next_id = unit.body.wound_next_id + 1
+        local _,part,_ = utils.insert_or_update(wound.parts, { new = true, body_part_id = part_id}, 'body_part_id')
+        part.flags2.gelded = true
+    else
+        -- Remove gelding from any existing wounds
+        for _,wound in ipairs(unit.body.wounds) do
+            for _,part in ipairs(wound.parts) do
+                part.flags2.gelded = false
             end
         end
     end
-    return bfound
+
+    if state then
+        -- Set part status to gelded
+        unit.body.components.body_part_status[part_id].gelded = true
+    else
+        -- Remove gelded status from all parts
+        for _,part in ipairs(unit.body.components.body_part_status) do
+            part.gelded = false
+        end
+    end
+    return true
 end
 
-function AddParts(unit)
-    for i,wound in ipairs(unit.body.wounds) do
-        if wound.id == 1 and #wound.parts == 0 then
-            utils.insert_or_update(unit.body.wounds[i].parts,{ new = true, body_part_id = 1 }, 'body_part_id')
-        end
+local function Geld(unit)
+    if SetGelded(unit, true) then
+        print(string.format("Unit %s gelded.", unit.id))
+    else
+        print(string.format("Failed to geld unit %s.", unit.id))
     end
 end
 
-function Geld(unit)
-    unit.flags3.gelded = true
-    if not FindBodyPart(unit,true) then
-        utils.insert_or_update(unit.body.wounds,{ new = true, id = unit.body.wound_next_id }, 'id')
-        unit.body.wound_next_id = unit.body.wound_next_id + 1
-        AddParts(unit)
-        if not FindBodyPart(unit,true) then
-            error("could not find body part")
-        end
+local function Ungeld(unit)
+    if SetGelded(unit, false) then
+        print(string.format("Unit %s ungelded.", unit.id))
+    else
+        print(string.format("Failed to ungeld unit %s.", unit.id))
     end
-    print(string.format("unit %s gelded.",unit.id))
-end
-
-function Ungeld(unit)
-    unit.flags3.gelded = false
-    FindBodyPart(unit,false)
-    print(string.format("unit %s ungelded.",unit.id))
-end
-
-if args.find then
-    print(FindBodyPart(unit) and "found" or "not found")
-    return
 end
 
 local oldstate = dfhack.units.isGelded(unit)
@@ -122,5 +120,5 @@ if newstate ~= oldstate then
         Ungeld(unit)
     end
 else
-    qerror(string.format("unit %s is already %s", unit.id, oldstate and "gelded" or "ungelded"))
+    qerror(string.format("Unit %s is already %s.", unit.id, oldstate and "gelded" or "ungelded"))
 end

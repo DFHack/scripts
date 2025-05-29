@@ -3,7 +3,7 @@ reveal-adv-map
 
 .. dfhack-tool::
     :summary: Reveal or hide the world map.
-    :tags: unavailable adventure armok map
+    :tags: adventure armok map
 
 This tool can be used to either reveal or hide all tiles on the world map in
 adventure mode (visible when viewing the quest log or fast traveling).

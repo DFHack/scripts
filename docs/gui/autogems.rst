@@ -4,7 +4,7 @@ gui/autogems
 
 .. dfhack-tool::
     :summary: Automatically cut rough gems.
-    :tags: unavailable fort auto workorders
+    :tags: unavailable
 
 This is a frontend for the `autogems` plugin that allows interactively
 configuring the gem types that you want to be cut.

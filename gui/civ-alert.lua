@@ -1,14 +1,15 @@
 --@ module=true
 
 local gui = require('gui')
-local textures = require('gui.textures')
-local widgets = require('gui.widgets')
 local overlay = require('plugins.overlay')
+local textures = require('gui.textures')
+local utils = require('utils')
+local widgets = require('gui.widgets')
 
 local function get_civ_alert()
     local list = df.global.plotinfo.alerts.list
     while #list < 2 do
-        local list_item = df.plotinfost.T_alerts.T_list:new()
+        local list_item = df.alert_statest:new()
         list_item.id = df.global.plotinfo.alerts.next_id
         df.global.plotinfo.alerts.next_id = df.global.plotinfo.alerts.next_id + 1
         list_item.name = 'civ-alert'
@@ -17,33 +18,44 @@ local function get_civ_alert()
     return list[1]
 end
 
-local function can_sound_alarm()
+-- public API section
+function can_sound_alarm()
     return df.global.plotinfo.alerts.civ_alert_idx == 0 and
             #get_civ_alert().burrows > 0
 end
 
-local function sound_alarm()
+function sound_alarm()
     if not can_sound_alarm() then return end
     df.global.plotinfo.alerts.civ_alert_idx = 1
 end
 
-local function can_clear_alarm()
+function can_clear_alarm()
     return df.global.plotinfo.alerts.civ_alert_idx ~= 0
 end
 
-local function clear_alarm()
+function clear_alarm()
     df.global.plotinfo.alerts.civ_alert_idx = 0
+end
+
+function add_civalert_burrow(id)
+    local burrows = get_civ_alert().burrows
+    utils.insert_sorted(burrows, id)
+end
+
+function remove_civalert_burrow(id)
+    local burrows = get_civ_alert().burrows
+    utils.erase_sorted(burrows, id)
+    if #burrows == 0 then
+        clear_alarm()
+    end
 end
 
 local function toggle_civalert_burrow(id)
     local burrows = get_civ_alert().burrows
-    if #burrows == 0 then
-        burrows:insert('#', id)
-    elseif burrows[0] == id then
-        burrows:resize(0)
-        clear_alarm()
+    if utils.binsearch(burrows, id) then
+        remove_civalert_burrow(id)
     else
-        burrows[0] = id
+        add_civalert_burrow(id)
     end
 end
 
@@ -66,24 +78,28 @@ function BigRedButton:init()
 
     self:addviews{
         widgets.Label{
-            text={
-                ' Activate ', NEWLINE,
-                ' civilian ', NEWLINE,
-                '  alert   ',
+            text=widgets.makeButtonLabelText{
+                chars={
+                    ' Activate ',
+                    ' civilian ',
+                    '  alert   ',
+                },
+                pens=BUTTON_TEXT_ON,
+                pens_hover=BUTTON_TEXT_OFF,
             },
-            text_pen=BUTTON_TEXT_ON,
-            text_hpen=BUTTON_TEXT_OFF,
             visible=can_sound_alarm,
             on_click=sound_alarm,
         },
         widgets.Label{
-            text={
-                '  Clear   ', NEWLINE,
-                ' civilian ', NEWLINE,
-                '  alert   ',
+            text=widgets.makeButtonLabelText{
+                chars={
+                    '  Clear   ',
+                    ' civilian ',
+                    '  alert   ',
+                },
+                pens=BUTTON_TEXT_OFF,
+                pens_hover=BUTTON_TEXT_ON,
             },
-            text_pen=BUTTON_TEXT_OFF,
-            text_hpen=BUTTON_TEXT_ON,
             visible=can_clear_alarm,
             on_click=clear_alarm,
         },
@@ -96,20 +112,24 @@ end
 
 CivalertOverlay = defclass(CivalertOverlay, overlay.OverlayWidget)
 CivalertOverlay.ATTRS{
+    desc='Adds a button for activating a civilian alert when the squads panel is open.',
     default_pos={x=-15,y=-1},
     default_enabled=true,
     viewscreens='dwarfmode',
     frame={w=20, h=5},
 }
 
+local function is_squads_panel_open()
+    return dfhack.gui.matchFocusString('dwarfmode/Squads/Default',
+        dfhack.gui.getDFViewscreen(true))
+end
+
 local function should_show_alert_button()
-    return can_clear_alarm() or
-            (df.global.game.main_interface.squads.open and can_sound_alarm())
+    return can_clear_alarm() or (is_squads_panel_open() and can_sound_alarm())
 end
 
 local function should_show_configure_button()
-    return df.global.game.main_interface.squads.open
-            and not can_sound_alarm() and not can_clear_alarm()
+    return is_squads_panel_open() and not can_sound_alarm() and not can_clear_alarm()
 end
 
 local function launch_config()
@@ -194,11 +214,11 @@ function Civalert:init()
             subviews={
                 widgets.WrappedLabel{
                     frame={t=0, r=0, h=2},
-                    text_to_wrap='Choose a burrow where you want your civilians to hide during danger.',
+                    text_to_wrap='Choose the burrow(s) where you want your civilians to hide during danger.',
                 },
                 widgets.HotkeyLabel{
                     frame={t=3, l=0},
-                    key='CUSTOM_CTRL_W',
+                    key='CUSTOM_CTRL_N',
                     label='Sound alarm! Citizens run to safety!',
                     on_activate=sound_alarm,
                     enabled=can_sound_alarm,
@@ -240,8 +260,7 @@ local SELECTED_ICON = to_pen{ch=string.char(251), fg=COLOR_LIGHTGREEN}
 
 function Civalert:get_burrow_icon(id)
     local burrows = get_civ_alert().burrows
-    if #burrows == 0 or burrows[0] ~= id then return nil end
-    return SELECTED_ICON
+    return utils.binsearch(burrows, id) and SELECTED_ICON or nil
 end
 
 function Civalert:get_burrow_choices()

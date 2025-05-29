@@ -2,6 +2,7 @@
 
 local dialogs = require('gui.dialogs')
 local predicates = reqscript('internal/caravan/predicates')
+local utils = require('utils')
 local widgets = require('gui.widgets')
 
 CH_UP = string.char(30)
@@ -11,7 +12,7 @@ CH_EXCEPTIONAL = string.char(240)
 
 local to_pen = dfhack.pen.parse
 SOME_PEN = to_pen{ch=':', fg=COLOR_YELLOW}
-ALL_PEN = to_pen{ch='+', fg=COLOR_LIGHTGREEN}
+ALL_PEN = to_pen{ch=string.char(251), fg=COLOR_LIGHTGREEN}
 
 function add_words(words, str)
     for word in str:gmatch("[%w]+") do
@@ -22,6 +23,15 @@ end
 function make_search_key(str)
     local words = {}
     add_words(words, str)
+    return table.concat(words, ' ')
+end
+
+function make_container_search_key(item, desc)
+    local words = {}
+    add_words(words, desc)
+    for _, contained_item in ipairs(dfhack.items.getContainedItems(item)) do
+        add_words(words, dfhack.items.getReadableDescription(contained_item))
+    end
     return table.concat(words, ' ')
 end
 
@@ -58,7 +68,7 @@ end
 local function estimate(value, round_base, granularity)
     local rounded = ((value+round_base)//granularity)*granularity
     local clamped = math.max(rounded, granularity)
-    return clamped
+    return dfhack.formatInt(clamped)
 end
 
 -- If the item's value is below the threshold, it gets shown exactly as-is.
@@ -68,47 +78,12 @@ end
 -- Otherwise, it will display a guess equal to [threshold + 50] * 30 rounded up to the nearest multiple of 1000.
 function obfuscate_value(value)
     local threshold = get_threshold(get_broker_skill())
-    if value < threshold then return tostring(value) end
+    if value < threshold then return dfhack.formatInt(value) end
     threshold = threshold + 50
-    if value <= threshold then return ('~%d'):format(estimate(value, 5, 10)) end
-    if value <= threshold*3 then return ('~%d'):format(estimate(value, 50, 100)) end
-    if value <= threshold*30 then return ('~%d'):format(estimate(value, 500, 1000)) end
-    return ('%d?'):format(estimate(threshold*30, 999, 1000))
-end
-
-local function to_title_case(str)
-    str = str:gsub('(%a)([%w_]*)',
-        function (first, rest) return first:upper()..rest:lower() end)
-    str = str:gsub('_', ' ')
-    return str
-end
-
-local function get_item_type_str(item)
-    local str = to_title_case(df.item_type[item:getType()])
-    if str == 'Trapparts' then
-        str = 'Mechanism'
-    end
-    return str
-end
-
-local function get_artifact_name(item)
-    local gref = dfhack.items.getGeneralRef(item, df.general_ref_type.IS_ARTIFACT)
-    if not gref then return end
-    local artifact = df.artifact_record.find(gref.artifact_id)
-    if not artifact then return end
-    local name = dfhack.TranslateName(artifact.name)
-    return ('%s (%s)'):format(name, get_item_type_str(item))
-end
-
-function get_item_description(item)
-    local desc = item.flags.artifact and get_artifact_name(item) or
-        dfhack.items.getDescription(item, 0, true)
-    local wear_level = item:getWear()
-    if wear_level == 1 then desc = ('x%sx'):format(desc)
-    elseif wear_level == 2 then desc = ('X%sX'):format(desc)
-    elseif wear_level == 3 then desc = ('XX%sXX'):format(desc)
-    end
-    return desc
+    if value <= threshold then return ('~%s'):format(estimate(value, 5, 10)) end
+    if value <= threshold*3 then return ('~%s'):format(estimate(value, 50, 100)) end
+    if value <= threshold*30 then return ('~%s'):format(estimate(value, 500, 1000)) end
+    return ('%s?'):format(estimate(threshold*30, 999, 1000))
 end
 
 -- takes into account trade agreements
@@ -137,10 +112,10 @@ function get_slider_widgets(self, suffix)
                     key_back='CUSTOM_SHIFT_C',
                     key='CUSTOM_SHIFT_V',
                     options={
-                        {label='XXTatteredXX', value=3},
-                        {label='XFrayedX', value=2},
-                        {label='xWornx', value=1},
-                        {label='Pristine', value=0},
+                        {label='XXTatteredXX', value=3, pen=COLOR_BROWN},
+                        {label='XFrayedX', value=2, pen=COLOR_LIGHTRED},
+                        {label='xWornx', value=1, pen=COLOR_YELLOW},
+                        {label='Pristine', value=0, pen=COLOR_GREEN},
                     },
                     initial_option=3,
                     on_change=function(val)
@@ -158,10 +133,10 @@ function get_slider_widgets(self, suffix)
                     key_back='CUSTOM_SHIFT_E',
                     key='CUSTOM_SHIFT_R',
                     options={
-                        {label='XXTatteredXX', value=3},
-                        {label='XFrayedX', value=2},
-                        {label='xWornx', value=1},
-                        {label='Pristine', value=0},
+                        {label='XXTatteredXX', value=3, pen=COLOR_BROWN},
+                        {label='XFrayedX', value=2, pen=COLOR_LIGHTRED},
+                        {label='xWornx', value=1, pen=COLOR_YELLOW},
+                        {label='Pristine', value=0, pen=COLOR_GREEN},
                     },
                     initial_option=0,
                     on_change=function(val)
@@ -186,7 +161,7 @@ function get_slider_widgets(self, suffix)
             },
         },
         widgets.Panel{
-            frame={t=5, l=0, r=0, h=4},
+            frame={t=6, l=0, r=0, h=4},
             subviews={
                 widgets.CycleHotkeyLabel{
                     view_id='min_quality'..suffix,
@@ -196,13 +171,13 @@ function get_slider_widgets(self, suffix)
                     key_back='CUSTOM_SHIFT_Z',
                     key='CUSTOM_SHIFT_X',
                     options={
-                        {label='Ordinary', value=0},
-                        {label='-Well Crafted-', value=1},
-                        {label='+Finely Crafted+', value=2},
-                        {label='*Superior*', value=3},
-                        {label=CH_EXCEPTIONAL..'Exceptional'..CH_EXCEPTIONAL, value=4},
-                        {label=CH_MONEY..'Masterful'..CH_MONEY, value=5},
-                        {label='Artifact', value=6},
+                        {label='Ordinary', value=0, pen=COLOR_GRAY},
+                        {label='-Well Crafted-', value=1, pen=COLOR_LIGHTBLUE},
+                        {label='+Fine Crafted+', value=2, pen=COLOR_BLUE},
+                        {label='*Superior*', value=3, pen=COLOR_YELLOW},
+                        {label=CH_EXCEPTIONAL..'Exceptional'..CH_EXCEPTIONAL, value=4, pen=COLOR_BROWN},
+                        {label=CH_MONEY..'Masterful'..CH_MONEY, value=5, pen=COLOR_MAGENTA},
+                        {label='Artifact', value=6, pen=COLOR_GREEN},
                     },
                     initial_option=0,
                     on_change=function(val)
@@ -220,13 +195,13 @@ function get_slider_widgets(self, suffix)
                     key_back='CUSTOM_SHIFT_Q',
                     key='CUSTOM_SHIFT_W',
                     options={
-                        {label='Ordinary', value=0},
-                        {label='-Well Crafted-', value=1},
-                        {label='+Finely Crafted+', value=2},
-                        {label='*Superior*', value=3},
-                        {label=CH_EXCEPTIONAL..'Exceptional'..CH_EXCEPTIONAL, value=4},
-                        {label=CH_MONEY..'Masterful'..CH_MONEY, value=5},
-                        {label='Artifact', value=6},
+                        {label='Ordinary', value=0, pen=COLOR_GRAY},
+                        {label='-Well Crafted-', value=1, pen=COLOR_LIGHTBLUE},
+                        {label='+Fine Crafted+', value=2, pen=COLOR_BLUE},
+                        {label='*Superior*', value=3, pen=COLOR_YELLOW},
+                        {label=CH_EXCEPTIONAL..'Exceptional'..CH_EXCEPTIONAL, value=4, pen=COLOR_BROWN},
+                        {label=CH_MONEY..'Masterful'..CH_MONEY, value=5, pen=COLOR_MAGENTA},
+                        {label='Artifact', value=6, pen=COLOR_GREEN},
                     },
                     initial_option=6,
                     on_change=function(val)
@@ -251,7 +226,7 @@ function get_slider_widgets(self, suffix)
             },
         },
         widgets.Panel{
-            frame={t=10, l=0, r=0, h=4},
+            frame={t=12, l=0, r=0, h=4},
             subviews={
                 widgets.CycleHotkeyLabel{
                     view_id='min_value'..suffix,
@@ -261,14 +236,14 @@ function get_slider_widgets(self, suffix)
                     key_back='CUSTOM_SHIFT_B',
                     key='CUSTOM_SHIFT_N',
                     options={
-                        {label='1'..CH_MONEY, value={index=1, value=1}},
-                        {label='20'..CH_MONEY, value={index=2, value=20}},
-                        {label='50'..CH_MONEY, value={index=3, value=50}},
-                        {label='100'..CH_MONEY, value={index=4, value=100}},
-                        {label='500'..CH_MONEY, value={index=5, value=500}},
-                        {label='1000'..CH_MONEY, value={index=6, value=1000}},
+                        {label='1'..CH_MONEY, value={index=1, value=1}, pen=COLOR_BROWN},
+                        {label='20'..CH_MONEY, value={index=2, value=20}, pen=COLOR_BROWN},
+                        {label='50'..CH_MONEY, value={index=3, value=50}, pen=COLOR_BROWN},
+                        {label='100'..CH_MONEY, value={index=4, value=100}, pen=COLOR_BROWN},
+                        {label='500'..CH_MONEY, value={index=5, value=500}, pen=COLOR_BROWN},
+                        {label='1000'..CH_MONEY, value={index=6, value=1000}, pen=COLOR_BROWN},
                         -- max "min" value is less than max "max" value since the range of inf - inf is not useful
-                        {label='5000'..CH_MONEY, value={index=7, value=5000}},
+                        {label='5000'..CH_MONEY, value={index=7, value=5000}, pen=COLOR_BROWN},
                     },
                     initial_option=1,
                     on_change=function(val)
@@ -286,13 +261,13 @@ function get_slider_widgets(self, suffix)
                     key_back='CUSTOM_SHIFT_T',
                     key='CUSTOM_SHIFT_Y',
                     options={
-                        {label='1'..CH_MONEY, value={index=1, value=1}},
-                        {label='20'..CH_MONEY, value={index=2, value=20}},
-                        {label='50'..CH_MONEY, value={index=3, value=50}},
-                        {label='100'..CH_MONEY, value={index=4, value=100}},
-                        {label='500'..CH_MONEY, value={index=5, value=500}},
-                        {label='1000'..CH_MONEY, value={index=6, value=1000}},
-                        {label='Max', value={index=7, value=math.huge}},
+                        {label='1'..CH_MONEY, value={index=1, value=1}, pen=COLOR_BROWN},
+                        {label='20'..CH_MONEY, value={index=2, value=20}, pen=COLOR_BROWN},
+                        {label='50'..CH_MONEY, value={index=3, value=50}, pen=COLOR_BROWN},
+                        {label='100'..CH_MONEY, value={index=4, value=100}, pen=COLOR_BROWN},
+                        {label='500'..CH_MONEY, value={index=5, value=500}, pen=COLOR_BROWN},
+                        {label='1000'..CH_MONEY, value={index=6, value=1000}, pen=COLOR_BROWN},
+                        {label='Max', value={index=7, value=math.huge}, pen=COLOR_GREEN},
                     },
                     initial_option=7,
                     on_change=function(val)
@@ -359,8 +334,8 @@ end
 
 function get_banned_items()
     local banned_items = {}
-    for _, mandate in ipairs(df.global.world.mandates) do
-        if mandate.mode == df.mandate.T_mode.Export then
+    for _, mandate in ipairs(df.global.world.mandates.all) do
+        if mandate.mode == df.mandate_type.Export then
             register_item_type(banned_items, mandate)
         end
     end
@@ -369,8 +344,8 @@ end
 
 local function analyze_noble(unit, risky_items, banned_items)
     for _, preference in ipairs(unit.status.current_soul.preferences) do
-        if preference.type == df.unit_preference.T_type.LikeItem and
-            preference.active
+        if preference.type == df.unitpref_type.LikeItem and
+            preference.flags.visible
         then
             register_item_type(risky_items, preference, banned_items)
         end
@@ -379,7 +354,7 @@ end
 
 local function get_mandate_noble_roles()
     local roles = {}
-    for _, link in ipairs(df.global.world.world_data.active_site[0].entity_links) do
+    for _, link in ipairs(dfhack.world.getCurrentSite().entity_links) do
         local he = df.historical_entity.find(link.entity_id);
         if not he or
             (he.type ~= df.historical_entity_type.SiteGovernment and
@@ -505,10 +480,22 @@ function get_advanced_filter_widgets(self, context)
     }
 end
 
-function get_info_widgets(self, export_agreements, context)
+function get_info_widgets(self, export_agreements, strict_ethical_bins_default, context)
     return {
+        widgets.CycleHotkeyLabel{
+            view_id='provenance',
+            frame={t=0, l=0, w=34},
+            key='CUSTOM_SHIFT_P',
+            label='Item origins:',
+            options={
+                {label='All', value='all', pen=COLOR_GREEN},
+                {label='Fort-made only', value='local', pen=COLOR_BLUE},
+                {label='Foreign-made only', value='foreign', pen=COLOR_YELLOW},
+            },
+            on_change=function() self:refresh_list() end,
+        },
         widgets.Panel{
-            frame={t=0, l=0, r=0, h=2},
+            frame={t=2, l=0, r=0, h=2},
             subviews={
                 widgets.Label{
                     frame={t=0, l=0},
@@ -532,7 +519,7 @@ function get_info_widgets(self, export_agreements, context)
                     key='CUSTOM_SHIFT_A',
                     options={
                         {label='Yes', value=true, pen=COLOR_GREEN},
-                        {label='No', value=false}
+                        {label='No', value=false},
                     },
                     initial_option=false,
                     on_change=function() self:refresh_list() end,
@@ -541,7 +528,7 @@ function get_info_widgets(self, export_agreements, context)
             },
         },
         widgets.Panel{
-            frame={t=3, l=0, r=0, h=3},
+            frame={t=5, l=0, r=0, h=4},
             subviews={
                 widgets.Label{
                     frame={t=0, l=0},
@@ -556,7 +543,7 @@ function get_info_widgets(self, export_agreements, context)
                     key='CUSTOM_SHIFT_G',
                     options={
                         {label='Show only ethically acceptable items', value='only', pen=COLOR_GREEN},
-                        {label='Ignore ethical restrictions', value='show'},
+                        {label='Ignore ethical restrictions', value='show', pen=COLOR_YELLOW},
                         {label='Show only ethically unacceptable items', value='hide', pen=COLOR_RED},
                     },
                     initial_option='only',
@@ -564,10 +551,26 @@ function get_info_widgets(self, export_agreements, context)
                     visible=self.animal_ethics or self.wood_ethics,
                     on_change=function() self:refresh_list() end,
                 },
+                widgets.ToggleHotkeyLabel{
+                    view_id='strict_ethical_bins',
+                    frame={t=3, l=0},
+                    key='CUSTOM_SHIFT_U',
+                    options={
+                        {label='Include mixed bins', value=false, pen=COLOR_GREEN},
+                        {label='Exclude mixed bins', value=true, pen=COLOR_YELLOW},
+                    },
+                    initial_option=strict_ethical_bins_default,
+                    option_gap=0,
+                    visible=function()
+                        if not self.animal_ethics and not self.wood_ethics then return false end
+                        return self.subviews.ethical:getOptionValue() ~= 'show'
+                    end,
+                    on_change=function() self:refresh_list() end,
+                },
             },
         },
         widgets.Panel{
-            frame={t=7, l=0, r=0, h=5},
+            frame={t=10, l=0, r=0, h=5},
             subviews={
                 widgets.Label{
                     frame={t=0, l=0},
@@ -623,35 +626,80 @@ function scan_banned(item, risky_items)
     return false, false
 end
 
-local function is_wood_based(mat_type, mat_index)
-    if mat_type == df.builtin_mats.LYE or
-        mat_type == df.builtin_mats.GLASS_CLEAR or
-        mat_type == df.builtin_mats.GLASS_CRYSTAL or
-        (mat_type == df.builtin_mats.COAL and mat_index == 1) or
-        mat_type == df.builtin_mats.POTASH or
-        mat_type == df.builtin_mats.ASH or
-        mat_type == df.builtin_mats.PEARLASH
-    then
+local function is_wood_based_material(mat_type, mat_index)
+    if mat_type == df.builtin_mats.GLASS_CLEAR or mat_type == df.builtin_mats.GLASS_CRYSTAL then
         return true
     end
 
     local mi = dfhack.matinfo.decode(mat_type, mat_index)
-    return mi and mi.material and
+    return mi and mi.mode == 'plant' and mi.material and
         (mi.material.flags.WOOD or
-         mi.material.flags.STRUCTURAL_PLANT_MAT or
-         mi.material.flags.SOAP)
+         mi.material.flags.STRUCTURAL_PLANT_MAT)
+end
+
+local item_types_never_wood = utils.invert{
+    df.item_type.SMALLGEM,
+    df.item_type.BLOCKS,
+    df.item_type.ROUGH,
+    df.item_type.BOULDER,
+    df.item_type.CORPSE,
+    df.item_type.CORPSEPIECE,
+    df.item_type.REMAINS,
+    df.item_type.MEAT,
+    df.item_type.FISH,
+    df.item_type.FISH_RAW,
+    df.item_type.VERMIN,
+    df.item_type.PET,
+    df.item_type.SEEDS,
+    df.item_type.PLANT,
+    df.item_type.SKIN_TANNED,
+    df.item_type.PLANT_GROWTH,
+    df.item_type.DRINK,
+    df.item_type.CHEESE,
+    df.item_type.FOOD,
+    df.item_type.COIN,
+    df.item_type.GLOB,
+    df.item_type.ROCK,
+    df.item_type.EGG,
+}
+
+local function is_wood_based_item(item)
+    local itype = item:getType()
+
+    if item_types_never_wood[itype] then return false end
+
+    local mat_type, mat_index = item:getMaterial(), item:getMaterialIndex()
+
+    if itype == df.item_type.BAR then
+        if mat_type == df.builtin_mats.POTASH or
+            mat_type == df.builtin_mats.ASH or
+            mat_type == df.builtin_mats.PEARLASH or
+            (mat_type == df.builtin_mats.COAL and mat_index == 1)
+        then
+            return true
+        end
+        local mi = dfhack.matinfo.decode(mat_type, mat_index)
+        return mi and mi.mode == 'creature'
+    elseif itype == df.item_type.LIQUID_MISC then
+        return mat_type == df.builtin_mats.LYE
+    elseif itype == df.item_type.WEAPON then
+        local mi = dfhack.matinfo.decode(mat_type, mat_index)
+        return mi and mi.mode == 'inorganic' and mi.material and not mi.material.flags.IS_METAL
+    end
+
+    return is_wood_based_material(mat_type, mat_index)
 end
 
 function has_wood(item)
     if item.flags2.grown then return false end
 
-    if is_wood_based(item:getMaterial(), item:getMaterialIndex()) then
+    if is_wood_based_item(item) then
         return true
     end
 
     if item:hasImprovements() then
         for _, imp in ipairs(item.improvements) do
-            if is_wood_based(imp.mat_type, imp.mat_index) then
+            if is_wood_based_material(imp.mat_type, imp.mat_index) then
                 return true
             end
         end

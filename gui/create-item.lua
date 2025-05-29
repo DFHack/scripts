@@ -99,12 +99,20 @@ local function getRestrictiveMatFilter(itemType, opts)
         BLOCKS = function(mat, parent, typ, idx)
             return mat.flags.IS_STONE or mat.flags.IS_METAL or mat.flags.IS_GLASS or mat.flags.WOOD
         end,
+        BAG = function(mat, parent, typ, idx)
+            return mat.flags.SILK or mat.flags.THREAD_PLANT or mat.flags.YARN
+        end,
     }
     for k, v in ipairs { 'GOBLET', 'FLASK', 'TOY', 'RING', 'CROWN', 'SCEPTER', 'FIGURINE', 'TOOL' } do
         itemTypes[v] = itemTypes.INSTRUMENT
     end
-    for k, v in ipairs { 'SHOES', 'SHIELD', 'HELM', 'GLOVES' } do
+    for k, v in ipairs { 'SHIELD', 'HELM' } do
         itemTypes[v] = itemTypes.ARMOR
+    end
+    for k, v in ipairs { 'SHOES', 'GLOVES' } do
+        itemTypes[v] = function(mat, parent, typ, idx)
+            return itemTypes.ARMOR(mat, parent, typ, idx) or itemTypes.BAG(mat, parent, typ, idx)
+        end
     end
     for k, v in ipairs { 'EARRING', 'BRACELET' } do
         itemTypes[v] = itemTypes.AMULET
@@ -122,7 +130,7 @@ local function getMatFilter(itemtype, opts)
             return mat.flags.STRUCTURAL_PLANT_MAT
         end,
         LEAVES = function(mat, parent, typ, idx)
-            return mat.flags.LEAF_MAT
+            return mat.flags.STOCKPILE_PLANT_GROWTH
         end,
         MEAT = function(mat, parent, typ, idx)
             return mat.flags.MEAT
@@ -147,7 +155,7 @@ local function getMatFilter(itemtype, opts)
             return (mat.flags.WOOD)
         end,
         THREAD = function(mat, parent, typ, idx)
-            return (mat.flags.THREAD_PLANT)
+            return (mat.flags.THREAD_PLANT or mat.flags.SILK or mat.flags.YARN or mat.flags.STOCKPILE_THREAD_METAL)
         end,
         LEATHER = function(mat, parent, typ, idx)
             return (mat.flags.LEATHER)
@@ -224,7 +232,8 @@ local default_accessors = {
             partlayerok, partlayerID = script.showListPrompt('Wish', 'What creature material should it be?',
                 COLOR_LIGHTGREEN, getCreatureMaterialList(raceId, casteId), 1, true)
         else
-            --the offsets here are because indexes in lua are wonky (some start at 0, some start at 1), so we adjust for that, as well as the index offset created by inserting the "generic" option at the start of the body part selection prompt
+            --the offsets here are because indexes in lua are wonky (some start at 0, some start at 1), so we adjust for that,
+            --as well as the index offset created by inserting the "generic" option at the start of the body part selection prompt
             bodypart = bodypart - 2
             partlayerok, partlayerID = script.showListPrompt('Wish', 'What tissue layer should it be?',
                 COLOR_LIGHTGREEN, getCreaturePartLayerList(raceId, casteId, bodypart), 1, true)
@@ -266,6 +275,12 @@ local positionals = argparse.processArgsGetopt({ ... }, {
         'count',
         hasArg = true,
         handler = function(arg) opts.count = argparse.nonnegativeInt(arg, 'count') end,
+    },
+    {
+        'p',
+        'pos',
+        hasArg = true,
+        handler = function(arg) opts.pos = argparse.coords(arg, 'pos') end,
     },
 })
 
