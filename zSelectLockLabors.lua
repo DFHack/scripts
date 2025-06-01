@@ -30,7 +30,6 @@ local function simulate_actions(self, count)
             gui.simulateInput(dfhack.gui.getCurViewscreen(), 'UNITLIST_SPECIALIZE')
         end
         gui.simulateInput(dfhack.gui.getCurViewscreen(), 'STANDARDSCROLL_DOWN')
-        gui.simulateInput(dfhack.gui.getCurViewscreen(), 'CONTEXT_SCROLL_DOWN')
 
         dfhack.timeout(2, 'frames', function() step(i + 1) end)
     end
