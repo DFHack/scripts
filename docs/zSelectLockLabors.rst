@@ -14,7 +14,7 @@ Features
 Usage
 -----
 
-Once the plugin is loaded and you're in the `Work Details` screen (e.g., `u` -> `Work Details`), the overlay will automatically appear.
+Once the plugin is loaded and you're in the `Work Details` screen (e.g., `y` -> `Work Details`), the overlay will automatically appear.
 
 1. Use the **Mode** dropdown to select what action(s) to simulate:
    - `Select only`: Just toggles unit selection.
