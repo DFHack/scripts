@@ -29,7 +29,10 @@ local function simulate_actions(self, count)
         if self.action_mode ~= 'select' then
             gui.simulateInput(dfhack.gui.getCurViewscreen(), 'UNITLIST_SPECIALIZE')
         end
+        --This line is keyboard arrow down
         gui.simulateInput(dfhack.gui.getCurViewscreen(), 'STANDARDSCROLL_DOWN')
+        --CONTEXT_SCROLL_DOWN helps with consistency. Otherwise the program will miss some units. Line below is scroll wheel down
+        gui.simulateInput(dfhack.gui.getCurViewscreen(), 'CONTEXT_SCROLL_DOWN')
 
         dfhack.timeout(2, 'frames', function() step(i + 1) end)
     end
