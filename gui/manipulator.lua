@@ -588,9 +588,9 @@ function Spreadsheet:init()
     goals_by_type[df.goal_type.CRAFT_A_MASTERWORK]          = { value = 15, name = "Craft"..string.char(15), pen = COLOR_LIGHTRED, pen_achieved = COLOR_LIGHTGREEN }
 
     local goals_by_value = {}
-   for _, v in ipairs(goals_by_type) do
-       goals_by_value[v.value] = v
-   end
+    for _, v in ipairs(goals_by_type) do
+        goals_by_value[v.value] = v
+    end
 
 
     local cols = Cols{}
@@ -609,6 +609,7 @@ function Spreadsheet:init()
             end,
         },
         DataColumn{
+            view_id='stress',
             group='summary',
             label='Stress',
             shared=self.shared,
@@ -649,6 +650,7 @@ function Spreadsheet:init()
             end,
         },
         DataColumn{
+            view_id='arrival',
             group='summary',
             label='Arrival',
             shared=self.shared,
@@ -695,34 +697,35 @@ function Spreadsheet:init()
             end,
         },
         DataColumn{
-        group='summary',
-        label='Goal',
-        shared=self.shared,
-        data_width=8,
-        data_fn=function(unit)
+            view_id='goal',
+            group='summary',
+            label='Goal',
+            shared=self.shared,
+            data_width=8,
+            data_fn=function(unit)
                 local goal = #unit.status.current_soul.personality.dreams > 0 and unit.status.current_soul.personality.dreams[0].type or df.goal_type.MAINTAIN_ENTITY_STATUS
                 local isAchieved = #unit.status.current_soul.personality.dreams > 0 and unit.status.current_soul.personality.dreams[0].flags.accomplished and 1 or -1
                 return isAchieved * (goals_by_type[goal].value or 1)
             end,
-        choice_fn=function(get_ordered_data_fn)
-            return {
-                text={
-                    {
-                        text=function()
-                            local ordered_data = get_ordered_data_fn()
-                            local goal_index = math.abs(ordered_data)
-                            return goals_by_value[goal_index].name
-                        end,
-                        pen=function()
-                            local ordered_data = get_ordered_data_fn()
-                            local isAchieved = ordered_data > 0
-                            local goal_index = math.abs(ordered_data)
-                            return isAchieved and goals_by_value[goal_index].pen_achieved or goals_by_value[goal_index].pen
-                        end,
+            choice_fn=function(get_ordered_data_fn)
+                return {
+                    text={
+                        {
+                            text=function()
+                                local ordered_data = get_ordered_data_fn()
+                                local goal_index = math.abs(ordered_data)
+                                return goals_by_value[goal_index].name
+                            end,
+                            pen=function()
+                                local ordered_data = get_ordered_data_fn()
+                                local isAchieved = ordered_data > 0
+                                local goal_index = math.abs(ordered_data)
+                                return isAchieved and goals_by_value[goal_index].pen_achieved or goals_by_value[goal_index].pen
+                            end,
+                        },
                     },
-                },
-            }
-        end,
+                }
+            end,
         }
     }
 
@@ -731,6 +734,7 @@ function Spreadsheet:init()
         if caption then
             cols:addviews{
                 DataColumn{
+                    view_id=caption:lower(),
                     group='skills',
                     label=caption,
                     shared=self.shared,
@@ -746,6 +750,7 @@ function Spreadsheet:init()
     for _, wd in ipairs(work_details) do
         cols:addviews{
             ToggleColumn{
+                view_id=wd.name:lower(),
                 group='work details',
                 label=wd.name,
                 shared=self.shared,
@@ -763,6 +768,7 @@ function Spreadsheet:init()
         for _, bld in ipairs(vec) do
             cols:addviews{
                 ToggleColumn{
+                    view_id=get_workshop_label(bld, type_enum, type_defs):lower(),
                     group='workshops',
                     label=get_workshop_label(bld, type_enum, type_defs),
                     shared=self.shared,
@@ -1060,7 +1066,7 @@ function Spreadsheet:render(dc)
     local selected = self.namelist:getSelected()
     for _, col in ipairs(self.cols.subviews) do
         col.subviews.col_list.page_top = page_top
-        col.subviews.col_list:setSelected(selected)
+        col.subviews.col_list.selected = selected
     end
     Spreadsheet.super.render(self, dc)
     self.shared.cache = {}
