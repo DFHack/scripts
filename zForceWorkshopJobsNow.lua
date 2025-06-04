@@ -99,8 +99,8 @@ ForceJobsOverlay.ATTRS {
         'dwarfmode/ViewSheets/BUILDING/Workshop/Quern/Items',
     },
     default_enabled = true,
-    default_pos = {x = -41, y = 9},
-    frame = {w = 18, h = 3, transparent = true},
+    default_pos = {x = -39, y = 9},
+    frame = {w = 22, h = 3, transparent = true},
 }
 
 function ForceJobsOverlay:init()
@@ -112,13 +112,13 @@ function ForceJobsOverlay:init()
             frame_background = gui.CLEAR_PEN,
             subviews = {
                 widgets.Label{
-                    frame = {l = 1, t = 0},
+                    frame = {l = 0, t = 0},
                     text = 'Prioritize All:',
                 },
                 widgets.HotkeyLabel{
-                    frame = {l = 1, t = 2},
+                    frame = {l = 0, t = 2},
                     label = 'ON',
-                    key = 'CUSTOM_O',
+                    key = 'CUSTOM_CTRL_O',
                     auto_width = true,
                     on_activate = function()
                         self.toggle_state = true
@@ -126,9 +126,9 @@ function ForceJobsOverlay:init()
                     end,
                 },
                 widgets.HotkeyLabel{
-                    frame = {l = 9, t = 2},
+                    frame = {l = 11, t = 2},
                     label = 'OFF',
-                    key = 'CUSTOM_F',
+                    key = 'CUSTOM_CTRL_I',
                     auto_width = true,
                     on_activate = function()
                         self.toggle_state = false
