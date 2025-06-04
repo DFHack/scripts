@@ -28,8 +28,8 @@ Navigate to any workshop or furnace job screen. A small UI will appear with:
   Prioritize All:
   ON     OFF
 
-- Press ``o`` to force all jobs.
-- Press ``f`` to disable forced jobs.
+- Press ``ctrl+o`` to prioritize all jobs on all stations.
+- Press ``ctrl+i`` to unprioritize all jobs on all stations.
 
 **Console Command**
 
