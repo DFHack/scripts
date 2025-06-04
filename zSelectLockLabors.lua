@@ -69,7 +69,7 @@ function SelectLockOverlay:init()
                     frame = {l = 1, t = 2},
                     key = 'CUSTOM_CTRL_N',
                     auto_focus = false,
-                    text = '100',
+                    text = '7',
                     on_change = function(val)
                         local num = tonumber(val)
                         self.entry_count = (num and num > 0 and math.floor(num)) or 100
