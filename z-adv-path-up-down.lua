@@ -3,16 +3,15 @@
 -- Presents an "Up/Down/Cancel" menu, then auto-paths one level at a time by simulating OPTION1 for each step,
 -- shows a popup at start and a separate popup on success or failure using showPopupAnnouncement.
 
-local script = require('gui.script')
-local gui    = require('gui')
-local dfgui  = dfhack.gui
-local world  = df.global.world
-local map    = world.map
+local script      = require('gui.script')
+local gui         = require('gui')
+local dfgui       = dfhack.gui
+local world       = df.global.world
+local map         = world.map
+local you         = world.units.adv_unit
 local delayFrames = 10  -- frames to wait for each simulated step
 
 script.start(function()
-    -- Initial checks
-    local you = world.units.adv_unit
     if not you then
         qerror("Error: No adventurer unit found.")
     end
@@ -59,22 +58,12 @@ script.start(function()
         COLOR_YELLOW
     )
 
-    -- Iterate over z-levels synchronously
-    for z = start_z, bound, step do
-        -- Re-fetch pointers to ensure safety
-        you = world.units.adv_unit
-        if not you then
+    -- Recursive scan function
+    local function tryZ(z)
+        -- Bounds check: if passed bound without finding, fail
+        if (goUp and z < bound) or (not goUp and z > bound) then
             dfgui.showPopupAnnouncement(
-                "Error: Adventurer no longer found. Aborting auto-path.",
-                COLOR_RED
-            )
-            return
-        end
-
-        view = dfhack.gui.getCurViewscreen()
-        if not view then
-            dfgui.showPopupAnnouncement(
-                "Error: Viewscreeen unavailable. Aborting auto-path.",
+                string.format("No available auto-path %s from your position.", direction),
                 COLOR_RED
             )
             return
@@ -86,30 +75,28 @@ script.start(function()
         you.path.dest.z = z
         you.path.goal   = 215
 
-        -- Simulate the OPTION1 (a) input (one-step move) This allows for the game to refresh you.path.path.x
+        -- Simulate the OPTION1 input (one-step move)
         gui.simulateInput(view, 'OPTION1')
 
         -- Wait for the step to be processed
-        script.sleep(delayFrames)
-
-        local pd    = you.path.path and you.path.path.x
-        local valid = pd and (#pd > 0)
-        if valid then
-            -- Commit to this step
-            you.path.dest.z = z
-            you.path.goal   = 215
-            local levels = math.abs(z - current_z)
-            dfgui.showPopupAnnouncement(
-                string.format("Auto-path %s %d levels.", direction, levels),
-                COLOR_GREEN
-            )
-            return
-        end
+        dfhack.timeout(delayFrames, 'frames', function()
+            local pd    = you.path.path and you.path.path.x
+            local valid = pd and (#pd > 0)
+            if valid then
+                -- Commit to this step
+                you.path.dest.z = z
+                you.path.goal   = 215
+                local levels = math.abs(z - current_z)
+                dfgui.showPopupAnnouncement(
+                    string.format("Auto-path %s %d levels.", direction, levels),
+                    COLOR_GREEN
+                )
+            else
+                tryZ(z + step)
+            end
+        end)
     end
 
-    -- No valid path found
-    dfgui.showPopupAnnouncement(
-        string.format("No available auto-path %s from your position.", direction),
-        COLOR_RED
-    )
+    -- Start scanning
+    tryZ(start_z)
 end)
