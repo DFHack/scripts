@@ -20,7 +20,7 @@ Run from the DFHack Lua console while in **Adventurer** mode:
 
   [DFHack]# lua z-adv-path-up-down.lua
 
-1. You’ll be prompted with **Up**, **Down**, or **Cancel**.  
-2. Select **Up** to auto-path one level above your current Z; **Down** to auto-path one level below.  
-3. A “please do not press any keys” popup displays while the script works.  
+1. You’ll be prompted with **Up**, **Down**, or **Cancel**.
+2. Select **Up** to auto-path one level above your current Z; **Down** to auto-path one level below.
+3. A “please do not press any keys” popup displays while the script works.
 4. On success, a confirmation popup shows how many levels you moved; on failure, an error popup appears.
