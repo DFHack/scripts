@@ -28,6 +28,7 @@ function zprospectanalyzer.scanProspect(section)
     end
     local data = {}
     local current
+    -- split output into lines without interpreting escape sequences
     for line in output:gmatch("([^\n]+)") do
         local header = line:match("^%s*([%a%s_]+)%s*:%s*$")
         if header then
@@ -55,25 +56,27 @@ function zprospectanalyzer.scanProspect(section)
     return data
 end
 
---- Sorts an array of material entries by quantity then elevation.
+--- Sorts an array of material entries by min elevation then quantity.
 -- @return sorted list
 function zprospectanalyzer.sortMaterials(list)
     table.sort(list, function(a, b)
-        if a.entry.count ~= b.entry.count then
-            return a.entry.count > b.entry.count
+        local am = a.entry.minElev or 0
+        local bm = b.entry.minElev or 0
+        if am ~= bm then
+            return am > bm
         end
-        local ae = a.entry.maxElev or a.entry.minElev or 0
-        local be = b.entry.maxElev or b.entry.minElev or 0
-        return ae > be
+        return a.entry.count > b.entry.count
     end)
     return list
 end
 
---- Prints material entries in aligned columns.
+--- Prints material entries in aligned columns with a header.
 function zprospectanalyzer.printMaterials(list)
+    -- Header line
+    print(string.format("    %-15s %8s %10s %10s", "Material", "Quantity", "Min Elev", "Max Elev"))
     for _, item in ipairs(list) do
         print(string.format(
-            "    %-15s : %7d   Elev:%3s..%-3s",
+            "    %-15s %8d %10s %10s",
             item.key:upper(),
             item.entry.count,
             item.entry.minElev or "?",
