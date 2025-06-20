@@ -14,7 +14,7 @@ SelectLockOverlay.ATTRS {
 
 local function simulate_actions(self, count)
         gui.simulateInput(dfhack.gui.getCurViewscreen(), 'STANDARDSCROLL_RIGHT')
-
+    
     local function step(i)
         if i > count then
             for _ = 1, count do
@@ -36,7 +36,7 @@ local function simulate_actions(self, count)
         --CONTEXT_SCROLL_DOWN helps with consistency. Otherwise the program will miss some units. Line below is scroll wheel down
         gui.simulateInput(dfhack.gui.getCurViewscreen(), 'CONTEXT_SCROLL_DOWN')
 
-        dfhack.timeout(2, 'frames', function() step(i + 1) end)
+        dfhack.timeout(3, 'frames', function() step(i + 1) end)
     end
 
     step(1)
@@ -44,7 +44,7 @@ end
 
 function SelectLockOverlay:init()
     self.action_mode = 'both'
-    self.entry_count = 100
+    self.entry_count = 7
     self.is_running = false
     self:addviews{
         widgets.Panel{
@@ -72,7 +72,7 @@ function SelectLockOverlay:init()
                     text = '7',
                     on_change = function(val)
                         local num = tonumber(val)
-                        self.entry_count = (num and num > 0 and math.floor(num)) or 100
+                        self.entry_count = (num and num > 0 and math.floor(num)) or 7
                     end,
                 },
                 widgets.HotkeyLabel{
