@@ -21,6 +21,6 @@ Once the plugin is loaded and you're in the `Work Details` screen (e.g., `y` -> 
    - `Lock only`: Just toggles the lock status.
    - `Select + Lock`: Toggles both selection and lock.
 
-2. Adjust the number of entries to apply actions to (default is 100).
+2. Adjust the number of entries to apply actions to (default is 7).
 
 3. Press the **RUN** button (or the hotkey defined for it) to execute the actions.
