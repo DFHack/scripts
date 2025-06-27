@@ -1,43 +1,26 @@
 zprospectanalyzer
 =================
 
-A DFHack CLI utility and Lua module for scanning and reporting material occurrences
-and elevation ranges using the built-in `prospect` command. It provides an easy-to-use
-interface to list material counts and elevation ranges, with sorting and preset lists.
+**Goal**: Filter and print stones that are worth **3 points**.
 
 Features
 --------
 
-- **Output Parsing**: Runs `prospect all` or `prospect all --show <section>` and parses the text output.
-- **Section Filtering**: Filter materials by specific sections like layers, ores, gems, or globally.
-- **Presets**: Built-in "blocks" preset for common stone materials.
-- **Missing Material Handling**: Lists missing materials at the end with `<not found>` marker.
+- **Output Parsing**: Automatically runs ``prospect all`` and parses the text output.
+- **Section Filtering**: Optionally filters materials by specific sections like ores or gems.
+- **Presets**: Running ``zprospectanalyzer`` **without parameters** will only run the preset of **3-point stones**.
+- **Missing Materials Reporting**: Displays ``<not found>`` next to any requested material that doesn't appear in the output.
 
 Usage
 -----
 
-Load the script in DFHack and run:
+.. code-block:: bash
+
+  zprospectanalyzer [material1] [material2] ...
+
+Example
+-------
 
 .. code-block:: bash
 
-  zprospectanalyzer [section] [material1] [material2] ...
-
-Examples:
-
-- **Default** (blocks preset):
-
-  .. code-block:: bash
-
-  zprospectanalyzer
-
-- **Filter by section**:
-
-  .. code-block:: bash
-
-  zprospectanalyzer layer_materials chert granite
-
-- **Global search**:
-
-  .. code-block:: bash
-
-  zprospectanalyzer jet ruby tetrahedrite
+  zprospectanalyzer claystone granite ruby tetrahedrite
