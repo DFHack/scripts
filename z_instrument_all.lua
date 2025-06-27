@@ -1,9 +1,7 @@
--- ztest.lua
+-- z_instrument_all.lua
 -- Automatically places work orders for all discovered instruments using: 'instruments order <name> <count>'
--- Accepts an optional numeric argument to control how many of each to order (default is 1)
+-- Optionally accepts a numeric argument to specify the number of each instrument to order (default is 1)
 
--- Retrieves and returns a list of unique instrument names from the DFHack 'instruments' command.
--- Strips parenthetical info and filters out crafting steps like 'make' or 'forge'.
 local function collect_unique_instrument_names()
     local success, raw_output = pcall(function()
         return dfhack.run_command_silent("instruments")
@@ -17,15 +15,13 @@ local function collect_unique_instrument_names()
     local seen_names = {}
 
     for line in raw_output:gmatch("[^\r\n]+") do
-        local normalized_line = dfhack.toSearchNormalized(line)
-
-        -- Skip crafting steps
-        if not normalized_line:match("^%s*make") and not normalized_line:match("^%s*forge") then
-            -- Remove content in parentheses and trim whitespace
-            local name = normalized_line:gsub("%s*%b()", ""):gsub("^%s+", ""):gsub("%s+$", "")
-            if name ~= "" and not seen_names[name] then
-                seen_names[name] = true
-                table.insert(instrument_names, name)
+        local normalized = dfhack.toSearchNormalized(line)
+        if not normalized:match("^%s*make") and not normalized:match("^%s*forge") then
+            local raw_name = line:gsub("%s*%b()", ""):gsub("^%s+", ""):gsub("%s+$", "")
+            local normalized_name = dfhack.toSearchNormalized(raw_name)
+            if raw_name ~= "" and not seen_names[normalized_name] then
+                seen_names[normalized_name] = true
+                table.insert(instrument_names, { name = raw_name, original_line = line })
             end
         end
     end
@@ -33,38 +29,59 @@ local function collect_unique_instrument_names()
     return instrument_names
 end
 
--- Submits DFHack instrument work orders using the list of instrument names and specified count.
 local function place_instrument_work_orders(order_count)
-    local names = collect_unique_instrument_names()
+    local instruments = collect_unique_instrument_names()
+    local counts = { building = 0, handheld = 0, total = 0 }
 
-    for _, instrument in ipairs(names) do
-        print("------------------------------\n")
+    for _, instrument in ipairs(instruments) do
+        local name = instrument.name
+        local type = "unknown"
 
-        print("Placed order for: " .. instrument .. " (x" .. order_count .. ")\n")
+        -- Determine type based on line description
+        local line_lower = instrument.original_line:lower()
+        if line_lower:find("building") then
+            type = "building"
+        elseif line_lower:find("handheld") then
+            type = "handheld"
+        end
+
+        print("------------------------------")
+        print("Placed order for: " .. name .. " (x" .. order_count .. ") [" .. type .. "]")
+        print("------------------------------")
+
         local success, err = pcall(function()
-            dfhack.run_command("instruments", "order", instrument, tostring(order_count))
+            dfhack.run_command("instruments", "order", name, tostring(order_count))
         end)
 
         if not success then
-            dfhack.printerr("Failed to place order for '" .. instrument .. "': " .. tostring(err))
+            dfhack.printerr("Failed to place order for '" .. name .. "': " .. tostring(err))
+        else
+            counts[type] = counts[type] + order_count
+            counts.total = counts.total + order_count
         end
-        print("------------------------------\n")
     end
+
+    -- Summary
+    print("\n==== Instrument Order Summary ====")
+    print("Total instruments ordered: " .. counts.total)
+    print("  Handheld: " .. counts.handheld)
+    print("  Building: " .. counts.building)
+    print("==================================\n")
 end
 
--- Main entry point: processes optional count argument and triggers order placement.
+-- Main execution
 local args = {...}
-local quantity = 1  -- Default number of orders per instrument
+local quantity = 1
 
 if #args == 1 then
     local parsed = tonumber(args[1])
     if parsed and parsed > 0 then
         quantity = math.floor(parsed)
     else
-        qerror("Invalid argument. Usage: ztest [number_of_orders_per_instrument]")
+        qerror("Invalid argument. Usage: z_instrument_all [number_of_orders_per_instrument]")
     end
 elseif #args > 1 then
-    qerror("Too many arguments. Usage: ztest [number_of_orders_per_instrument]")
+    qerror("Too many arguments. Usage: z_instrument_all [number_of_orders_per_instrument]")
 end
 
 local ok, err = pcall(function()
