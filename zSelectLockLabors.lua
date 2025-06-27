@@ -14,7 +14,7 @@ SelectLockOverlay.ATTRS {
 
 local function simulate_actions(self, count)
         gui.simulateInput(dfhack.gui.getCurViewscreen(), 'STANDARDSCROLL_RIGHT')
-    
+
     local function step(i)
         if i > count then
             for _ = 1, count do
