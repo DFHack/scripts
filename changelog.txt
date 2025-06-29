@@ -32,6 +32,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `gui/mod-manager`: gracefully handle mods with missing or broken ``info.txt`` files
 
 ## Misc Improvements
 

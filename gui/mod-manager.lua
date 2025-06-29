@@ -524,7 +524,8 @@ function ModlistWindow:refresh_list()
     local choices = {}
     for idx,mod in ipairs(scriptmanager.get_active_mods()) do
         if not include_vanilla and mod.vanilla then goto continue end
-        local steam_id = scriptmanager.get_mod_info_metadata(mod.path, 'STEAM_FILE_ID').STEAM_FILE_ID
+        local metadata = scriptmanager.get_mod_info_metadata(mod.path, 'STEAM_FILE_ID')
+        local steam_id = metadata and metadata.STEAM_FILE_ID or nil
         local url = steam_id and (': https://steamcommunity.com/sharedfiles/filedetails/?id=%s'):format(steam_id) or ''
         table.insert(choices, {
             text={
