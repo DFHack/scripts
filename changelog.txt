@@ -114,6 +114,10 @@ Template for new versions:
 - `gui/notify`: save reminder now appears in adventure mode
 - `gui/notify`: save reminder changes color to yellow at 30 minutes and to orange at 60 minutes
 - `gui/confirm`: in the delete manager order confirmation dialog, show a description of which order you have selected to delete
+- `position`: display both adventurer and site pos simultaneously. Display map block pos+offset of selected tile.
+- `devel/hello-world`: updated to show off the new Slider widget
+
+## Removed
 - `gui/create-item`: now accepts a ``pos`` argument of where to spawn items
 - `modtools/create-item`: exported ``hackWish`` function now supports ``opts.pos`` for determining spawn location
 - `hfs-pit`: improve placement of stairs w/r/t eerie pits and ramp tops

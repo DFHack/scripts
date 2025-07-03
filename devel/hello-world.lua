@@ -12,17 +12,27 @@ local HIGHLIGHT_PEN = dfhack.pen.parse{
 
 HelloWorldWindow = defclass(HelloWorldWindow, widgets.Window)
 HelloWorldWindow.ATTRS{
-    frame={w=20, h=14},
+    frame={w=25, h=25},
     frame_title='Hello World',
     autoarrange_subviews=true,
-    autoarrange_gap=1,
+    autoarrange_gap=2,
+    resizable=true,
+    resize_min={w=25, h=25},
 }
 
 function HelloWorldWindow:init()
+    local LEVEL_OPTIONS = {
+        {label='Low', value=1},
+        {label='Medium', value=2},
+        {label='High', value=3},
+        {label='Pro', value=4},
+        {label='Insane', value=5},
+    }
+
     self:addviews{
         widgets.Label{text={{text='Hello, world!', pen=COLOR_LIGHTGREEN}}},
         widgets.HotkeyLabel{
-            frame={l=0, t=0},
+            frame={l=0},
             label='Click me',
             key='CUSTOM_CTRL_A',
             on_activate=self:callback('toggleHighlight'),
@@ -31,6 +41,28 @@ function HelloWorldWindow:init()
             view_id='highlight',
             frame={w=10, h=5},
             frame_style=gui.INTERIOR_FRAME,
+        },
+        widgets.Divider{
+            frame={h=1},
+            frame_style_l=false,
+            frame_style_r=false,
+        },
+        widgets.CycleHotkeyLabel{
+            view_id='level',
+            frame={l=0, w=20},
+            label='Level:',
+            key_back='CUSTOM_SHIFT_C',
+            key='CUSTOM_SHIFT_V',
+            options=LEVEL_OPTIONS,
+            initial_option=LEVEL_OPTIONS[1].value,
+        },
+        widgets.Slider{
+            frame={l=1},
+            num_stops=#LEVEL_OPTIONS,
+            get_idx_fn=function()
+                return self.subviews.level:getOptionValue()
+            end,
+            on_change=function(idx) self.subviews.level:setOption(idx) end,
         },
     }
 end
