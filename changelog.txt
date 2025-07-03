@@ -31,6 +31,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `deathcause`: added functionality to this script to fetch cause of death programatically
 
 ## Fixes
 - `gui/journal`: fix typo which caused the table of contents to always be regenerated even when not needed
