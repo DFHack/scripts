@@ -44,6 +44,65 @@ function describeReaction(reaction)
     return skill .. ": " .. table.concat(reagents, ", ")
 end
 
+function collect_unique_instrument_names()
+    local civ_id = df.global.plotinfo.civ_id
+    local instruments = {}
+    local seen = {}
+
+    for _, instr in ipairs(df.global.world.raws.itemdefs.instruments) do
+        if instr.source_enid == civ_id then
+            local name = instr.name
+            local normalized = dfhack.toSearchNormalized(name)
+            if not seen[normalized] then
+                seen[normalized] = true
+                local type = instr.flags.PLACED_AS_BUILDING and "building" or "handheld"
+                table.insert(instruments, { name = name, type = type })
+            end
+        end
+    end
+
+    return instruments
+end
+
+function place_instrument_work_orders(count, quiet, type_filter)
+    local instruments = collect_unique_instrument_names()
+    local counts = { building = 0, handheld = 0, total = 0 }
+
+    for _, instrument in ipairs(instruments) do
+        local name = instrument.name
+        local type = instrument.type
+
+        if type_filter and type ~= type_filter then goto continue end
+
+        if not quiet then
+            print("------------------------------")
+            print("Placing order for: " .. name .. " (x" .. count .. ") [" .. type .. "]")
+            print("------------------------------")
+        end
+
+        local success, err = pcall(function()
+            order_instrument(name, count, quiet)
+        end)
+
+        if not success then
+            dfhack.printerr("Failed to place order for '" .. name .. "': " .. tostring(err))
+        else
+            counts[type] = counts[type] + count
+            counts.total = counts.total + count
+        end
+
+        ::continue::
+    end
+
+    if not quiet then
+        print("\n==== Instrument Order Summary ====")
+        print("Total instruments ordered: " .. counts.total)
+        print("  Handheld: " .. counts.handheld)
+        print("  Building: " .. counts.building)
+        print("==================================\n")
+    end
+end
+
 local function print_list()
     -- gather instrument piece reactions and index them by the instrument they are part of
     local instruments = {}
@@ -75,12 +134,16 @@ local function print_list()
     end
 end
 
-local function order_instrument(name, amount, quiet)
+function order_instrument(name, amount, quiet)
     local instrument = nil
+    local civ_id = df.global.plotinfo.civ_id
+    local normalized_input = dfhack.toSearchNormalized(name)
 
     for _, instr in ipairs(raws.itemdefs.instruments) do
-        if dfhack.toSearchNormalized(instr.name) == name and instr.source_enid == civ_id then
+        if instr.source_enid == civ_id and
+            dfhack.toSearchNormalized(instr.name) == normalized_input then
             instrument = instr
+            break
         end
     end
 
@@ -107,6 +170,9 @@ local function order_instrument(name, amount, quiet)
     end
 
     local assembly_reaction = getAssemblyReaction(instrument.id)
+    if not assembly_reaction then
+        qerror("No assembly reaction found for instrument '" .. name .. "'")
+    end
 
     local assembly_order = {
         id=-1,
@@ -152,11 +218,32 @@ end
 if #positionals == 0 or positionals[1] == "list" then
     print_list()
 elseif positionals[1] == "order" then
-    local instrument_name = positionals[2]
-    if not instrument_name then
-        qerror("Usage: instruments order <instrument_name> [<amount>]")
+    local target = positionals[2]
+    if not target then
+        qerror("Usage: instruments order <instrument_name|all> [<amount>] [handheld|building]")
     end
 
-    local amount = positionals[3] or 1
-    order_instrument(instrument_name, amount, quiet)
+    local amount = 1
+    local type_filter = nil
+
+    for i = 3, #positionals do
+        local arg = positionals[i]:lower()
+        if tonumber(arg) then
+            amount = tonumber(arg)
+        elseif arg == "handheld" or arg == "building" then
+            type_filter = arg
+        else
+            qerror("Invalid argument: " .. positionals[i])
+        end
+    end
+
+    if amount < 1 then
+        qerror("Amount must be a positive number")
+    end
+
+    if target == "all" then
+        place_instrument_work_orders(amount, quiet, type_filter)
+    else
+        order_instrument(target, amount, quiet)
+    end
 end
