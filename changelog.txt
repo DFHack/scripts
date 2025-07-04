@@ -36,6 +36,7 @@ Template for new versions:
 - `gui/journal`: fix typo which caused the table of contents to always be regenerated even when not needed
 - `gui/mod-manager`: gracefully handle mods with missing or broken ``info.txt`` files
 - `uniform-unstick`: resolve overlap with new buttons in 51.13
+- `immortal-cravings`: prioritize high-value meals and don't go eating or drinking on a full stomach
 
 ## Misc Improvements
 
