@@ -35,6 +35,8 @@ Template for new versions:
 ## Fixes
 - `gui/journal`: fix typo which caused the table of contents to always be regenerated even when not needed
 - `gui/mod-manager`: gracefully handle mods with missing or broken ``info.txt`` files
+- `gui/mod-manager`: gracefully handle vanilla mods with different versions from the user's preset
+- `gui/mod-manager`: now supports arena mode
 - `uniform-unstick`: resolve overlap with new buttons in 51.13
 
 ## Misc Improvements

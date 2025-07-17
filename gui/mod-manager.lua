@@ -12,10 +12,29 @@ local widgets = require('gui.widgets')
 local presets_file = json.open("dfhack-config/mod-manager.json")
 local GLOBAL_KEY = 'mod-manager'
 
--- get_newregion_viewscreen and get_modlist_fields are declared as global functions
--- so external tools can call them to get the DF mod list
-function get_newregion_viewscreen()
+-- Shamelessly taken from hack/library/lua/script-manager.lua
+local function vanilla(dir)
+    dir = dir.value
+    return dir:startswith('data/vanilla')
+end
+
+-- get_moddable_viewscreen(), get_any_moddable_viewscreen() and get_modlist_fields are declared
+-- as global functions so external tools can call them to get the DF mod list
+function get_moddable_viewscreen(type)
+    local vs = nil
+    if type == 'region' then
+        vs = dfhack.gui.getViewscreenByType(df.viewscreen_new_regionst, 0)
+    elseif type == 'arena' then
+        vs = dfhack.gui.getViewscreenByType(df.viewscreen_new_arenast, 0)
+    end
+    return vs
+end
+
+function get_any_moddable_viewscreen()
     local vs = dfhack.gui.getViewscreenByType(df.viewscreen_new_regionst, 0)
+    if not vs then
+        vs = dfhack.gui.getViewscreenByType(df.viewscreen_new_arenast, 0)
+    end
     return vs
 end
 
@@ -55,21 +74,29 @@ function get_modlist_fields(kind, viewscreen)
     end
 end
 
+--- @return { success: boolean, version: string }
 local function move_mod_entry(viewscreen, to, from, mod_id, mod_version)
     local to_fields = get_modlist_fields(to, viewscreen)
     local from_fields = get_modlist_fields(from, viewscreen)
 
     local mod_index = nil
+    local loaded_version = nil
     for i, v in ipairs(from_fields.id) do
         local version = from_fields.numeric_version[i]
-        if v.value == mod_id and version == mod_version then
+        local src_dir = from_fields.src_dir[i]
+        local displayed_version = from_fields.displayed_version[i].value
+        -- assumes that vanilla mods will not have multiple possible indices.
+        if v.value == mod_id and (vanilla(src_dir) or version == mod_version) then
+            if version ~= mod_version then
+                loaded_version = displayed_version
+            end
             mod_index = i
             break
         end
     end
 
     if mod_index == nil then
-        return false
+        return { success= false, version= nil }
     end
 
     for k, v in pairs(to_fields) do
@@ -84,13 +111,15 @@ local function move_mod_entry(viewscreen, to, from, mod_id, mod_version)
         v:erase(mod_index)
     end
 
-    return true
+    return { success= true, version= loaded_version }
 end
 
+--- @return { success: boolean, version: string }
 local function enable_mod(viewscreen, mod_id, mod_version)
     return move_mod_entry(viewscreen, "object_load_order", "available", mod_id, mod_version)
 end
 
+--- @return { success: boolean, version: string }
 local function disable_mod(viewscreen, mod_id, mod_version)
     return move_mod_entry(viewscreen, "available", "object_load_order", mod_id, mod_version)
 end
@@ -105,6 +134,7 @@ local function get_active_modlist(viewscreen)
     return t
 end
 
+--- @return { failures: [string], changed: [{ id: string, new: string }] }
 local function swap_modlist(viewscreen, modlist)
     local current = get_active_modlist(viewscreen)
     for _, v in ipairs(current) do
@@ -112,12 +142,16 @@ local function swap_modlist(viewscreen, modlist)
     end
 
     local failures = {}
+    local changed = {}
     for _, v in ipairs(modlist) do
-        if not enable_mod(viewscreen, v.id, v.version) then
+        local res = enable_mod(viewscreen, v.id, v.version)
+        if not res.success then
             table.insert(failures, v.id)
+        elseif res.version then
+            table.insert(changed, { id= v.id, new= res.version })
         end
     end
-    return failures
+    return { failures= failures, changed= changed }
 end
 
 --------------------
@@ -137,7 +171,7 @@ ModmanageMenu.ATTRS {
 }
 
 local function save_new_preset(preset_name)
-    local viewscreen = get_newregion_viewscreen()
+    local viewscreen = get_any_moddable_viewscreen()
     local modlist = get_active_modlist(viewscreen)
     table.insert(presets_file.data, { name = preset_name, modlist = modlist })
     presets_file:write()
@@ -157,27 +191,17 @@ local function overwrite_preset(idx)
         return
     end
 
-    local viewscreen = get_newregion_viewscreen()
+    local viewscreen = get_any_moddable_viewscreen()
     local modlist = get_active_modlist(viewscreen)
     presets_file.data[idx].modlist = modlist
     presets_file:write()
 end
 
-local function load_preset(idx, unset_default_on_failure)
-    if idx > #presets_file.data then
-        return
-    end
+local function prepare_warning(text, failed, changed, unset_default_on_failure)
+    if not failed and not changed then return end
 
-    local viewscreen = get_newregion_viewscreen()
-    local modlist = presets_file.data[idx].modlist
-    local failures = swap_modlist(viewscreen, modlist)
-
-    if #failures > 0 then
-        local text = {}
+    if failed then
         if unset_default_on_failure then
-            presets_file.data[idx].default = false
-            presets_file:write()
-
             table.insert(text, {
                 text='Failed to load some mods from your default preset.',
                 pen=COLOR_LIGHTRED,
@@ -193,10 +217,46 @@ local function load_preset(idx, unset_default_on_failure)
                 pen=COLOR_LIGHTRED,
             })
         end
+    end
+
+    if failed and changed then
         table.insert(text, NEWLINE)
-        table.insert(text, NEWLINE)
-        table.insert(text, 'Please re-create your preset with mods you currently have installed.')
-        table.insert(text, NEWLINE)
+    end
+
+    if changed then
+        table.insert(text, {
+            text='Some vanilla mods have been updated.',
+            pen=COLOR_LIGHTRED,
+        })
+    end
+    table.insert(text, NEWLINE)
+    table.insert(text, 'Please re-create your preset with mods you currently have installed.')
+    table.insert(text, NEWLINE)
+    table.insert(text, NEWLINE)
+end
+
+local function load_preset(idx, unset_default_on_failure)
+    if idx > #presets_file.data then
+        return
+    end
+
+    local viewscreen = get_any_moddable_viewscreen()
+    local modlist = presets_file.data[idx].modlist
+    local results = swap_modlist(viewscreen, modlist)
+    local failures = results.failures
+    local changes = results.changed
+    local text = {}
+
+    local failed = #failures > 0
+    local changed = #changes > 0
+
+    prepare_warning(text, failed, changed)
+    if failed and unset_default_on_failure then
+        presets_file.data[idx].default = false
+        presets_file:write()
+    end
+
+    if failed then
         table.insert(text, 'Here are the mods that failed to load:')
         table.insert(text, NEWLINE)
         table.insert(text, NEWLINE)
@@ -204,8 +264,25 @@ local function load_preset(idx, unset_default_on_failure)
             table.insert(text, ('- %s'):format(v))
             table.insert(text, NEWLINE)
         end
+    end
+
+    if failed and changed then
+        table.insert(text, NEWLINE) -- just to separate the sections
+    end
+
+    if changed then
+        table.insert(text, 'Here are the vanilla mods that have been updated:')
+        table.insert(text, NEWLINE)
+        table.insert(text, NEWLINE)
+        for _, v in ipairs(changes) do
+            table.insert(text, ('- %s to %s'):format(v.id, v.new))
+            table.insert(text, NEWLINE)
+        end
+    end
+
+    if failed or changed then
         dialogs.showMessage("Warning", text)
-end
+    end
 end
 
 local function find_preset_by_name(name)
@@ -573,7 +650,7 @@ ModmanageOverlay.ATTRS {
     desc = "Adds a link to the mod selection screen for accessing the mod manager.",
     default_pos = { x=5, y=-6 },
     version = 2,
-    viewscreens = { "new_region/Mods" },
+    viewscreens = { "new_region/Mods", "new_arena/Mods" },
     default_enabled=true,
 }
 
@@ -636,7 +713,7 @@ notification_timer_fn()
 local default_applied = false
 dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     if sc == SC_VIEWSCREEN_CHANGED then
-        local vs = get_newregion_viewscreen()
+        local vs = get_any_moddable_viewscreen()
         if vs and not default_applied then
             default_applied = true
             for i, v in ipairs(presets_file.data) do
