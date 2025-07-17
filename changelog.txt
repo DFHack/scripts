@@ -29,6 +29,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `entomb`: allow any unit that has a corpse or body parts to be assigned a tomb zone
 
 ## New Features
 
