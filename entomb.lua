@@ -1,5 +1,6 @@
 -- Entomb corpse items of any dead unit.
 --@module = true
+local utils = require('utils')
 
 -- Get unit from selected corpse or corpse piece item.
 function GetUnitFromCorpse(item)
@@ -109,6 +110,51 @@ function PutInCoffin(coffin, item)
     end
 end
 
+function HaulToCoffin(tomb, coffin, item)
+    if not tomb or not coffin or not item then return end
+
+    if dfhack.items.getHolderBuilding(item) == coffin and item.flags.in_building == true then
+print("DEBUG: item is already properly interred, skipping", tomb.id, dfhack.buildings.getName(tomb),
+coffin.id, dfhack.buildings.getName(coffin), item.id, dfhack.items.getReadableDescription(item))
+        return  -- already interred in this coffin, skip
+    end
+
+    -- TODO Consider what should happen when certain item.flags are set, particularly .forbid and .dump.
+    -- TODO Consider copy-paste-modify scripts/internal/caravan/pedestal.lua::is_displayable_item()
+
+    -- Remove current job from item to allow it to be moved to the tomb.
+    if item.flags.in_job then
+        local inJob = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
+        local job = inJob and inJob.data.job or nil
+        if job
+            and job.job_type == df.job_type.PlaceItemInTomb
+            and dfhack.job.getGeneralRef(job, df.general_ref_type.BUILDING_HOLDER) ~= nil
+            and dfhack.job.getGeneralRef(job, df.general_ref_type.BUILDING_HOLDER).building_id == tomb.id
+        then
+print("DEBUG: desired job already exists, skipping", tomb.id, dfhack.buildings.getName(tomb),
+coffin.id, dfhack.buildings.getName(coffin), item.id, dfhack.items.getReadableDescription(item), job.id)
+            return  -- desired job already exists, skip
+        end
+        if job then
+print("DEBUG: removing current job from this item", item.id, dfhack.items.getReadableDescription(item),
+job.id, df.job_type[job.job_type])
+            dfhack.job.removeJob(job)
+        end
+    end
+
+    local pos = utils.getBuildingCenter(coffin)
+
+    local job = df.job:new()
+    job.job_type = df.job_type.PlaceItemInTomb
+    job.pos = pos
+
+    dfhack.job.attachJobItem(job, item, df.job_role_type.Hauled, -1, -1)
+    dfhack.job.addGeneralRef(job, df.general_ref_type.BUILDING_HOLDER, tomb.id)
+    tomb.jobs:insert('#', job)
+
+    dfhack.job.linkIntoWorld(job, true)
+end
+
 local function GetCoffin(tomb)
     local coffin
     if tomb.type == df.civzone_type.Tomb then
@@ -149,7 +195,8 @@ function AssignToTomb(unit, tomb, forceBurial)
             if coffin then
                 for _, item_id in ipairs(corpseParts) do
                     local item = df.item.find(item_id)
-                    PutInCoffin(coffin, item)
+                    -- PutInCoffin(coffin, item)
+                    HaulToCoffin(tomb, coffin, item)
                 end
                 print('Corpse items have been teleported into a coffin.')
             else
