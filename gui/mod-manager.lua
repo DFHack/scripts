@@ -73,7 +73,11 @@ local function move_mod_entry(viewscreen, to, from, mod_id, mod_version)
     end
 
     for k, v in pairs(to_fields) do
-        if type(from_fields[k][mod_index]) == "userdata" then
+
+        if k == "src_dir" then  -- 0.52.02 hotfix workaround.
+            v:resize(#v + 1)
+            v[#v - 1] = from_fields[k][mod_index]
+        elseif type(from_fields[k][mod_index]) == "userdata" then
             v:insert('#', from_fields[k][mod_index]:new())
         else
             v:insert('#', from_fields[k][mod_index])
