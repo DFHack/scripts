@@ -29,6 +29,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `deathcause`: added functionality to this script to fetch cause of death programatically
 
 ## Fixes
 

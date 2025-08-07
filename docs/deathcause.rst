@@ -14,3 +14,29 @@ Usage
 ::
 
     deathcause
+
+API
+---
+
+The ``deathcause`` script can be called programmatically by other scripts, either via the
+commandline interface with ``dfhack.run_script()`` or via the API functions
+defined in :source-scripts:`deathcause.lua`, available from the return value of
+``reqscript('deathcause')``:
+
+* ``getDeathCauseFromHistFig(histfig)``
+
+Returns a string with the historical figure's cause of death, sometimes with more information
+than with a unit.
+
+* ``getDeathCauseFromUnit(unit)``
+
+Returns a string with the unit's cause of death.
+
+ API usage example::
+
+   local dc = reqscript('deathcause')
+
+   -- Note: this is an arguably bad example because this is the same as running deathcause
+   -- from the launcher, but this would theoretically still work.
+   local deathReason = dc.getDeathCauseFromUnit(dfhack.gui.getSelectedUnit())
+   print(deathReason)
