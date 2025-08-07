@@ -3,7 +3,17 @@
 
 local idle = reqscript('idle-crafting')
 local repeatutil = require("repeat-util")
+
 --- utility functions
+
+local verbose = false
+---conditional printing of debug messages
+---@param message string
+local function debug(message)
+    if verbose then
+        print(message)
+    end
+end
 
 ---3D city metric
 ---@param p1 df.coord
@@ -13,6 +23,25 @@ function distance(p1, p2)
     return math.max(math.abs(p1.x - p2.x), math.abs(p1.y - p2.y)) + math.abs(p1.z - p2.z)
 end
 
+---maybe a candidate for utils.lua?
+---find best available item in an item vector (according to some metric)
+---@generic T : df.item
+---@param item_vector T[]
+---@param metric fun(item: T): number?
+---@return T?
+function findBest(item_vector, metric, smallest)
+    local best = nil
+    local mbest = nil
+    for _, item in ipairs(item_vector) do
+        mitem = metric(item)
+        if mitem and (not best or (smallest and mitem < mbest or mitem > mbest)) then
+            best = item
+            mbest = mitem
+        end
+    end
+    return best
+end
+
 ---find closest accessible item in an item vector
 ---@generic T : df.item
 ---@param pos df.coord
@@ -20,19 +49,14 @@ end
 ---@param is_good? fun(item: T): boolean
 ---@return T?
 local function findClosest(pos, item_vector, is_good)
-    local closest = nil
-    local dclosest = -1
-    for _,item in ipairs(item_vector) do
-        if not item.flags.in_job and (not is_good or is_good(item)) then
+    local function metric(item)
+        if not is_good or is_good(item) then
             local pitem = xyz2pos(dfhack.items.getPosition(item))
-            local ditem = distance(pos, pitem)
-            if dfhack.maps.canWalkBetween(pos, pitem) and (not closest or ditem < dclosest) then
-                closest = item
-                dclosest = ditem
-            end
+            return dfhack.maps.canWalkBetween(pos, pitem) and distance(pos, pitem) or nil
         end
+        return nil
     end
-    return closest
+    return findBest(item_vector, metric, true)
 end
 
 ---find a drink
@@ -41,24 +65,32 @@ end
 local function get_closest_drink(pos)
     local is_good = function (drink)
         local container = dfhack.items.getContainer(drink)
-        return container and container:isFoodStorage()
+        return not drink.flags.in_job and container and container:isFoodStorage()
     end
     return findClosest(pos, df.global.world.items.other.DRINK, is_good)
 end
 
----find some prepared meal
+---find available meal with highest per-portion value
 ---@return df.item_foodst?
-local function get_closest_meal(pos)
+local function get_best_meal(pos)
+
     ---@param meal df.item_foodst
-    local function is_good(meal)
-        if meal.flags.rotten then
-            return false
+    local function portion_value(meal)
+        local accessible = dfhack.maps.canWalkBetween(pos,xyz2pos(dfhack.items.getPosition(meal)))
+        if meal.flags.in_job or meal.flags.rotten or not accessible then
+            return nil
         else
+            -- check that meal is either on the ground or in food storage (and not in a backpack)
             local container = dfhack.items.getContainer(meal)
-            return not container or container:isFoodStorage()
+            if not container or container:isFoodStorage() then
+                return dfhack.items.getValue(meal) / meal.stack_size
+            else
+                return nil
+            end
         end
     end
-    return findClosest(pos, df.global.world.items.other.FOOD, is_good)
+
+    return findBest(df.global.world.items.other.FOOD, portion_value)
 end
 
 ---create a Drink job for the given unit
@@ -86,11 +118,22 @@ end
 ---create Eat job for the given unit
 ---@param unit df.unit
 local function goEat(unit)
-    local meal = get_closest_meal(unit.pos)
-    if not meal then
+    local meal_stack = get_best_meal(unit.pos)
+    if not meal_stack then
         -- print('no accessible meals found')
         return
     end
+
+    ---@type df.item|df.item_foodst
+    local meal
+    if meal_stack.stack_size > 1 then
+        meal = meal_stack:splitStack(1, true)
+        meal:categorize(true)
+    else
+        meal = meal_stack
+    end
+    dfhack.items.setOwner(meal, unit)
+
     local job = idle.make_job()
     job.job_type = df.job_type.Eat
     job.flags.special = true
@@ -103,6 +146,25 @@ local function goEat(unit)
     dfhack.job.addWorker(job, unit)
     local name = dfhack.units.getReadableName(unit)
     print(dfhack.df2console('immortal-cravings: %s is getting something to eat'):format(name))
+end
+
+---unit is ready to take jobs (will interrupt social activities)
+---@param unit df.unit
+---@return boolean
+function unitIsAvailable(unit)
+    if unit.job.current_job then
+        return false
+    elseif #unit.individual_drills > 0 then
+        return false
+    elseif unit.flags1.caged or unit.flags1.chained then
+        return false
+    elseif unit.military.squad_id ~= -1 then
+        local squad = df.squad.find(unit.military.squad_id)
+        -- this lookup should never fail
+        ---@diagnostic disable-next-line: need-check-nil
+        return #squad.orders == 0 and squad.activity == -1
+    end
+    return true
 end
 
 --- script logic
@@ -137,7 +199,7 @@ local threshold = -9000
 
 ---unit loop: check for idle watched units and create eat/drink jobs for them
 local function unit_loop()
-    -- print(('immortal-cravings: running unit loop (%d watched units)'):format(#watched))
+    debug(('immortal-cravings: running unit loop (%d watched units)'):format(#watched))
     ---@type integer[]
     local kept = {}
     for _, unit_id in ipairs(watched) do
@@ -148,7 +210,8 @@ local function unit_loop()
         then
             goto next_unit
         end
-        if not idle.unitIsAvailable(unit) then
+        if not unitIsAvailable(unit) then
+            debug("immortal-cravings: skipping busy"..dfhack.units.getReadableName(unit))
             table.insert(kept, unit.id)
         else
             -- unit is available for jobs; satisfy one of its needs
@@ -166,7 +229,7 @@ local function unit_loop()
     end
     watched = kept
     if #watched == 0 then
-        -- print('immortal-cravings: no more watched units, cancelling unit loop')
+        debug('immortal-cravings: no more watched units, cancelling unit loop')
         repeatutil.cancel(GLOBAL_KEY .. '-unit')
     end
 end
@@ -178,18 +241,21 @@ end
 
 ---main loop: look for citizens with personality needs for food/drink but w/o physiological need
 local function main_loop()
-    -- print('immortal-cravings watching:')
+    debug('immortal-cravings watching:')
     watched = {}
-    for _, unit in ipairs(dfhack.units.getCitizens()) do
-        if not is_active_caste_flag(unit, 'NO_DRINK') and not is_active_caste_flag(unit, 'NO_EAT') then
+    for _, unit in ipairs(dfhack.units.getCitizens(false, false)) do
+        if
+            not (is_active_caste_flag(unit, 'NO_DRINK') or is_active_caste_flag(unit, 'NO_EAT')) or
+            unit.counters2.stomach_content > 0
+        then
             goto next_unit
         end
         for _, need in ipairs(unit.status.current_soul.personality.needs) do
-            if need.id == DrinkAlcohol and need.focus_level < threshold or
-                need.id == EatGoodMeal and need.focus_level < threshold
+            if  need.id == DrinkAlcohol and need.focus_level < threshold or
+                need.id == EatGoodMeal  and need.focus_level < threshold
             then
                 table.insert(watched, unit.id)
-                -- print('  '..dfhack.df2console(dfhack.units.getReadableName(unit)))
+                debug('  '..dfhack.df2console(dfhack.units.getReadableName(unit)))
                 goto next_unit
             end
         end
