@@ -325,9 +325,9 @@ sub generate_dt_ini($$$$) {
     emit_addr 'physical_attrs',%all,'unit','body.physical_attrs';
     emit_addr 'body_size',%all,'unit','appearance.body_modifiers';
     emit_addr 'size_info',%all,'unit','body.size_info';
-    emit_addr 'curse',%all,'unit','curse.name';
-    emit_addr 'curse_add_flags1',%all,'unit','curse.add_tags1';
-    emit_addr 'turn_count',%all,'unit','curse.time_on_site';
+    emit_addr 'curse',%all,'unit','uwss_display_name_sing';
+    emit_addr 'curse_add_flags1',%all,'unit','uwss_add_caste_flag';
+    emit_addr 'turn_count',%all,'unit','usable_interaction.time_on_site';
     emit_addr 'souls',%all,'unit','status.souls';
     emit_addr 'states',%all,'unit','status.misc_traits';
     emit_addr 'labors',%all,'unit','status.labors';

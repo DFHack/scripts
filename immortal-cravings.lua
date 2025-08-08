@@ -172,8 +172,8 @@ local function unit_loop()
 end
 
 local function is_active_caste_flag(unit, flag_name)
-    return not unit.curse.rem_tags1[flag_name] and
-        (unit.curse.add_tags1[flag_name] or dfhack.units.casteFlagSet(unit.race, unit.caste, df.caste_raw_flags[flag_name]))
+    return not unit.uwss_remove_caste_flag[flag_name] and
+        (unit.uwss_add_caste_flag[flag_name] or dfhack.units.casteFlagSet(unit.race, unit.caste, df.caste_raw_flags[flag_name]))
 end
 
 ---main loop: look for citizens with personality needs for food/drink but w/o physiological need

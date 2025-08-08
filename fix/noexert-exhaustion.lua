@@ -5,10 +5,10 @@
 --Running this script on repeat approximately at least every 350 ticks should prevent NOEXERT units from becoming Tired as a result of Individual Combat Drill.
 
 function isNoExert(u)
-    if(u.curse.rem_tags1.NOEXERT) then --tag removal overrides tag addition, so if the NOEXERT tag is removed the unit cannot be NOEXERT.
+    if(u.uwss_remove_caste_flag.NOEXERT) then --tag removal overrides tag addition, so if the NOEXERT tag is removed the unit cannot be NOEXERT.
         return false
     end
-    if(u.curse.add_tags1.NOEXERT) then--if the tag hasn't been removed, and the unit has a curse that adds it, they must be NOEXERT.
+    if(u.uwss_add_caste_flag.NOEXERT) then--if the tag hasn't been removed, and the unit has a curse that adds it, they must be NOEXERT.
         return true
     end
     if(dfhack.units.casteFlagSet(u.race,u.caste, df.caste_raw_flags.NOEXERT)) then --if the tag hasn't been added or removed, but their race and caste has the tag, they're NOEXERT.

@@ -16,11 +16,7 @@ Template for new versions:
 
 ## New Features
 
-- `gui/design`: add option to draw N-point stars, hollow or filled or inverted, and change the main axis to orient in any direction
-
 ## Fixes
-
-- `gui/design`: prevent line thickness from extending outside the map boundary
 
 ## Misc Improvements
 
@@ -31,6 +27,76 @@ Template for new versions:
 # Future
 
 ## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 52.03-r1
+
+## New Tools
+
+## New Features
+
+## Fixes
+- `make-legendary`: ``make-legendary all`` will no longer corrupt souls
+
+## Misc Improvements
+
+## Removed
+
+# 52.02-r2
+
+## New Tools
+
+## New Features
+- `gui/mod-manager`: now supports arena mode
+
+## Fixes
+- `gui/mod-manager`: gracefully handle vanilla mods with different versions from the user's preset
+- `gui/mod-manager`: hide other versions of loaded mods and unhides them when unloaded
+
+## Misc Improvements
+
+## Removed
+
+# 52.02-r1
+
+## New Tools
+
+## New Features
+
+## Fixes
+- ``embark-anyone``: validate viewscreen before using, avoids a crash
+
+## Misc Improvements
+
+## Removed
+
+# 52.01-r1
+
+## New Tools
+
+## New Features
+
+## Fixes
+- fixed references to removed ``unit.curse`` compound
+- `gui/gm-unit`: remove reference to ``think_counter``, removed in v51.12
+- `gui/journal`: fix typo which caused the table of contents to always be regenerated even when not needed
+- `gui/mod-manager`: gracefully handle mods with missing or broken ``info.txt`` files
+- `uniform-unstick`: resolve overlap with new buttons in 51.13
+
+## Misc Improvements
+
+## Removed
+
+# 51.12-r1
+
+## New Tools
 - `deteriorate`: (reinstated) allow corpses, body parts, food, and/or damaged clothes to rot away
 - `modtools/moddable-gods`: (reinstated) create new deities from scratch
 
@@ -38,15 +104,15 @@ Template for new versions:
 - `gui/spectate`: added "Prefer nicknamed" to the list of options
 - `gui/mod-manager`: when run in a loaded world, shows a list of active mods -- click to export the list to the clipboard for easy sharing or posting
 - `gui/blueprint`: now records zone designations
+- `gui/design`: add option to draw N-point stars, hollow or filled or inverted, and change the main axis to orient in any direction
 
 ## Fixes
 - `starvingdead`: properly restore to correct enabled state when loading a new game that is different from the first game loaded in this session
 - `starvingdead`: ensure undead decay does not happen faster than the declared decay rate when saving and loading the game
+- `gui/design`: prevent line thickness from extending outside the map boundary
 
 ## Misc Improvements
 - `remove-stress`: also applied to long-term stress, immediately removing stressed and haggard statuses
-
-## Removed
 
 # 51.11-r1
 

@@ -343,10 +343,11 @@ local MIN_WIDTH = 26
 EquipOverlay = defclass(EquipOverlay, overlay.OverlayWidget)
 EquipOverlay.ATTRS{
     desc='Adds a link to the equip screen to fix equipment conflicts.',
-    default_pos={x=7,y=21},
+    default_pos={x=7,y=23},
     default_enabled=true,
     viewscreens='dwarfmode/Squads/Equipment/Default',
     frame={w=MIN_WIDTH, h=1},
+    version=1
 }
 
 function EquipOverlay:init()
