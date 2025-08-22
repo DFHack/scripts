@@ -244,6 +244,7 @@ function Spectate:init()
 
         create_row({t=27}, 'Job', 'J', 'job', colFollow, colHover),
         create_row({t=28}, 'Activity', 'A', 'activity', colFollow, colHover),
+        create_row({t=27}, 'Research', 'R', 'research', colFollow, colHover),
         create_row({t=29}, 'Name', 'N', 'name', colFollow, colHover),
         create_row({t=30}, 'Stress', 'S', 'stress', colFollow, colHover),
         create_stress_list({t=31}, colFollow, colHover),
