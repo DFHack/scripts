@@ -34,6 +34,9 @@ Template for new versions:
 
 ## Misc Improvements
 
+- adapt Lua tools to use new API functionality for creating and assigning jobs
+- `idle-crafting`: properly interrupt interruptible (i.e. "green") social activities
+
 ## Removed
 
 # 52.03-r2

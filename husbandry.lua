@@ -4,9 +4,8 @@
 
 local utils = require 'utils'
 local repeatutil = require("repeat-util")
-local ic = reqscript('idle-crafting')
 
-local verbose = true
+local verbose = false
 ---conditional printing of debug messages
 ---@param message string
 local function debug(message)
@@ -120,17 +119,17 @@ local function getAppropriateWorkshop(unit, collection)
 end
 
 local function shearCreature(unit, workshop)
-    local job = ic.make_job()
+    local job = dfhack.job.createLinked()
     job.job_type = df.job_type.ShearCreature
     dfhack.job.addGeneralRef(job, df.general_ref_type.UNIT_SHEAREE, unit.id)
-    ic.assignToWorkshop(job, workshop)
+    dfhack.job.assignToWorkshop(job, workshop)
 end
 
 local function milkCreature(unit, workshop)
-    local job = ic.make_job()
+    local job = dfhack.job.createLinked()
     job.job_type = df.job_type.MilkCreature
     dfhack.job.addGeneralRef(job, df.general_ref_type.UNIT_MILKEE, unit.id)
-    ic.assignToWorkshop(job, workshop)
+    dfhack.job.assignToWorkshop(job, workshop)
 end
 
 

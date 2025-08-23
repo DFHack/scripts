@@ -1,7 +1,6 @@
 --@enable = true
 --@module = true
 
-local idle = reqscript('idle-crafting')
 local repeatutil = require("repeat-util")
 
 --- utility functions
@@ -101,7 +100,7 @@ local function goDrink(unit)
         -- print('no accessible drink found')
         return
     end
-    local job = idle.make_job()
+    local job = dfhack.job.createLinked()
     job.job_type = df.job_type.DrinkItem
     job.flags.special = true
     local dx, dy, dz = dfhack.items.getPosition(drink)
@@ -134,7 +133,7 @@ local function goEat(unit)
     end
     dfhack.items.setOwner(meal, unit)
 
-    local job = idle.make_job()
+    local job = dfhack.job.createLinked()
     job.job_type = df.job_type.Eat
     job.flags.special = true
     local dx, dy, dz = dfhack.items.getPosition(meal)
@@ -146,25 +145,6 @@ local function goEat(unit)
     dfhack.job.addWorker(job, unit)
     local name = dfhack.units.getReadableName(unit)
     print(dfhack.df2console('immortal-cravings: %s is getting something to eat'):format(name))
-end
-
----unit is ready to take jobs (will interrupt social activities)
----@param unit df.unit
----@return boolean
-function unitIsAvailable(unit)
-    if unit.job.current_job then
-        return false
-    elseif #unit.individual_drills > 0 then
-        return false
-    elseif unit.flags1.caged or unit.flags1.chained then
-        return false
-    elseif unit.military.squad_id ~= -1 then
-        local squad = df.squad.find(unit.military.squad_id)
-        -- this lookup should never fail
-        ---@diagnostic disable-next-line: need-check-nil
-        return #squad.orders == 0 and squad.activity == -1
-    end
-    return true
 end
 
 --- script logic
@@ -210,7 +190,7 @@ local function unit_loop()
         then
             goto next_unit
         end
-        if not unitIsAvailable(unit) then
+        if not dfhack.units.isJobAvailable(unit) then
             debug("immortal-cravings: skipping busy"..dfhack.units.getReadableName(unit))
             table.insert(kept, unit.id)
         else
@@ -245,21 +225,13 @@ local function main_loop()
     watched = {}
     for _, unit in ipairs(dfhack.units.getCitizens(false, false)) do
         if
-            not (is_active_caste_flag(unit, 'NO_DRINK') or is_active_caste_flag(unit, 'NO_EAT')) or
-            unit.counters2.stomach_content > 0
+            (is_active_caste_flag(unit, 'NO_DRINK') or is_active_caste_flag(unit, 'NO_EAT')) and
+            unit.counters2.stomach_content == 0 and
+            dfhack.units.getFocusPenalty(unit, DrinkAlcohol, EatGoodMeal) < threshold
         then
-            goto next_unit
+            table.insert(watched, unit.id)
+            debug('  ' .. dfhack.df2console(dfhack.units.getReadableName(unit)))
         end
-        for _, need in ipairs(unit.status.current_soul.personality.needs) do
-            if  need.id == DrinkAlcohol and need.focus_level < threshold or
-                need.id == EatGoodMeal  and need.focus_level < threshold
-            then
-                table.insert(watched, unit.id)
-                debug('  '..dfhack.df2console(dfhack.units.getReadableName(unit)))
-                goto next_unit
-            end
-        end
-        ::next_unit::
     end
 
     if #watched > 0 then
