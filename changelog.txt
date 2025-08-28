@@ -33,6 +33,7 @@ Template for new versions:
 ## Fixes
 
 ## Misc Improvements
+- `caravan`: the ``Bring goods to depot``, ``Trade``, and ``Assign items for display`` screens now allow searching for items with non-ASCII characters in their description
 
 ## Removed
 
