@@ -44,12 +44,12 @@ local selected_unit = dfhack.gui.getSelectedUnit()
 if unit then
     local research_data_list = {}
     for i, unit in pairs(dfhack.units.getCitizens()) do
-        
+
         if selected_unit and selected_unit.id ~= unit.id then
             goto continue
         end
 
-        local historical_figure = researchInfo.getHistoricalFigure(unit.id)
+        local historical_figure = df.historical_figure.find(unit.hist_figure_id)
         if historical_figure then
             local research_data, error_msg = researchInfo.getResearchData(historical_figure)
             if research_data then

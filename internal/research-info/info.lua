@@ -40,7 +40,6 @@ function getGoalInfo(goal, category)
         return goal_info
     end
 
-    local goal_info = ""
     for i = 0, 31 do
         if goal[i] then
             local global_flag_index = category * 32 + i -- wizards move
@@ -59,7 +58,7 @@ local function getTopicInfo(topic)
 
     for key, value in pairs(topic) do
         if type(value) == "boolean" and value then
-            -- Если значение булевое и равно true, выводим тему как изученную
+            -- show learned topics
             topic_info = topic_info .. string.format("\n\t\t%s", key)
         end
     end
@@ -102,10 +101,8 @@ end
 function getResearchData(historical_figure)
     local knowledge = getHistoricKnowledge(historical_figure)
     local data = {
-
-        name = dfhack.translation.translateName(historical_figure.name), --dfhack.translation.TranslateName(historical_figure.name),
+        name = dfhack.translation.translateName(historical_figure.name),
         knowledge_goal_category = getKnowledgeGoalCategoryInfo(knowledge.knowledge_goal_category),
-        --knowledge_goal = getGoalInfo(knowledge.knowledge_goal),
         knowledge_goal = getGoalInfo(knowledge.knowledge_goal, knowledge.knowledge_goal_category),
         research_points = knowledge.research_points,
         research_percentage = string.format("%.2f", (knowledge.research_points / 100000) * 100),
