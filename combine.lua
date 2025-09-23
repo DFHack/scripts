@@ -9,6 +9,7 @@ local opts, args = {
     types = nil,
     quiet = false,
     verbose = 0,
+    override = nil,
   }, {...}
 
 -- TODO:
@@ -167,6 +168,10 @@ local function stack_type_new(type_vals)
     -- attributes from the type val table
     for k,v in pairs(type_vals) do
         stack_type[k] = v
+    end
+
+    if opts.override then
+        stack_type.max_stack_qty = opts.override
     end
 
     -- item info
@@ -785,6 +790,7 @@ local function parse_commandline(opts, args)
             {'d', 'dry-run', handler=function() opts.dry_run = true end},
             {'q', 'quiet', handler=function() opts.quiet = true end},
             {'v', 'verbose', hasArg=true, handler=function(optarg) opts.verbose = math.tointeger(optarg) or 0 end},
+            {'o', 'override', hasArg=true, handler=function(optarg) opts.override = math.tointeger(optarg) or 0 end}
     })
 
     -- if stockpile option is not specificed, then default to all
