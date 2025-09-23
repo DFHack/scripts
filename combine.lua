@@ -19,7 +19,6 @@ local opts, args = {
 -- - Combine partial bars in smelters.
 -- - Combine thread, quality of thread.
 -- - Quality for food, currently ignoring.
--- - Override stack size; armok option.
 -- - Override container limits; quantum containers armok option.
 
 -- list of types that use race and caste
