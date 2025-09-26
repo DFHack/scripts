@@ -42,6 +42,8 @@ Template for new versions:
 - `uniform-unstick`: the ``--all`` and ``--drop`` options, when used together, now print the separator line between each unit's report in the proper place
 
 ## Misc Improvements
+- `caravan`: the ``Bring goods to depot``, ``Trade``, and ``Assign items for display`` overlays now allow searching for items with non-ASCII characters in their description
+- `caravan`: the ``Trade`` overlay will use the trader's appraisal skill instead of the broker's to round/obfuscate the value of items
 
 - adapt Lua tools to use new API functionality for creating and assigning jobs
 - `idle-crafting`: properly interrupt interruptible (i.e. "green") social activities
