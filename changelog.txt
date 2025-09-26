@@ -32,6 +32,7 @@ Template for new versions:
 - `store-owned`: task owned items to be stored in the owner's room furniture
 
 ## New Features
+- `combine`: added functionality to override the max stack quantity
 
 ## Fixes
 - `ban-cooking`: bans honey added by creatures other than vanilla honey bee
