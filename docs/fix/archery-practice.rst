@@ -2,63 +2,66 @@ fix/archery-practice
 ====================
 
 .. dfhack-tool::
-    :summary: Consolidate and remove extra ammo items to fix 'Soldier (no item)' issue.
+    :summary: Fix quivers and training ammo items to allow archery practice to take place.
     :tags: fort bugfix items
 
-Combine ammo items inside quivers that are assigned for training to allow
+Make quivers the last item in the inventory of every ranged unit currently
+training and split stacks of ammo items assigned for training inside the
+quivers to ensure each training unit can have more than one stack to allow
 archery practice to take place.
 
 Usage
 -----
 
 ``fix/archery-practice``
-    Combine ammo items inside quivers that are assigned for training.
+    Move quivers to the end of units' inventory list and split stacks of
+    training ammo items inside the quivers.
 
 ``fix/archery-practice -q``, ``fix/archery-practice --quiet``
-    Combine ammo items inside quivers that are assigned for training.
-    Do not print to console.
+    Move quivers to the end of units' inventory list and split stacks of
+    training ammo items inside the quivers. Do not print to console.
 
-This tool will combine ammo items inside the quivers of units in squads
-that are currently set to train with the objective of ensuring that each
-unit hold only one combined stack of ammo item assigned for training in
-their quiver. Any ammo items left over after the combining operation
-will be dropped on the ground.
+This tool will set quivers as the last item in the inventory of units in
+squads that are currently set to train as well as split ammo items inside
+their quivers into multiple stacks if a quiver contains only ammo item
+with a stack size of 25 or larger assigned for training. The original
+training ammo item with a reduced stack size will remain in the quiver
+while new ammo items split from it will be placed on the ground where
+the unit is located to be picked up later.
 
-The 'Soldier (no item)' issue
------------------------------
+Why are archers not practicing archery?
+---------------------------------------
 
 Due to a bug in the game, a unit that is scheduled to train will not be
 able to practice archery at the archery range when their quiver contains
-more than one stack of ammo item that is assigned to them for training.
-This is indicated on the unit by the 'Soldier (no item)' status.
+only one stack of ammo item assigned for training. This is sometimes
+indicated on the unit by the 'Soldier (no item)' status.
 
-The issue occurs when the game assigns an ammo item with a stack size of
-less than 25 to the unit, prompting the game to assign additional stacks
-of ammo items to make up for the deficit.
+During versions 52.03 and 52.04, the issue was the complete reverse;
+units would not practice when their quivers contained more than one
+stack of ammo items assigned for training.
 
-The workaround to this issue is to ensure the squad ammo assignments
-for use in training contain as few ammo items with stack sizes smaller
-than 25 as possible. Since training bolts are often made from wood or
-bone which are created in stacks of 5, the use of the  ``combine`` tool on
-ammo stockpiles is recommended to reduce the frequency of this issue
-occurring, while "incomplete" stacks of ammo items that are already
-picked up by training units can be managed by this tool.
+Another issue in 52.05 is that units will not practice archery if their
+quiver is not the last item in their inventory.
 
-Any other stacks of ammo items inside the quiver that are not assigned
-for training will not affect the unit's ability to practice archery.
-
-As of DF version 52.05, this bug should already be fixed.
+This tool provides an interim remedy by moving quivers to the end of
+every training unit's inventory list and splitting stacks of ammo items
+inside their quivers to prompt the game to give them multiple stacks
+of training ammo items.
 
 Limitations
 -----------
 
-Due to the very limited number of ammo items a unit's quiver might contain,
-the material, quality, and maker of the items are ignored when performing
-the combining operation on them. Only ammo items assigned for training will
-be combined, while ammo items inside the quiver that are assigned for combat
-will not be affected.
+The game has a tendency to reshuffle the squad's ammo/unit pairings if
+the newly split ammo items are force paired to the units holding the
+original ammo item. As a compromise, the new items are placed on the
+ground instead and added to the squad's training ammo assignment pool,
+so that the game can distribute the items normally without causing the
+pairing for ammo items already in quivers to be reshuffled.
 
-Although this tool will consolidate ammo items inside quivers and discard
-any surplus items, the training units may not immediately go for archery
-practice, especially if they are still trying to collect more ammo items
-that the game have assigned to them.
+Although this tool would allow units to practice archery, the activity
+will still be aborted once they have only one stack of training ammo
+item remaining in their quivers. Practicing units will gain skill from
+practice, but not the positive thought they would have gained from
+having completed the activity. Once the game assigns more training
+ammo items to them, they can continue practicing archery.

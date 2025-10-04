@@ -31,6 +31,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `fix/archery-practice`: now splits instead of combining ammo items in quivers, and moves quivers to end of unit's inventory list
 
 ## Misc Improvements
 

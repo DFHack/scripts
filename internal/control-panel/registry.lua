@@ -74,8 +74,8 @@ COMMANDS_BY_IDX = {
     -- can be restored here once we solve issue #4292
     -- {command='craft-age-wear', help_command='tweak', group='bugfix', mode='tweak', default=true,
     --     desc='Allows items crafted from organic materials to wear out over time.'},
-    {command='fix/archery-practice', group='bugfix', mode='repeat',
-        desc='Consolidate ammo items inside quivers to allow archery practice to take place.',
+    {command='fix/archery-practice', group='bugfix', mode='repeat', default=true,
+        desc='Fix quivers and training ammo items to allow archery practice to take place.',
         params={'--time', '449', '--timeUnits', 'ticks', '--command', '[', 'fix/archery-practice', '-q', ']'}},
     {command='fix/blood-del', group='bugfix', mode='run', default=true},
     {command='fix/dead-units', group='bugfix', mode='repeat', default=true,

@@ -1,4 +1,4 @@
--- Consolidate and remove extra ammo items to fix 'Soldier (no item)' issue.
+-- Fix quivers and training ammo items to allow archery practice to take place.
 
 local argparse = require("argparse")
 local utils = require('utils')
@@ -8,7 +8,7 @@ local function GetTrainingSquads()
     for _, squad in ipairs(df.global.world.squads.all) do
         if squad.entity_id == df.global.plotinfo.group_id then
             if #squad.ammo.ammunition > 0 and squad.activity ~= -1 then
-                trainingSquads[#trainingSquads + 1] = squad
+                table.insert(trainingSquads, squad)
             end
         end
     end
@@ -33,13 +33,16 @@ local function GetTrainingAmmo(quiver, squad)
             local containedAmmo = generalRef
             local ammoItem = containedAmmo and df.item.find(containedAmmo.item_id)
             if isTrainingAmmo(ammoItem, squad) then
-                trainingAmmo[#trainingAmmo + 1] = ammoItem
+                table.insert(trainingAmmo, ammoItem)
             end
         end
     end
     return trainingAmmo
 end
 
+--[[ The following functions are commented out because the nature
+-- of the bug has changed, requiring a different solution.
+-- More info: https://discord.com/channels/793331351645323264/873014631315148840/1423311023254933576
 local function UnassignAmmo(trainingAmmo, itemToKeep, itemsToRemove, squad, unit)
     local plotEqAssignedAmmo = df.global.plotinfo.equipment.items_assigned.AMMO
     local plotEqUnassignedAmmo = df.global.plotinfo.equipment.items_unassigned.AMMO
@@ -139,35 +142,124 @@ local function ConsolidateAmmo(trainingAmmo, squad, unit)
         end
     end
 end
+-- End of commented out functions ]]
+
+-- Currently, only assignment to squad is practical, as pairing ammo items with
+-- units directly has a tendency to cause the game to reshuffle the pairings.
+local function AssignAmmoToSquad(newItems, item, squad)
+    local plotEqAssignedAmmo = df.global.plotinfo.equipment.items_assigned.AMMO
+    local assignedAmmo
+    for _, ammoSpec in ipairs(squad.ammo.ammunition) do
+        if utils.linear_index(ammoSpec.assigned, item.id) then
+            assignedAmmo = ammoSpec
+            break
+        end
+    end
+    for _, newItem in ipairs(newItems) do
+        assignedAmmo.assigned:insert('#', newItem.id)
+        utils.sort_vector(assignedAmmo.assigned)
+        plotEqAssignedAmmo:insert('#', newItem.id)
+        utils.sort_vector(plotEqAssignedAmmo)
+    end
+end
+
+local function SplitAmmo(item, squad, unit)
+    local newItems = {}
+    repeat
+        local items = dfhack.items.createItem(
+            unit,
+            dfhack.items.findType('AMMO'),
+            item.subtype.subtype,
+            item.mat_type,
+            item.mat_index
+        )
+        if items then
+            for _, newItem in ipairs(items) do
+                newItem:setStackSize(5)
+                newItem.maker_race = item.maker_race
+                newItem:setQuality(item.quality)
+                newItem.skill_rating = item.skill_rating
+                newItem.maker = item.maker
+                newItem.masterpiece_event = item.masterpiece_event
+                table.insert(newItems, newItem)
+            end
+        end
+        item:setStackSize(item.stack_size - 5)
+    until item.stack_size <= 5
+    AssignAmmoToSquad(newItems, item, squad)
+end
+
+local function RemoveQuiverFromInv(unit, quiver)
+    local equippedQuiver
+    for i, v in ipairs (unit.inventory) do
+        -- Remove quiver only if it's not the last item in the inventory.
+        if v.item == quiver and i ~= (#unit.inventory - 1) then
+            equippedQuiver = v
+        end
+    end
+    if equippedQuiver then
+        local idx = utils.linear_index(unit.inventory, equippedQuiver)
+        unit.inventory:erase(idx)
+        return true
+    end
+    return false
+end
+
+local function MoveQuiverToEnd(unit, quiver)
+    local caste = dfhack.units.getCasteRaw(unit)
+    local bodyPart
+    for i, v in ipairs(caste.body_info.body_parts) do
+        if v.category == 'BODY_UPPER' then
+            bodyPart = i
+            break
+        end
+    end
+    if bodyPart then dfhack.items.moveToInventory(quiver, unit, df.inv_item_role_type.Worn, bodyPart) end
+end
 
 local function FixTrainingUnits(trainingSquads, options)
-    local totalTrainingAmmo = 0
-    local consolidateCount = 0
+    local splitAmmoCount = 0
+    local fixQuiverCount = 0
     for _, squad in ipairs(trainingSquads) do
         for _, position in ipairs(squad.positions) do
-            if position.occupant == -1 then goto nextPosition end
-            local unit = df.unit.find(df.historical_figure.find(position.occupant).unit_id)
-            local quiver = unit and df.item.find(position.equipment.quiver)
-            if quiver then
-                local trainingAmmo = GetTrainingAmmo(quiver, squad)
-                if #trainingAmmo > 1 then
-                    if not options.quiet then
-                        local unitName = unit and dfhack.units.getReadableName(unit)
-                        print(('Consolidating training ammo for %s...'):format(unitName))
+            if position.occupant ~= -1 then
+                local unit = df.unit.find(df.historical_figure.find(position.occupant).unit_id)
+                local quiver = unit and df.item.find(position.equipment.quiver)
+                if quiver then
+                    local trainingAmmo = GetTrainingAmmo(quiver, squad)
+                    local unitName = unit and dfhack.units.getReadableName(unit)
+                    if #trainingAmmo == 1 then
+                        local item = trainingAmmo[1]
+                        -- Split ammo if it's the only training ammo item and its stack size is 25 or larger.
+                        if item.stack_size >= 25 then
+                            if not options.quiet then
+                                print(('Splitting training ammo for %s...'):format(unitName))
+                            end
+                            SplitAmmo(item, squad, unit)
+                            splitAmmoCount = splitAmmoCount + 1
+                        end
                     end
-                    totalTrainingAmmo = totalTrainingAmmo + #trainingAmmo
-                    ConsolidateAmmo(trainingAmmo, squad, unit)
-                    consolidateCount = consolidateCount + 1
+                    if RemoveQuiverFromInv(unit, quiver) then
+                        if not options.quiet then
+                            print(('Moving quiver to the end for %s...'):format(unitName))
+                        end
+                        MoveQuiverToEnd(unit, quiver)
+                        fixQuiverCount = fixQuiverCount + 1
+                    end
                 end
             end
-            ::nextPosition::
         end
     end
     if not options.quiet then
-        if consolidateCount > 0 then
-            print(('%d stacks of ammo items in %d quiver(s) consolidated.'):format(totalTrainingAmmo, consolidateCount))
+        if splitAmmoCount > 0 then
+            print(('%d stack(s) of ammo item(s) split into stacks of 5.'):format(splitAmmoCount))
         else
-            print('No stacks of ammo items require consolidation.')
+            print('No ammo items require splitting.')
+        end
+        if fixQuiverCount > 0 then
+            print(('%d quiver(s) moved to the end of each unit\'s inventory list.'):format(fixQuiverCount))
+        else
+            print('No inventories require sorting.')
         end
     end
 end
