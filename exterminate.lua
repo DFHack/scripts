@@ -1,6 +1,8 @@
 --@module = true
 
 local argparse = require('argparse')
+-- for profession constants
+local profession = df.profession
 
 local function spawnLiquid(position, liquid_level, liquid_type, update_liquids)
   local map_block = dfhack.maps.getTileBlock(position)
@@ -28,7 +30,12 @@ local function checkUnit(opts, unit)
     if not opts.include_friendly and not dfhack.units.isDanger(unit) and not dfhack.units.isWildlife(unit) then
         return false
     end
+    -- filter by caste if specified
     if opts.selected_caste and opts.selected_caste ~= df.creature_raw.find(unit.race).caste[unit.caste].caste_id then
+        return false
+    end
+    -- filter only children if requested
+    if opts.children_only and unit.profession ~= profession.CHILD then
         return false
     end
     return true
@@ -167,6 +174,7 @@ local options, args = {
     only_visible = false,
     include_friendly = false,
     limit = -1,
+    children_only = false,
 }, {...}
 
 local positionals = argparse.processArgsGetopt(args, {
@@ -174,6 +182,7 @@ local positionals = argparse.processArgsGetopt(args, {
     {'m', 'method', handler = function(arg) options.method = killMethod[arg:upper()] end, hasArg = true},
     {'o', 'only-visible', handler = function() options.only_visible = true end},
     {'f', 'include-friendly', handler = function() options.include_friendly = true end},
+    {'c', 'children-only', handler = function() options.children_only = true end},
     {'l', 'limit', handler = function(arg) options.limit = argparse.positiveInt(arg, 'limit') end, hasArg = true},
 })
 
