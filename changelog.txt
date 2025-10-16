@@ -33,6 +33,7 @@ Template for new versions:
 ## Fixes
 
 ## Misc Improvements
+- `fix/stuck-squad`: don't require a returning army, verbose and quiet options
 
 ## Removed
 
@@ -178,7 +179,6 @@ Template for new versions:
 
 ## Misc Improvements
 - `remove-stress`: also applied to long-term stress, immediately removing stressed and haggard statuses
-- `fix/stuck-squad`: don't require a returning army, verbose and quiet options
 
 # 51.11-r1
 
