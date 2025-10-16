@@ -12,7 +12,7 @@ tiles or warm tiles). Note that "just damp" tiles will still be highlighted if
 they are otherwise already visible.
 
 You can draw boxes around areas of tiles to alter their aquifer properties, or
-you can use the :kbd:`Ctrl`:kbd:`A`` shortcut to affect entire layers at a time.
+you can use the :kbd:`Ctrl`:kbd:`A` shortcut to affect entire layers at a time.
 
 If you want to see where the aquifer tiles are so you can designate digging,
 please run `gui/reveal`. If you only want to see the aquifer tiles and not

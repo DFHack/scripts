@@ -360,6 +360,24 @@ NOTIFICATIONS_BY_IDX = {
         end,
     },
     {
+        name='auto_train',
+        desc='Notifies when there are no squads set up for training',
+        default=true,
+        dwarf_fn=function()
+            local at = reqscript('autotraining')
+            if (at.isEnabled() and at.checkSquads() == nil) then
+                return {{text="autotraining: no squads selected",pen=COLOR_LIGHTRED}}
+            end
+        end,
+        on_click=function()
+            local message =
+            "You have no squads selected for training.\n"..
+            "You should have a squad set up to be constantly training with about 8 units needed for training.\n"..
+            "Then you can select that squad for training in the config.\n\nWould you like to open the config? Alternatively, simply close this popup to go create a squad."
+            dlg.showYesNoPrompt('Training Squads not configured', message, COLOR_WHITE, function () dfhack.run_command('gui/autotraining') end)
+        end,
+    },
+    {
         name='traders_ready',
         desc='Notifies when traders are ready to trade at the depot.',
         default=true,
