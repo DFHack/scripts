@@ -384,7 +384,7 @@ function Diag:init()
             name = "Reverse",
             type = "bool",
             value = false,
-            key = "CUSTOM_R",
+            key = "CUSTOM_SHIFT_R",
         },
     }
 end
