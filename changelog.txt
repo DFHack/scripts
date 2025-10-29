@@ -36,6 +36,8 @@ Template for new versions:
 - `autotraining`: squads once used for training then disabled now properly are treated as disabled.
 
 ## Misc Improvements
+- `caravan`: the ``Bring goods to depot``, ``Trade``, and ``Assign items for display`` overlays now allow searching for items with non-ASCII characters in their description
+- `caravan`: the ``Trade`` overlay will use the trader's appraisal skill instead of the broker's to round/obfuscate the value of items
 
 ## Removed
 
