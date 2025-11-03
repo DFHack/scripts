@@ -29,6 +29,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `item`: new ``--total-quality`` option for use in conjunction with ``--min-quality`` or ``--max-quality`` to filter items according to their total quality
 
 ## Fixes
 
