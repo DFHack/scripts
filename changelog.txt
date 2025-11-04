@@ -31,6 +31,8 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `gui/design`: designating a single-level stair construction now properly follows the selected stair type.
+- `gui/design`: adjusted conflicting keybinds, diagonal line reverse becoming ``R`` and bottom stair type becoming ``g``.
 
 ## Misc Improvements
 
