@@ -85,7 +85,7 @@ function getUnitTraitCurrent(unit, trait)
   local base = getUnitTraitBase(unit, trait)
   local value = base
   if unit.status.current_soul.personality.temporary_trait_changes ~= nil then
-    value = value + unit.status.current_soul.personality.temporary_trait_changes[trait]
+    value = value + unit.status.current_soul.personality.temporary_trait_changes.traits[trait]
   end
 
   return value
