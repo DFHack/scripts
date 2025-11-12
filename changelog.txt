@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `gui/siegemanager`: manage your siege engines at a glance.
 
 ## New Features
 
