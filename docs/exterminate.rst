@@ -36,6 +36,9 @@ Examples
     Kill all non-friendly creatures.
 ``exterminate all:MALE``
     Kill all non-friendly male creatures.
+``exterminate all --children-only``
+    Kill only non-friendly child units. Helpful for automated cleanup routines
+    that run on a schedule.
 
 Options
 -------
@@ -49,6 +52,10 @@ Options
     Specifies the tool should also kill units friendly to the player.
 ``-l``, ``--limit <num>``
     Set the maximum number of units to exterminate.
+``-c``, ``--children-only``
+    Target only child units. Useful for timer-based automation scripts
+    that periodically remove wandering poults or other child creatures
+    that may endanger dwarven children.
 
 Methods
 -------
