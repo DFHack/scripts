@@ -36,9 +36,9 @@ Examples
     Kill all non-friendly creatures.
 ``exterminate all:MALE``
     Kill all non-friendly male creatures.
-``exterminate all --children-only``
-    Kill only non-friendly child units. Helpful for automated cleanup routines
-    that run on a schedule.
+``exterminate -f -c bird_turkey -m knockout`
+    Target all turkey children on the map, including friendly ones, and put them
+    into an unconscious state.
 
 Options
 -------
