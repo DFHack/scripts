@@ -168,9 +168,9 @@ function getUnitCasteTraitRange(unit, trait)
   local caste = dfhack.units.getCasteRaw(unit)
   local range = {}
 
-  range.min = caste.personality.a[df.personality_facet_type[trait]]
-  range.mid = caste.personality.b[df.personality_facet_type[trait]]
-  range.max = caste.personality.c[df.personality_facet_type[trait]]
+  range.min = caste.personality.min[df.personality_facet_type[trait]]
+  range.mid = caste.personality.med[df.personality_facet_type[trait]]
+  range.max = caste.personality.max[df.personality_facet_type[trait]]
 
   return range
 end
