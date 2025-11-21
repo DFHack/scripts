@@ -127,7 +127,7 @@ local function add_nearby_items(job)
 
     local count = 0
     for_each_item_in_radius(x, y, z, state.radius, function(it)
-        if it ~= target and not it.flags.in_job and it.flags.on_ground and not it.flags.forbid and 
+        if it ~= target and not it.flags.in_job and it.flags.on_ground and not it.flags.forbid and
                 not it:isWheelbarrow() and not dfhack.items.isRouteVehicle(it) and
                 not is_stockpiled(it) and matches(it) then
             dfhack.job.attachJobItem(job, it, df.job_role_type.Hauled, -1, -1)
