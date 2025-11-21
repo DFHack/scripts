@@ -3,9 +3,9 @@ multihaul
 
 .. dfhack-tool::
     :summary: Haulers gather multiple nearby items when using wheelbarrows.
-    :tags: fort productivity items stockpile
+    :tags: fort gameplay items stockpile
 
-This tool allows dwarves to collect several adjacent items at once when
+This tool allows dwarves to collect several adjacent non-forbidden items at once when
 performing hauling jobs with a wheelbarrow. When enabled, new
 ``StoreItemInStockpile`` jobs with wheelbarrows will automatically attach nearby items so
 they can be hauled in a single trip. Jobs without wheelbarrows would try to attach one if autowheelbarrows option is on.
