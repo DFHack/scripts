@@ -57,6 +57,57 @@ function PetitionersOverlay:init()
         },
     }
 end
+local skill_color_ranges = {
+    {0, 0, COLOR_GREY},                 -- MINING
+    {1, 2, COLOR_BROWN},                 -- Woodcutting / Carpentry
+    {3, 4, COLOR_BROWN},                 -- Engrave / Masonry
+    {5, 23, COLOR_YELLOW},               -- Cooking / artisan crafting
+    {24, 28, COLOR_ORANGE},              -- Smelt / forge
+    {29, 30, COLOR_CYAN},                -- Gem cutting / encrusting
+    {31, 36, COLOR_BROWN},               -- Crafting
+    {37, 53, COLOR_RED},                 -- Weapon skills
+    {54, 56, COLOR_MAGENTA},             -- Mechanics, magic, sneak
+    {57, 62, COLOR_LIME},                -- Medical skills (healing green)
+    {63, 69, COLOR_TAN},                 -- Odd jobs
+    {70, 82, COLOR_BLUE},                -- Social skills
+    {83, 87, COLOR_PURPLE},              -- Inner skills like discipline
+    {88, 91, COLOR_MAGENTA},             -- Writing / Poetry / Reading
+    {92, 96, COLOR_BLUE},                -- Teaching / Leadership
+    {97, 106, COLOR_DARKRED},            -- Military skills
+    {107, 113, COLOR_BROWN},             -- Artisan odd jobs
+    {114, 115, COLOR_GREEN},             -- Climbing / Gelding
+    {116, 122, COLOR_MAGENTA},           -- Artistic skills
+    {123, 130, COLOR_TEAL},              -- Thinking / Engineering
+    {131, 132, COLOR_MAGENTA},           -- Papermaking / bookbinding
+    {133, 134, COLOR_BROWN},             -- Cut / carve stone
+}
+
+
+local function get_skill_color(skill_id)
+    if not skill_id then return COLOR_GREY end
+    for _, range in ipairs(skill_color_ranges) do
+        local min_id, max_id, color = table.unpack(range)
+        if skill_id >= min_id and skill_id <= max_id then
+            return color
+        end
+    end
+    return COLOR_GREY -- fallback
+end
+
+local function get_rating_color(rating)
+    if not rating then return COLOR_GREY end
+    if rating <= 4 then
+        return COLOR_GREY
+    elseif rating <= 8 then
+        return COLOR_WHITE
+    elseif rating <= 12 then
+        return COLOR_YELLOW
+    elseif rating <= 16 then
+        return COLOR_ORANGE
+    else -- 17-20
+        return COLOR_RED
+    end
+end
 
 -- Builds or refreshes the list contents based on the currently selected petition
 function PetitionersOverlay:SetListChoices()
@@ -115,8 +166,8 @@ function PetitionersOverlay:SetListChoices()
                     --local skill_name_pen = COLOR_CYAN       -- for skill name
                     --local skill_rating_pen = COLOR_WHITE    -- for rating
 
-                    table.insert(lines, { text = string.format("%-26s", df.job_skill[skill.id]), pen = COLOR_RED })
-                    table.insert(lines, { text = string.format(" %2d", skill.rating), pen = COLOR_BLUE })
+                    table.insert(lines, { text = string.format("%-26s", df.job_skill[skill.id]), pen = get_skill_color(skill.id) })
+                    table.insert(lines, { text = string.format("%2d", skill.rating), pen = get_rating_color(skill.rating) })
                     table.insert(lines, NEWLINE)
                 end
             end
