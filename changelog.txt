@@ -13,7 +13,6 @@ that repo.
 Template for new versions:
 
 ## New Tools
-- `fix/codex-pages`: add pages to written content that have unspecified page counts.
 
 ## New Features
 
@@ -28,6 +27,19 @@ Template for new versions:
 # Future
 
 ## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 53.07-r1
+
+## New Tools
+- `fix/codex-pages`: add pages to written content that have unspecified page counts.
 - `gui/keybinds`: gui for managing and saving custom keybindings
 
 ## New Features
