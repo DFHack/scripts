@@ -1,7 +1,7 @@
 -- Creates a unit.  Beta; use at own risk.
 
 -- Originally created by warmist
--- Significant contributions over time by Boltgun, Dirst, Expwnent, lethosor, mifki, Putnam, Atomic Chicken and Shim-Panze.
+-- Significant contributions over time by Boltgun, Dirst, Expwnent, lethosor, mifki, Putnam, Atomic Chicken, Shim-Panze, and Topples.
 
 --[[
   TODO
@@ -173,7 +173,7 @@ local function apply_skills(unit, skillDetails)
     local id = sk.skill -- should already be a df.job_skill value
     local level = tonumber(sk.level) or 0
     if level > 0 then
-      -- find existing
+      -- find existing if creature has innate skill
       local found = nil
       for _, us in ipairs(soul.skills) do
         if us.id == id then found = us; break end
@@ -578,7 +578,6 @@ function nameUnit(unit, entityRawName)
     hf.name:assign(name)
     hf.name.has_name = true
   end
-  print("has_name:", unit.name.has_name, "first_name:", unit.name.first_name)
 end
 
 function getItemTypeFromStr(itemTypeStr)
