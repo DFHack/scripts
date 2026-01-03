@@ -1012,4 +1012,3 @@ if args.name then
 end
 
 createUnit(args.race, args.caste, pos, locationRange, args.locationType, args.age, args.domesticate, civ_id, group_id, entityRawName, args.nick, args.duration, args.quantity, args.equip, args.skills, args.profession, args.customProfession, args.flagSet, args.flagClear)
-
