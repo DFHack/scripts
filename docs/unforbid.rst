@@ -27,3 +27,6 @@ Options
 
 ``-X``, ``--include-worn``
     Include worn (X) and tattered (XX) items when unforbidding.
+
+``-m``, ``--metal-only``
+    Only unforbid items made of metal.

@@ -2,7 +2,7 @@
 
 local argparse = require('argparse')
 
-local function unforbid_all(include_unreachable, quiet, include_worn)
+local function unforbid_all(include_unreachable, quiet, include_worn, metal_only)
     local p
     if quiet then p=function(s) return end; else p=function(s) return print(s) end; end
     p('Unforbidding all items...')
@@ -31,6 +31,14 @@ local function unforbid_all(include_unreachable, quiet, include_worn)
                 goto skipitem
             end
 
+            if metal_only then
+                local matinfo = dfhack.matinfo.decode(item)
+                if not matinfo or not matinfo.material.flags.IS_METAL then
+                    p(('  not metal: %s (skipping)'):format(item))
+                    goto skipitem
+                end
+            end
+
             p(('  unforbid: %s'):format(item))
             item.flags.forbid = false
             count = count + 1
@@ -47,7 +55,8 @@ local options, args = {
     help = false,
     quiet = false,
     include_unreachable = false,
-    include_worn = false
+    include_worn = false,
+    metal_only = false
 }, {...}
 
 local positionals = argparse.processArgsGetopt(args, {
@@ -55,6 +64,7 @@ local positionals = argparse.processArgsGetopt(args, {
     { 'q', 'quiet', handler = function() options.quiet = true end },
     { 'X', 'include-worn', handler = function() options.include_worn = true end},
     { 'u', 'include-unreachable', handler = function() options.include_unreachable = true end },
+    { 'm', 'metal-only', handler = function() options.metal_only = true end },
 })
 
 if positionals[1] == nil or positionals[1] == 'help' or options.help then
@@ -63,5 +73,5 @@ if positionals[1] == nil or positionals[1] == 'help' or options.help then
 end
 
 if positionals[1] == 'all' then
-    unforbid_all(options.include_unreachable, options.quiet, options.include_worn)
+    unforbid_all(options.include_unreachable, options.quiet, options.include_worn, options.metal_only)
 end
