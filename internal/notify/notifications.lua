@@ -334,8 +334,64 @@ local function save_popup()
     end
 end
 
+local function get_units_with_missing_nemesis_records()
+    local namelist = {}
+    for _, unit in ipairs(df.global.world.units.active) do
+        local ref = dfhack.units.getGeneralRef(unit, df.general_ref_type.IS_NEMESIS)
+        if ref then
+            local nrec = ref:getNemesis()
+            if nrec == nil then
+                table.insert(namelist, dfhack.units.getReadableName(unit))
+            end
+        end
+    end
+    return namelist
+end
+
 -- the order of this list controls the order the notifications will appear in the overlay
 NOTIFICATIONS_BY_IDX = {
+    {
+        name='missing_nemesis',
+        desc='Reports missing nemesis records, indicating savegame corruption.',
+        default=true,
+        fn = function()
+            local count = df.global.nemesis_next_id - #df.global.world.nemesis.all
+            if count == 0 then return end
+            return { {
+                pen = COLOR_LIGHTRED,
+                text = ('missing %d nemesis record%s'):format(count, count == 1 and '' or 's'),
+            } }
+        end,
+        on_click=function()
+            local message = {
+                { pen = COLOR_RED,   text = 'This save game may be corrupt.' }, NEWLINE,
+                NEWLINE,
+                { pen = COLOR_WHITE, text = 'This save game contains units which are missing' }, NEWLINE,
+                { pen = COLOR_WHITE, text = 'their assigned nemesis records.' }, NEWLINE,
+                NEWLINE,
+                { pen = COLOR_WHITE, text = 'Missing nemesis records have been known to cause' }, NEWLINE,
+                { pen = COLOR_WHITE, text = 'crashes during game save and when retiring forts.' }, NEWLINE,
+                NEWLINE,
+                { pen = COLOR_WHITE, text = 'Units with missing nemesis records will' }, NEWLINE,
+                { pen = COLOR_RED,   text = 'permanently disappear' },
+                { pen = COLOR_WHITE, text =                      ' if they leave the map or' }, NEWLINE,
+                { pen = COLOR_WHITE, text = 'if the fort is retired.' }, NEWLINE,
+                NEWLINE,
+            }
+            local redtext = get_units_with_missing_nemesis_records()
+            if #redtext > 0 then
+                table.insert(message, { pen = COLOR_RED,
+                    text = 'These active units are missing their nemesis records:' })
+                table.insert(message, NEWLINE)
+                for _, line in ipairs(redtext) do
+                    table.insert(message, { pen = COLOR_LIGHTRED, text = '  ' .. line })
+                    table.insert(message, NEWLINE)
+                end
+            end
+            dlg.showMessage((#redtext > 0 and 'Active units are' or 'This world is')
+                .. ' missing nemesis records',message, COLOR_WHITE)
+        end,
+    },
     {
         name='stuck_squad',
         desc='Notifies when a squad is stuck on the world map.',
