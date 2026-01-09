@@ -34,7 +34,8 @@ local json = require('json')
 local gui = require('gui')
 local widgets = require('gui.widgets')
 
-local CONFIG_FILE = 'dfhack-config/quickcmd.json'
+local CONFIG_FILE_OLD = 'dfhack-config/quickcmd.json'
+local CONFIG_FILE = 'dfhack-config/quickcmd-v2.json'
 local HOTKEYWIDTH = 7
 local OUTWIDTH = 4
 local HOTKEYS = 'asdfghjklqwertyuiopzxcvbnm'
@@ -44,19 +45,19 @@ local function save_commands(data)
 end
 
 local function load_commands()
+    -- Try to load from new config file first
     local ok, data = pcall(json.decode_file, CONFIG_FILE)
+    if ok then return data end
+
+    -- New file doesn't exist or is invalid - try old file for migration
+    ok, data = pcall(json.decode_file, CONFIG_FILE_OLD)
     if not ok then return {} end
 
-    -- Migrate old string format to new object format
-    local migrated = false
+    -- Migrate old string format to new object format (in-memory only)
     for i, cmd in ipairs(data) do
         if type(cmd) == 'string' then
             data[i] = {command = cmd, name = '', show_output = false}
-            migrated = true
         end
-    end
-    if migrated then
-        save_commands(data)
     end
 
     return data
