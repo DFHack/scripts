@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `gui/logcleaner`: graphical overlay for configuring the logcleaner plugin with enable and filter toggles.
 
 ## New Features
 
