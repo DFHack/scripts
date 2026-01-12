@@ -18,6 +18,8 @@ Template for new versions:
 
 ## Fixes
 
+- `prioritize`: Fix the overlay appearing where it should not when following a unit
+
 ## Misc Improvements
 
 ## Removed
