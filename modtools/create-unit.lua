@@ -1,7 +1,7 @@
 -- Creates a unit.  Beta; use at own risk.
 
 -- Originally created by warmist
--- Significant contributions over time by Boltgun, Dirst, Expwnent, lethosor, mifki, Putnam, Atomic Chicken and Shim-Panze.
+-- Significant contributions over time by Boltgun, Dirst, Expwnent, lethosor, mifki, Putnam, Atomic Chicken, Shim-Panze, and Topples.
 
 --[[
   TODO
@@ -129,21 +129,7 @@ function createUnit(raceStr, casteStr, pos, locationRange, locationType, age, do
 end
 
 function createUnitBase(...)
-  local old_gametype = df.global.gametype
-  local old_mode = df.global.plotinfo.main.mode
-  local old_popups = {} --as:df.popup_message[]
-  for _, popup in pairs(df.global.world.status.popups) do
-    table.insert(old_popups, popup)
-  end
-  df.global.world.status.popups:resize(0) -- popups would prevent us from opening the creature creation menu, so remove them temporarily
-
   local ok, ret = dfhack.pcall(createUnitInner, ...)
-
-  df.global.gametype = old_gametype
-  df.global.plotinfo.main.mode = old_mode
-  for _, popup in pairs(old_popups) do
-    df.global.world.status.popups:insert('#', popup)
-  end
 
   if not ok then
     error(ret)
@@ -152,122 +138,85 @@ function createUnitBase(...)
   return ret
 end
 
+local function guess_inv_role(item_type)
+  if item_type == df.item_type.WEAPON then
+    return df.inv_item_role_type.Weapon
+  end
+  if item_type == df.item_type.AMMO then
+    return df.inv_item_role_type.Ammo
+  end
+  return df.inv_item_role_type.Worn
+end
+
+local function apply_equipment(unit, equipDetails)
+  if not equipDetails or #equipDetails == 0 then return end
+
+  for _, eq in ipairs(equipDetails) do
+    local count = tonumber(eq.count) or 1
+    local role = guess_inv_role(eq.itemType)
+
+    for _=1,count do
+      local items = dfhack.items.createItem(unit, eq.itemType, eq.subType, eq.matType, eq.matIndex, false)
+      for _, item in ipairs(items) do
+        dfhack.items.moveToInventory(item, unit, role)
+      end
+    end
+  end
+end
+
+local function apply_skills(unit, skillDetails)
+  if not skillDetails or #skillDetails == 0 then return end
+  local soul = unit.status and unit.status.current_soul
+  if not soul then return end
+
+  for _, sk in ipairs(skillDetails) do
+    local id = sk.skill -- should already be a df.job_skill value
+    local level = tonumber(sk.level) or 0
+    if level > 0 then
+      -- find existing if creature has innate skill
+      local found = nil
+      for _, us in ipairs(soul.skills) do
+        if us.id == id then found = us; break end
+      end
+      if not found then
+        found = df.unit_skill:new()
+        found.id = id
+        found.experience = 0
+        soul.skills:insert('#', found)
+      end
+      found.rating = level
+    end
+  end
+end
+
+-- Needed to make the unit "active" in the world.
+function activate_and_place_unit(unit, pos)
+  -- insert to make active or else the unit will remain inactive and invisible
+  df.global.world.units.active:insert('#', unit)
+
+  unit.pos:assign(pos)
+
+  -- update block info
+  local block = dfhack.maps.getTileBlock(pos.x, pos.y, pos.z)
+  if not block then return false end
+  local tx, ty = pos.x % 16, pos.y % 16
+  block.occupancy[tx][ty].unit = true
+
+  -- the only flags needed (probably)
+  unit.flags1.inactive = false
+  unit.flags1.hidden_in_ambush = false
+
+  return true
+end
+
 function createUnitInner(race_id, caste_id, caste_id_choices, pos, locationChoices, locationType, age, domesticate, civ_id, group_id, entityRawName, nickname, vanishDelay, equipDetails, skillDetails, profession, customProfession, flagSet, flagClear, spawnNumber)
-  local gui = require 'gui'
-
-  local view_x = df.global.window_x
-  local view_y = df.global.window_y
-  local view_z = df.global.window_z
-  local cursor = copyall(df.global.cursor)
-
-  local isArena = dfhack.world.isArena()
-  local arenaSpawn = df.global.world.arena_spawn
-
-  local oldSpawnType
-  local oldSpawnFilter
-  oldSpawnType = arenaSpawn.type
-  arenaSpawn.type = 0 -- selects the creature at index 0 when the arena spawn screen is produced
-  oldSpawnFilter = arenaSpawn.filter
-  arenaSpawn.filter = "" -- clear filter to prevent it from messing with the selection
-
--- Clear arena spawn data to avoid interference:
-
-  local oldInteractionEffect
-  oldInteractionEffect = arenaSpawn.interaction
-  arenaSpawn.interaction = -1
-  local oldSpawnTame
-  oldSpawnTame = arenaSpawn.tame
-  arenaSpawn.tame = df.world.T_arena_spawn.T_tame.NotTame -- prevent interference by the tame/mountable setting (which isn't particularly useful as it only appears to set unit.flags1.tame)
-
-  local equipment = arenaSpawn.equipment
-
-  local old_item_types = {} --as:df.item_type[]
-  for _, item_type in pairs(equipment.item_types) do
-    table.insert(old_item_types, item_type)
-  end
-  equipment.item_types:resize(0)
-
-  local old_item_subtypes = {} --as:number[]
-  for _, item_subtype in pairs(equipment.item_subtypes) do
-    table.insert(old_item_subtypes, item_subtype)
-  end
-  equipment.item_subtypes:resize(0)
-
-  local old_item_mat_types = {} --as:number[]
-  for _, item_mat_type in pairs(equipment.item_materials.mat_type) do
-    table.insert(old_item_mat_types, item_mat_type)
-  end
-  equipment.item_materials.mat_type:resize(0)
-
-  local old_item_mat_indexes = {} --as:number[]
-  for _, item_mat_index in pairs(equipment.item_materials.mat_index) do
-    table.insert(old_item_mat_indexes, item_mat_index)
-  end
-  equipment.item_materials.mat_index:resize(0)
-
-  local old_item_counts = {} --as:number[]
-  for _, item_count in pairs(equipment.item_counts) do
-    table.insert(old_item_counts, item_count)
-  end
-  equipment.item_counts:resize(0)
-
-  local old_skills = {} --as:number[]
-  for _, skill in ipairs(equipment.skills) do
-    table.insert(old_skills, skill)
-  end
-  equipment.skills:resize(0)
-
-  local old_skill_levels = {} --as:number[]
-  for _, skill_level in ipairs(equipment.skill_levels) do
-    table.insert(old_skill_levels, skill_level)
-  end
-  equipment.skill_levels:resize(0)
-
--- Spawn the creature:
-
-  arenaSpawn.race:insert(0, race_id) -- place at index 0 to allow for straightforward selection as described above. The rest of the list need not be cleared.
-  if caste_id then
-    arenaSpawn.caste:insert(0, caste_id) -- if not specificied, caste_id is randomly selected and inserted during the spawn loop below, as otherwise creating multiple creatures simultaneously would result in them all being of the same caste.
-  end
-  arenaSpawn.creature_cnt:insert('#', 0)
-
-  local curViewscreen = dfhack.gui.getCurViewscreen()
-  local dwarfmodeScreen = df.viewscreen_dwarfmodest:new() -- the viewscreen present in arena "overseer" mode
-  curViewscreen.child = dwarfmodeScreen
-  dwarfmodeScreen.parent = curViewscreen
-  df.global.plotinfo.main.mode = df.ui_sidebar_mode.LookAround -- produce the cursor
-
-  df.global.gametype = df.game_type.DWARF_ARENA
-
-  if not locationChoices then -- otherwise randomise the cursor location for every unit spawned in the loop below
---  move cursor to location instead of moving unit later, corrects issue of missing mapdata when moving the created unit.
-    df.global.cursor.x = tonumber(pos.x)
-    df.global.cursor.y = tonumber(pos.y)
-    df.global.cursor.z = tonumber(pos.z)
-  end
-
-  if equipDetails then
-    for _, equip in ipairs(equipDetails) do
-      equipment.item_types:insert('#', equip.itemType)
-      equipment.item_subtypes:insert('#', equip.subType)
-      equipment.item_materials.mat_type:insert('#', equip.matType)
-      equipment.item_materials.mat_index:insert('#', equip.matIndex)
-      equipment.item_counts:insert('#', equip.quantity)
-    end
-  end
-
-  if skillDetails then
-    for _, skill in ipairs(skillDetails) do
-      equipment.skills:insert('#', skill.skill)
-      equipment.skill_levels:insert('#', skill.level)
-    end
-  end
-
   local createdUnits = {}
   for n = 1, spawnNumber do -- loop here to avoid having to handle spawn data each time when creating multiple units
     if not caste_id then -- choose a random caste ID each time
-      arenaSpawn.caste:insert(0, caste_id_choices[math.random(1, #caste_id_choices)])
+      caste_id = dfhack.units.getCasteRaw[math.random(1, #caste_id_choices)]
     end
+
+    local spawnPos = pos
 
     if locationChoices then
 --    select a random spawn position within the specified location range, if available
@@ -281,81 +230,23 @@ function createUnitInner(race_id, caste_id, caste_id_choices, pos, locationChoic
           table.remove(locationChoices, i) -- remove invalid positions from the list to optimise subsequent spawning sequences
         end
       end
-      if randomPos then
-        df.global.cursor.x = tonumber(randomPos.x)
-        df.global.cursor.y = tonumber(randomPos.y)
-        df.global.cursor.z = tonumber(randomPos.z)
-      else
-        break -- no valid tiles available; terminate the spawn loop without creating any units
+    end
+
+    local unit
+
+    if spawnPos then
+      unit = dfhack.units.create(race_id, caste_id)
+
+      local ok = activate_and_place_unit(unit, {x=spawnPos.x, y=spawnPos.y, z=spawnPos.z})
+      if not ok then
+        qerror(("Failed to place unit at %d %d %d"):format(spawnPos.x, spawnPos.y, spawnPos.z))
       end
+    else
+        qerror('Unable to spawn unit: no valid spawn location given.')
     end
 
-    gui.simulateInput(dwarfmodeScreen, 'D_LOOK_ARENA_CREATURE') -- open the arena spawning menu
-    local spawnScreen = dfhack.gui.getCurViewscreen() -- df.viewscreen_layer_arena_creaturest
-    gui.simulateInput(spawnScreen, 'SELECT') -- create the selected creature
-
-    if not caste_id then
-      arenaSpawn.caste:erase(0)
-    end
-
---  Process the created unit:
-    local unit = df.unit.find(df.global.unit_next_id-1)
     table.insert(createdUnits, unit)
-    processNewUnit(unit, age, domesticate, civ_id, group_id, entityRawName, nickname, vanishDelay, profession, customProfession, flagSet, flagClear, isArena)
-  end
-
-  dfhack.screen.dismiss(dwarfmodeScreen)
-  df.global.window_x = view_x -- view moves whilst spawning units, so restore it here
-  df.global.window_y = view_y
-  df.global.window_z = view_z
-  df.global.cursor:assign(cursor) -- cursor sometimes persists in adventure mode, so ensure that it's reset
-
--- Restore arena spawn data:
-
-  arenaSpawn.race:erase(0)
-  if caste_id then
-    arenaSpawn.caste:erase(0)
-  end
-  arenaSpawn.creature_cnt:erase(0)
-
-  arenaSpawn.filter = oldSpawnFilter
-  arenaSpawn.type = oldSpawnType
-  arenaSpawn.interaction = oldInteractionEffect
-  arenaSpawn.tame = oldSpawnTame
-
-  if equipDetails then
-    equipment.item_types:resize(0)
-    equipment.item_subtypes:resize(0)
-    equipment.item_materials.mat_type:resize(0)
-    equipment.item_materials.mat_index:resize(0)
-    equipment.item_counts:resize(0)
-  end
-
-  if skillDetails then
-    equipment.skills:resize(0)
-    equipment.skill_levels:resize(0)
-  end
-
-  for _,i in pairs(old_item_types) do
-    equipment.item_types:insert('#',i)
-  end
-  for _,i in pairs(old_item_subtypes) do
-    equipment.item_subtypes:insert('#',i)
-  end
-  for _,i in pairs(old_item_mat_types) do
-    equipment.item_materials.mat_type:insert('#',i)
-  end
-  for _,i in pairs(old_item_mat_indexes) do
-    equipment.item_materials.mat_index:insert('#',i)
-  end
-  for _,i in pairs(old_item_counts) do
-    equipment.item_counts:insert('#',i)
-  end
-  for _,i in ipairs(old_skills) do
-    equipment.skills:insert('#',i)
-  end
-  for _,i in ipairs(old_skill_levels) do
-    equipment.skill_levels:insert('#',i)
+    processNewUnit(unit, age, domesticate, civ_id, group_id, entityRawName, nickname, vanishDelay, equipDetails, skillDetails, profession, customProfession, flagSet, flagClear, isArena)
   end
 
   return createdUnits -- table containing the created unit(s) (intended for module usage)
@@ -566,11 +457,11 @@ function createNemesis(unit,civ_id,group_id)
   nem.unit_id = unit.id
   nem.unit = unit
   nem.flags:resize(31)
-  nem.unk10 = -1
-  nem.unk11 = -1
-  nem.unk12 = -1
-  nem.unk_v47_1 = -1
-  nem.unk_v47_2 = -1
+  -- nem.unk10 = -1
+  -- nem.unk11 = -1
+  -- nem.unk12 = -1
+  -- nem.unk_v47_1 = -1
+  -- nem.unk_v47_2 = -1
   df.global.world.nemesis.all:insert("#",nem)
   df.global.nemesis_next_id = id+1
   unit.general_refs:insert("#",{new = df.general_ref_is_nemesisst, nemesis_id = id})
@@ -647,8 +538,8 @@ function nameUnit(unit, entityRawName)
   local FrontCompound, RearCompound, FirstName = 0, 1, 2  --indexes for language_word_table.words/.parts
 
   if entity_raw then
-    PREFERRED = entity_raw.symbols.symbols1.OTHER
-    TOLERATED = entity_raw.symbols.symbols2.OTHER
+    PREFERRED = entity_raw.symbols.symbols_major.OTHER
+    TOLERATED = entity_raw.symbols.symbols_minor.OTHER
   else -- wild units use every word available
     PREFERRED = df.global.world.raws.language.word_table[0][35] -- a guess; this table has every word, and so do the ones at [0][37], [1][35] and [1][37]
     TOLERATED = PREFERRED
@@ -680,10 +571,12 @@ function nameUnit(unit, entityRawName)
   name.language = translationIndex
   if unit.status.current_soul then
     unit.status.current_soul.name:assign(name)
+    unit.status.current_soul.name.has_name = true
   end
   local hf = df.historical_figure.find(unit.hist_figure_id)
   if hf then
     hf.name:assign(name)
+    hf.name.has_name = true
   end
 end
 
@@ -795,7 +688,10 @@ function extractSkillDetail(skillStr)
   return skillDetail
 end
 
-function processNewUnit(unit, age, domesticate, civ_id, group_id, entityRawName, nickname, vanishDelay, profession, customProfession, flagSet, flagClear, isArena) -- isArena boolean is used for determining whether or not the arena name should be cleared
+function processNewUnit(unit, age, domesticate, civ_id, group_id, entityRawName, nickname, vanishDelay, equipDetails, skillDetails, profession, customProfession, flagSet, flagClear, isArena) -- isArena boolean is used for determining whether or not the arena name should be cleared
+  apply_skills(unit, skillDetails)
+  apply_equipment(unit, equipDetails)
+
   if entityRawName and type(entityRawName) == 'string' then
     nameUnit(unit, entityRawName)
   elseif not isArena then -- arena mode ONLY displays the first_name of units; removing it would result in a blank space where you'd otherwise expect the caste name to show up
@@ -901,7 +797,7 @@ function domesticateUnit(unit)
     unit.population_id = -1
     unit.animal.population.region_x = -1
     unit.animal.population.region_y = -1
-    unit.animal.population.unk_28 = -1
+    -- unit.animal.population.unk_28 = -1
     unit.animal.population.population_idx = -1
     unit.animal.population.layer_depth = -1
 
@@ -922,7 +818,7 @@ function wildUnit(unit)
       unit.animal.population.region_x = site.pos.x
       unit.animal.population.region_y = site.pos.y
     end
-    unit.animal.population.unk_28 = -1
+    -- unit.animal.population.unk_28 = -1
     unit.animal.population.population_idx = -1  -- Eventually want to make a real population
     unit.animal.population.layer_depth = -1  -- Eventually this should be a parameter
     unit.animal.leave_countdown = 99999  -- Eventually this should be a parameter
@@ -984,7 +880,7 @@ function setEquipmentOwnership(unit)
     dfhack.items.setOwner(item, unit)
     item.flags.foreign = true
   end
-  unit.military.uniform_drop:resize(0) -- prevents new fortress mode citizens from dropping their equipment a tick after creation
+  unit.uniform.uniform_drop:resize(0) -- prevents new fortress mode citizens from dropping their equipment a tick after creation
 end
 
 function handleUnitFlags(unit,flagSet,flagClear)
