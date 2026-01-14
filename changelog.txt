@@ -13,6 +13,7 @@ that repo.
 Template for new versions:
 
 ## New Tools
+- `copybuilding`: Accompanying script for ``buildingplan.copybuilding`` that allows copying buildings/constructions/stockpiles under the cursor or from history. Intended to be used with keybindings.
 
 ## New Features
 
