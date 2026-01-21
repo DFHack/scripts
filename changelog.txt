@@ -273,6 +273,7 @@ Template for new versions:
 - `gui/mass-remove`: add a button to the bottom toolbar when eraser mode is active for launching `gui/mass-remove`
 - `idle-crafting`: default to only considering happy and ecstatic units for the highest need threshold
 - `gui/sitemap`: add a button to the toolbar at the bottom left corner of the screen for launching `gui/sitemap`
+- `gui/design`: add a button to the toolbar at the bottom left corner of the screen for launching `gui/design`
 
 ## Fixes
 - `idle-crafting`: check that units still have crafting needs before creating a job for them
