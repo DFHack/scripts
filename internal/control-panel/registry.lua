@@ -100,7 +100,7 @@ COMMANDS_BY_IDX = {
     {command='fix/stuck-instruments', group='bugfix', mode='repeat', default=true,
         params={'--time', '1', '--timeUnits', 'days', '--command', '[', 'fix/stuck-instruments', ']'}},
     {command='fix/stuck-squad', group='bugfix', mode='repeat', default=true,
-        params={'--time', '1', '--timeUnits', 'days', '--command', '[', 'fix/stuck-squad', ']'}},
+        params={'--time', '1', '--timeUnits', 'days', '--command', '[', 'fix/stuck-squad', '-vq', ']'}},
     {command='fix/stuck-worship', group='bugfix', mode='repeat', default=true,
         params={'--time', '1', '--timeUnits', 'days', '--command', '[', 'fix/stuck-worship', '-q', ']'}},
     {command='fix/noexert-exhaustion', group='bugfix', mode='repeat', default=true,
