@@ -330,6 +330,7 @@ Template for new versions:
 ## Fixes
 - `advtools`: fix dfhack-added conversation options not appearing in the ask whereabouts conversation tree
 - `gui/rename`: fix error when changing the language of a unit's name
+- `makeown`: fix makeown-ing an enemy of your civilization (such as a giant) constantly giving everyone else vengeful thoughts about them
 
 ## Misc Improvements
 - `assign-preferences`: new ``--show`` option to display the preferences of the selected unit
