@@ -70,6 +70,9 @@ Options
 ``-v``, ``--verbose n``
     Print verbose output for debugging purposes, n from 1 to 4.
 
+``-o``, ``--override n``
+    Override the default max stack qty.
+
 Notes
 -----
 
