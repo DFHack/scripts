@@ -29,6 +29,18 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 53.10-r1
+
+## New Tools
+
+## New Features
 - `gui/notify`: new notification type: missing nemesis records; displays a warning message about game corruption.
 
 ## Fixes
