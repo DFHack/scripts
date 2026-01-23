@@ -63,9 +63,9 @@ for i=2,41 do -- 50 to 2000
 end
 TRACK_WEIGHTS[41].label = TRACK_WEIGHTS[41].label..'/Any' -- 2000 is Any for track_max
 
-local UNIT_SIZES = {}
+local UNIT_WEIGHTS = {}
 for i=1,200 do -- 1000 to 200000; actual creature labels would require checking raws
-  UNIT_SIZES[i] = {value=i*1000, label=('(%d)'):format(i*1000)}
+  UNIT_WEIGHTS[i] = {value=i*1000, label=('(%d)'):format(i*1000)}
 end
 
 TrackStopOverlay = defclass(TrackStopOverlay, overlay.OverlayWidget)
@@ -503,21 +503,21 @@ function PlateOverlay:init()
     },
     widgets.CycleHotkeyLabel{
       view_id='unit_min',
-      frame={t=3, l=0, w=22},
-      label='Min Size:',
+      frame={t=3, l=0, w=24},
+      label='Min Weight:',
       key_back='CUSTOM_SHIFT_E',
       key='CUSTOM_SHIFT_R',
-      options=UNIT_SIZES,
+      options=UNIT_WEIGHTS,
       on_change=self:callback('changeUnitMin'),
       visible=self:callback('isCreaturesTab'),
     },
     widgets.CycleHotkeyLabel{
       view_id='unit_max',
-      frame={t=4, l=0, w=22},
-      label='Max Size:',
+      frame={t=4, l=0, w=24},
+      label='Max Weight:',
       key_back='CUSTOM_SHIFT_C',
       key='CUSTOM_SHIFT_V',
-      options=UNIT_SIZES,
+      options=UNIT_WEIGHTS,
       on_change=self:callback('changeUnitMax'),
       visible=self:callback('isCreaturesTab'),
     },
