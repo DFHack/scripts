@@ -82,6 +82,9 @@ local function import_uniform_file(filepath)
     panel.customizing_squad_uniform_nickname = nickname
 
     for i, slot in ipairs(uniform_data) do
+        if type(slot) ~= 'table' then
+            return false, ('Uniform slot %d is invalid. Expected table.'):format(i)
+        end
         local idx = i - 1
         panel.cs_cat[idx] = slot.cat or -1
         panel.cs_it_spec_item_id[idx] = slot.spec_item_id or -1
@@ -201,7 +204,16 @@ local function ImportUniformDialog()
                     dfhack.println('Deleted: ' .. fname)
                     local list = get_dlg().subviews.list
                     local filter = list:getFilter()
-                    list:setChoices(get_uniform_choices(), list:getSelected())
+                    local choices = get_uniform_choices()
+                    local selected = list:getSelected()
+                    if #choices == 0 then
+                        selected = nil
+                    elseif selected and selected > #choices then
+                        selected = #choices
+                    elseif not selected then
+                        selected = 1
+                    end
+                    list:setChoices(choices, selected)
                     list:setFilter(filter)
                 end)
         end,
