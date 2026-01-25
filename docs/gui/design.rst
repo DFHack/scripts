@@ -45,7 +45,7 @@ Shapes
     - Spacing can be increased/decreased using 'T'/'t'.
     - They can be inverted using 'i'.
 - Diagonal
-    - Direction can be reversed using 'r'.
+    - Direction can be reversed using 'R'.
     - Spacing can be increased/decreased using 'T'/'t'.
     - They can be inverted using 'i'.
 - Line

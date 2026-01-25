@@ -80,8 +80,19 @@ funcs.booze = function()
 end
 
 funcs.honey = function()
-    local mat = dfhack.matinfo.find("CREATURE:HONEY_BEE:HONEY")
-    ban_cooking('honey bee honey', mat.type, mat.index, df.item_type.LIQUID_MISC, -1)
+    for _, c in ipairs(df.global.world.raws.creatures.all) do
+        for _, m in ipairs(c.material) do
+            if m.flags.EDIBLE_COOKED then
+                for _, s in ipairs(m.reaction_product.id) do
+                    if s.value == "DRINK_MAT" then
+                        local matinfo = dfhack.matinfo.find(c.creature_id, m.id)
+                        ban_cooking(c.name[2] .. ' ' .. m.id, matinfo.type, matinfo.index, df.item_type.LIQUID_MISC, -1)
+                        break
+                    end
+                end
+            end
+        end
+    end
 end
 
 funcs.tallow = function()

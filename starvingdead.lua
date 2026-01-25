@@ -43,7 +43,7 @@ local function do_decay()
                 attribute.value = math.floor(attribute.value - (attribute.value * attribute_decay))
             end
 
-            if unit.curse.interaction.time_on_site > (state.death_threshold * TICKS_PER_MONTH) then
+            if unit.usable_interaction.time_on_site > (state.death_threshold * TICKS_PER_MONTH) then
                 unit.animal.vanish_countdown = 1
             end
         end

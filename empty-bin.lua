@@ -8,7 +8,7 @@ local argparse = require('argparse')
 local options, args = {
         help = false,
         recursive = false,
-        liquids = false
+        force = false
     },
     {...}
 
@@ -18,9 +18,10 @@ local function emptyContainer(container)
         print('Emptying ' .. dfhack.items.getReadableDescription(container))
         local pos = xyz2pos(dfhack.items.getPosition(container))
         for _, item in ipairs(items) do
-            local skip_liquid = not options.liquids and (item:getType() == df.item_type.LIQUID_MISC or item:getType() == df.item_type.DRINK)
-            if skip_liquid then
-                print('  ' .. dfhack.items.getReadableDescription(item) .. ' was skipped because the --liquids flag was not provided')
+            local itemType = item:getType()
+            local skip = not options.force and (itemType == df.item_type.LIQUID_MISC or itemType == df.item_type.DRINK or itemType == df.item_type.POWDER_MISC)
+            if skip then
+                print('  ' .. dfhack.items.getReadableDescription(item) .. ' was skipped (use --force to override)')
             else
                 print('  ' .. dfhack.items.getReadableDescription(item))
                 dfhack.items.moveToGround(item, pos)
@@ -35,7 +36,7 @@ end
 argparse.processArgsGetopt(args,{
     { 'h', 'help', handler = function() options.help = true end },
     { 'r', 'recursive', handler = function() options.recursive = true end },
-    { 'l', 'liquids', handler = function() options.liquids = true end }
+    { 'f', 'force', handler = function() options.force = true end }
     })
 
 if options.help then

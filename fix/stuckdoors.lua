@@ -9,7 +9,7 @@ end
 
 -- Util function: find out if there are any units on the tile with coordinates x,y,z
 function unitOnTile(x, y, z)
-    local units = dfhack.units.getUnitsInBox(x,y,z,x,y,z,dfhack.units.isActive)
+    local units = dfhack.units.getUnitsInBox(x,y,z,x,y,z)
     return #(units) > 0
 end
 

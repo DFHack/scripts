@@ -1,10 +1,12 @@
 -- show death cause of a creature
+--@ module = true
 
 local DEATH_TYPES = reqscript('gui/unit-info-viewer').DEATH_TYPES
 
 -- Gets the first corpse item at the given location
-function getItemAtPosition(pos)
+local function getItemAtPosition(pos)
     for _, item in ipairs(df.global.world.items.other.ANY_CORPSE) do
+        -- could this maybe be `if same_xyz(pos, item.pos) then`?
         if item.pos.x == pos.x and item.pos.y == pos.y and item.pos.z == pos.z then
             print("Automatically chose first corpse at the selected location.")
             return item
@@ -12,11 +14,11 @@ function getItemAtPosition(pos)
     end
 end
 
-function getRaceNameSingular(race_id)
+local function getRaceNameSingular(race_id)
     return df.creature_raw.find(race_id).name[0]
 end
 
-function getDeathStringFromCause(cause)
+local function getDeathStringFromCause(cause)
     if cause == -1 then
         return "died"
     else
@@ -24,13 +26,13 @@ function getDeathStringFromCause(cause)
     end
 end
 
-function displayDeathUnit(unit)
+-- Returns a cause of death given a unit
+local function getDeathCauseFromUnit(unit)
     local str = unit.name.has_name and '' or 'The '
     str = str .. dfhack.units.getReadableName(unit)
 
     if not dfhack.units.isDead(unit) then
-        print(dfhack.df2console(str) .. " is not dead yet!")
-        return
+        return str .. " is not dead yet!"
     end
 
     str = str .. (" %s"):format(getDeathStringFromCause(unit.counters.death_cause))
@@ -50,12 +52,12 @@ function displayDeathUnit(unit)
         end
     end
 
-    print(dfhack.df2console(str) .. '.')
+    return str .. '.'
 end
 
 -- returns the item description if the item still exists; otherwise
 -- returns the weapon name
-function getWeaponName(item_id, subtype)
+local function getWeaponName(item_id, subtype)
     local item = df.item.find(item_id)
     if not item then
         return df.global.world.raws.itemdefs.weapons[subtype].name
@@ -63,7 +65,7 @@ function getWeaponName(item_id, subtype)
     return dfhack.items.getDescription(item, 0, false)
 end
 
-function displayDeathEventHistFigUnit(histfig_unit, event)
+local function getDeathEventHistFigUnit(histfig_unit, event)
     local str = ("The %s %s %s in year %d"):format(
             getRaceNameSingular(histfig_unit.race),
             dfhack.translation.translateName(dfhack.units.getVisibleName(histfig_unit)),
@@ -87,11 +89,11 @@ function displayDeathEventHistFigUnit(histfig_unit, event)
         end
     end
 
-    print(dfhack.df2console(str) .. '.')
+    return  str .. '.'
 end
 
 -- Returns the death event for the given histfig or nil if not found
-function getDeathEventForHistFig(histfig_id)
+local function getDeathEventForHistFig(histfig_id)
     for i = #df.global.world.history.events - 1, 0, -1 do
         local event = df.global.world.history.events[i]
         if event:getType() == df.history_event_type.HIST_FIGURE_DIED then
@@ -102,17 +104,18 @@ function getDeathEventForHistFig(histfig_id)
     end
 end
 
-function displayDeathHistFig(histfig)
+-- Returns the cause of death given a histfig
+local function getDeathCauseFromHistFig(histfig)
     local histfig_unit = df.unit.find(histfig.unit_id)
     if not histfig_unit then
         qerror("Cause of death not available")
     end
 
     if not dfhack.units.isDead(histfig_unit) then
-        print(("%s is not dead yet!"):format(dfhack.df2console(dfhack.units.getReadableName(histfig_unit))))
+        return ("%s is not dead yet!"):format(dfhack.units.getReadableName(histfig_unit))
     else
         local death_event = getDeathEventForHistFig(histfig.id)
-        displayDeathEventHistFigUnit(histfig_unit, death_event)
+        return getDeathEventHistFigUnit(histfig_unit, death_event)
     end
 end
 
@@ -147,6 +150,19 @@ local function get_target()
     return selected_item.hist_figure_id, df.unit.find(selected_item.unit_id)
 end
 
+-- wrapper function to take either a unit or a histfig and get the death cause
+function getDeathCause(target)
+    if df.unit:is_instance(target) then
+        return getDeathCauseFromUnit(target)
+    else
+        return getDeathCauseFromHistFig(target)
+    end
+end
+
+if dfhack_flags.module then
+    return
+end
+
 local hist_figure_id, selected_unit = get_target()
 
 if not hist_figure_id then
@@ -155,7 +171,7 @@ elseif hist_figure_id == -1 then
     if not selected_unit then
         qerror("Cause of death not available")
     end
-    displayDeathUnit(selected_unit)
+    print(dfhack.df2console(getDeathCause(selected_unit)))
 else
-    displayDeathHistFig(df.historical_figure.find(hist_figure_id))
+    print(dfhack.df2console(getDeathCause(df.historical_figure.find(hist_figure_id))))
 end

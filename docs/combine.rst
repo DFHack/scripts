@@ -38,7 +38,9 @@ Commands
 ``all``
     Search all stockpiles.
 ``here``
-    Search the currently selected stockpile.
+    Search the currently selected stockpile, or the stockpile that the
+    currently-seelected item is in, or the stockpile that the currently-
+    displayed item-list is in.
 
 Options
 -------

@@ -733,7 +733,7 @@ local seasons = {
     'winter',
 }
 function GetWave(dwf)
-    arrival_time = current_tick - dwf.curse.interaction.time_on_site;
+    arrival_time = current_tick - dwf.useable_interaction.time_on_site;
     --print(string.format("Current year %s, arrival_time = %s, ticks_per_year = %s", df.global.cur_year, arrival_time, ticks_per_year))
     arrival_year = df.global.cur_year + (arrival_time // ticks_per_year);
     arrival_season = 1 + (arrival_time % ticks_per_year) // ticks_per_season;

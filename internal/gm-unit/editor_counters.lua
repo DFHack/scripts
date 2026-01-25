@@ -9,7 +9,6 @@ Editor_Counters=defclass(Editor_Counters, base_editor.Editor)
 Editor_Counters.ATTRS{
     frame_title = "Counters editor",
     counters1={
-    "think_counter",
     "job_counter",
     "swap_counter",
     "winded",
