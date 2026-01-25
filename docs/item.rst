@@ -49,7 +49,8 @@ Examples
     flood-fill to create a burrow covering an entire cavern layer).
 
 ``item melt -t weapon -m steel --max-quality 3``
-    Designate all steel weapons whose quality is at most superior for melting.
+    Designate all steel weapons whose core quality is at most superior for
+    melting.
 
 ``item hide -t boulder --scattered``
     Hide all scattered boulders, i.e. those that are not in stockpiles.
@@ -120,6 +121,11 @@ Options
 ``-Q``, ``--max-quality <integer>``
     Only include items whose quality level is at most ``integer``. Useful
     values are 0 (ordinary) to 5 (masterwork).
+
+``--total-quality``
+    Only applies to ``--min-quality`` and ``--max-quality`` options. Filter items
+    according to their total quality (to include improvements) of instead of
+    their core quality.
 
 ``--stockpiled``
     Only include items that are in stockpiles. Does not include empty bins,
@@ -201,8 +207,12 @@ the filter is described.
     see above).
 
 * ``condition_quality(tab, lower, upper, negate)``
-    Selects items with quality between ``lower`` and ``upper`` (Range 0-5, see
-    above).
+    Selects items with core quality between ``lower`` and ``upper`` (Range 0-5,
+    see above).
+
+* ``condition_overall_quality(tab, lower, upper, negate)``
+    Selects items with total quality between ``lower`` and ``upper`` (Range 0-5,
+    see above).
 
 * ``condition_stockpiled(tab, negate)``
     Corresponds to ``--stockpiled``.

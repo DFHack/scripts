@@ -34,6 +34,8 @@ COMMANDS_BY_IDX = {
         desc='Automatically shear creatures that are ready for shearing.',
         params={'--time', '14', '--timeUnits', 'days', '--command', '[', 'workorder', 'ShearCreature', ']'}},
     {command='autoslab', group='automation', mode='enable'},
+    {command='autotraining', group='automation', mode='enable',
+        desc='Automatically assign units with training needs to training squads. '},
     {command='ban-cooking all', group='automation', mode='run'},
     {command='buildingplan set boulders false', group='automation', mode='run',
         desc='Enable if you usually don\'t want to use boulders for construction.'},
@@ -72,6 +74,10 @@ COMMANDS_BY_IDX = {
     -- can be restored here once we solve issue #4292
     -- {command='craft-age-wear', help_command='tweak', group='bugfix', mode='tweak', default=true,
     --     desc='Allows items crafted from organic materials to wear out over time.'},
+    -- Issue resolved in 53.01; tool no longer required.
+    -- {command='fix/archery-practice', group='bugfix', mode='repeat', default=true,
+    --    desc='Fix quivers and training ammo items to allow archery practice to take place.',
+    --    params={'--time', '449', '--timeUnits', 'ticks', '--command', '[', 'fix/archery-practice', '-q', ']'}},
     {command='fix/blood-del', group='bugfix', mode='run', default=true},
     {command='fix/dead-units', group='bugfix', mode='repeat', default=true,
         desc='Fix units still being assigned to burrows after death.',

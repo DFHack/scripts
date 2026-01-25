@@ -55,26 +55,12 @@ function weightedChoice(choices)
     return nil --never reached on well-formed input
 end
 
----create a new linked job
----@return df.job
-function make_job()
-    local job = df.job:new()
-    dfhack.job.linkIntoWorld(job, true)
-    return job
-end
-
-function assignToWorkshop(job, workshop)
-    job.pos = xyz2pos(workshop.centerx, workshop.centery, workshop.z)
-    dfhack.job.addGeneralRef(job, df.general_ref_type.BUILDING_HOLDER, workshop.id)
-    workshop.jobs:insert("#", job)
-end
-
 ---make totem at specified workshop
 ---@param unit df.unit
 ---@param workshop df.building_workshopst
 ---@return boolean
 function makeTotem(unit, workshop)
-    local job = make_job()
+    local job = dfhack.job.createLinked()
     job.job_type = df.job_type.MakeTotem
     job.mat_type = -1
 
@@ -89,7 +75,7 @@ function makeTotem(unit, workshop)
     jitem.flags2.body_part = true
     job.job_items.elements:insert('#', jitem)
 
-    assignToWorkshop(job, workshop)
+    dfhack.job.assignToWorkshop(job, workshop)
     return dfhack.job.addWorker(job, unit)
 end
 
@@ -98,7 +84,7 @@ end
 ---@param workshop df.building_workshopst
 ---@return boolean
 function makeHornCrafts(unit, workshop)
-    local job = make_job()
+    local job = dfhack.job.createLinked()
     job.job_type = df.job_type.MakeCrafts
     job.mat_type = -1
     job.material_category.horn = true
@@ -114,7 +100,7 @@ function makeHornCrafts(unit, workshop)
     jitem.flags2.body_part = true
     job.job_items.elements:insert('#', jitem)
 
-    assignToWorkshop(job, workshop)
+    dfhack.job.assignToWorkshop(job, workshop)
     return dfhack.job.addWorker(job, unit)
 end
 
@@ -123,7 +109,7 @@ end
 ---@param workshop df.building_workshopst
 ---@return boolean
 function makeBoneCraft(unit, workshop)
-    local job = make_job()
+    local job = dfhack.job.createLinked()
     job.job_type = df.job_type.MakeCrafts
     job.mat_type = -1
     job.material_category.bone = true
@@ -139,7 +125,7 @@ function makeBoneCraft(unit, workshop)
     jitem.flags2.body_part = true
     job.job_items.elements:insert('#', jitem)
 
-    assignToWorkshop(job, workshop)
+    dfhack.job.assignToWorkshop(job, workshop)
     return dfhack.job.addWorker(job, unit)
 end
 
@@ -148,7 +134,7 @@ end
 ---@param workshop df.building_workshopst
 ---@return boolean
 function makeShellCraft(unit, workshop)
-    local job = make_job()
+    local job = dfhack.job.createLinked()
     job.job_type = df.job_type.MakeCrafts
     job.mat_type = -1
     job.material_category.shell = true
@@ -164,7 +150,7 @@ function makeShellCraft(unit, workshop)
     jitem.flags2.body_part = true
     job.job_items.elements:insert('#', jitem)
 
-    assignToWorkshop(job, workshop)
+    dfhack.job.assignToWorkshop(job, workshop)
     return dfhack.job.addWorker(job, unit)
 end
 
@@ -173,7 +159,7 @@ end
 ---@param workshop df.building_workshopst
 ---@return boolean ""
 function makeRockCraft(unit, workshop)
-    local job = make_job()
+    local job = dfhack.job.createLinked()
     job.job_type = df.job_type.MakeCrafts
     job.mat_type = 0
 
@@ -187,7 +173,7 @@ function makeRockCraft(unit, workshop)
     jitem.flags3.hard = true
     job.job_items.elements:insert('#', jitem)
 
-    assignToWorkshop(job, workshop)
+    dfhack.job.assignToWorkshop(job, workshop)
     return dfhack.job.addWorker(job, unit)
 end
 
@@ -291,13 +277,8 @@ local STONE_CRAFT = df.unit_labor['STONE_CRAFT']
 ---@param value_if_absent T
 ---@return number|T
 function getCraftingNeed(unit, value_if_absent)
-    local needs = unit.status.current_soul.personality.needs
-    for _, need in ipairs(needs) do
-        if need.id == CraftObject then
-            return -need.focus_level
-        end
-    end
-    return value_if_absent
+    local focus_penalty = dfhack.units.getFocusPenalty(unit, CraftObject)
+    return focus_penalty > 1000 and value_if_absent or -focus_penalty
 end
 
 local function stop()
@@ -332,27 +313,6 @@ end
 function canAccessWorkshop(unit, workshop)
     local workshop_position = xyz2pos(workshop.centerx, workshop.centery, workshop.z)
     return dfhack.maps.canWalkBetween(unit.pos, workshop_position)
-end
-
----unit is ready to take jobs
----@param unit df.unit
----@return boolean
-function unitIsAvailable(unit)
-    if unit.job.current_job then
-        return false
-    elseif #unit.specific_refs > 0 then -- activities such as "Conduct Meeting"
-        return false
-    elseif #unit.social_activities > 0 then
-        return false
-    elseif #unit.individual_drills > 0 then
-        return false
-    elseif unit.military.squad_id ~= -1 then
-        local squad = df.squad.find(unit.military.squad_id)
-        -- this lookup should never fail
-        ---@diagnostic disable-next-line: need-check-nil
-        return #squad.orders == 0 and squad.activity == -1
-    end
-    return true
 end
 
 ---select crafting job based on available resources
@@ -397,7 +357,7 @@ local function processUnit(workshop, idx, unit_id)
     elseif not canAccessWorkshop(unit, workshop) then
         -- dfhack.print('-')
         return false
-    elseif not unitIsAvailable(unit) then
+    elseif not dfhack.units.isJobAvailable(unit) then
         -- dfhack.print('.')
         return false
     end

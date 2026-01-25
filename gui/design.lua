@@ -366,6 +366,7 @@ function Design:init()
 
     local build_options = {
         {label='Walls', value='Cw'},
+        {label='Reinforced Walls', value='CW'},
         {label='Floor', value='Cf'},
         {label='Fortification', value='CF'},
         {label='Ramps', value='Cr'},
@@ -408,7 +409,7 @@ function Design:init()
                         widgets.CycleHotkeyLabel {
                             view_id='stairs_bottom_subtype',
                             frame={t=1, l=0},
-                            key='CUSTOM_SHIFT_B',
+                            key='CUSTOM_G',
                             label='Bottom Stair Type:',
                             visible=function()
                                 local bounds = self:get_view_bounds()
@@ -1345,8 +1346,15 @@ function Design:get_designation(point)
     if mode.desig == 'i' then
         local stairs_top_type = self.subviews.stairs_top_subtype:getOptionValue()
         local stairs_bottom_type = self.subviews.stairs_bottom_subtype:getOptionValue()
+        local stairs_only_type = self.subviews.stairs_only_subtype:getOptionValue()
         if point.z == 0 then
-            return stairs_bottom_type == 'auto' and 'u' or stairs_bottom_type
+            if view_bounds.z1 == view_bounds.z2 then
+                -- Single layer staircase
+                return stairs_only_type
+            else
+                -- Bottom of multi-level staircase
+                return stairs_bottom_type == 'auto' and 'u' or stairs_bottom_type
+        end
         elseif view_bounds and point.z == math.abs(view_bounds.z1 - view_bounds.z2) then
             local pos = Point{x=view_bounds.x1, y=view_bounds.y1, z=view_bounds.z1} + point
             local tile_type = dfhack.maps.getTileType(xyz2pos(pos.x, pos.y, pos.z))
