@@ -12,29 +12,40 @@ SelectLockOverlay.ATTRS {
     frame = {w = 25, h = 6, r = 1, t = 1, transparent = false},
 }
 
+local function sanitize_entry_count(count, fallback)
+    local num = tonumber(count)
+    if num then
+        return math.max(1, math.floor(num))
+    end
+    return fallback
+end
+
 local function simulate_actions(self, count)
-        gui.simulateInput(dfhack.gui.getCurViewscreen(), 'STANDARDSCROLL_RIGHT')
+    count = sanitize_entry_count(count, 1)
+    gui.simulateInput(dfhack.gui.getCurViewscreen(), 'STANDARDSCROLL_RIGHT')
 
     local function step(i)
         if i > count then
             for _ = 1, count do
-                gui.simulateInput(dfhack.gui.getCurViewscreen(), 'STANDARDSCROLL_UP')
-                gui.simulateInput(dfhack.gui.getCurViewscreen(), 'CONTEXT_SCROLL_UP')
+                local viewscreen = dfhack.gui.getCurViewscreen()
+                gui.simulateInput(viewscreen, 'STANDARDSCROLL_UP')
+                gui.simulateInput(viewscreen, 'CONTEXT_SCROLL_UP')
             end
             self.is_running = false
             return
         end
 
+        local viewscreen = dfhack.gui.getCurViewscreen()
         if self.action_mode ~= 'lock' then
-            gui.simulateInput(dfhack.gui.getCurViewscreen(), 'SELECT')
+            gui.simulateInput(viewscreen, 'SELECT')
         end
         if self.action_mode ~= 'select' then
-            gui.simulateInput(dfhack.gui.getCurViewscreen(), 'UNITLIST_SPECIALIZE')
+            gui.simulateInput(viewscreen, 'UNITLIST_SPECIALIZE')
         end
         --This line is keyboard arrow down
-        gui.simulateInput(dfhack.gui.getCurViewscreen(), 'STANDARDSCROLL_DOWN')
+        gui.simulateInput(viewscreen, 'STANDARDSCROLL_DOWN')
         --CONTEXT_SCROLL_DOWN helps with consistency. Otherwise the program will miss some units. Line below is scroll wheel down
-        gui.simulateInput(dfhack.gui.getCurViewscreen(), 'CONTEXT_SCROLL_DOWN')
+        gui.simulateInput(viewscreen, 'CONTEXT_SCROLL_DOWN')
 
         dfhack.timeout(3, 'frames', function() step(i + 1) end)
     end
@@ -69,10 +80,9 @@ function SelectLockOverlay:init()
                     frame = {l = 1, t = 2},
                     key = 'CUSTOM_CTRL_N',
                     auto_focus = false,
-                    text = '7',
+                    text = tostring(self.entry_count),
                     on_change = function(val)
-                        local num = tonumber(val)
-                        self.entry_count = (num and num > 0 and math.floor(num)) or 7
+                        self.entry_count = sanitize_entry_count(val, self.entry_count)
                     end,
                 },
                 widgets.HotkeyLabel{

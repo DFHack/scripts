@@ -1,7 +1,7 @@
 Select Lock Overlay
 ===================
 
-This is a DFHack overlay plugin for Dwarf Fortress that simulates the selection and locking of multiple units within the **Work Details** screen. It provides a simple UI interface to batch-toggle units' labor assignments, either by selecting, locking, or both.
+This is a DFHack overlay plugin for Dwarf Fortress (`SelectLockLabors`) that simulates the selection and locking of multiple units within the **Work Details** screen. It provides a simple UI interface to batch-toggle units' labor assignments, either by selecting, locking, or both.
 
 Features
 --------
