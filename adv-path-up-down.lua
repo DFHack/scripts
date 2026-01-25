@@ -10,15 +10,11 @@ local world       = df.global.world
 local map         = world.map
 local you         = world.units.adv_unit
 local delayFrames = 10  -- frames to wait for each simulated step
+local pathGoal    = 215 -- unit_path_goal value used for adventure movement
 
 script.start(function()
     if not you then
         qerror("Error: No adventurer unit found.")
-    end
-
-    local view = dfhack.gui.getCurViewscreen()
-    if not view then
-        qerror("Error: No current viewscreen to send input to.")
     end
 
     local x, y, current_z = you.pos.x, you.pos.y, you.pos.z
@@ -69,11 +65,26 @@ script.start(function()
             return
         end
 
+        local view = dfhack.gui.getCurViewscreen()
+        if not view then
+            dfgui.showPopupAnnouncement(
+                "Auto-path failed: no valid viewscreen to send input to.",
+                COLOR_RED
+            )
+            return
+        end
+
+        if you.path.path then
+            you.path.path.x:resize(0)
+            you.path.path.y:resize(0)
+            you.path.path.z:resize(0)
+        end
+
         -- Request path to (x, y, z)
         you.path.dest.x = x
         you.path.dest.y = y
         you.path.dest.z = z
-        you.path.goal   = 215
+        you.path.goal   = pathGoal
 
         -- Simulate the OPTION1 input (one-step move)
         gui.simulateInput(view, 'OPTION1')
@@ -85,7 +96,7 @@ script.start(function()
             if valid then
                 -- Commit to this step
                 you.path.dest.z = z
-                you.path.goal   = 215
+                you.path.goal   = pathGoal
                 local levels = math.abs(z - current_z)
                 dfgui.showPopupAnnouncement(
                     string.format("Auto-path %s %d levels.", direction, levels),
