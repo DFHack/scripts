@@ -934,9 +934,13 @@ local building_db_raw = {
         subtype=df.siegeengine_type.Ballista},
     ic={label='Catapult', type=df.building_type.SiegeEngine,
         subtype=df.siegeengine_type.Catapult},
+    it={label='Bolt Thrower', type=df.building_type.SiegeEngine,
+        subtype=df.siegeengine_type.BoltThrower},
     -- constructions
     Cw={label='Wall',
         type=df.building_type.Construction, subtype=df.construction_type.Wall},
+    CW={label='Reinforced Wall',
+        type=df.building_type.Construction, subtype=df.construction_type.ReinforcedWall},
     Cf={label='Floor',
         type=df.building_type.Construction, subtype=df.construction_type.Floor},
     Cr={label='Ramp',

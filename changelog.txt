@@ -16,11 +16,7 @@ Template for new versions:
 
 ## New Features
 
-- `gui/design`: add option to draw N-point stars, hollow or filled or inverted, and change the main axis to orient in any direction
-
 ## Fixes
-
-- `gui/design`: prevent line thickness from extending outside the map boundary
 
 ## Misc Improvements
 
@@ -31,6 +27,217 @@ Template for new versions:
 # Future
 
 ## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 53.10-r1
+
+## New Tools
+
+## New Features
+- `gui/notify`: new notification type: missing nemesis records; displays a warning message about game corruption.
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 53.07-r1
+
+## New Tools
+- `fix/codex-pages`: add pages to written content that have unspecified page counts.
+- `gui/keybinds`: gui for managing and saving custom keybindings
+
+## New Features
+
+## Fixes
+- `empty-bin`: renamed ``--liquids`` parameter to ``--force`` and made emptying of containers (bags) with powders contingent on that parameter. Previously powders would just always get disposed.
+
+## Misc Improvements
+- `combine`: try harder to find the currently-selected stockpile
+
+## Removed
+
+# 53.06-r1
+
+## New Tools
+
+## New Features
+
+## Fixes
+- `gui/design`: designating a single-level stair construction now properly follows the selected stair type.
+- `gui/design`: adjusted conflicting keybinds, diagonal line reverse becoming ``R`` and bottom stair type becoming ``g``.
+- `modtools/set-personality`: use correct caste trait ranges; fixes `gui/gm-unit` being unable to correctly randomize traits or set traits to caste average
+
+## Misc Improvements
+
+## Removed
+
+# 53.04-r1
+
+## New Tools
+- `gui/siegemanager`: manage your siege engines at a glance.
+
+## New Features
+- `item`: new ``--total-quality`` option for use in conjunction with ``--min-quality`` or ``--max-quality`` to filter items according to their total quality
+
+## Fixes
+
+## Misc Improvements
+- `gui/design`: can now construct reinforced walls
+- `quickfort`: support for reinforced walls and bolt throwers
+
+## Removed
+
+# 53.01-r1
+
+## New Tools
+- `fix/symbol-unstick`: unstick noble symbols that cannot be re-designated.
+- `resize-armor`: resize armor or clothing item to any creature size.
+
+## New Features
+
+## Fixes
+- `autotraining`: squads once used for training then disabled now properly are treated as disabled.
+
+## Misc Improvements
+
+## Removed
+- `fix/archery-practice`: removed from the control panel's bug fixes tab.
+
+# 52.05-r2
+
+## New Tools
+
+## New Features
+
+## Fixes
+- `fix/archery-practice`: now splits instead of combining ammo items in quivers, and moves quivers to end of unit's inventory list
+
+## Misc Improvements
+
+## Removed
+
+# 52.05-r1
+
+## New Tools
+- `fix/archery-practice`: combine ammo items in units' quivers to fix 'Soldier (no item)' issue
+- `gui/adv-finder`: UI for tracking historical figures and artifacts in adventure mode
+- `store-owned`: task owned items to be stored in the owner's room furniture
+
+## New Features
+
+## Fixes
+- `ban-cooking`: bans honey added by creatures other than vanilla honey bee
+- `uniform-unstick`: added quivers, backpacks, and flasks/waterskins to uniform analysis
+- `uniform-unstick`: the ``--drop`` option now only evaluates clothing as possible items to drop
+- `uniform-unstick`: the ``--free`` option no longer redundantly reports an improperly assigned item when that item is removed from a uniform
+- `uniform-unstick`: the ``--drop`` and ``--free`` options now only drop items which are actually in a unit's inventory
+- `uniform-unstick`: the ``--all`` and ``--drop`` options, when used together, now print the separator line between each unit's report in the proper place
+
+## Misc Improvements
+- adapt Lua tools to use new API functionality for creating and assigning jobs
+- `idle-crafting`: properly interrupt interruptible (i.e. "green") social activities
+
+## Removed
+
+# 52.03-r2
+
+## New Tools
+- `autotraining`: new tool to assign citizens to a military squad when they need Martial Training
+- `gui/autotraining`: configuration tool for autotraining
+- `entomb`: allow any unit that has a corpse or body parts to be assigned a tomb zone
+- `husbandry`: Automatically milk and shear animals at nearby farmer's workshops
+
+## New Features
+- `deathcause`: added functionality to this script to fetch cause of death programatically
+
+## Fixes
+- `ban-cooking`: will not fail trying to ban honey if the world has no honey
+- `confirm`: only show pause option for pausable confirmations
+- `confirm`: when editing a uniform, confirm discard of changes when exiting with Escape
+- `confirm`: when removing a manager order, show correct order description when using non-100% interface setting
+- `confirm`: when removing a manager order, show correct order description after prior order removal or window resize (when scrolled to bottom of order list)
+- `confirm`: when removing a manager order, show specific item/job type for ammo, shield, helm, gloves, shoes, trap component, and meal orders
+- `confirm`: the pause option now pauses individual confirmation types, allowing multiple different confirmations to be paused independently
+- `immortal-cravings`: prioritize high-value meals, properly split of portions, and don't go eating or drinking on a full stomach
+- `uniform-unstick`: no longer causes units to equip multiples of assigned items
+- `caravan`: in the pedestal item assignment dialog, add new items at the end of the list of displayed items instead of at a random position
+- `caravan`: in the pedestal item assignment dialog, consistently remove items from the list of displayed items
+
+## Misc Improvements
+- `devel/hello-world`: updated to show off the new Slider widget
+
+## Removed
+
+# 52.03-r1
+
+## New Tools
+
+## New Features
+
+## Fixes
+- `make-legendary`: ``make-legendary all`` will no longer corrupt souls
+
+## Misc Improvements
+
+## Removed
+
+# 52.02-r2
+
+## New Tools
+
+## New Features
+- `gui/mod-manager`: now supports arena mode
+
+## Fixes
+- `gui/mod-manager`: gracefully handle vanilla mods with different versions from the user's preset
+- `gui/mod-manager`: hide other versions of loaded mods and unhides them when unloaded
+
+## Misc Improvements
+
+## Removed
+
+# 52.02-r1
+
+## New Tools
+
+## New Features
+
+## Fixes
+- ``embark-anyone``: validate viewscreen before using, avoids a crash
+
+## Misc Improvements
+
+## Removed
+
+# 52.01-r1
+
+## New Tools
+
+## New Features
+
+## Fixes
+- fixed references to removed ``unit.curse`` compound
+- `gui/gm-unit`: remove reference to ``think_counter``, removed in v51.12
+- `gui/journal`: fix typo which caused the table of contents to always be regenerated even when not needed
+- `gui/mod-manager`: gracefully handle mods with missing or broken ``info.txt`` files
+- `uniform-unstick`: resolve overlap with new buttons in 51.13
+
+## Misc Improvements
+
+## Removed
+
+# 51.12-r1
+
+## New Tools
 - `deteriorate`: (reinstated) allow corpses, body parts, food, and/or damaged clothes to rot away
 - `modtools/moddable-gods`: (reinstated) create new deities from scratch
 
@@ -38,15 +245,15 @@ Template for new versions:
 - `gui/spectate`: added "Prefer nicknamed" to the list of options
 - `gui/mod-manager`: when run in a loaded world, shows a list of active mods -- click to export the list to the clipboard for easy sharing or posting
 - `gui/blueprint`: now records zone designations
+- `gui/design`: add option to draw N-point stars, hollow or filled or inverted, and change the main axis to orient in any direction
 
 ## Fixes
 - `starvingdead`: properly restore to correct enabled state when loading a new game that is different from the first game loaded in this session
 - `starvingdead`: ensure undead decay does not happen faster than the declared decay rate when saving and loading the game
+- `gui/design`: prevent line thickness from extending outside the map boundary
 
 ## Misc Improvements
 - `remove-stress`: also applied to long-term stress, immediately removing stressed and haggard statuses
-
-## Removed
 
 # 51.11-r1
 

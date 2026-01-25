@@ -25,18 +25,20 @@ Examples
 --------
 
 ``empty-bin``
-    Empty the contents of selected containers or all containers in the selected stockpile or building, except containers with liquids, onto the floor.
+   Empty the contents of selected containers or all containers in the selected stockpile or building, except containers with liquids or powders, onto the floor.
 
-``empty-bin --liquids``
-    Empty the contents of selected containers or all containers in the selected stockpile or building, including containers with liquids, onto the floor.
+``empty-bin --force``
+   Empty the contents of selected containers or all containers in the selected stockpile or building, including containers with liquids or powders, onto the floor.
 
-``empty-bin --recursive --liquids``
-    Empty the contents of selected containers or all containers in the selected stockpile or building, including containers with liquids and containers contents that are containers, such as a bags of seeds or filled waterskins, onto the floor.
+``empty-bin --recursive --force``
+   Empty the contents of selected containers or all containers in the selected stockpile or building, including containers with liquids/powders and containers contents that are containers, such as a bags of seeds or filled waterskins, onto the floor.
+
 
 Options
---------------
+-------
 
 ``-r``, ``--recursive``
-    Recursively empty containers.
-``-l``, ``--liquids``
-    Move contained liquids (DRINK and LIQUID_MISC) to the floor, making them unusable.
+   Recursively empty containers.
+
+``-f``, ``--force``
+   Move contained liquid and powders (DRINK, LIQUID_MISC and POWDER_MISC) to the floor, making them unusable.

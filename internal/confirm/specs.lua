@@ -7,6 +7,7 @@
 
 local json = require('json')
 local trade_internal = reqscript('internal/caravan/trade')
+local gui = require('gui')
 
 local CONFIG_FILE = 'dfhack-config/confirm.json'
 
@@ -325,13 +326,13 @@ ConfirmSpec{
     id='uniform-discard-changes',
     title='Discard uniform changes',
     message='Are you sure you want to discard changes to this uniform?',
-    intercept_keys={'_MOUSE_L', '_MOUSE_R'},
+    intercept_keys={'LEAVESCREEN', '_MOUSE_L', '_MOUSE_R'},
     -- sticks out the left side so it can move with the panel
     -- when the screen is resized too narrow
     intercept_frame={r=32, t=19, w=101, b=3},
     context='dwarfmode/Squads/Equipment/Customizing/Default',
     predicate=function(keys, mouse_offset)
-        if keys._MOUSE_R then
+        if keys.LEAVESCREEN or keys._MOUSE_R then
             return uniform_has_changes()
         end
         if clicked_on_confirm_button(mouse_offset) then
@@ -430,7 +431,7 @@ ConfirmSpec{
     end,
 }
 
-local function make_order_desc(order, noun)
+local function make_order_material_desc(order, noun)
     local desc = ''
     if order.mat_type >= 0 then
         local matinfo = dfhack.matinfo.decode(order.mat_type, order.mat_index)
@@ -451,35 +452,81 @@ end
 local orders = df.global.world.manager_orders.all
 local itemdefs = df.global.world.raws.itemdefs
 local reactions = df.global.world.raws.reactions.reactions
+
+local meal_type_by_ingredient_count = {
+    [2] = 'easy',
+    [3] = 'fine',
+    [4] = 'lavish',
+}
+
+local function make_order_desc(order)
+    if order.job_type == df.job_type.CustomReaction then
+        for _, reaction in ipairs(reactions) do
+            if reaction.code == order.reaction_name then
+                return reaction.name
+            end
+        end
+        return ''
+    elseif order.job_type == df.job_type.PrepareMeal then
+        -- DF uses mat_type as ingredient count?
+        local meal_type = meal_type_by_ingredient_count[order.mat_type]
+        if meal_type then
+            return 'prepare ' .. meal_type .. ' meal'
+        end
+        return 'prepare meal'
+    end
+    local noun
+    if order.job_type == df.job_type.MakeArmor then
+        noun = itemdefs.armor[order.item_subtype].name
+    elseif order.job_type == df.job_type.MakeWeapon then
+        noun = itemdefs.weapons[order.item_subtype].name
+    elseif order.job_type == df.job_type.MakeShield then
+        noun = itemdefs.shields[order.item_subtype].name
+    elseif order.job_type == df.job_type.MakeAmmo then
+        noun = itemdefs.ammo[order.item_subtype].name
+    elseif order.job_type == df.job_type.MakeHelm then
+        noun = itemdefs.helms[order.item_subtype].name
+    elseif order.job_type == df.job_type.MakeGloves then
+        noun = itemdefs.gloves[order.item_subtype].name
+    elseif order.job_type == df.job_type.MakePants then
+        noun = itemdefs.pants[order.item_subtype].name
+    elseif order.job_type == df.job_type.MakeShoes then
+        noun = itemdefs.shoes[order.item_subtype].name
+    elseif order.job_type == df.job_type.MakeTool then
+        noun = itemdefs.tools[order.item_subtype].name
+    elseif order.job_type == df.job_type.MakeTrapComponent then
+        noun = itemdefs.trapcomps[order.item_subtype].name
+    elseif order.job_type == df.job_type.SmeltOre then
+        noun = 'ore'
+    else
+        -- caption is usually "verb noun(-phrase)"
+        noun = df.job_type.attrs[order.job_type].caption
+    end
+    return make_order_material_desc(order, noun)
+end
+
 ConfirmSpec{
     id='order-remove',
     title='Remove manger order',
     message=function()
         local order_desc = ''
         local scroll_pos = mi.info.work_orders.scroll_position_work_orders
-        local y_offset = dfhack.screen.getWindowSize() > 154 and 8 or 10
+        local ir = gui.get_interface_rect()
+        local y_offset = ir.width > 154 and 8 or 10
+        local order_rows = (ir.height - y_offset - 9) // 3
+        local max_scroll_pos = math.max(0, #orders - order_rows) -- DF keeps list view "full" (no empty rows at bottom), if possible
+        if scroll_pos > max_scroll_pos then
+            -- sometimes, DF does not adjust scroll_position_work_orders (when
+            -- scrolled to bottom: order removed, or list view height grew);
+            -- compensate to keep order_idx in sync (and in bounds)
+            scroll_pos = max_scroll_pos
+        end
         local _, y = dfhack.screen.getMousePos()
         if y then
             local order_idx = scroll_pos + (y - y_offset) // 3
-            local order = orders[order_idx]
-            if order.job_type == df.job_type.CustomReaction then
-                for _, reaction in ipairs(reactions) do
-                    if reaction.code == order.reaction_name then
-                        order_desc = reaction.name
-                    end
-                end
-            elseif order.job_type == df.job_type.MakeArmor then
-                order_desc = make_order_desc(order, itemdefs.armor[order.item_subtype].name)
-            elseif order.job_type == df.job_type.MakeWeapon then
-                order_desc = make_order_desc(order, itemdefs.weapons[order.item_subtype].name)
-            elseif order.job_type == df.job_type.MakePants then
-                order_desc = make_order_desc(order, itemdefs.pants[order.item_subtype].name)
-            elseif order.job_type == df.job_type.SmeltOre then
-                order_desc = make_order_desc(order, 'ore')
-            elseif order.job_type == df.job_type.MakeTool then
-                order_desc = make_order_desc(order, itemdefs.tools[order.item_subtype].name)
-            else
-                order_desc = make_order_desc(order, df.job_type.attrs[order.job_type].caption)
+            local order = safe_index(orders, order_idx)
+            if order then
+                order_desc = make_order_desc(order)
             end
         end
         return ('Are you sure you want to remove this manager order?\n\n%s'):format(dfhack.capitalizeStringWords(order_desc))

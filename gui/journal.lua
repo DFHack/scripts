@@ -72,7 +72,7 @@ function JournalWindow:init()
                 self.subviews.table_of_contents_panel.visible = not collapsed
                 self.subviews.table_of_contents_divider.visible = not collapsed
 
-                if not colllapsed then
+                if not collapsed then
                     self:reloadTableOfContents()
                 end
 

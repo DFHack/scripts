@@ -153,7 +153,7 @@ end
 -- Gives a list of all the unit's beliefs and their values.
 -- Returns a table where the keys are the belief names and its values are its strength
 -- If tiers is true, the value is the tier of the belief instead of the trait's strength
-local function getUnitBeliefList(unit, tiers)
+function getUnitBeliefList(unit, tiers)
   local list = {}
 
   for id, beliefName in ipairs(df.value_type) do

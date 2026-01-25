@@ -1,14 +1,12 @@
 --@module = true
 
-local ic = reqscript('idle-crafting')
-
 ---make cheese using a specific barrel and workshop
 ---@param barrel df.item
 ---@param workshop df.building_workshopst
 ---@return df.job
 function makeCheese(barrel, workshop)
     ---@type df.job
-    local job = ic.make_job()
+    local job = dfhack.job.createLinked()
     job.job_type = df.job_type.MakeCheese
 
     local jitem = df.job_item:new()
@@ -22,29 +20,17 @@ function makeCheese(barrel, workshop)
         dfhack.error('could not attach item')
     end
 
-    ic.assignToWorkshop(job, workshop)
+    dfhack.job.assignToWorkshop(job, workshop)
     return job
 end
 
-
-
----unit is ready to take jobs
+---checks that unit can path to workshop
 ---@param unit df.unit
+---@param workshop df.building_workshopst
 ---@return boolean
-function unitIsAvailable(unit)
-    if unit.job.current_job then
-        return false
-    elseif #unit.individual_drills > 0 then
-        return false
-    elseif unit.flags1.caged or unit.flags1.chained then
-        return false
-    elseif unit.military.squad_id ~= -1 then
-        local squad = df.squad.find(unit.military.squad_id)
-        -- this lookup should never fail
-        ---@diagnostic disable-next-line: need-check-nil
-        return #squad.orders == 0 and squad.activity == -1
-    end
-    return true
+function canAccessWorkshop(unit, workshop)
+    local workshop_position = xyz2pos(workshop.centerx, workshop.centery, workshop.z)
+    return dfhack.maps.canWalkBetween(unit.pos, workshop_position)
 end
 
 ---check if unit can perform labor at workshop
@@ -54,8 +40,8 @@ end
 ---@return boolean
 function availableLaborer(unit, unit_labor, workshop)
     return unit.status.labors[unit_labor]
-       and unitIsAvailable(unit)
-       and ic.canAccessWorkshop(unit, workshop)
+       and dfhack.units.isJobAvailable(unit)
+       and canAccessWorkshop(unit, workshop)
 end
 
 ---find unit with a particular labor enabled

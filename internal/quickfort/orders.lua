@@ -108,6 +108,8 @@ local function process_filter(order_specs, filter, reactions)
     elseif filter.item_type == df.item_type.BALLISTAPARTS then
         label = 'ballista parts'
     elseif filter.item_type == df.item_type.BAR then label = 'magnetite ore'
+    elseif filter.item_type == df.item_type.BOLT_THROWER_PARTS then
+        label = 'bolt thrower parts'
     elseif filter.item_type == df.item_type.BOX then label = 'coffer'
     elseif filter.item_type == df.item_type.CAGE then label = 'wooden cage'
     elseif filter.item_type == df.item_type.CATAPULTPARTS then

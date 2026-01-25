@@ -7,9 +7,11 @@ function getName(unit)
 end
 
 function legendize(unit, skill_idx)
-    utils.insert_or_update(unit.status.current_soul.skills,
-        {new=true, id=skill_idx, rating=df.skill_rating.Legendary5},
-        'id')
+    if skill_idx >= 0 and skill_idx <= df.job_skill._last_item then
+        utils.insert_or_update(unit.status.current_soul.skills,
+            {new=true, id=skill_idx, rating=df.skill_rating.Legendary5},
+            'id')
+    end
 end
 
 function make_legendary(skillname)
@@ -50,7 +52,9 @@ function BreathOfArmok()
         return
     end
     for i in ipairs(df.job_skill) do
-        legendize(unit, i)
+        if i >= 0 then
+            legendize(unit, i)
+        end
     end
     print('The breath of Armok has engulfed ' .. getName(unit))
 end

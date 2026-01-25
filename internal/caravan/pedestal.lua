@@ -599,9 +599,10 @@ end
 
 local function unassign_item(bld, item)
     if not bld then return end
-    local _, found, idx = utils.binsearch(bld.displayed_items, item.id)
-    if found then
+    local idx, _ = utils.linear_index(bld.displayed_items, item.id)
+    if idx then
         bld.displayed_items:erase(idx)
+        item.flags.in_building = false
     end
 end
 
@@ -628,7 +629,7 @@ local function attach_item(item, display_bld)
     local ref = df.new(df.general_ref_building_display_furniturest)
     ref.building_id = display_bld.id
     item.general_refs:insert('#', ref)
-    utils.insert_sorted(display_bld.displayed_items, item.id)
+    display_bld.displayed_items:insert('#', item.id)
     item.flags.forbid = false
     item.flags.in_building = false
 end
