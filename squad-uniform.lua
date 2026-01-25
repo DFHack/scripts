@@ -9,9 +9,14 @@ local json = require('json')
 local UNIFORM_DIR = dfhack.getDFPath() .. '/dfhack-config/squad_uniform/'
 
 local function ensure_uniform_dir()
-    if not dfhack.filesystem.isdir(UNIFORM_DIR) then
-        dfhack.filesystem.mkdir(UNIFORM_DIR)
+    if dfhack.filesystem.isdir(UNIFORM_DIR) then
+        return true
     end
+    local ok, err = dfhack.filesystem.mkdir(UNIFORM_DIR)
+    if not ok then
+        dfhack.printerr('Failed to create uniform directory: ' .. tostring(err))
+    end
+    return ok
 end
 
 local function is_valid_name(name)
@@ -19,9 +24,11 @@ local function is_valid_name(name)
 end
 
 local function get_uniform_files()
-    ensure_uniform_dir()
+    if not ensure_uniform_dir() then
+        return {}
+    end
     local files = {}
-    local list = dfhack.filesystem.listdir(UNIFORM_DIR)
+    local list, err = dfhack.filesystem.listdir(UNIFORM_DIR)
     if list then
         for _, file in ipairs(list) do
             if file:match('%.dfuniform$') then
@@ -29,12 +36,16 @@ local function get_uniform_files()
             end
         end
         table.sort(files)
+    elseif err then
+        dfhack.printerr('Failed to list uniform files: ' .. tostring(err))
     end
     return files
 end
 
 local function import_uniform_file(filepath)
-    ensure_uniform_dir()
+    if not ensure_uniform_dir() then
+        return false, 'Uniform directory is unavailable.'
+    end
     local file, err = io.open(filepath, 'r')
     if not file then
         return false, 'Failed to open file for reading: ' .. tostring(err)
@@ -54,7 +65,7 @@ local function import_uniform_file(filepath)
     end
 
     local nickname = data.nickname
-    if not nickname or nickname == '' then
+    if not nickname or nickname == '' or not is_valid_name(nickname) then
         nickname = filepath:match('([^/\\]+)%.dfuniform$') or 'ImportedUniform'
     end
 
@@ -105,7 +116,9 @@ local function import_uniform_file(filepath)
 end
 
 local function export_uniform_file(filepath)
-    ensure_uniform_dir()
+    if not ensure_uniform_dir() then
+        return false, 'Uniform directory is unavailable.'
+    end
     local panel = df.global.game.main_interface and df.global.game.main_interface.squad_equipment
     if not panel then
         return false, 'Squad equipment panel is not available. Please open the Military > Equipment screen.'
@@ -200,7 +213,11 @@ local function ImportUniformDialog()
             dialogs.showYesNoPrompt('Delete uniform file?',
                 'Are you sure you want to delete "' .. fname .. '"?', nil,
                 function()
-                    os.remove(fname)
+                    local ok, err = os.remove(fname)
+                    if not ok then
+                        dialogs.showMessage('Delete failed', 'Unable to delete "' .. fname .. '": ' .. tostring(err))
+                        return
+                    end
                     dfhack.println('Deleted: ' .. fname)
                     local list = get_dlg().subviews.list
                     local filter = list:getFilter()
