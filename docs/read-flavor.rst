@@ -25,3 +25,17 @@ Notes
 - You must use your own text-to-speech (TTS) program to read the output.
   On Windows 11, Voice Attack works well, and a profile with the launch command
   can be included for others to use.
+
+-------------------
+Press ` ~ key and hold for 0.05 seconds and release
+Pause 0.05 seconds
+Set Windows clipboard to 'read-flavor'
+Pause 0.05 seconds
+Press Left Ctrl+V keys and hold for 0.05 seconds and release
+Pause 0.05 seconds
+Press NumPad Enter key and hold for 0.05 seconds and release
+Pause 0.05 seconds
+Press Escape key and hold for 0.05 seconds and release
+Pause 0.05 seconds
+Set text [TTS] to [D:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress\flavor text\read flavor.txt]
+Say, '{TXT:TTS}'
