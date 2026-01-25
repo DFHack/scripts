@@ -12,7 +12,7 @@
 local CONFIG = {
   MAX_FILL_TILES = 2000,   -- positive integer; safety limit
   ALLOW_DIAGONALS = false, -- set true to allow 8-way fill
-  MAX_LIMIT_HARD = 4000  -- hard clamp to avoid runaway fills
+  MAX_LIMIT_HARD = 4000,  -- hard clamp to avoid runaway fills
 }
 
 -------------------------
@@ -167,7 +167,8 @@ local function main(...)
     elseif s == 'h' or s == 'help' then
       print('Usage: autoceiling [t] [<max_fill_tiles>]')
       print('  t: enable diagonal flood fill')
-      print('  <max_fill_tiles>: positive integer, default ' .. CONFIG.MAX_FILL_TILES)
+      print(('  <max_fill_tiles>: positive integer, default %d, max %d')
+        :format(CONFIG.MAX_FILL_TILES, CONFIG.MAX_LIMIT_HARD))
       return
     elseif s ~= '' then
       err('unknown argument: ' .. tostring(raw))
@@ -187,9 +188,12 @@ local function main(...)
   end
   local z_surface = z0 + 1
 
-  -- Require buildingplan directly; let it error if missing
-  local bp = require('plugins.buildingplan')
-  if bp and (not bp.isEnabled or not bp.isEnabled()) then bp = nil end
+  local ok, bp = pcall(require, 'plugins.buildingplan')
+  if not ok then
+    bp = nil
+  elseif bp and (not bp.isEnabled or not bp.isEnabled()) then
+    bp = nil
+  end
   local cons = dfhack.constructions
 
   local placed, skipped = 0, 0
@@ -209,13 +213,13 @@ local function main(...)
     elseif has_any_building(x, y, z_surface) then
       skip('building')
     else
-      local ok, why
+      local ok_place, why
       if bp then
-        ok, why = place_planned(bp, pos)
+        ok_place, why = place_planned(bp, pos)
       else
-        ok, why = place_native(cons, pos)
+        ok_place, why = place_native(cons, pos)
       end
-      if ok then placed = placed + 1 else skip(why or 'unknown') end
+      if ok_place then placed = placed + 1 else skip(why or 'unknown') end
     end
   end
 
