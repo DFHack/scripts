@@ -36,6 +36,66 @@ Template for new versions:
 
 ## Removed
 
+# 53.10-r1
+
+## New Tools
+
+## New Features
+- `gui/notify`: new notification type: missing nemesis records; displays a warning message about game corruption.
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 53.07-r1
+
+## New Tools
+- `fix/codex-pages`: add pages to written content that have unspecified page counts.
+- `gui/keybinds`: gui for managing and saving custom keybindings
+
+## New Features
+
+## Fixes
+- `empty-bin`: renamed ``--liquids`` parameter to ``--force`` and made emptying of containers (bags) with powders contingent on that parameter. Previously powders would just always get disposed.
+
+## Misc Improvements
+- `combine`: try harder to find the currently-selected stockpile
+
+## Removed
+
+# 53.06-r1
+
+## New Tools
+
+## New Features
+
+## Fixes
+- `gui/design`: designating a single-level stair construction now properly follows the selected stair type.
+- `gui/design`: adjusted conflicting keybinds, diagonal line reverse becoming ``R`` and bottom stair type becoming ``g``.
+- `modtools/set-personality`: use correct caste trait ranges; fixes `gui/gm-unit` being unable to correctly randomize traits or set traits to caste average
+
+## Misc Improvements
+
+## Removed
+
+# 53.04-r1
+
+## New Tools
+- `gui/siegemanager`: manage your siege engines at a glance.
+
+## New Features
+- `item`: new ``--total-quality`` option for use in conjunction with ``--min-quality`` or ``--max-quality`` to filter items according to their total quality
+
+## Fixes
+
+## Misc Improvements
+- `gui/design`: can now construct reinforced walls
+- `quickfort`: support for reinforced walls and bolt throwers
+
+## Removed
+
 # 53.01-r1
 
 ## New Tools

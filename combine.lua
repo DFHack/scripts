@@ -736,6 +736,26 @@ local function get_stockpile_here()
     -- return the stockpile as a table
     local stockpiles = {}
     local building = dfhack.gui.getSelectedStockpile(true)
+
+    -- try finding the stockpile by viewed item or first item in itemlist viewsheet.
+    if building == nil then
+        local item = nil
+        if dfhack.gui.getSelectedItem(true) ~= nil then
+            item = dfhack.gui.getSelectedItem(true)
+        elseif tonumber(dfhack.DF_VERSION:match("^0*%.*(%d+%.%d+)")) >= 50.07   -- matchFocusString() in Commit a770a4c
+            and dfhack.gui.matchFocusString("dwarfmode/ViewSheets/ITEM_LIST", dfhack.gui.getDFViewscreen())
+            and df.global.game.main_interface.view_sheets.open == true
+            and df.global.game.main_interface.view_sheets.active_sheet == df.view_sheet_type.ITEM_LIST
+            and #df.global.game.main_interface.view_sheets.viewing_itid > 0
+        then
+            local itemid = df.global.game.main_interface.view_sheets.viewing_itid[0]
+            item = df.item.find(itemid)
+        end
+        local pos = (item) and xyz2pos(dfhack.items.getPosition(item)) or nil
+        building = (pos) and dfhack.buildings.findAtTile(pos) or nil
+        building = (df.building_stockpilest:is_instance(building)) and building or nil
+    end
+
     if not building then qerror('Please select a stockpile.') end
     table.insert(stockpiles, building)
     if opts.verbose > 0 then

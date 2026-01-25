@@ -95,6 +95,8 @@ descriptions = {
                 "as logs or bars. Cutting boulders into blocks gives four times as",
                 "many items, which are lighter for faster hauling and yield smooth",
                 "constructions."},
+    BOLT_THROWER_PARTS = {
+                "Can be used to construct a Bolt Thrower."},
     BOX = {     "A container for storing items. They are required by nobles, and will",
                 "increase the value of rooms they are placed in. Also required to store",
                 "hospital supplies. They can be made of stone or metal (coffers),",
