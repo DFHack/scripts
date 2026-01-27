@@ -1,8 +1,3 @@
-    :summary: Filter hauling routes in the Hauling menu with an inline search box.
-
-This overlay adds a :guilabel:`Filter:` field to the :guilabel:`Hauling` menu
-(opened with :kbd:`h`) and filters the hauling route list as you type.
-Activate the filter by clicking the field or pressing :kbd:`Alt`\ +\ :kbd:`S`.
-Clearing the field restores the full list, including any routes or stops added
-
-while the filter was active.
+Summary:
+Add a search box to the Hauling menu to filter hauling routes.
+This overlay adds a Filter field to the Hauling menu (opened with h). The list of hauling routes updates as you type. You can activate the filter by clicking the field or pressing Alt+S. Clearing the field shows the full list again, including any routes or stops added while the filter was active.
