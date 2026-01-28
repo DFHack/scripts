@@ -983,6 +983,9 @@ local function get_target(opts)
     if opts.histfig_id then
         target = get_hf_target(df.historical_figure.find(opts.histfig_id))
         if not target then qerror('Historical figure not found') end
+    elseif opts.entity_id then
+        target = get_entity_target(df.historical_entity.find(opts.entity_id))
+        if not target then qerror('Entity not found') end
     elseif opts.item_id then
         target = get_artifact_target(df.item.find(opts.item_id))
         if not target then qerror('Artifact not found') end
