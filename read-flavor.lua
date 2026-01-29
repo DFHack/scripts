@@ -68,6 +68,7 @@ end
 
 local UNIT_SHEET_SUBTAB = {
     HEALTH = 2,
+    SKILLS = 3,
     PERSONALITY = 10,
 }
 
@@ -85,6 +86,21 @@ local PERSONALITY_ACTIVE_TAB = {
     PREFERENCES = 2,
     NEEDS = 3,
 }
+
+local SKILL_ACTIVE_TAB = {
+    KNOWLEDGE = 4,
+}
+
+local function get_skill_text(view_sheets)
+    if #view_sheets.skill_description_raw_str == 0 then
+        return nil
+    end
+    local lines = collect_lines(view_sheets.skill_description_raw_str)
+    if #lines == 0 then
+        return nil
+    end
+    return table.concat(lines, '\n')
+end
 
 local function get_unit_flavor_text(view_sheets)
     local unit = df.unit.find(view_sheets.active_id)
@@ -115,8 +131,19 @@ local function get_unit_flavor_text(view_sheets)
         qerror('No text found on the Personality subtab (Traits/Values/Preferences/Needs).')
     end
 
+    if view_sheets.active_sub_tab == UNIT_SHEET_SUBTAB.SKILLS
+        and view_sheets.unit_skill_active_tab == SKILL_ACTIVE_TAB.KNOWLEDGE
+    then
+        local text = get_skill_text(view_sheets)
+        if text then
+            return unit, 'Skill', text
+        end
+        clear_output_file()
+        qerror('No text found on the Knowledge subtab.')
+    end
+
     clear_output_file()
-    qerror('Open Health, Personality or an item window before running this script.')
+    qerror('Open Health, Personality, Skills, or an item window before running this script.')
 end
 
 local function get_item_flavor_text(view_sheets)
