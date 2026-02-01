@@ -279,7 +279,7 @@ end
 
 function HaulingRouteFilterOverlay:overlay_onenable()
     if not self then return end
-	local filter = self.subviews.filter
+    local filter = self.subviews.filter
     if filter then
         filter:setFocus(false)
     end
