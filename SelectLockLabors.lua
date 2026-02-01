@@ -42,9 +42,7 @@ local function simulate_actions(self, count)
         if self.action_mode ~= 'select' then
             gui.simulateInput(viewscreen, 'UNITLIST_SPECIALIZE')
         end
-        --This line is keyboard arrow down
         gui.simulateInput(viewscreen, 'STANDARDSCROLL_DOWN')
-        --CONTEXT_SCROLL_DOWN helps with consistency. Otherwise the program will miss some units. Line below is scroll wheel down
         gui.simulateInput(viewscreen, 'CONTEXT_SCROLL_DOWN')
 
         dfhack.timeout(3, 'frames', function() step(i + 1) end)
@@ -57,6 +55,7 @@ function SelectLockOverlay:init()
     self.action_mode = 'both'
     self.entry_count = 7
     self.is_running = false
+
     self:addviews{
         widgets.Panel{
             frame_style = gui.MEDIUM_FRAME,
@@ -67,6 +66,7 @@ function SelectLockOverlay:init()
                     frame = {l = 1, t = 1},
                     label = 'Mode',
                     option_gap = 2,
+                    key = 'CUSTOM_S', -- press 's' to cycle modes
                     options = {
                         {label = 'Select only', value = 'select'},
                         {label = 'Lock only', value = 'lock'},
