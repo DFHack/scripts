@@ -1,4 +1,5 @@
 --@module=true
+
 local gui = require('gui')
 local widgets = require('gui.widgets')
 local overlay = require('plugins.overlay')
@@ -22,6 +23,7 @@ end
 
 local function simulate_actions(self, count)
     count = sanitize_entry_count(count, 1)
+
     gui.simulateInput(dfhack.gui.getCurViewscreen(), 'STANDARDSCROLL_RIGHT')
 
     local function step(i)
@@ -36,12 +38,14 @@ local function simulate_actions(self, count)
         end
 
         local viewscreen = dfhack.gui.getCurViewscreen()
+
         if self.action_mode ~= 'lock' then
             gui.simulateInput(viewscreen, 'SELECT')
         end
         if self.action_mode ~= 'select' then
             gui.simulateInput(viewscreen, 'UNITLIST_SPECIALIZE')
         end
+
         gui.simulateInput(viewscreen, 'STANDARDSCROLL_DOWN')
         gui.simulateInput(viewscreen, 'CONTEXT_SCROLL_DOWN')
 
@@ -89,6 +93,7 @@ function SelectLockOverlay:init()
                     view_id = 'run_button',
                     frame = {l = 1, t = 3},
                     label = 'RUN',
+                    key = 'CUSTOM_R', -- press 'r' to run
                     on_activate = function()
                         if self.is_running then return end
                         self.is_running = true
