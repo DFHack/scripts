@@ -18,6 +18,8 @@ Template for new versions:
 
 ## Fixes
 
+- `prioritize`: Fix the overlay appearing where it should not when following a unit
+
 ## Misc Improvements
 
 ## Removed
@@ -33,6 +35,7 @@ Template for new versions:
 ## Fixes
 
 ## Misc Improvements
+- `gui/notify`: reduced severity of the missing nemesis records warning if no units on the map are affected.  clarified wording.
 
 ## Removed
 
