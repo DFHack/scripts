@@ -1,4 +1,4 @@
-Lever Interface
+lever-interface
 ===============
 
 Overview
