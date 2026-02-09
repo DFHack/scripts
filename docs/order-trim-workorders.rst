@@ -3,7 +3,6 @@ order-trim-workorders
 
 .. dfhack-tool::
     :summary: Pick, pretty-format, and trim work orders from DFHack order JSON files.
-    :tags: fort gui workorders
 
 This script provides a two-step UI for trimming work order files in
 ``dfhack-config/orders``:
