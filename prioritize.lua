@@ -658,11 +658,28 @@ end
 -- EnRouteOverlay
 --
 
+--- Return the selected active construction or destruction job
+local function getSelectedActiveBuildingJob()
+    -- This is not relying on dfhack.gui.getSelectedJob() because we don't want
+    -- the job of a selected or followed unit, only of a selected building
+    local building = dfhack.gui.getSelectedBuilding(true)
+    if not building then
+        return nil
+    end
+
+    -- Find if the building is being constructed
+    for _, job in ipairs(building.jobs) do
+        if not job.flags.suspend and (job.job_type == df.job_type.ConstructBuilding or job.job_type == df.job_type.ConstructBuilding) then
+            return job
+        end
+    end
+
+    return nil
+end
+
+
 local function is_visible()
-    local job = dfhack.gui.getSelectedJob(true)
-    return job and not job.flags.suspend and
-        (job.job_type == df.job_type.DestroyBuilding or
-         job.job_type == df.job_type.ConstructBuilding)
+    return getSelectedActiveBuildingJob() ~= nil
 end
 
 EnRouteOverlay = defclass(EnRouteOverlay, overlay.OverlayWidget)
@@ -693,7 +710,7 @@ function EnRouteOverlay:init()
             label='Make top priority:',
             key='CUSTOM_CTRL_T',
             on_change=function(val)
-                local job = dfhack.gui.getSelectedJob(true)
+                local job = getSelectedActiveBuildingJob()
                 if not job then return end
                 job.flags.do_now = val
             end,
@@ -712,7 +729,7 @@ function EnRouteOverlay:get_builder_name_pen()
 end
 
 function EnRouteOverlay:zoom_to_builder()
-    local job = dfhack.gui.getSelectedJob(true)
+    local job = getSelectedActiveBuildingJob()
     if not job then return end
     local builder = dfhack.job.getWorker(job)
     if builder then
@@ -721,7 +738,7 @@ function EnRouteOverlay:zoom_to_builder()
 end
 
 function EnRouteOverlay:render(dc)
-    local job = dfhack.gui.getSelectedJob(true)
+    local job = getSelectedActiveBuildingJob()
     self.builder = dfhack.job.getWorker(job)
     self.subviews.do_now:setOption(job.flags.do_now)
     EnRouteOverlay.super.render(self, dc)
