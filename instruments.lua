@@ -187,4 +187,3 @@ elseif positionals[1] == "building" then
     local amount = positionals[2] or 1
     order_instruments(function(instr) return instr.flags.PLACED_AS_BUILDING end, amount, quiet)
 end
-`
