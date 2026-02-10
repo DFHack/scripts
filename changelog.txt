@@ -29,6 +29,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `multihaul`: add multiple items to a single haul job with wheelbarrow
 
 ## New Features
 - `trackstop`: can now modify pressure plates; permits minecart and creature triggers to be set beyond normal sensitivity
