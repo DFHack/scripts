@@ -31,6 +31,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `trackstop`: can now modify pressure plates; permits minecart and creature triggers to be set beyond normal sensitivity
 
 ## Fixes
 
