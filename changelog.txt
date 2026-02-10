@@ -18,6 +18,8 @@ Template for new versions:
 
 ## Fixes
 
+- `prioritize`: Fix the overlay appearing where it should not when following a unit
+
 ## Misc Improvements
 
 ## Removed
@@ -30,6 +32,21 @@ Template for new versions:
 
 ## New Features
 - `gui/quickcmd`: added custom command names and option to display command output
+- `trackstop`: can now modify pressure plates; permits minecart and creature triggers to be set beyond normal sensitivity
+
+## Fixes
+
+## Misc Improvements
+- `gui/notify`: reduced severity of the missing nemesis records warning if no units on the map are affected.  clarified wording.
+
+## Removed
+
+# 53.10-r1
+
+## New Tools
+
+## New Features
+- `gui/notify`: new notification type: missing nemesis records; displays a warning message about game corruption.
 
 ## Fixes
 
