@@ -31,6 +31,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `gui/rename`: added check for entity_id input in get_target function
 
 ## Misc Improvements
 
