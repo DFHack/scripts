@@ -34,6 +34,7 @@ Template for new versions:
 - `trackstop`: can now modify pressure plates; permits minecart and creature triggers to be set beyond normal sensitivity
 
 ## Fixes
+- `gui/rename`: added check for entity_id input in get_target function
 
 ## Misc Improvements
 - `gui/notify`: reduced severity of the missing nemesis records warning if no units on the map are affected.  clarified wording.
