@@ -97,7 +97,7 @@ local function remove_item_from_position(squad_position, item_id)
             for idx, assigned_item_id in ipairs(uniform_spec.assigned) do
                 if assigned_item_id == item_id then
                     uniform_spec.assigned:erase(idx)
-                    return
+                    break
                 end
             end
         end
@@ -105,7 +105,17 @@ local function remove_item_from_position(squad_position, item_id)
     for _, special_case in ipairs({"quiver", "backpack", "flask"}) do
         if squad_position.equipment[special_case] == item_id then
             squad_position.equipment[special_case] = -1
-            return
+            break
+        end
+    end
+
+    -- Move the item from assigned to unassigned in the global equipment lists
+    local item = df.item.find(item_id)
+    if item then
+        local item_type = item:getType()
+        local equipment = df.global.plotinfo.equipment
+        if utils.erase_sorted(equipment.items_assigned[item_type], item_id) then
+            utils.insert_sorted(equipment.items_unassigned[item_type], item_id)
         end
     end
 end
