@@ -93,13 +93,16 @@ local function get_hf_target(hf)
     local unit = df.unit.find(hf.unit_id)
     local sync_names = {}
     if unit then
-        local unit_name = dfhack.units.getVisibleName(unit)
-        if unit_name ~= name then
-            table.insert(sync_names, unit_name)
+        -- Always sync unit.name
+        table.insert(sync_names, unit.name)
+        -- Also sync current_soul.name if present
+        if unit.status.current_soul then
+            table.insert(sync_names, unit.status.current_soul.name)
         end
     end
     return {name=name, sync_names=sync_names, civ_id=hf.civ_id}
 end
+
 
 local function get_unit_target(unit)
     if not unit then return end
