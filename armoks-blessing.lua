@@ -23,7 +23,7 @@ function brainwash_unit(unit)
     unit.status.current_soul.personality.traits.GREED                    = 25
     unit.status.current_soul.personality.traits.IMMODERATION             = 25
     unit.status.current_soul.personality.traits.VIOLENT                  = 50
-    unit.status.current_soul.personality.traits.PERSEVERENCE             = 75
+    unit.status.current_soul.personality.traits.PERSEVERANCE             = 75
     unit.status.current_soul.personality.traits.WASTEFULNESS             = 50
     unit.status.current_soul.personality.traits.DISCORD                  = 25
     unit.status.current_soul.personality.traits.FRIENDLINESS             = 75
@@ -80,7 +80,7 @@ function brainwash_unit(unit)
         [df.value_type.HARD_WORK]=41,
         [df.value_type.SACRIFICE]=41,
         [df.value_type.COMPETITION]=-41,
-        [df.value_type.PERSEVERENCE]=41,
+        [df.value_type.PERSEVERANCE]=41,
         [df.value_type.LEISURE_TIME]=-11,
         [df.value_type.COMMERCE]=41,
         [df.value_type.ROMANCE]=41,

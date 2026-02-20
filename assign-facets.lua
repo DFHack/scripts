@@ -136,7 +136,7 @@ function assign(facets, unit, reset)
         facet = facet:upper()
         -- there's a typo in the game data
         if facet == "PERSEVERANCE" then
-            facet = "PERSEVERENCE"
+            facet = "PERSEVERANCE"
         end
         if df.personality_facet_type[facet] then
             if level >= -3 and level <= 3 then

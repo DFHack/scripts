@@ -912,8 +912,8 @@ local function export_more_legends_xml()
     for ID, event in progress_ipairs(vector, 'historical event relationship supplements') do
         file:write("\t<historical_event_relationship_supplement>\n")
         file:write("\t\t<event>"..event.event.."</event>\n")
-        file:write("\t\t<occasion_type>"..event.occasion_type.."</occasion_type>\n")
-        file:write("\t\t<site>"..event.site.."</site>\n")
+        file:write("\t\t<occasion_type>"..event.circumstance.."</occasion_type>\n")
+        file:write("\t\t<site>"..event.circumstance_id.."</site>\n")
         file:write("\t\t<reason>"..event.reason.."</reason>\n")
         file:write("\t</historical_event_relationship_supplement>\n")
     end
