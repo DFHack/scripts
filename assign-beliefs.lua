@@ -134,10 +134,6 @@ function assign(beliefs, unit, reset)
     for belief, level in pairs(beliefs) do
         assert(type(level) == "number")
         belief = belief:upper()
-        -- there's a typo in the game data
-        if belief == "PERSEVERANCE" then
-            belief = "PERSEVERENCE"
-        end
         if df.value_type[belief] then
             if level >= -3 and level <= 3 then
                 local belief_value = calculate_random_belief_value(level)

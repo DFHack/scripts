@@ -34,7 +34,7 @@ end
 local function print_event(event)
     local str = df.new("string")
     local ctx = df.history_event_context:new()
-    event:getSentence(str, ctx)
+    event:getSentence(str, ctx, true, false)
     ctx:delete()
     print(str.value)
     str:delete()
