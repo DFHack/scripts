@@ -134,10 +134,6 @@ function assign(facets, unit, reset)
     for facet, level in pairs(facets) do
         assert(type(level) == "number")
         facet = facet:upper()
-        -- there's a typo in the game data
-        if facet == "PERSEVERANCE" then
-            facet = "PERSEVERANCE"
-        end
         if df.personality_facet_type[facet] then
             if level >= -3 and level <= 3 then
                 local facet_strength = calculate_random_facet_strength(level)
