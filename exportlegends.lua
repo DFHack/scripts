@@ -913,7 +913,7 @@ local function export_more_legends_xml()
         file:write("\t<historical_event_relationship_supplement>\n")
         file:write("\t\t<event>"..event.event.."</event>\n")
         file:write("\t\t<occasion_type>"..event.circumstance.."</occasion_type>\n")
-        file:write("\t\t<site>"..event.circumstance_id.."</site>\n")
+        file:write("\t\t<site>"..event.circumstance_id.Death.."</site>\n") -- FIXME: Death has been chosen arbitrarily here
         file:write("\t\t<reason>"..event.reason.."</reason>\n")
         file:write("\t</historical_event_relationship_supplement>\n")
     end
