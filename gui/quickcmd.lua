@@ -163,7 +163,7 @@ function QCMDDialog:showCommandOutput(command, name)
     local screen = self.parent_view
     screen:dismiss()
 
-    local OutputDialog = defclass(OutputDialog, gui.ZScreenModal)
+    local OutputDialog = defclass(OutputDialog, gui.ZScreen)
     OutputDialog.ATTRS{
         focus_path='quickcmd_output',
         command='',
