@@ -212,6 +212,33 @@ local function boost(job_matchers, opts)
     end
 end
 
+local function boost_oldest(job_matchers, opts)
+    local quiet = opts.quiet
+    local count = opts.oldest_count
+    local job = df.global.world.jobs.list
+    while ( job.next ) do
+        job = job.next
+        if (job.item and not job.item.flags.do_now and job.item.order_id == -1) then
+            job.item.flags.do_now = true
+            count = count - 1
+            if (count <= 0) then
+                return true
+            end
+        end
+    end
+end
+
+local function clear_all(job_matchers, opts)
+    local quiet = opts.quiet
+    local job = df.global.world.jobs.list
+    while ( job.next ) do
+        job = job.next
+        if (job.item and job.item.flags.do_now) then
+            job.item.flags.do_now = false
+        end
+    end
+end
+
 local function print_add_message(job_type, annotation)
     annotation = annotation or ''
     print(('Automatically prioritizing future jobs of type: %s%s')
@@ -517,6 +544,13 @@ end
 local function parse_commandline(args)
     local opts, action, unit_labors, reaction_names = {}, status, nil, nil
     local positionals = argparse.processArgsGetopt(args, {
+            {'o', 'oldest', hasArg=true, handler=function(arg)
+                action = boost_oldest
+                opts.oldest_count = arg
+            end},
+            {'z', 'clear', handler=function(arg)
+                action = clear_all
+            end},
             {'a', 'add', handler=function() action = boost_and_watch end},
             {'d', 'delete', handler=function() action = remove_watch end},
             {'h', 'help', handler=function() opts.help = true end},
