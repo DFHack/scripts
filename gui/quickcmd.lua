@@ -50,9 +50,7 @@ local function migrate_to_v2(data)
     local commands = {}
     for i, cmd in ipairs(data) do
         if type(cmd) == 'string' then
-            table.insert(commands, {command = cmd, name = '', show_output = false})
-        else
-            table.insert(commands, cmd)
+            table.insert(commands, {command = cmd, name = nil, show_output = false})
         end
     end
 
@@ -175,7 +173,7 @@ function QCMDDialog:showCommandOutput(command, name)
 
     function OutputDialog:init()
         local title
-        if self.name and self.name ~= '' then
+        if self.name then
             title = self.name .. ': ' .. self.command
         else
             title = self.command
@@ -223,7 +221,7 @@ function QCMDDialog:updateList()
         end
 
         -- Display name if set, otherwise display command
-        local display_text = cmd_obj.name and cmd_obj.name ~= '' and cmd_obj.name or cmd_obj.command
+        local display_text = cmd_obj.name or cmd_obj.command
 
         -- Store the entry.
         table.insert(choices, {
@@ -257,7 +255,7 @@ function QCMDDialog:onAddCommand()
         COLOR_GREEN,
         '',
         function(command)
-            table.insert(self.commands, {command=command, name='', show_output=false})
+            table.insert(self.commands, {command=command, name=nil, show_output=false})
             save_commands(self.commands)
             self:updateList()
         end
@@ -319,7 +317,7 @@ function QCMDDialog:onSetName()
         COLOR_GREEN,
         self.commands[index].name or '',
         function(name)
-            self.commands[index].name = name
+            self.commands[index].name = name ~= '' and name or nil
             save_commands(self.commands)
             self:updateList()
         end
