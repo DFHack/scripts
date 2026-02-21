@@ -10,13 +10,12 @@ CH_DN = string.char(31)
 CH_MONEY = string.char(15)
 CH_EXCEPTIONAL = string.char(240)
 
-local to_pen = dfhack.pen.parse
-SOME_PEN = to_pen{ch=':', fg=COLOR_YELLOW}
-ALL_PEN = to_pen{ch=string.char(251), fg=COLOR_LIGHTGREEN}
+SOME_PEN = dfhack.pen.parse{ch=':', fg=COLOR_YELLOW}
+ALL_PEN  = dfhack.pen.parse{ch=string.char(251), fg=COLOR_LIGHTGREEN}
 
 function add_words(words, str)
-    for word in str:gmatch("[%w]+") do
-        table.insert(words, word:lower())
+    for word in dfhack.toSearchNormalized(str):gmatch("[%w]+") do
+        table.insert(words, word)
     end
 end
 
@@ -35,8 +34,15 @@ function make_container_search_key(item, desc)
     return table.concat(words, ' ')
 end
 
-local function get_broker_skill()
+function get_broker_skill()
     local broker = dfhack.units.getUnitByNobleRole('broker')
+    local interface_trade = df.global.game.main_interface.trade
+    if interface_trade.open == true
+        and interface_trade.choosing_merchant == false
+        and interface_trade.fortress_trader ~= nil
+    then
+        broker = interface_trade.fortress_trader
+    end
     if not broker then return 0 end
     for _,skill in ipairs(broker.status.current_soul.skills) do
         if skill.id == df.job_skill.APPRAISAL then
@@ -46,7 +52,7 @@ local function get_broker_skill()
     return 0
 end
 
-local function get_threshold(broker_skill)
+function get_threshold(broker_skill)
     if broker_skill <= df.skill_rating.Dabbling then return 0 end
     if broker_skill <= df.skill_rating.Novice then return 10 end
     if broker_skill <= df.skill_rating.Adequate then return 25 end
@@ -62,7 +68,7 @@ local function get_threshold(broker_skill)
     if broker_skill <= df.skill_rating.Master then return 4000 end
     if broker_skill <= df.skill_rating.HighMaster then return 5000 end
     if broker_skill <= df.skill_rating.GrandMaster then return 10000 end
-    return math.huge
+    return math.maxinteger
 end
 
 local function estimate(value, round_base, granularity)
@@ -76,8 +82,8 @@ end
 -- Otherwise, if it's less than or equal to [threshold + 50] * 3, it will round to the nearest multiple of 100
 -- Otherwise, if it's less than or equal to [threshold + 50] * 30, it will round to the nearest multiple of 1000
 -- Otherwise, it will display a guess equal to [threshold + 50] * 30 rounded up to the nearest multiple of 1000.
-function obfuscate_value(value)
-    local threshold = get_threshold(get_broker_skill())
+function obfuscate_value(value, threshold)
+    threshold = threshold or get_threshold(get_broker_skill())
     if value < threshold then return dfhack.formatInt(value) end
     threshold = threshold + 50
     if value <= threshold then return ('~%s'):format(estimate(value, 5, 10)) end
@@ -267,7 +273,7 @@ function get_slider_widgets(self, suffix)
                         {label='100'..CH_MONEY, value={index=4, value=100}, pen=COLOR_BROWN},
                         {label='500'..CH_MONEY, value={index=5, value=500}, pen=COLOR_BROWN},
                         {label='1000'..CH_MONEY, value={index=6, value=1000}, pen=COLOR_BROWN},
-                        {label='Max', value={index=7, value=math.huge}, pen=COLOR_GREEN},
+                        {label='Max', value={index=7, value=math.maxinteger}, pen=COLOR_GREEN},
                     },
                     initial_option=7,
                     on_change=function(val)

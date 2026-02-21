@@ -503,10 +503,10 @@ local function get_status(item, display_bld)
     return STATUS.AVAILABLE.value
 end
 
-local function make_choice_text(data)
+local function make_choice_text(data, threshold)
     return {
         {width=STATUS_COL_WIDTH, text=function() return STATUS[STATUS_REVMAP[data.status]].label end},
-        {gap=2, width=VALUE_COL_WIDTH, rjustify=true, text=common.obfuscate_value(data.value)},
+        {gap=2, width=VALUE_COL_WIDTH, rjustify=true, text=common.obfuscate_value(data.value, threshold)},
         {gap=2, text=data.desc},
     }
 end
@@ -530,6 +530,7 @@ end
 function AssignItems:cache_choices(inside_containers, display_bld)
     if self.choices_cache[inside_containers] then return self.choices_cache[inside_containers] end
 
+    local cache_threshold = common.get_threshold(common.get_broker_skill())
     local choices = {}
     for _, item in ipairs(df.global.world.items.other.IN_PLAY) do
         if not is_displayable_item(item) then goto continue end
@@ -559,7 +560,7 @@ function AssignItems:cache_choices(inside_containers, display_bld)
         end
         local entry = {
             search_key=search_key,
-            text=make_choice_text(data),
+            text=make_choice_text(data, cache_threshold),
             data=data,
         }
         table.insert(choices, entry)
