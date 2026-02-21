@@ -137,6 +137,24 @@ local function order_instrument(name, amount, quiet)
     end
 end
 
+local function order_instruments(filter_fn, amount, quiet)
+    local matched = {}
+
+    for _, instr in ipairs(raws.itemdefs.instruments) do
+        if instr.source_enid == civ_id and filter_fn(instr) then
+            table.insert(matched, instr)
+        end
+    end
+
+    if #matched == 0 then
+        qerror("No instruments matched the selection")
+    end
+
+    for _, instr in ipairs(matched) do
+        order_instrument(dfhack.toSearchNormalized(instr.name), amount, quiet)
+    end
+end
+
 local help = false
 local quiet = false
 local positionals = argparse.processArgsGetopt({...}, {
@@ -159,4 +177,13 @@ elseif positionals[1] == "order" then
 
     local amount = positionals[3] or 1
     order_instrument(instrument_name, amount, quiet)
+elseif positionals[1] == "all" then
+    local amount = positionals[2] or 1
+    order_instruments(function() return true end, amount, quiet)
+elseif positionals[1] == "handheld" then
+    local amount = positionals[2] or 1
+    order_instruments(function(instr) return not instr.flags.PLACED_AS_BUILDING end, amount, quiet)
+elseif positionals[1] == "building" then
+    local amount = positionals[2] or 1
+    order_instruments(function(instr) return instr.flags.PLACED_AS_BUILDING end, amount, quiet)
 end
