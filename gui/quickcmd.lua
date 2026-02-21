@@ -173,7 +173,7 @@ function QCMDDialog:showCommandOutput(command, name)
 
     function OutputDialog:init()
         local title = ('%s%s'):format(self.name ~= '' and self.name .. ': ' or '', self.command)
-        
+
         self:addviews{
             widgets.Window{
                 frame_title=title,
