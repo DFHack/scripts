@@ -34,33 +34,47 @@ local json = require('json')
 local gui = require('gui')
 local widgets = require('gui.widgets')
 
-local CONFIG_FILE_OLD = 'dfhack-config/quickcmd.json'
-local CONFIG_FILE = 'dfhack-config/quickcmd-v2.json'
+local CONFIG_FILE_BACKUP = 'dfhack-config/quickcmd.json.bak'
+local CONFIG_FILE = 'dfhack-config/quickcmd.json'
 local HOTKEYWIDTH = 7
 local OUTWIDTH = 4
 local HOTKEYS = 'asdfghjklqwertyuiopzxcvbnm'
 
 local function save_commands(data)
-    json.encode_file(data, CONFIG_FILE)
+    json.encode_file({version=2, commands=data}, CONFIG_FILE)
 end
 
-local function load_commands()
-    -- Try to load from new config file first
-    local ok, data = pcall(json.decode_file, CONFIG_FILE)
-    if ok then return data end
+local function migrate_to_v2(data)
+    json.encode_file(data, CONFIG_FILE_BACKUP)
 
-    -- New file doesn't exist or is invalid - try old file for migration
-    ok, data = pcall(json.decode_file, CONFIG_FILE_OLD)
-    if not ok then return {} end
-
-    -- Migrate old string format to new object format (in-memory only)
+    local commands = {}
     for i, cmd in ipairs(data) do
         if type(cmd) == 'string' then
-            data[i] = {command = cmd, name = '', show_output = false}
+            table.insert(commands, {command = cmd, name = '', show_output = false})
+        else
+            table.insert(commands, cmd)
         end
     end
 
-    return data
+    save_commands(commands)
+    return commands
+end
+
+local function load_commands()
+    local ok, data = pcall(json.decode_file, CONFIG_FILE)
+    if ok then
+        if type(data) == 'table' and data.version then
+            if data.version == 2 then
+                return data.commands or {}
+            end
+        end
+        -- Old format: array of strings
+        if type(data) == 'table' and #data > 0 then
+            return migrate_to_v2(data)
+        end
+    end
+
+    return {}
 end
 
 QCMDDialog = defclass(QCMDDialog, widgets.Window)
