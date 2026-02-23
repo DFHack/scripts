@@ -47,6 +47,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `gui/quickcmd`: added custom command names and option to display command output
 - `gui/notify`: new notification type: missing nemesis records; displays a warning message about game corruption.
 
 ## Fixes
