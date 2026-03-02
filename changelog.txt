@@ -18,8 +18,6 @@ Template for new versions:
 
 ## Fixes
 
-- `prioritize`: Fix the overlay appearing where it should not when following a unit
-
 ## Misc Improvements
 
 ## Removed
@@ -29,6 +27,18 @@ Template for new versions:
 # Future
 
 ## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 53.10-r2
+
+## New Tools
 - `gui/logcleaner`: graphical overlay for configuring the logcleaner plugin with enable and filter toggles.
 
 ## New Features
@@ -36,6 +46,7 @@ Template for new versions:
 
 ## Fixes
 - `gui/rename`: added check for entity_id input in get_target function
+- `prioritize`: Fix the overlay appearing where it should not when following a unit
 
 ## Misc Improvements
 - `gui/notify`: reduced severity of the missing nemesis records warning if no units on the map are affected.  clarified wording.
