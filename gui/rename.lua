@@ -636,7 +636,7 @@ function Rename:get_component_action_choices()
 
     local randomize_text = {{text='[', pen=COLOR_RED}, 'Random', {text=']', pen=COLOR_RED}}
     for val, comp in ipairs(df.language_name_component) do
-    	if val < 0 then goto continue end -- ignore language_name_component NONE element with value -1
+        if val < 0 then goto continue end -- ignore language_name_component NONE element with value -1
         local randomize_fn = self:callback('randomize_component_word', comp)
         table.insert(choices, {text=randomize_text, data={fn=randomize_fn}})
         local clear_text = {
