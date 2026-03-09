@@ -11,6 +11,7 @@ local function reaction_entry(reactions, job_type, values, name)
     local order = df.manager_order:new()
     -- These defaults differ from the newly created order's.
     order:assign{
+        frequency = df.workquota_frequency_type.OneTime,
         job_type = job_type,
         item_type = -1,
         item_subtype = -1,
@@ -628,6 +629,7 @@ end
 -- Place a new copy of the order onto the manager's queue.
 function create_orders(order, amount)
     local new_order = order:new()
+    new_order.frequency = df.workquota_frequency_type.OneTime
     amount = math.floor(amount)
     new_order.amount_left = amount
     new_order.amount_total = amount

@@ -49,6 +49,7 @@ function queue_beds(amount)
     order = df.manager_order:new()
     order.id = df.global.world.manager_orders.manager_order_next_id
     df.global.world.manager_orders.manager_order_next_id = df.global.world.manager_orders.manager_order_next_id + 1
+    order.frequency = df.workquota_frequency_type.OneTime
     order.job_type = df.job_type.ConstructBed
     order.material_category.wood = true
     order.amount_left = amount
