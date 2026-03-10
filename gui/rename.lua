@@ -605,6 +605,7 @@ function Rename:get_component_choices()
             },
             data={val=df.language_name_component.TheX, is_first_name=true}})
     for val, comp in ipairs(df.language_name_component) do
+        if val < 0 then goto continue end -- ignore language_name_component NONE element with value -1
         local text = {
             {text=comp:gsub('(%l)(%u)', '%1 %2')}, NEWLINE,
             {gap=2, pen=COLOR_YELLOW, text=function()
@@ -614,6 +615,8 @@ function Rename:get_component_choices()
             end},
         }
         table.insert(choices, {text=text, data={val=val}})
+
+        ::continue::
     end
     return choices
 end
@@ -632,7 +635,8 @@ function Rename:get_component_action_choices()
     table.insert(choices, {text='', data={fn=function() end}})
 
     local randomize_text = {{text='[', pen=COLOR_RED}, 'Random', {text=']', pen=COLOR_RED}}
-    for comp in ipairs(df.language_name_component) do
+    for val, comp in ipairs(df.language_name_component) do
+        if val < 0 then goto continue end -- ignore language_name_component NONE element with value -1
         local randomize_fn = self:callback('randomize_component_word', comp)
         table.insert(choices, {text=randomize_text, data={fn=randomize_fn}})
         local clear_text = {
@@ -643,6 +647,8 @@ function Rename:get_component_action_choices()
         local clear_fn = self:callback('clear_component_word', comp)
         table.insert(choices, {text=clear_text, data={fn=clear_fn}})
         table.insert(choices, {text='', data={fn=function() end}})
+
+        ::continue::
     end
     return choices
 end

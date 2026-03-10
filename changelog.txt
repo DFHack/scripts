@@ -31,6 +31,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `gui/rename`: skip ``NONE`` when iterating through language name options
 - `quickfort`: work orders will no longer be created with a repetition frequency of ``NONE``
 
 ## Misc Improvements
