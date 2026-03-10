@@ -17,6 +17,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `gui/rename`: skip ``NONE`` when iterating through language name options
 
 ## Misc Improvements
 
@@ -31,6 +32,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- 
 
 ## Misc Improvements
 
