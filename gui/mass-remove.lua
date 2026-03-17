@@ -2,7 +2,7 @@
 
 --@ module = true
 
-local toolbar_textures = dfhack.textures.loadTileset('hack/data/art/mass_remove_toolbar.png', 8, 12)
+local toolbar_textures = dfhack.textures.loadTileset(dfhack.getHackPath()..'/data/art/mass_remove_toolbar.png', 8, 12)
 
 local gui = require('gui')
 local guidm = require('gui.dwarfmode')

@@ -9,16 +9,16 @@ local guidm = require('gui.dwarfmode')
 local INITIAL_LIST_HEIGHT = 5
 local INITIAL_INFO_HEIGHT = 15
 
-local texturesOnOff8x12 = dfhack.textures.loadTileset('hack/data/art/on-off.png', 8, 12, true)
+local texturesOnOff8x12 = dfhack.textures.loadTileset(dfhack.getHackPath()..'/data/art/on-off.png', 8, 12, true)
 local LIST_ITEM_HIGHLIGHTED = dfhack.textures.getTexposByHandle(texturesOnOff8x12[1]) -- yellow-ish indicator
 
-local texturesOnOff = dfhack.textures.loadTileset('hack/data/art/on-off_top-left.png', 32, 32, true)
+local texturesOnOff = dfhack.textures.loadTileset(dfhack.getHackPath()..'/data/art/on-off_top-left.png', 32, 32, true)
 local TILE_HIGHLIGHTED = dfhack.textures.getTexposByHandle(texturesOnOff[1]) -- yellow-ish indicator
 if TILE_HIGHLIGHTED < 0 then -- use a fallback
     TILE_HIGHLIGHTED = 88 -- `X`
 end
 
-local texturesSmallLetters = dfhack.textures.loadTileset('hack/data/art/curses-small-letters_top-left.png', 32, 32, true)
+local texturesSmallLetters = dfhack.textures.loadTileset(dfhack.getHackPath()..'/data/art/curses-small-letters_top-left.png', 32, 32, true)
 local TILE_STARTING_SYMBOL = dfhack.textures.getTexposByHandle(texturesSmallLetters[1])
 if TILE_STARTING_SYMBOL < 0 then -- use a fallback
     TILE_STARTING_SYMBOL = 97 -- `a`
