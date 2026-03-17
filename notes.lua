@@ -6,7 +6,7 @@ local note_manager = reqscript('internal/notes/note_manager')
 
 textures = {
     green_pin = dfhack.textures.loadTileset(
-        'hack/data/art/note_green_pin_map.png',
+        dfhack.getHackPath()..'/data/art/note_green_pin_map.png',
         32,
         32,
         true

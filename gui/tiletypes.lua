@@ -34,7 +34,7 @@ local UI_COLORS = {
     INVALID_OPTION= COLOR_RED,
 }
 
-local TILESET = dfhack.textures.loadTileset('hack/data/art/tiletypes.png', 8, 12, true)
+local TILESET = dfhack.textures.loadTileset(dfhack.getHackPath()..'/data/art/tiletypes.png', 8, 12, true)
 local TILESET_STRIDE = 16
 
 local DEFAULT_OPTIONS = {

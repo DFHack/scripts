@@ -5,7 +5,7 @@ local utils = require('utils')
 local widgets = require('gui.widgets')
 local overlay = require('plugins.overlay')
 
-local toolbar_textures = dfhack.textures.loadTileset('hack/data/art/sitemap_toolbar.png', 8, 12)
+local toolbar_textures = dfhack.textures.loadTileset(dfhack.getHackPath()..'/data/art/sitemap_toolbar.png', 8, 12)
 
 function launch_sitemap()
     dfhack.run_script('gui/sitemap')
