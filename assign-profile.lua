@@ -92,7 +92,7 @@ local scripts = {
     FACETS = reqscript("assign-facets"),
 }
 
-local default_filename = "/hack/scripts/dwarf_profiles.json"
+local default_filename = dfhack.getHackPath().."/scripts/dwarf_profiles.json"
 
 -- ------------------------------------------------- APPLY PROFILE -------------------------------------------------- --
 --- Apply the given profile to a unit, erasing or resetting the unit characteristics as requested.

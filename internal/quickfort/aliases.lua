@@ -11,7 +11,7 @@ local quickfort_reader = reqscript('internal/quickfort/reader')
 
 local log = quickfort_common.log
 
-common_aliases_filename = 'hack/data/quickfort/aliases-common.txt'
+common_aliases_filename = dfhack.getHackPath()..'/data/quickfort/aliases-common.txt'
 user_aliases_filename = 'dfhack-config/quickfort/aliases.txt'
 
 -- special keycode shortcuts inherited from python quickfort.

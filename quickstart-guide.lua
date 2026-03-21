@@ -3,7 +3,7 @@
 local gui = require('gui')
 local widgets = require('gui.widgets')
 
-local GUIDE_FILE = 'hack/docs/docs/Quickstart.txt'
+local GUIDE_FILE = dfhack.getHackPath()..'/docs/docs/Quickstart.txt'
 
 local function add_section_widget(sections, section)
     if #section == 0 then return end

@@ -7,7 +7,7 @@ end
 
 local settings = {
     blueprints_user_dir={default_value='dfhack-config/blueprints'},
-    blueprints_library_dir={default_value='hack/data/blueprints'},
+    blueprints_library_dir={default_value=dfhack.getHackPath()..'/data/blueprints'},
     force_marker_mode={default_value=false},
     stockpiles_max_barrels={default_value=-1},
     stockpiles_max_bins={default_value=-1},
