@@ -26,7 +26,7 @@ local SCROLLBACK_CHARS = 2^18
 local PERSISTED_SCROLLBACK_CHARS = 2^15
 
 config = config or json.open('dfhack-config/launcher.json')
-base_freq = base_freq or json.open('hack/data/base_command_counts.json')
+base_freq = base_freq or json.open(dfhack.getHackPath()..'/data/base_command_counts.json')
 user_freq = user_freq or json.open('dfhack-config/command_counts.json')
 
 -- track whether the user has enabled dev mode
