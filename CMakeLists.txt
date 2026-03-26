@@ -4,6 +4,8 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                        PATTERN "*.json"
                        PATTERN "scripts/docs" EXCLUDE
                        PATTERN "scripts/test" EXCLUDE
+                       PATTERN ".github" EXCLUDE
+                       PATTERN ".vscode" EXCLUDE
 )
 
 if(BUILD_TESTS)
