@@ -196,7 +196,7 @@ function RollerOverlay:render(dc)
   self.subviews.direction:setOption(DIRECTION_MAP_REVERSE[b.direction])
   self.subviews.speed:setOption(SPEED_MAP_REVERSE[b.speed])
 
-  TrackStopOverlay.super.render(self, dc)
+  RollerOverlay.super.render(self, dc)
 end
 
 function RollerOverlay:init()
@@ -539,8 +539,38 @@ function PlateOverlay:init()
   }
 end
 
+GearOverlay = defclass(GearOverlay, overlay.OverlayWidget)
+GearOverlay.ATTRS{
+  desc='Adds widget for toggling gear assemblies.',
+  default_pos={x=-83, y=32},
+  version=2,
+  default_enabled=true,
+  viewscreens='dwarfmode/ViewSheets/BUILDING/GearAssembly',
+  frame={w=15, h=3},
+  frame_style=gui.MEDIUM_FRAME,
+  frame_background=gui.CLEAR_PEN,
+}
+
+function GearOverlay:render(dc)
+  self.subviews.gear_toggle:setOption(not getBuild().gear_flags.disengaged)
+  GearOverlay.super.render(self, dc)
+end
+
+function GearOverlay:init()
+  self:addviews{
+    widgets.ToggleHotkeyLabel{
+      view_id='gear_toggle',
+      frame={t=0, l=0},
+      label='State:',
+      key='CUSTOM_SHIFT_X',
+      on_change=function() getBuild():setTriggerState(0) end,
+    },
+  }
+end
+
 OVERLAY_WIDGETS = {
   trackstop=TrackStopOverlay,
   rollers=RollerOverlay,
   pressureplate=PlateOverlay,
+  gearassembly=GearOverlay,
 }
