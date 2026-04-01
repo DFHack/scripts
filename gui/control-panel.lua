@@ -403,7 +403,7 @@ function CommandTab:init_footer(panel)
 end
 
 local function launch_help(data)
-    dfhack.run_command('gui/launcher', data.help_command or data.command .. ' ')
+    dfhack.run_command('gui/launcher', (data.help_command or data.command) .. ' ')
 end
 
 function CommandTab:show_help()
