@@ -31,6 +31,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+``gui/control-panel``: fixed inconsistent space in command help ("tweak" -> "tweak ", like with other commands)
 
 ## Misc Improvements
 
