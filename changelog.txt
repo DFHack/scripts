@@ -29,6 +29,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `fix/loyaltycascade`: Added announcements for units who aren't renegades but still got removed from conflicts by makeown.remove_from_conflict in fixUnit
 
 ## Fixes
 
