@@ -68,6 +68,37 @@ local function moveToContainer(item, creator, container_type)
     return bucket
 end
 
+local function moveToBag(item, creator)
+    local containerMat = dfhack.matinfo.find('PLANT_MAT:PIG_TAIL:THREAD')
+    if not containerMat then
+        for _, n in ipairs(df.global.world.raws.plants.all) do
+            if n.flags.THREAD_PLANT then
+                containerMat = dfhack.matinfo.find('PLANT_MAT:' .. n.id .. ':THREAD')
+                break
+            end
+        end
+        if not containerMat then
+            containerMat = dfhack.matinfo.find('CREATURE_MAT:COW:LEATHER')
+        end
+        if not containerMat then
+            for _, c in ipairs(df.global.world.raws.creatures.all) do
+                for _, m in ipairs(c.material) do
+                    if m.flags.LEATHER then
+                        containerMat = dfhack.matinfo.find('CREATURE_MAT:' .. c.creature_id .. ':' .. m.id)
+                        break
+                    end
+                end
+                if containerMat then break end
+            end
+        end
+    end
+    local boxType = dfhack.items.findType('BOX:NONE')
+    local boxes = dfhack.items.createItem(creator, boxType, -1, containerMat.type, containerMat.index)
+    local box = boxes[1]
+    dfhack.items.moveToContainer(item, box)
+    return box
+end
+
 -- this part was written by four rabbits in a trenchcoat (ppaawwll)
 local function createCorpsePiece(creator, bodypart, partlayer, creatureID, casteID, generic)
     -- (partlayer is also used to determine the material if we're spawning a "generic" body part (i'm just lazy lol))
@@ -301,6 +332,8 @@ local function createItem(mat, itemType, quality, creator, description, amount)
         return moveToContainer(item, creator, 'BARREL')
     elseif mat_token == 'WATER' or mat_token == 'LYE' then
         return moveToContainer(item, creator, 'BUCKET')
+    elseif item_type == 'POWDER_MISC' or item_type == 'SEEDS' then
+        return moveToBag(item, creator)
     end
     return items
 end
