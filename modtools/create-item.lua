@@ -68,35 +68,53 @@ local function moveToContainer(item, creator, container_type)
     return bucket
 end
 
-local function moveToBag(item, creator)
+local function moveToBag(itemsToBag, creator)
+    local items_list = type(itemsToBag) == 'table' and not itemsToBag._type and itemsToBag or {itemsToBag}
+    if #items_list == 0 then return {} end
+    -- Use plant thread for bag material (pig tail fiber)
     local containerMat = dfhack.matinfo.find('PLANT_MAT:PIG_TAIL:THREAD')
     if not containerMat then
         for _, n in ipairs(df.global.world.raws.plants.all) do
-            if n.flags.THREAD_PLANT then
-                containerMat = dfhack.matinfo.find('PLANT_MAT:' .. n.id .. ':THREAD')
-                break
-            end
-        end
-        if not containerMat then
-            containerMat = dfhack.matinfo.find('CREATURE_MAT:COW:LEATHER')
-        end
-        if not containerMat then
-            for _, c in ipairs(df.global.world.raws.creatures.all) do
-                for _, m in ipairs(c.material) do
-                    if m.flags.LEATHER then
-                        containerMat = dfhack.matinfo.find('CREATURE_MAT:' .. c.creature_id .. ':' .. m.id)
-                        break
-                    end
+            for _, m in ipairs(n.material) do
+                if m.flags.THREAD_PLANT then
+                    containerMat = dfhack.matinfo.find('PLANT_MAT:' .. n.id .. ':' .. m.id)
+                    if containerMat then break end
                 end
-                if containerMat then break end
             end
+            if containerMat then break end
         end
     end
-    local boxType = dfhack.items.findType('BOX:NONE')
-    local boxes = dfhack.items.createItem(creator, boxType, -1, containerMat.type, containerMat.index)
-    local box = boxes[1]
-    dfhack.items.moveToContainer(item, box)
-    return box
+    if not containerMat then
+        containerMat = dfhack.matinfo.find('CREATURE_MAT:COW:LEATHER')
+    end
+    if not containerMat then
+        for _, c in ipairs(df.global.world.raws.creatures.all) do
+            for _, m in ipairs(c.material) do
+                if m.flags.LEATHER then
+                    containerMat = dfhack.matinfo.find('CREATURE_MAT:' .. c.creature_id .. ':' .. m.id)
+                    if containerMat then break end
+                end
+            end
+            if containerMat then break end
+        end
+    end
+    if not containerMat then
+        print('[create-item] ERROR: no bag material found')
+        return {item}
+    end
+    -- Use BAG item type, NOT BOX. BOX creates chests/coffers (item_boxst),
+    -- BAG creates actual bags (item_bagst) for holding powder/seeds.
+    local bagType = dfhack.items.findType('BAG:NONE')
+    local ok, bags = pcall(dfhack.items.createItem, creator, bagType, -1, containerMat.type, containerMat.index)
+    if not ok then
+        print('[create-item] ERROR creating bag: ' .. tostring(bags))
+        return {item}
+    end
+    local bag = bags[1]
+    for _, it in ipairs(items_list) do
+        dfhack.items.moveToContainer(it, bag)
+    end
+    return {bag}
 end
 
 -- this part was written by four rabbits in a trenchcoat (ppaawwll)
@@ -332,7 +350,7 @@ local function createItem(mat, itemType, quality, creator, description, amount)
         return moveToContainer(item, creator, 'BARREL')
     elseif mat_token == 'WATER' or mat_token == 'LYE' then
         return moveToContainer(item, creator, 'BUCKET')
-    elseif item_type == 'POWDER_MISC' or item_type == 'SEEDS' then
+    elseif item_type == 'POWDER_MISC' then
         return moveToBag(item, creator)
     end
     return items
@@ -377,8 +395,12 @@ function hackWish(accessors, opts)
         until count
     end
     if not mattype or not itemtype then return end
-    if df.item_type.attrs[itemtype].is_stackable then
-        local mat = typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and {matindex, casteId} or {mattype, matindex}
+    -- Force stackable behavior for POWDER_MISC even if the engine
+    -- reports is_stackable=false (Steam DF version issue)
+    local item_type_name = df.item_type[itemtype]
+    if df.item_type.attrs[itemtype].is_stackable
+        or item_type_name == 'POWDER_MISC' then
+        local mat = typesThatUseCreaturesExceptCorpses[item_type_name] and {matindex, casteId} or {mattype, matindex}
         return createItem(mat, {itemtype, itemsubtype}, quality, unit, description, count)
     end
     local items = {}
@@ -391,6 +413,9 @@ function hackWish(accessors, opts)
                 table.insert(items, item)
             end
         end
+    end
+    if df.item_type[itemtype] == 'SEEDS' then
+        items = moveToBag(items, unit)
     end
     if opts.pos then
         for _,item in ipairs(items) do
