@@ -99,16 +99,16 @@ local function moveToBag(itemsToBag, creator)
         end
     end
     if not containerMat then
-        print('[create-item] ERROR: no bag material found')
-        return {item}
+        -- print('[create-item] ERROR: no bag material found')
+        return items_list
     end
     -- Use BAG item type, NOT BOX. BOX creates chests/coffers (item_boxst),
     -- BAG creates actual bags (item_bagst) for holding powder/seeds.
     local bagType = dfhack.items.findType('BAG:NONE')
     local ok, bags = pcall(dfhack.items.createItem, creator, bagType, -1, containerMat.type, containerMat.index)
     if not ok then
-        print('[create-item] ERROR creating bag: ' .. tostring(bags))
-        return {item}
+        -- print('[create-item] ERROR creating bag: ' .. tostring(bags))
+        return items_list
     end
     local bag = bags[1]
     for _, it in ipairs(items_list) do
