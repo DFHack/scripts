@@ -19,6 +19,11 @@ handle_shift_click_on_render = handle_shift_click_on_render or false
 
 local trade = df.global.game.main_interface.trade
 
+-- Auto Barter: configurable profit margin for the merchant.
+-- 1.25 = offer 25% more value than the merchant's goods you want.
+-- Increase if merchants keep rejecting. Decrease as your broker skill improves.
+local TARGET_MARGIN = 1.25
+
 -- -------------------
 -- Trade
 --
@@ -684,6 +689,163 @@ local function getSavedGoodflag(saved_state, k)
     return saved_state[k+1]
 end
 
+-- -------------------
+-- Auto Barter
+--
+
+local function get_selected_merchant_value()
+    local total = 0
+    local goodflags = trade.goodflag[0]
+    local in_selected_container = false
+    for item_idx, item in ipairs(trade.good[0]) do
+        local goodflag = goodflags[item_idx]
+        if not goodflag.contained then
+            in_selected_container = goodflag.selected
+            if goodflag.selected then
+                total = total + common.get_perceived_value(item, trade.mer)
+            end
+        else
+            if not in_selected_container and goodflag.selected then
+                total = total + common.get_perceived_value(item, trade.mer)
+            end
+        end
+    end
+    return total
+end
+
+local function build_fort_selectable_units()
+    local banned_items = common.get_banned_items()
+    local risky_items = common.get_risky_items(banned_items)
+    local units = {}
+    local current_container = nil
+
+    for item_idx, item in ipairs(trade.good[1]) do
+        local goodflag = trade.goodflag[1][item_idx]
+
+        if goodflag.contained then
+            -- this item is inside a container; attach it to the current container unit
+            if current_container then
+                table.insert(current_container.contained_indices, item_idx)
+                -- check mandate on contained item
+                local is_banned, _ = common.scan_banned(item, risky_items)
+                if is_banned then
+                    current_container.has_banned = true
+                end
+            end
+        else
+            -- flush previous container
+            current_container = nil
+
+            local is_banned, _ = common.scan_banned(item, risky_items)
+            local is_container = df.item_binst:is_instance(item)
+
+            local unit = {
+                item_idx = item_idx,
+                value = common.get_perceived_value(item, trade.mer),
+                is_container = is_container,
+                contained_indices = {},
+                has_banned = is_banned,
+            }
+
+            if is_container then
+                current_container = unit
+            end
+
+            table.insert(units, unit)
+        end
+    end
+
+    -- filter out banned units
+    local filtered = {}
+    for _, unit in ipairs(units) do
+        if not unit.has_banned then
+            table.insert(filtered, unit)
+        end
+    end
+    return filtered
+end
+
+local function auto_barter(expensive_first)
+    local merchant_value = get_selected_merchant_value()
+    if merchant_value <= 0 then
+        dfhack.printerr('Auto Barter: Select merchant goods first!')
+        return
+    end
+
+    local target_value = math.ceil(merchant_value * TARGET_MARGIN)
+
+    -- deselect all fortress goods
+    for item_idx in ipairs(trade.good[1]) do
+        trade.goodflag[1][item_idx].selected = false
+    end
+
+    -- build and sort selectable units
+    local units = build_fort_selectable_units()
+    if expensive_first then
+        table.sort(units, function(a, b) return a.value > b.value end)
+    else
+        table.sort(units, function(a, b) return a.value < b.value end)
+    end
+
+    -- knapsack greedy selection with overshoot protection
+    local running_total = 0
+    local selected_units = {}
+
+    for _, unit in ipairs(units) do
+        if running_total >= target_value then break end
+
+        local remaining = target_value - running_total
+        -- overshoot protection: if this unit's value is more than 2x what we
+        -- still need AND there are cheaper options ahead, skip it
+        if unit.value > remaining * 2 and remaining > 0 then
+            -- but if we have nothing selected yet, we must take something
+            if #selected_units > 0 then
+                goto continue
+            end
+        end
+
+        running_total = running_total + unit.value
+        table.insert(selected_units, unit)
+
+        ::continue::
+    end
+
+    -- if we overshot badly in the first pass, do a second pass to find
+    -- tighter fits from remaining items
+    if running_total < target_value then
+        for _, unit in ipairs(units) do
+            if running_total >= target_value then break end
+            -- check if already selected
+            local dominated = false
+            for _, sel in ipairs(selected_units) do
+                if sel.item_idx == unit.item_idx then
+                    dominated = true
+                    break
+                end
+            end
+            if not dominated then
+                running_total = running_total + unit.value
+                table.insert(selected_units, unit)
+            end
+        end
+    end
+
+    -- apply selections to trade.goodflag
+    for _, unit in ipairs(selected_units) do
+        trade.goodflag[1][unit.item_idx].selected = true
+        -- if it's a container, also select all contained items
+        for _, cidx in ipairs(unit.contained_indices) do
+            trade.goodflag[1][cidx].selected = true
+        end
+    end
+
+    local value_str = dfhack.formatInt(running_total)
+    local target_str = dfhack.formatInt(target_value)
+    local merchant_str = dfhack.formatInt(merchant_value)
+    print(('Auto Barter: Merchant goods=%s, Target=%s (x%.2f), Offering=%s (%d items)'):format(
+        merchant_str, target_str, TARGET_MARGIN, value_str, #selected_units))
+end
+
 TradeOverlay = defclass(TradeOverlay, overlay.OverlayWidget)
 TradeOverlay.ATTRS{
     desc='Adds convenience functions for working with bins to the trade screen.',
@@ -799,6 +961,37 @@ function TradeBannerOverlay:onInput(keys)
             trade_view:dismiss()
         end
     end
+end
+
+-- -------------------
+-- AutoBarterOverlay
+--
+
+AutoBarterOverlay = defclass(AutoBarterOverlay, overlay.OverlayWidget)
+AutoBarterOverlay.ATTRS{
+    desc='Adds auto barter buttons to the trade screen.',
+    default_pos={x=-31,y=-5},
+    default_enabled=true,
+    viewscreens='dwarfmode/Trade/Default',
+    frame={w=25, h=2},
+    frame_background=gui.CLEAR_PEN,
+}
+
+function AutoBarterOverlay:init()
+    self:addviews{
+        widgets.TextButton{
+            frame={t=0, l=0},
+            label='Barter (expensive)',
+            key='CUSTOM_CTRL_E',
+            on_activate=function() auto_barter(true) end,
+        },
+        widgets.TextButton{
+            frame={t=1, l=0},
+            label='Barter (cheap)',
+            key='CUSTOM_CTRL_W',
+            on_activate=function() auto_barter(false) end,
+        },
+    }
 end
 
 -- -------------------

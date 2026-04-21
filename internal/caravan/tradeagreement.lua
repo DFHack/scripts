@@ -12,7 +12,7 @@ TradeAgreementOverlay.ATTRS{
     default_pos={x=45, y=-6},
     default_enabled=true,
     viewscreens='dwarfmode/Diplomacy/Requests',
-    frame={w=25, h=4},
+    frame={w=35, h=5},
     frame_style=gui.MEDIUM_FRAME,
     frame_background=gui.CLEAR_PEN,
 }
@@ -71,6 +71,31 @@ local function diplomacy_toggle_cat()
     end
 end
 
+local function diplomacy_toggle_all_cats()
+    local target_val = 4
+    local all_selected = true
+    for _, cat in ipairs(diplomacy.taking_requests_tablist) do
+        local priority = diplomacy.environment.dipev.sell_requests.priority[cat]
+        for i in ipairs(priority) do
+            if priority[i] ~= 4 then
+                all_selected = false
+                break
+            end
+        end
+        if not all_selected then break end
+    end
+    if all_selected then
+        target_val = 0
+    end
+
+    for _, cat in ipairs(diplomacy.taking_requests_tablist) do
+        local priority = diplomacy.environment.dipev.sell_requests.priority[cat]
+        for i in ipairs(priority) do
+            priority[i] = target_val
+        end
+    end
+end
+
 local function select_by_value(prices, val)
     local priority = get_cur_priority_list()
     for i in ipairs(priority) do
@@ -92,6 +117,14 @@ function TradeAgreementOverlay:init()
     self:addviews{
         widgets.HotkeyLabel{
             frame={t=1, l=0},
+            label='Select globally',
+            key='CUSTOM_SHIFT_A',
+            on_activate=diplomacy_toggle_all_cats,
+        },
+    }
+    self:addviews{
+        widgets.HotkeyLabel{
+            frame={t=2, l=0},
             label='Select by value',
             key='CUSTOM_CTRL_M',
             on_activate=self:callback('select_by_value'),
