@@ -133,6 +133,13 @@ are trading with. Clicking on the badge will show a list of problematic items,
 and you can click the button on the dialog to deselect all the problematic
 items in your trade list.
 
+**caravan.autobarter**
+
+This overlay provides "Barter (expensive)" and "Barter (cheap)" buttons on the trade
+screen. These buttons automatically select fortress goods to trade that total slightly
+more than the value of the merchant goods you have selected. You can choose whether to
+fill the quota with your most expensive items or your cheapest items.
+
 Trade agreements
 ````````````````
 
@@ -141,6 +148,7 @@ Trade agreements
 This adds a small panel with some useful shortcuts:
 
 * ``Ctrl-a`` for selecting all/none in the currently shown category.
+* ``Shift-Ctrl-a`` for selecting all/none across all item categories globally.
 * ``Ctrl-m`` for selecting items with specific base material price (only
   enabled for item categories where this matters, like gems and leather).
 
