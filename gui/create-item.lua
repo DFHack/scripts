@@ -81,7 +81,7 @@ local function getRestrictiveMatFilter(itemType, opts)
             return (mat.flags.ITEMS_AMMO)
         end,
         ARMOR = function(mat, parent, typ, idx)
-            return (mat.flags.ITEMS_ARMOR or mat.flags.LEATHER)
+            return (mat.flags.ITEMS_ARMOR or mat.flags.LEATHER or mat.flags.ITEMS_SOFT)
         end,
         INSTRUMENT = function(mat, parent, typ, idx)
             return (mat.flags.ITEMS_HARD)
@@ -106,7 +106,7 @@ local function getRestrictiveMatFilter(itemType, opts)
     for k, v in ipairs { 'GOBLET', 'FLASK', 'TOY', 'RING', 'CROWN', 'SCEPTER', 'FIGURINE', 'TOOL' } do
         itemTypes[v] = itemTypes.INSTRUMENT
     end
-    for k, v in ipairs { 'SHIELD', 'HELM' } do
+    for k, v in ipairs { 'SHIELD', 'HELM', 'PANTS' } do
         itemTypes[v] = itemTypes.ARMOR
     end
     for k, v in ipairs { 'SHOES', 'GLOVES' } do
@@ -129,7 +129,7 @@ local function getMatFilter(itemtype, opts)
         PLANT = function(mat, parent, typ, idx)
             return mat.flags.STRUCTURAL_PLANT_MAT
         end,
-        LEAVES = function(mat, parent, typ, idx)
+        PLANT_GROWTH = function(mat, parent, typ, idx)
             return mat.flags.STOCKPILE_PLANT_GROWTH
         end,
         MEAT = function(mat, parent, typ, idx)
