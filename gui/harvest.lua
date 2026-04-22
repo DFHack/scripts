@@ -58,7 +58,7 @@ local function remove_shrub_tile(plant)
     local pos = plant.pos
     local block = dfhack.maps.ensureTileBlock(pos)
     if not block then return end
-    
+
     local lx, ly = pos.x % 16, pos.y % 16
     local tt = block.tiletype[lx][ly]
     local attrs = df.tiletype.attrs[tt]
@@ -91,7 +91,7 @@ local function is_shrub_harvestable(plant_obj)
     if not raw then return false end
     -- Shrubs with no growths are just base plants (plump helmets, etc.)
     if #raw.growths == 0 then return true end
-    
+
     local tick = df.global.cur_year_tick
     for _, g in ipairs(raw.growths) do
         if g.timing_1 == -1 or g.timing_2 == -1 then
@@ -123,7 +123,7 @@ local function is_harvestable_growth(growth, raw)
     end
     -- Also check if the growth ID suggests it's a fruit/nut/berry/pod
     local gid = growth.id:upper()
-    if gid:find('FRUIT') or gid:find('NUT') or gid:find('BERRY') or gid:find('POD') 
+    if gid:find('FRUIT') or gid:find('NUT') or gid:find('BERRY') or gid:find('POD')
        or gid:find('CONE') or gid:find('SEED') or gid:find('FLOWER') then
         return true
     end
@@ -134,7 +134,7 @@ end
 local function tree_has_harvestable_fruit(plant_obj)
     local raw = df.global.world.raws.plants.all[plant_obj.material]
     if not raw or #raw.growths == 0 then return false end
-    
+
     local tick = df.global.cur_year_tick
     for _, g in ipairs(raw.growths) do
         local active = false
@@ -160,7 +160,7 @@ local function spawn_plant_yield_raw(mat_index, target_container, pos, stack_siz
         log('  spawn_plant_yield_raw: raw not found for mat_index=' .. tostring(mat_index))
         return 0
     end
-    
+
     local creator = nil
     for _, u in ipairs(df.global.world.units.active) do
         if dfhack.units.isCitizen(u) then
@@ -174,7 +174,7 @@ local function spawn_plant_yield_raw(mat_index, target_container, pos, stack_siz
     log('  cur_year_tick=' .. tostring(tick))
     local spawned_any = false
     local count = 0
-    
+
     for gi, g in ipairs(raw.growths) do
         local active = true
         log('    growth[' .. gi .. ']: timing_1=' .. tostring(g.timing_1) .. ' timing_2=' .. tostring(g.timing_2))
@@ -197,7 +197,7 @@ local function spawn_plant_yield_raw(mat_index, target_container, pos, stack_siz
             active = false
             log('      -> unknown timing, active=false')
         end
-            
+
         if active then
             local matinfo = dfhack.matinfo.decode(g)
             log('      matinfo.decode result: ' .. tostring(matinfo))
@@ -221,7 +221,7 @@ local function spawn_plant_yield_raw(mat_index, target_container, pos, stack_siz
             end
         end
     end
-    
+
     if not spawned_any then
         log('    No growths spawned, trying base plant material...')
         local matinfo = dfhack.matinfo.find('PLANT', raw.id)
@@ -249,15 +249,15 @@ end
 local function get_fortress_max_harvest_skills()
     local max_grower = 0
     local max_herbalist = 0
-    
+
     for _, unit in ipairs(df.global.world.units.active) do
         if dfhack.units.isCitizen(unit) and not dfhack.units.isDead(unit) then
             local grower = dfhack.units.getNominalSkill(unit, df.job_skill.PLANT)
             local herbalist = dfhack.units.getNominalSkill(unit, df.job_skill.HERBALISM)
-            
+
             if grower > max_grower then max_grower = grower end
             if herbalist > max_herbalist then max_herbalist = herbalist end
-            
+
             if max_grower >= 15 and max_herbalist >= 15 then
                 break
             end
@@ -367,7 +367,7 @@ function Harvest:get_help_text()
     for k, v in pairs(self.selected_items) do item_count = item_count + 1 end
     local plant_count = 0
     for k, v in pairs(self.selected_plants) do plant_count = plant_count + 1 end
-    
+
     local ret = 'Double-click to harvest ' .. tostring(item_count) .. ' fallen items and ' .. tostring(plant_count) .. ' plants.'
     if item_count == 0 and plant_count == 0 then
         ret = 'Drag a box to select plants and dropped fruit. ' .. ret
@@ -419,23 +419,23 @@ function Harvest:select_harvestables_in_box(bounds)
         log('select_harvestables_in_box: bounds is nil!')
         return
     end
-    
+
     log('=== HARVEST DEBUG: select_harvestables_in_box ===')
     log('Bounds: x=' .. bounds.x1 .. '-' .. bounds.x2 .. ' y=' .. bounds.y1 .. '-' .. bounds.y2 .. ' z=' .. bounds.z1 .. '-' .. bounds.z2)
-    
+
     local seen_buildings = {}
     local seen_blocks = {}
     local tiles_checked = 0
-    
+
     for z = bounds.z1, bounds.z2 do
         for y = bounds.y1, bounds.y2 do
             for x = bounds.x1, bounds.x2 do
                 tiles_checked = tiles_checked + 1
                 local pos = xyz2pos(x, y, z)
-                
+
                 local bld = dfhack.buildings.findAtTile(pos)
                 local is_farm = bld and bld:getType() == df.building_type.FarmPlot
-                
+
                 -- 1. Try getPlantAtTile: only select SHRUBS, NOT trees
                 if not is_farm then
                     local ok_gp, plant_at = pcall(dfhack.maps.getPlantAtTile, pos)
@@ -448,7 +448,7 @@ function Harvest:select_harvestables_in_box(bounds)
                         local is_tree = (plant_at.tree_info ~= nil)
                         local tree_str = is_tree and 'TREE' or 'SHRUB'
                         log('  getPlantAtTile(' .. x .. ',' .. y .. ',' .. z .. '): ' .. name .. ' type=' .. tostring(plant_at.type) .. ' hp=' .. tostring(plant_at.hitpoints) .. ' gc=' .. tostring(plant_at.grow_counter) .. ' ' .. tree_str)
-                        
+
                         local dominated = not plant_at.damage_flags.dead
                         -- For trees, ignore season_dead (it's a normal seasonal state)
                         -- For shrubs, check both dead and season_dead
@@ -460,7 +460,7 @@ function Harvest:select_harvestables_in_box(bounds)
                         local is_sapling = (not is_tree and plant_at.type ~= 2)
                         local allow_saplings = self.subviews.include_saplings:getOptionValue()
                         log('    alive=' .. tostring(dominated) .. ' is_sapling=' .. tostring(is_sapling) .. ' allow_saplings=' .. tostring(allow_saplings))
-                        
+
                         if dominated and (not is_sapling or allow_saplings) then
                             if is_tree then
                                 log('    TREE: skipped (trees cannot be harvested via script safely)')
@@ -567,7 +567,7 @@ function Harvest:do_harvest(pos)
     log('=== do_harvest at (' .. pos.x .. ',' .. pos.y .. ',' .. pos.z .. ') ===')
     -- 1. Identify container Target
     local target_container = nil
-    
+
     -- First check if we double clicked ON a container
     local items_on_tile = dfhack.maps.getTileBlock(pos).items
     for _, item_id in ipairs(items_on_tile) do
@@ -582,15 +582,15 @@ function Harvest:do_harvest(pos)
             end
         end
     end
-    
+
     if not target_container then
         target_container = self:get_last_container()
     end
-    
+
     if not target_container then
         target_container = self:find_global_empty_container()
     end
-    
+
     if target_container then
         self.last_container_id = target_container.id
         if not dfhack.items.moveToGround(target_container, pos) then
@@ -617,7 +617,7 @@ function Harvest:do_harvest(pos)
     if not ok then
         log('CRASH in setup: ' .. tostring(err))
     end
-    
+
     local stack_size = 1
     if sim_herbalist >= 5 then stack_size = 2 end
     if sim_herbalist >= 10 then stack_size = 4 end
@@ -635,7 +635,7 @@ function Harvest:do_harvest(pos)
             break
         end
     end
-    
+
     for item_id, item in pairs(self.selected_items) do
         if item:getType() == df.item_type.SEEDS and item.flags.in_building then
             local mat_index = item.mat_index
@@ -656,7 +656,7 @@ function Harvest:do_harvest(pos)
         local plant = plant_data.plant
         local is_tree = plant_data.is_tree
         log('  harvesting plant: ' .. tostring(plant) .. ' mat=' .. plant.material .. ' is_tree=' .. tostring(is_tree))
-        
+
         if is_tree then
             log('    TREE: skipped (trees cannot be harvested via script safely)')
         else
@@ -675,7 +675,7 @@ end
 
 function Harvest:onInput(keys)
     if Harvest.super.onInput(self, keys) then return true end
-    
+
     if keys._MOUSE_R and self.mark then
         log('RIGHT CLICK: clearing mark')
         self.mark = nil
