@@ -376,6 +376,20 @@ function hackWish(accessors, opts)
     if not itemok then return end
     local matok, mattype, matindex, casteId, bodypart, partlayerID, corpsepieceGeneric = accessors.get_mat(itemtype, opts)
     if not matok then return end
+
+    -- For PLANT_GROWTH, itemsubtype must be the growth index within the plant's raws.
+    -- If it's -1, we search the plant raws to find the growth that matches this material.
+    if df.item_type[itemtype] == 'PLANT_GROWTH' and itemsubtype == -1 then
+        for _, plant in ipairs(df.global.world.raws.plants.all) do
+            for i, growth in ipairs(plant.growths) do
+                if growth.mat_type == mattype and growth.mat_index == matindex then
+                    itemsubtype = i
+                    break
+                end
+            end
+            if itemsubtype ~= -1 then break end
+        end
+    end
     if not no_quality_item_types[df.item_type[itemtype]] then
         qualityok, quality = accessors.get_quality()
         if not qualityok then return end

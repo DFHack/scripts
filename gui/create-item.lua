@@ -129,7 +129,7 @@ local function getMatFilter(itemtype, opts)
         PLANT = function(mat, parent, typ, idx)
             return mat.flags.STRUCTURAL_PLANT_MAT
         end,
-        LEAVES = function(mat, parent, typ, idx)
+        PLANT_GROWTH = function(mat, parent, typ, idx)
             return mat.flags.STOCKPILE_PLANT_GROWTH
         end,
         MEAT = function(mat, parent, typ, idx)
