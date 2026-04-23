@@ -332,7 +332,7 @@ local function save_requests()
     if dfhack.filesystem.isfile(CONFIG_FILE) then
         data = json.decode_file(CONFIG_FILE) or {}
     end
-    
+
     local civ_data = data[key] or {}
     for _, cat in ipairs(diplomacy.taking_requests_tablist) do
         local cat_name = df.entity_sell_category[cat]
@@ -353,7 +353,7 @@ local function save_requests()
             end
         end
     end
-    
+
     data[key] = civ_data
     json.encode_file(data, CONFIG_FILE, {pretty=true})
     dfhack.gui.showAnnouncement('Trade requests saved for ' .. key, COLOR_GREEN)
@@ -364,18 +364,18 @@ local function load_requests()
         dfhack.gui.showAnnouncement('No saved trade agreements found.', COLOR_RED)
         return
     end
-    
+
     local data = json.decode_file(CONFIG_FILE)
     if not data then return end
-    
+
     local key = get_civ_key()
     local civ_data = data[key]
-    
+
     if not civ_data then
         dfhack.gui.showAnnouncement('No saved requests found for ' .. key, COLOR_YELLOW)
         return
     end
-    
+
     for _, cat in ipairs(diplomacy.taking_requests_tablist) do
         local cat_name = df.entity_sell_category[cat]
         local priority = diplomacy.environment.dipev.sell_requests.priority[cat]
@@ -386,7 +386,7 @@ local function load_requests()
             end
         end
     end
-    
+
     dfhack.gui.showAnnouncement('Trade requests loaded for ' .. key, COLOR_GREEN)
 end
 
