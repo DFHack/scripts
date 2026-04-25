@@ -3,6 +3,9 @@
 
 saitama
 =======
+
+Tags: fort | armok | units
+
 Multiplies the potential (max_value) of every mental and physical attribute
 for the selected unit, all citizens, all map creatures, or an entire squad.
 
