@@ -148,9 +148,17 @@ Trade agreements
 This adds a small panel with some useful shortcuts:
 
 * ``Ctrl-a`` for selecting all/none in the currently shown category.
-* ``Shift-Ctrl-a`` for selecting all/none across all item categories globally.
+* ``Shift-a`` for selecting all/none across all item categories globally.
 * ``Ctrl-m`` for selecting items with specific base material price (only
   enabled for item categories where this matters, like gems and leather).
+* ``Ctrl-w`` for selecting items by solid density (weight). This is enabled
+  for categories like boulders, metals, cheese, crafts, and other raw
+  materials where weight matters.
+* ``Ctrl-s`` for saving the current trade agreement requests for the active
+  civilization. Requests are stored per-civ so you can maintain different
+  agreements for different trading partners.
+* ``Ctrl-l`` for loading previously saved trade agreement requests for the
+  active civilization.
 
 Display furniture
 `````````````````
