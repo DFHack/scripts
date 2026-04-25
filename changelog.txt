@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `saitama`: multiply the attribute potential (max_value) of a unit, squad, or all citizens
 
 ## New Features
 
