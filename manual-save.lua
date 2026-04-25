@@ -6,8 +6,8 @@ manual-save
 Tags: fort | dfhack
 
 Creates a persistent, named save snapshot that will not be overwritten
-by future autosaves. The save is created by triggering a native
-autosave and then duplicating the result into a timestamped folder.
+by future autosaves. The save is created natively by injecting the save
+command directly into the game's UI state.
 
 Usage
 -----
@@ -45,6 +45,7 @@ Options
 ]====]
 
 local utils = require("utils")
+local gui = require("gui")
 
 -- ---------------------------------------------------------------------------
 -- Argument parsing
@@ -84,50 +85,6 @@ end
 -- File helpers
 -- ---------------------------------------------------------------------------
 
--- Safely copy a single file using 4 MB chunks to avoid memory spikes.
-local function copyFile(src, dst)
-    local infile = io.open(src, "rb")
-    if not infile then return false end
-    local outfile = io.open(dst, "wb")
-    if not outfile then
-        infile:close()
-        return false
-    end
-
-    while true do
-        local chunk = infile:read(4096 * 1024)
-        if not chunk then break end
-        outfile:write(chunk)
-    end
-
-    infile:close()
-    outfile:close()
-    return true
-end
-
--- Recursively copy a directory tree.
-local function copyDir(src, dst)
-    if not dfhack.filesystem.exists(dst) then
-        dfhack.filesystem.mkdir(dst)
-    end
-
-    local items = dfhack.filesystem.listdir(src)
-    for _, item in ipairs(items or {}) do
-        local name = type(item) == "table" and item.name or item
-        local isdir = type(item) == "table" and item.isdir
-                      or dfhack.filesystem.isdir(src .. "/" .. name)
-        if name ~= "." and name ~= ".." then
-            local src_path = src .. "/" .. name
-            local dst_path = dst .. "/" .. name
-            if isdir then
-                copyDir(src_path, dst_path)
-            else
-                copyFile(src_path, dst_path)
-            end
-        end
-    end
-end
-
 -- Recursively delete a directory tree. Returns true on success.
 local function deleteDir(path)
     local items = dfhack.filesystem.listdir(path)
@@ -162,31 +119,6 @@ local function getTrueSaveDir()
         end
     end
     return dfhack.getDFPath() .. "/save"
-end
-
--- Return the name of the most-recently-modified save folder.
-local function getNewestSaveFolder(save_dir)
-    local items = dfhack.filesystem.listdir(save_dir)
-    local newest_time = 0
-    local newest_folder = nil
-
-    for _, item in ipairs(items or {}) do
-        local name = type(item) == "table" and item.name or item
-        local isdir = type(item) == "table" and item.isdir
-                      or dfhack.filesystem.isdir(save_dir .. "/" .. name)
-
-        if isdir and name ~= "." and name ~= ".." and name ~= "current" then
-            local wpath = save_dir .. "/" .. name .. "/world.sav"
-            if dfhack.filesystem.exists(wpath) then
-                local mtime = dfhack.filesystem.mtime(wpath)
-                if mtime > newest_time then
-                    newest_time = mtime
-                    newest_folder = name
-                end
-            end
-        end
-    end
-    return newest_folder
 end
 
 -- ---------------------------------------------------------------------------
@@ -235,7 +167,6 @@ end
 -- ---------------------------------------------------------------------------
 
 local function triggerManualSave()
-    local ui_main = df.global.plotinfo.main
     local fort_name = dfhack.df2utf(
         dfhack.translation.translateName(
             df.global.world.world_data.active_site[0].name, true))
@@ -246,40 +177,25 @@ local function triggerManualSave()
     local date_str = os.date("%Y-%m-%d_%H-%M-%S")
     local final_folder_name = positional_name or (fort_name .. "-Manual-" .. date_str)
 
-    print("Initiating autosave snapshot process...")
-    print("Will create manual save at: " .. final_folder_name)
+    print("Initiating manual save...")
+    print("Saving natively to: " .. final_folder_name)
 
-    -- Request the native autosave (same mechanism as quicksave)
-    ui_main.autosave_request = true
-    ui_main.autosave_timer = 5
-    ui_main.save_progress.substage = 0
-    ui_main.save_progress.stage = 0
-    ui_main.save_progress.info.nemesis_save_file_id:resize(0)
-    ui_main.save_progress.info.nemesis_member_idx:resize(0)
-    ui_main.save_progress.info.units:resize(0)
-    ui_main.save_progress.info.cur_unit_chunk = nil
-    ui_main.save_progress.info.cur_unit_chunk_num = -1
-    ui_main.save_progress.info.units_offloaded = -1
+    -- Inject the text and trigger the save UI natively
+    local options = df.global.game.main_interface.options
+    options.open = true
+    options.entering_manual_folder = true
+    options.entering_manual_str = final_folder_name
+
+    -- Simulate pressing Enter to confirm the text box and trigger the save
+    gui.simulateInput(dfhack.gui.getCurViewscreen(true), 'SELECT')
 
     -- The game freezes its simulation loop while saving. These 10 frames
-    -- will only tick down after the save is 100% written and the game
-    -- unfreezes, guaranteeing a clean copy source.
+    -- will only tick down after the save is 100% written and the game unfreezes.
     dfhack.timeout(10, 'frames', function()
-        local true_save_dir = getTrueSaveDir()
-        local newest_folder = getNewestSaveFolder(true_save_dir)
-        if newest_folder then
-            local src_dir = true_save_dir .. "/" .. newest_folder
-            local dst_dir = true_save_dir .. "/" .. final_folder_name
+        print("Manual save completed successfully: " .. final_folder_name)
 
-            print("Autosave complete. Duplicating '" .. newest_folder .. "' to snapshot...")
-            copyDir(src_dir, dst_dir)
-            print("Manual save completed successfully: " .. final_folder_name)
-
-            if cleanup_count then
-                pruneManualSaves(true_save_dir, cleanup_count)
-            end
-        else
-            dfhack.printerr("Error: Could not locate the freshly saved folder.")
+        if cleanup_count then
+            pruneManualSaves(getTrueSaveDir(), cleanup_count)
         end
     end)
 end
