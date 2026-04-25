@@ -1,3 +1,41 @@
+-- Instantly harvest plants, shrubs, and crops in a selected area.
+--[====[
+gui/harvest
+===========
+
+Tags: fort | armok | plants
+
+Instantly harvest shrubs, farm crops, and fallen fruit/plant
+items within a box-selected area. Harvested goods are placed
+into a container or on the ground.
+
+Usage
+-----
+
+    gui/harvest
+
+Click and drag a box on the map to select harvestable plants.
+Double-click empty ground to execute the harvest. The tool will
+auto-locate an empty barrel or bag in the fortress, or you can
+double-click an existing container to use it.
+
+Options (in-window toggles)
+---------------------------
+
+Ctrl-A
+    Select all harvestable tiles on the current z-level.
+
+Ctrl-C
+    Clear the current selection.
+
+Ctrl-M
+    Toggle between simulating your best dwarf's skill level
+    and forcing maximum yields.
+
+Ctrl-S
+    Toggle whether saplings are included in the harvest.
+]====]
+
 local gui = require('gui')
 local guidm = require('gui.dwarfmode')
 local widgets = require('gui.widgets')
