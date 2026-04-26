@@ -180,9 +180,11 @@ local function triggerManualSave()
     print("Initiating manual save...")
     print("Saving natively to: " .. final_folder_name)
 
-    -- Inject the text and trigger the save UI natively
+    -- Open the options menu natively via input to ensure it initializes properly
     local options = df.global.game.main_interface.options
-    options.open = true
+    if not options.open then
+        gui.simulateInput(dfhack.gui.getCurViewscreen(true), 'OPTIONS')
+    end
     options.entering_manual_folder = true
     options.entering_manual_str = final_folder_name
 
