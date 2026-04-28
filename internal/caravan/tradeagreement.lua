@@ -13,7 +13,7 @@ TradeAgreementOverlay.ATTRS{
     default_pos={x=45, y=-6},
     default_enabled=true,
     viewscreens='dwarfmode/Diplomacy/Requests',
-    frame={w=58, h=7},
+    frame={w=58, h=5},
     frame_style=gui.MEDIUM_FRAME,
     frame_background=gui.CLEAR_PEN,
 }
@@ -31,9 +31,12 @@ local function decode_mat_list(mat)
     return minfo and minfo.material.material_value or 0
 end
 
-local function decode_mat_weight(mat)
-    local minfo = dfhack.matinfo.decode(mat.type, mat.index)
-    return minfo and minfo.material.solid_density or 0
+local function decode_mat_density(mat)
+    local ok, result = pcall(function()
+        local minfo = dfhack.matinfo.decode(mat.type, mat.index)
+        return minfo and minfo.material.solid_density or 0
+    end)
+    return ok and result or 0
 end
 
 local select_by_value_tab = {
@@ -140,7 +143,7 @@ local select_by_value_tab = {
 }
 select_by_value_tab.LargeCutGems = select_by_value_tab.SmallCutGems
 
-local select_by_weight_tab = {
+local select_by_density_tab = {
     Stone={
         get_mats=function(resources) return resources.stones end,
         decode=function(id) return dfhack.matinfo.decode(0, id).material.solid_density end,
@@ -155,31 +158,31 @@ local select_by_weight_tab = {
     },
     Cheese={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.cheese) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Powders={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.powders) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Extracts={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.extracts) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Drinks={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.booze) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Meat={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.meat) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Leather={
         get_mats=function(resources) return transform_mat_list(resources.organic.leather) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Parchment={
         get_mats=function(resources) return transform_mat_list(resources.organic.parchment) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     SmallCutGems={
         get_mats=function(resources) return resources.gems end,
@@ -187,52 +190,52 @@ local select_by_weight_tab = {
     },
     CupsMugsGoblets={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.crafts) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Crafts={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.crafts) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     FlasksWaterskins={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.flasks) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Quivers={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.quivers) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Backpacks={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.backpacks) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Barrels={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.barrels) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Sand={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.sand) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Glass={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.glass) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
     Clay={
         get_mats=function(resources) return transform_mat_list(resources.misc_mat.clay) end,
-        decode=decode_mat_weight,
+        decode=decode_mat_density,
     },
-    ClothPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_weight },
-    ThreadPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_weight },
-    RopesPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_weight },
-    BagsPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_weight },
-    ClothSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_weight },
-    ThreadSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_weight },
-    RopesSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_weight },
-    BagsSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_weight },
-    ClothYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_weight },
-    ThreadYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_weight },
-    RopesYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_weight },
-    BagsYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_weight },
+    ClothPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_density },
+    ThreadPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_density },
+    RopesPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_density },
+    BagsPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_density },
+    ClothSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_density },
+    ThreadSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_density },
+    RopesSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_density },
+    BagsSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_density },
+    ClothYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_density },
+    ThreadYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_density },
+    RopesYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_density },
+    BagsYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_density },
     Plants={
         get_mats=function(resources) return resources.plants end,
         decode=function(id) return dfhack.matinfo.decode(df.builtin_mats.PLANT, id).material.solid_density end,
@@ -242,7 +245,7 @@ local select_by_weight_tab = {
         decode=function(id) return dfhack.matinfo.decode(df.builtin_mats.PLANT, id).material.solid_density end,
     },
 }
-select_by_weight_tab.LargeCutGems = select_by_weight_tab.SmallCutGems
+select_by_density_tab.LargeCutGems = select_by_density_tab.SmallCutGems
 
 local function get_cur_tab_category()
     return diplomacy.taking_requests_tablist[diplomacy.taking_requests_selected_tab]
@@ -253,9 +256,9 @@ local function get_select_by_value_tab(category)
     return select_by_value_tab[df.entity_sell_category[category]]
 end
 
-local function get_select_by_weight_tab(category)
+local function get_select_by_density_tab(category)
     category = category or get_cur_tab_category()
-    return select_by_weight_tab[df.entity_sell_category[category]]
+    return select_by_density_tab[df.entity_sell_category[category]]
 end
 
 local function get_cur_priority_list()
@@ -425,10 +428,10 @@ function TradeAgreementOverlay:init()
         },
         widgets.HotkeyLabel{
             frame={t=2, l=24, w=23},
-            label='Select by weight',
+            label='Select by density',
             key='CUSTOM_CTRL_W',
-            on_activate=self:callback('select_by_weight'),
-            enabled=get_select_by_weight_tab,
+            on_activate=self:callback('select_by_density'),
+            enabled=get_select_by_density_tab,
         },
     }
 end
@@ -474,19 +477,23 @@ function TradeAgreementOverlay:select_by_value()
     )
 end
 
-function TradeAgreementOverlay:select_by_weight()
+function TradeAgreementOverlay:select_by_density()
     local cat = get_cur_tab_category()
-    local cur_tab = get_select_by_weight_tab(cat)
+    local cur_tab = get_select_by_density_tab(cat)
 
     local resource_name = df.entity_sell_category[cat]
     local prices, matValuesUnique = get_prices(cur_tab)
+    if #matValuesUnique == 0 then
+        dfhack.gui.showAnnouncement('No density data available for ' .. resource_name:lower(), COLOR_YELLOW)
+        return
+    end
     local list = {}
     for index, value in ipairs(matValuesUnique) do
-        list[index] = ('%4d (%d type%s of %s)'):format(
+        list[index] = ('%5d kg/m' .. string.char(253) .. ' (%d type%s of %s)'):format(
             value.value, value.count, value.count == 1 and '' or 's', resource_name:lower())
     end
     dlg.showListPrompt(
-        "Select materials with solid density", "",
+        "Select materials by density (kg/m" .. string.char(253) .. ")", "",
         COLOR_WHITE,
         list,
         function(id) select_by_value(prices, matValuesUnique[id].value) end
