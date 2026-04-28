@@ -1,28 +1,26 @@
 --@ module = true
-
 -- TODO: the category checkbox that indicates whether all items in the category
 -- are selected can be incorrect after the overlay adjusts the container
 -- selection. the state is in trade.current_type_a_flag, but figuring out which
 -- index to modify is non-trivial.
-
 local common = reqscript('internal/caravan/common')
 local gui = require('gui')
 local overlay = require('plugins.overlay')
 local predicates = reqscript('internal/caravan/predicates')
 local utils = require('utils')
 local widgets = require('gui.widgets')
-
 trader_selected_state = trader_selected_state or {}
 broker_selected_state = broker_selected_state or {}
 handle_ctrl_click_on_render = handle_ctrl_click_on_render or false
 handle_shift_click_on_render = handle_shift_click_on_render or false
-
 local trade = df.global.game.main_interface.trade
-
+-- Auto Barter: configurable profit margin for the merchant.
+-- 1.25 = offer 25% more value than the merchant's goods you want.
+-- Increase if merchants keep rejecting. Decrease as your broker skill improves.
+local TARGET_MARGIN = 1.25
 -- -------------------
 -- Trade
 --
-
 Trade = defclass(Trade, widgets.Window)
 Trade.ATTRS {
     frame_title='Select trade goods',
@@ -30,50 +28,42 @@ Trade.ATTRS {
     resizable=true,
     resize_min={w=48, h=40},
 }
-
 local function get_entry_icon(data)
     if trade.goodflag[data.list_idx][data.item_idx].selected then
         return common.ALL_PEN
     end
 end
-
 local function sort_noop()
     -- this function is used as a marker and never actually gets called
     error('sort_noop should not be called')
 end
-
 local function sort_base(a, b)
     return a.data.desc < b.data.desc
 end
-
 local function sort_by_name_desc(a, b)
     if a.search_key == b.search_key then
         return sort_base(a, b)
     end
     return a.search_key < b.search_key
 end
-
 local function sort_by_name_asc(a, b)
     if a.search_key == b.search_key then
         return sort_base(a, b)
     end
     return a.search_key > b.search_key
 end
-
 local function sort_by_value_desc(a, b)
     if a.data.value == b.data.value then
         return sort_by_name_desc(a, b)
     end
     return a.data.value > b.data.value
 end
-
 local function sort_by_value_asc(a, b)
     if a.data.value == b.data.value then
         return sort_by_name_desc(a, b)
     end
     return a.data.value < b.data.value
 end
-
 local function sort_by_status_desc(a, b)
     local a_selected = get_entry_icon(a.data)
     local b_selected = get_entry_icon(b.data)
@@ -82,7 +72,6 @@ local function sort_by_status_desc(a, b)
     end
     return a_selected
 end
-
 local function sort_by_status_asc(a, b)
     local a_selected = get_entry_icon(a.data)
     local b_selected = get_entry_icon(b.data)
@@ -91,21 +80,17 @@ local function sort_by_status_asc(a, b)
     end
     return b_selected
 end
-
 local STATUS_COL_WIDTH = 7
 local VALUE_COL_WIDTH = 6
 local FILTER_HEIGHT = 18
-
 function Trade:init()
     self.cur_page = 1
     self.filters = {'', ''}
     self.predicate_contexts = {{name='trade_caravan'}, {name='trade_fort'}}
-
     self.animal_ethics = common.is_animal_lover_caravan(trade.mer)
     self.wood_ethics = common.is_tree_lover_caravan(trade.mer)
     self.banned_items = common.get_banned_items()
     self.risky_items = common.get_risky_items(self.banned_items)
-
     self:addviews{
         widgets.CycleHotkeyLabel{
             view_id='sort',
@@ -269,16 +254,13 @@ function Trade:init()
             auto_width=true,
         },
     }
-
     -- replace the FilteredList's built-in EditField with our own
     self.subviews.list.list.frame.t = 0
     self.subviews.list.edit.visible = false
     self.subviews.list.edit = self.subviews.search
     self.subviews.search.on_change = self.subviews.list:callback('onFilterChange')
-
     self:reset_cache()
 end
-
 function Trade:refresh_list(sort_widget, sort_fn)
     sort_widget = sort_widget or 'sort'
     sort_fn = sort_fn or self.subviews.sort:getOptionValue()
@@ -297,7 +279,6 @@ function Trade:refresh_list(sort_widget, sort_fn)
     list:setFilter(saved_filter)
     list.list:on_scrollbar(math.max(0, saved_top - list.list.page_top))
 end
-
 local function is_ethical_product(item, animal_ethics, wood_ethics)
     if not animal_ethics and not wood_ethics then return true end
     -- bin contents are already split out; no need to double-check them
@@ -310,21 +291,17 @@ local function is_ethical_product(item, animal_ethics, wood_ethics)
             end
         end
     end
-
     return (not animal_ethics or not item:isAnimalProduct()) and
         (not wood_ethics or not common.has_wood(item))
 end
-
 local function make_choice_text(value, desc)
     return {
         {width=STATUS_COL_WIDTH+VALUE_COL_WIDTH, rjustify=true, text=common.obfuscate_value(value)},
         {gap=2, text=desc},
     }
 end
-
 function Trade:cache_choices(list_idx, trade_bins)
     if self.choices[list_idx][trade_bins] then return self.choices[list_idx][trade_bins] end
-
     local goodflags = trade.goodflag[list_idx]
     local trade_bins_choices, notrade_bins_choices = {}, {}
     local parent_data
@@ -384,12 +361,10 @@ function Trade:cache_choices(list_idx, trade_bins)
         end
         if is_container then parent_data = data end
     end
-
     self.choices[list_idx][true] = trade_bins_choices
     self.choices[list_idx][false] = notrade_bins_choices
     return self:cache_choices(list_idx, trade_bins)
 end
-
 function Trade:get_choices()
     local raw_choices = self:cache_choices(self.cur_page-1, self.subviews.trade_bins:getOptionValue())
     local provenance = self.subviews.provenance:getOptionValue()
@@ -439,7 +414,6 @@ function Trade:get_choices()
     table.sort(choices, self.subviews.sort:getOptionValue())
     return choices
 end
-
 local function toggle_item_base(choice, target_value)
     local goodflag = trade.goodflag[choice.data.list_idx][choice.data.item_idx]
     if target_value == nil then
@@ -452,17 +426,14 @@ local function toggle_item_base(choice, target_value)
     end
     return target_value
 end
-
 function Trade:select_item(idx, choice)
     if not dfhack.internal.getModifiers().shift then
         self.prev_list_idx = self.subviews.list.list:getSelected()
     end
 end
-
 function Trade:toggle_item(idx, choice)
     toggle_item_base(choice)
 end
-
 function Trade:toggle_range(idx, choice)
     if not self.prev_list_idx then
         self:toggle_item(idx, choice)
@@ -476,35 +447,28 @@ function Trade:toggle_range(idx, choice)
     end
     self.prev_list_idx = list_idx
 end
-
 function Trade:toggle_visible()
     local target_value
     for _, choice in ipairs(self.subviews.list:getVisibleChoices()) do
         target_value = toggle_item_base(choice, target_value)
     end
 end
-
 function Trade:reset_cache()
     self.choices = {[0]={}, [1]={}}
     self:refresh_list()
 end
-
 -- -------------------
 -- TradeScreen
 --
-
 trade_view = trade_view or nil
-
 TradeScreen = defclass(TradeScreen, gui.ZScreen)
 TradeScreen.ATTRS {
     focus_path='caravan/trade',
 }
-
 function TradeScreen:init()
     self.trade_window = Trade{}
     self:addviews{self.trade_window}
 end
-
 function TradeScreen:onInput(keys)
     if self.reset_pending then return false end
     local handled = TradeScreen.super.onInput(self, keys)
@@ -514,7 +478,6 @@ function TradeScreen:onInput(keys)
     end
     return handled
 end
-
 function TradeScreen:onRenderFrame()
     if not df.global.game.main_interface.trade.open then
         if trade_view then trade_view:dismiss() end
@@ -526,17 +489,13 @@ function TradeScreen:onRenderFrame()
         self.trade_window:reset_cache()
     end
 end
-
 function TradeScreen:onDismiss()
     trade_view = nil
 end
-
 -- -------------------
 -- TradeOverlay
 --
-
 local MARGIN_HEIGHT = 26 -- screen height *other* than the list
-
 local function set_height(list_idx, delta)
     trade.i_height[list_idx] = trade.i_height[list_idx] + delta
     if delta >= 0 then return end
@@ -547,14 +506,12 @@ local function set_height(list_idx, delta)
             math.min(trade.scroll_position_item[list_idx],
                      trade.i_height[list_idx] - page_height))
 end
-
 local function flags_match(goodflag1, goodflag2)
     return goodflag1.selected == goodflag2.selected and
         goodflag1.contained == goodflag2.contained and
         goodflag1.container_collapsed == goodflag2.container_collapsed and
         goodflag1.filtered_off == goodflag2.filtered_off
 end
-
 local function select_shift_clicked_container_items(new_state, old_state_fn, list_idx)
     -- if ctrl is also held, collapse the container too
     local also_collapse = dfhack.internal.getModifiers().ctrl
@@ -568,29 +525,23 @@ local function select_shift_clicked_container_items(new_state, old_state_fn, lis
             end
             goto continue
         end
-
         local old_goodflag = old_state_fn(k)
         if flags_match(goodflag, old_goodflag) then goto continue end
         local is_container = df.item_binst:is_instance(trade.good[list_idx][k])
         if not is_container then goto continue end
-
         -- deselect the container itself
         goodflag.selected = false
-
         if also_collapse or old_goodflag.container_collapsed then
             goodflag.container_collapsed = true
             collapsing_container = not old_goodflag.container_collapsed
         end
         in_target_container = true
-
         ::continue::
     end
-
     if collapsed_item_count > 0 then
         set_height(list_idx, collapsed_item_count * -3)
     end
 end
-
 -- collapses uncollapsed containers and restores the selection state for the container
 -- and contained items
 local function toggle_ctrl_clicked_containers(new_state, old_state_fn, list_idx)
@@ -603,27 +554,21 @@ local function toggle_ctrl_clicked_containers(new_state, old_state_fn, list_idx)
             utils.assign(goodflag, old_goodflag)
             goto continue
         end
-
         if flags_match(goodflag, old_goodflag) or goodflag.contained then goto continue end
         local is_container = df.item_binst:is_instance(trade.good[list_idx][k])
         if not is_container then goto continue end
-
         goodflag.selected = old_goodflag.selected
         goodflag.container_collapsed = not old_goodflag.container_collapsed
         in_target_container = true
         is_collapsing = goodflag.container_collapsed
-
         ::continue::
     end
-
     if toggled_item_count > 0 then
         set_height(list_idx, toggled_item_count * 3 * (is_collapsing and -1 or 1))
     end
 end
-
 local function collapseTypes(types_list, list_idx)
     local type_on_count = 0
-
     for k in ipairs(types_list) do
         local type_on = trade.current_type_a_on[list_idx][k]
         if type_on then
@@ -631,59 +576,204 @@ local function collapseTypes(types_list, list_idx)
         end
         types_list[k] = false
     end
-
     trade.i_height[list_idx] = type_on_count * 3
     trade.scroll_position_item[list_idx] = 0
 end
-
 local function collapseAllTypes()
    collapseTypes(trade.current_type_a_expanded[0], 0)
    collapseTypes(trade.current_type_a_expanded[1], 1)
 end
-
 local function collapseContainers(item_list, list_idx)
     local num_items_collapsed = 0
     for k, goodflag in ipairs(item_list) do
         if goodflag.contained then goto continue end
-
         local item = trade.good[list_idx][k]
         local is_container = df.item_binst:is_instance(item)
         if not is_container then goto continue end
-
         if not goodflag.container_collapsed then
             goodflag.container_collapsed = true
             num_items_collapsed = num_items_collapsed + #dfhack.items.getContainedItems(item)
         end
-
         ::continue::
     end
-
     if num_items_collapsed > 0 then
         set_height(list_idx, num_items_collapsed * -3)
     end
 end
-
 local function collapseAllContainers()
     collapseContainers(trade.goodflag[0], 0)
     collapseContainers(trade.goodflag[1], 1)
 end
-
 local function collapseEverything()
     collapseAllContainers()
     collapseAllTypes()
 end
-
 local function copyGoodflagState()
     -- utils.clone will return a lua table, with indices offset by 1
     -- we'll use getSavedGoodflag to map the index back to the original value
     trader_selected_state = utils.clone(trade.goodflag[0], true)
     broker_selected_state = utils.clone(trade.goodflag[1], true)
 end
-
 local function getSavedGoodflag(saved_state, k)
     return saved_state[k+1]
 end
-
+-- -------------------
+-- Auto Barter
+--
+local function get_selected_merchant_value()
+    local total = 0
+    local goodflags = trade.goodflag[0]
+    local in_selected_container = false
+    for item_idx, item in ipairs(trade.good[0]) do
+        local goodflag = goodflags[item_idx]
+        if not goodflag.contained then
+            in_selected_container = goodflag.selected
+            if goodflag.selected then
+                total = total + common.get_perceived_value(item, trade.mer)
+            end
+        else
+            if not in_selected_container and goodflag.selected then
+                total = total + common.get_perceived_value(item, trade.mer)
+            end
+        end
+    end
+    return total
+end
+local function build_fort_selectable_units()
+    local banned_items = common.get_banned_items()
+    local risky_items = common.get_risky_items(banned_items)
+    local units = {}
+    local current_container = nil
+    for item_idx, item in ipairs(trade.good[1]) do
+        local goodflag = trade.goodflag[1][item_idx]
+        if goodflag.contained then
+            -- this item is inside a container; attach it to the current container unit
+            if current_container then
+                table.insert(current_container.contained_indices, item_idx)
+                -- check mandate on contained item
+                local is_banned, _ = common.scan_banned(item, risky_items)
+                if is_banned then
+                    current_container.has_banned = true
+                end
+            end
+        else
+            -- flush previous container
+            current_container = nil
+            local is_banned, _ = common.scan_banned(item, risky_items)
+            local is_container = df.item_binst:is_instance(item)
+            local unit = {
+                item_idx = item_idx,
+                value = common.get_perceived_value(item, trade.mer),
+                is_container = is_container,
+                contained_indices = {},
+                has_banned = is_banned,
+            }
+            if is_container then
+                current_container = unit
+            end
+            table.insert(units, unit)
+        end
+    end
+    -- filter out banned units
+    local filtered = {}
+    for _, unit in ipairs(units) do
+        if not unit.has_banned then
+            table.insert(filtered, unit)
+        end
+    end
+    return filtered
+end
+-- Compute the negotiation markup the game applies to merchant goods.
+-- dfhack.items.getValue returns base values, but the game's trade screen
+-- applies a markup based on broker/merchant skill negotiation. We derive
+-- this markup by comparing import_value (the game's actual total for all
+-- merchant goods) against our computed total.
+local function compute_merchant_markup()
+    local total_base = 0
+    for item_idx, item in ipairs(trade.good[0]) do
+        local goodflag = trade.goodflag[0][item_idx]
+        if not goodflag.contained then
+            total_base = total_base + common.get_perceived_value(item, trade.mer)
+        end
+    end
+    local import_value = trade.mer.import_value
+    if total_base > 0 and import_value > 0 then
+        return import_value / total_base
+    end
+    return 1.0
+end
+local function auto_barter(expensive_first)
+    local merchant_value = get_selected_merchant_value()
+    if merchant_value <= 0 then
+        dfhack.printerr('Auto Barter: Select merchant goods first!')
+        return
+    end
+    -- Scale the target by the negotiation markup so we match the game's
+    -- actual displayed merchant value, not just the base item values.
+    local markup = compute_merchant_markup()
+    local target_value = math.ceil(merchant_value * markup * TARGET_MARGIN)
+    -- deselect all fortress goods
+    for item_idx in ipairs(trade.good[1]) do
+        trade.goodflag[1][item_idx].selected = false
+    end
+    -- build and sort selectable units
+    local units = build_fort_selectable_units()
+    if expensive_first then
+        table.sort(units, function(a, b) return a.value > b.value end)
+    else
+        table.sort(units, function(a, b) return a.value < b.value end)
+    end
+    -- knapsack greedy selection with overshoot protection
+    local running_total = 0
+    local selected_units = {}
+    for _, unit in ipairs(units) do
+        if running_total >= target_value then break end
+        local remaining = target_value - running_total
+        -- overshoot protection: if this unit's value is more than 2x what we
+        -- still need AND there are cheaper options ahead, skip it
+        if unit.value > remaining * 2 and remaining > 0 then
+            -- but if we have nothing selected yet, we must take something
+            if #selected_units > 0 then
+                goto continue
+            end
+        end
+        running_total = running_total + unit.value
+        table.insert(selected_units, unit)
+        ::continue::
+    end
+    -- if we didn't reach target in the first pass, do a second pass
+    -- to fill the gap from remaining items
+    if running_total < target_value then
+        for _, unit in ipairs(units) do
+            if running_total >= target_value then break end
+            -- check if already selected
+            local dominated = false
+            for _, sel in ipairs(selected_units) do
+                if sel.item_idx == unit.item_idx then
+                    dominated = true
+                    break
+                end
+            end
+            if not dominated then
+                running_total = running_total + unit.value
+                table.insert(selected_units, unit)
+            end
+        end
+    end
+    -- apply selections to trade.goodflag
+    for _, unit in ipairs(selected_units) do
+        trade.goodflag[1][unit.item_idx].selected = true
+        -- if it's a container, also select all contained items
+        for _, cidx in ipairs(unit.contained_indices) do
+            trade.goodflag[1][cidx].selected = true
+        end
+    end
+    -- local value_str = dfhack.formatInt(running_total)
+    -- local target_str = dfhack.formatInt(target_value)
+    -- local merchant_str = dfhack.formatInt(math.ceil(merchant_value * markup))
+    -- print(('Auto Barter: Merchant goods(game)=%s, Target=%s (x%.2f, markup=%.2f), Offering=%s (%d items)'):format(
+    --     merchant_str, target_str, TARGET_MARGIN, markup, value_str, #selected_units))
+end
 TradeOverlay = defclass(TradeOverlay, overlay.OverlayWidget)
 TradeOverlay.ATTRS{
     desc='Adds convenience functions for working with bins to the trade screen.',
@@ -694,7 +784,6 @@ TradeOverlay.ATTRS{
     frame_style=gui.MEDIUM_FRAME,
     frame_background=gui.CLEAR_PEN,
 }
-
 function TradeOverlay:init()
     self:addviews{
         widgets.Label{
@@ -736,7 +825,6 @@ function TradeOverlay:init()
         },
     }
 end
-
 -- do our alterations *after* the vanilla response to the click has registered. otherwise
 -- it's very difficult to figure out which item has been clicked
 function TradeOverlay:onRenderBody(dc)
@@ -750,10 +838,8 @@ function TradeOverlay:onRenderBody(dc)
         toggle_ctrl_clicked_containers(trade.goodflag[1], curry(getSavedGoodflag, broker_selected_state), 1)
     end
 end
-
 function TradeOverlay:onInput(keys)
     if TradeOverlay.super.onInput(self, keys) then return true end
-
     if keys._MOUSE_L then
         if dfhack.internal.getModifiers().shift then
             handle_shift_click_on_render = true
@@ -764,11 +850,9 @@ function TradeOverlay:onInput(keys)
         end
     end
 end
-
 -- -------------------
 -- TradeBannerOverlay
 --
-
 TradeBannerOverlay = defclass(TradeBannerOverlay, overlay.OverlayWidget)
 TradeBannerOverlay.ATTRS{
     desc='Adds link to the trade screen to launch the DFHack trade UI.',
@@ -778,7 +862,6 @@ TradeBannerOverlay.ATTRS{
     frame={w=25, h=1},
     frame_background=gui.CLEAR_PEN,
 }
-
 function TradeBannerOverlay:init()
     self:addviews{
         widgets.TextButton{
@@ -790,33 +873,55 @@ function TradeBannerOverlay:init()
         },
     }
 end
-
 function TradeBannerOverlay:onInput(keys)
     if TradeBannerOverlay.super.onInput(self, keys) then return true end
-
     if keys._MOUSE_R or keys.LEAVESCREEN then
         if trade_view then
             trade_view:dismiss()
         end
     end
 end
-
+-- -------------------
+-- AutoBarterOverlay
+--
+AutoBarterOverlay = defclass(AutoBarterOverlay, overlay.OverlayWidget)
+AutoBarterOverlay.ATTRS{
+    desc='Adds auto barter buttons to the trade screen.',
+    default_pos={x=-31,y=-5},
+    default_enabled=true,
+    viewscreens='dwarfmode/Trade/Default',
+    frame={w=25, h=2},
+    frame_background=gui.CLEAR_PEN,
+}
+function AutoBarterOverlay:init()
+    self:addviews{
+        widgets.TextButton{
+            frame={t=0, l=0},
+            label='Barter (expensive)',
+            key='CUSTOM_CTRL_E',
+            on_activate=function() auto_barter(true) end,
+        },
+        widgets.TextButton{
+            frame={t=1, l=0},
+            label='Barter (cheap)',
+            key='CUSTOM_CTRL_W',
+            on_activate=function() auto_barter(false) end,
+        },
+    }
+end
 -- -------------------
 -- Ethics
 --
-
 Ethics = defclass(Ethics, widgets.Window)
 Ethics.ATTRS {
     frame_title='Ethical transgressions',
     frame={w=45, h=30},
     resizable=true,
 }
-
 function Ethics:init()
     self.choices = {}
     self.animal_ethics = common.is_animal_lover_caravan(trade.mer)
     self.wood_ethics = common.is_tree_lover_caravan(trade.mer)
-
     self:addviews{
         widgets.Label{
             frame={l=0, t=0},
@@ -841,18 +946,14 @@ function Ethics:init()
             on_activate=self:callback('deselect_transgressions'),
         },
     }
-
     self:rescan()
 end
-
 function Ethics:get_transgression_count()
     return #self.choices
 end
-
 function Ethics:get_transgression_color()
     return next(self.choices) and COLOR_LIGHTRED or COLOR_LIGHTGREEN
 end
-
 -- also used by confirm
 function for_selected_item(list_idx, fn)
     local goodflags = trade.goodflag[list_idx]
@@ -869,7 +970,6 @@ function for_selected_item(list_idx, fn)
         end
     end
 end
-
 local function for_ethics_violation(fn, animal_ethics, wood_ethics)
     if not animal_ethics and not wood_ethics then return end
     for_selected_item(1, function(item_idx, item)
@@ -878,7 +978,6 @@ local function for_ethics_violation(fn, animal_ethics, wood_ethics)
         end
     end)
 end
-
 function Ethics:rescan()
     local choices = {}
     for_ethics_violation(function(item_idx, item)
@@ -888,11 +987,9 @@ function Ethics:rescan()
         }
         table.insert(choices, choice)
     end, self.animal_ethics, self.wood_ethics)
-
     self.subviews.list:setChoices(choices)
     self.choices = choices
 end
-
 function Ethics:deselect_transgressions()
     local goodflags = trade.goodflag[1]
     for _,choice in ipairs(self.choices) do
@@ -900,23 +997,18 @@ function Ethics:deselect_transgressions()
     end
     self:rescan()
 end
-
 -- -------------------
 -- EthicsScreen
 --
-
 ethics_view = ethics_view or nil
-
 EthicsScreen = defclass(EthicsScreen, gui.ZScreen)
 EthicsScreen.ATTRS {
     focus_path='caravan/trade/ethics',
 }
-
 function EthicsScreen:init()
     self.ethics_window = Ethics{}
     self:addviews{self.ethics_window}
 end
-
 function EthicsScreen:onInput(keys)
     if self.reset_pending then return false end
     local handled = EthicsScreen.super.onInput(self, keys)
@@ -926,7 +1018,6 @@ function EthicsScreen:onInput(keys)
     end
     return handled
 end
-
 function EthicsScreen:onRenderFrame()
     if not df.global.game.main_interface.trade.open then
         if ethics_view then ethics_view:dismiss() end
@@ -938,15 +1029,12 @@ function EthicsScreen:onRenderFrame()
         self.ethics_window:rescan()
     end
 end
-
 function EthicsScreen:onDismiss()
     ethics_view = nil
 end
-
 -- --------------------------
 -- TradeEthicsWarningOverlay
 --
-
 -- also called by confirm
 function has_ethics_violation()
     local violated = false
@@ -956,7 +1044,6 @@ function has_ethics_violation()
     end, common.is_animal_lover_caravan(trade.mer), common.is_tree_lover_caravan(trade.mer))
     return violated
 end
-
 TradeEthicsWarningOverlay = defclass(TradeEthicsWarningOverlay, overlay.OverlayWidget)
 TradeEthicsWarningOverlay.ATTRS{
     desc='Adds warning to the trade screen when you are about to offend the elves.',
@@ -966,7 +1053,6 @@ TradeEthicsWarningOverlay.ATTRS{
     frame={w=9, h=2},
     visible=has_ethics_violation,
 }
-
 function TradeEthicsWarningOverlay:init()
     self:addviews{
         widgets.BannerPanel{
@@ -986,14 +1072,11 @@ function TradeEthicsWarningOverlay:init()
         },
     }
 end
-
 function TradeEthicsWarningOverlay:preUpdateLayout(rect)
     self.frame.w = (rect.width - 95) // 2
 end
-
 function TradeEthicsWarningOverlay:onInput(keys)
     if TradeEthicsWarningOverlay.super.onInput(self, keys) then return true end
-
     if keys._MOUSE_R or keys.LEAVESCREEN then
         if ethics_view then
             ethics_view:dismiss()
