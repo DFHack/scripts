@@ -32,6 +32,8 @@ Template for new versions:
 
 ## Fixes
 
+- `gui/petitions`: fix deity display
+
 ## Misc Improvements
 
 ## Removed
