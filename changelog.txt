@@ -32,6 +32,8 @@ Template for new versions:
 
 ## Fixes
 
+- `caravan`: fix ethics warning for wooden weapons
+
 ## Misc Improvements
 
 ## Removed
