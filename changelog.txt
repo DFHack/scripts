@@ -32,6 +32,8 @@ Template for new versions:
 
 ## Fixes
 
+- `immortal-cravings`: also take care of immortal units with alcohol dependence
+
 ## Misc Improvements
 
 ## Removed
