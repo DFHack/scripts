@@ -32,6 +32,8 @@ Template for new versions:
 
 ## Fixes
 
+- `fix/stuck-worship`: fix lookup of units current prayer target(s).
+
 ## Misc Improvements
 
 ## Removed
