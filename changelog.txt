@@ -35,6 +35,8 @@ Template for new versions:
 
 - `caravan`: fix ethics warning for wooden weapons
 
+- `immortal-cravings`: also take care of immortal units with alcohol dependence
+
 ## Misc Improvements
 
 ## Removed
