@@ -33,6 +33,8 @@ Template for new versions:
 ## Fixes
 - `gui/siegemanager`: consistently set the initial filter to "All"
 
+- `caravan`: fix ethics warning for wooden weapons
+
 ## Misc Improvements
 
 ## Removed
