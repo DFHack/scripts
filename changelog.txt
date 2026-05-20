@@ -31,6 +31,18 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 53.14-r1
+
+## New Tools
+
+## New Features
+
+## Fixes
 - `caravan`: fix ethics warning for wooden weapons
 - `gui/control-panel`: fixed inconsistent space in command help ("tweak" -> "tweak ", like with other commands)
 - `gui/siegemanager`: consistently set the initial filter to "All"
