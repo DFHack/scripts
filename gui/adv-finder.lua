@@ -676,7 +676,7 @@ function AdvFindWindow:init()
         widgets.ConfigureButton{
             frame = {t=0, r=0},
             on_click = function()
-                local sel_window = view.subviews[2] --AdvSelWindow
+                local sel_window = view.subviews.sel_window --AdvSelWindow
                 sel_window.visible = true
                 sel_window:sel_list()
             end,
@@ -732,7 +732,10 @@ AdvFindScreen.ATTRS{
 }
 
 function AdvFindScreen:init()
-    self:addviews{AdvFindWindow{}, AdvSelWindow{}}
+    self:addviews{
+        AdvFindWindow{view_id='find_window'},
+        AdvSelWindow{view_id='sel_window'},
+    }
 end
 
 function AdvFindScreen:onDismiss()

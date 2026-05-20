@@ -682,9 +682,14 @@ local function is_wood_based_item(item)
         return mi and mi.mode == 'creature'
     elseif itype == df.item_type.LIQUID_MISC then
         return mat_type == df.builtin_mats.LYE
-    elseif itype == df.item_type.WEAPON then
+    end
+
+    -- detect obsidian short swords
+    if itype == df.item_type.WEAPON then
         local mi = dfhack.matinfo.decode(mat_type, mat_index)
-        return mi and mi.mode == 'inorganic' and mi.material and not mi.material.flags.IS_METAL
+        if mi and mi.mode == 'inorganic' and mi.material and not mi.material.flags.IS_METAL then
+            return true
+        end
     end
 
     return is_wood_based_material(mat_type, mat_index)
