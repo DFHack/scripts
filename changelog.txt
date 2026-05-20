@@ -31,10 +31,9 @@ Template for new versions:
 ## New Features
 
 ## Fixes
-- `gui/siegemanager`: consistently set the initial filter to "All"
-
 - `caravan`: fix ethics warning for wooden weapons
-
+- `gui/control-panel`: fixed inconsistent space in command help ("tweak" -> "tweak ", like with other commands)
+- `gui/siegemanager`: consistently set the initial filter to "All"
 - `immortal-cravings`: also take care of immortal units with alcohol dependence
 
 ## Misc Improvements
