@@ -35,6 +35,18 @@ Template for new versions:
 ## Misc Improvements
 
 ## Removed
+
+# 53.14-r2
+
+## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
 - ``gui/logcleaner``: Removed
 
 # 53.14-r1
