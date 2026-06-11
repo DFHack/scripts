@@ -36,6 +36,19 @@ Template for new versions:
 
 ## Removed
 
+# 53.14-alpha3
+
+## New Tools
+
+## New Features
+
+## Fixes
+- ``script\add-recipe``: fix to include incorrectly excluded recipes
+
+## Misc Improvements
+
+## Removed
+
 # 53.14-r2
 
 ## New Tools
