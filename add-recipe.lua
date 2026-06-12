@@ -95,11 +95,11 @@ function addItems(category, exotic)
 
     --if the weapon we're adding is a digging implement, add to diggers instead of weapons
     --prevents picks from being duplicated, and puts great picks in correct category
-    if (df.itemdef_weaponst:is_instance(item) and item.skill_melee == df.job_skill.MINING) then 
+    if (df.itemdef_weaponst:is_instance(item) and item.skill_melee == df.job_skill.MINING) then
       if (checkKnown(diggers, subtype)) then
         itemOk = false
       end
-    end  
+    end
 
     if (itemOk) then
       known:insert('#', subtype)
