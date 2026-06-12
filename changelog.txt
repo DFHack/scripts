@@ -43,7 +43,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
-- `script\add-recipe`: fix to include incorrectly excluded recipes
+- `add-recipe`: fix to include incorrectly excluded recipes
 
 ## Misc Improvements
 
