@@ -73,7 +73,7 @@ function addItems(category, exotic)
     local subtype = item.subtype
     local itemOk = false
     local known = known_category
-    -- digging implements are seperate from weapons in entity resources. 
+    -- digging implements are seperate from weapons in entity resources.
     if (df.itemdef_weaponst:is_instance(item) and item.skill_melee == df.job_skill.MINING) then
       known = diggers
     end
