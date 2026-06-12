@@ -74,10 +74,10 @@ function addItems(category, exotic)
     local itemOk = false
     local known = known_category
     -- digging implements are seperate from weapons in entity resources. 
-    if (df.itemdef_weaponst:is_instance(item) and item.skill_melee == df.job_skill.MINING) then 
+    if (df.itemdef_weaponst:is_instance(item) and item.skill_melee == df.job_skill.MINING) then
       known = diggers
     end
-    
+
     --check if it's a training weapon
     local t1, t2 = pcall(function () return item.flags.TRAINING == false end)
     local training = not(not t1 or t2)
