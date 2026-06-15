@@ -3,14 +3,14 @@ locate-stone
 
 .. dfhack-tool::
     :summary: Finds stone and ore mineral events on the map.
-    :tags: fort armok inspection productivity 
+    :tags: fort armok inspection productivity
 
 Fork of `locate-ore` to also include stone and fuel sources.
 This tool scans the map for stone and ore mineral events. With no arguments, or with
 ``list``, prints a list of  stone and ore types with tile
-counts. 
+counts.
 
-With a stone or ore or metal argument, selects a random matching undesignated wall tile, 
+With a stone or ore or metal argument, selects a random matching undesignated wall tile,
 centers the camera on it, and designates it for digging.
 
 If you want to dig **all** tiles of that kind of ore, highlight that tile with the
