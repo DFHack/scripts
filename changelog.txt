@@ -31,18 +31,6 @@ Template for new versions:
 ## New Features
 
 ## Fixes
-
-## Misc Improvements
-
-## Removed
-
-# 53.14-alpha3
-
-## New Tools
-
-## New Features
-
-## Fixes
 - `add-recipe`: fix to include incorrectly excluded recipes
 
 ## Misc Improvements
