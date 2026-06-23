@@ -27,12 +27,14 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `machine-toggle`: interface for toggling gear assemblies, as well as pressure plates (previously in `trackstop`) (available only if ``armok`` tools are shown)
 
 ## New Features
 
 ## Fixes
 
 ## Misc Improvements
+- `trackstop`: ``pressureplate`` overlay moved to `machine-toggle` as an ``armok`` tool
 
 ## Removed
 
