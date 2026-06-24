@@ -71,11 +71,19 @@ function get_agr_party_name(agr)
     return party_name
 end
 
+---@param agr df.agreement
 function get_deity_name(agr)
-    local religion_id = agr.details[0].data.Location.deity_data.Religion
-    local deities = df.global.world.entities.all[religion_id].relations.deities
-    if #deities == 0 then return 'An Unknown Deity' end
-    return dfhack.translation.translateName(df.global.world.history.figures[deities[0]].name,true)
+    local practice_type = agr.details[0].data.Location.deity_type
+    local practice_id = agr.details[0].data.Location.deity_data.practice_id -- could be either entity_id or hf_id
+    if practice_type == df.religious_practice_type.WORSHIP_HFID then
+        local hf = df.historical_figure.find(practice_id)
+        if not hf then return 'An Unknown Deity' end
+        return dfhack.translation.translateName(hf.name, true)
+    else
+        local deities = df.global.world.entities.all[practice_id].relations.deities
+        if #deities == 0 then return 'An Unknown Deity' end
+        return dfhack.translation.translateName(df.global.world.history.figures[deities[0]].name, true)
+    end
 end
 
 --get resolution status, and string
