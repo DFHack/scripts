@@ -32,8 +32,8 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `gui/rename`: fix script error that sometimes caused the script to malfunction when started from the Launcher.
 - `gui/control-panel`: fixed incorrect description of deteriorate commands
-
 - `gui/petitions`: fix deity display
 
 ## Misc Improvements
