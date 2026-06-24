@@ -3,9 +3,14 @@
 
 local repeatutil = require("repeat-util")
 
+--- constants
+
+local focus_threshold = -9000
+local dependence_threshold = 33600 * 2
+
 --- utility functions
 
-local verbose = false
+verbose = false
 ---conditional printing of debug messages
 ---@param message string
 local function debug(message)
@@ -147,6 +152,19 @@ local function goEat(unit)
     print(dfhack.df2console('immortal-cravings: %s is getting something to eat'):format(name))
 end
 
+---@param unit df.unit
+---@param flag_name string
+local function is_active_caste_flag(unit, flag_name)
+    return not unit.uwss_remove_caste_flag[flag_name] and
+        (unit.uwss_add_caste_flag[flag_name] or dfhack.units.casteFlagSet(unit.race, unit.caste, df.caste_raw_flags[flag_name]))
+end
+
+---@param unit df.unit
+local function needs_alcohol(unit)
+    local mt = dfhack.units.getMiscTrait(unit, df.misc_trait_type.WantsDrink, false)
+    return mt and mt.value > dependence_threshold
+end
+
 --- script logic
 
 local GLOBAL_KEY = 'immortal-cravings'
@@ -175,8 +193,6 @@ EatGoodMeal = df.need_type.EatGoodMeal
 ---@type integer[]
 watched = watched or {}
 
-local threshold = -9000
-
 ---unit loop: check for idle watched units and create eat/drink jobs for them
 local function unit_loop()
     debug(('immortal-cravings: running unit loop (%d watched units)'):format(#watched))
@@ -194,12 +210,18 @@ local function unit_loop()
             debug("immortal-cravings: skipping busy"..dfhack.units.getReadableName(unit))
             table.insert(kept, unit.id)
         else
-            -- unit is available for jobs; satisfy one of its needs
+            -- unit is alcohol dependent and approaching withdrawal symptoms
+            if needs_alcohol(unit) then
+                goDrink(unit)
+                goto next_unit
+            end
+
+            -- otherwise satisfy a personality need
             for _, need in ipairs(unit.status.current_soul.personality.needs) do
-                if need.id == DrinkAlcohol and need.focus_level < threshold then
+                if need.id == DrinkAlcohol and need.focus_level < focus_threshold then
                     goDrink(unit)
                     break
-                elseif need.id == EatGoodMeal and need.focus_level < threshold then
+                elseif need.id == EatGoodMeal and need.focus_level < focus_threshold then
                     goEat(unit)
                     break
                 end
@@ -214,10 +236,7 @@ local function unit_loop()
     end
 end
 
-local function is_active_caste_flag(unit, flag_name)
-    return not unit.uwss_remove_caste_flag[flag_name] and
-        (unit.uwss_add_caste_flag[flag_name] or dfhack.units.casteFlagSet(unit.race, unit.caste, df.caste_raw_flags[flag_name]))
-end
+
 
 ---main loop: look for citizens with personality needs for food/drink but w/o physiological need
 local function main_loop()
@@ -227,7 +246,8 @@ local function main_loop()
         if
             (is_active_caste_flag(unit, 'NO_DRINK') or is_active_caste_flag(unit, 'NO_EAT')) and
             unit.counters2.stomach_content == 0 and
-            dfhack.units.getFocusPenalty(unit, DrinkAlcohol, EatGoodMeal) < threshold
+            (dfhack.units.getFocusPenalty(unit, DrinkAlcohol, EatGoodMeal) < focus_threshold or
+            needs_alcohol(unit))
         then
             table.insert(watched, unit.id)
             debug('  ' .. dfhack.df2console(dfhack.units.getReadableName(unit)))
