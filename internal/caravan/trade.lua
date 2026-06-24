@@ -725,7 +725,6 @@ local function auto_barter(expensive_first)
     end
     -- knapsack greedy selection with overshoot protection
     local running_total = 0
-    local selected_units = {}
     for _, unit in ipairs(units) do
         if running_total >= target_value then break end
         local remaining = target_value - running_total
@@ -733,12 +732,12 @@ local function auto_barter(expensive_first)
         -- still need AND there are cheaper options ahead, skip it
         if unit.value > remaining * 2 and remaining > 0 then
             -- but if we have nothing selected yet, we must take something
-            if #selected_units > 0 then
+            if running_total > 0 then
                 goto continue
             end
         end
         running_total = running_total + unit.value
-        table.insert(selected_units, unit)
+        unit.selected = true
         ::continue::
     end
     -- if we didn't reach target in the first pass, do a second pass
@@ -746,33 +745,22 @@ local function auto_barter(expensive_first)
     if running_total < target_value then
         for _, unit in ipairs(units) do
             if running_total >= target_value then break end
-            -- check if already selected
-            local dominated = false
-            for _, sel in ipairs(selected_units) do
-                if sel.item_idx == unit.item_idx then
-                    dominated = true
-                    break
-                end
-            end
-            if not dominated then
+            if not unit.selected then
                 running_total = running_total + unit.value
-                table.insert(selected_units, unit)
+                unit.selected = true
             end
         end
     end
     -- apply selections to trade.goodflag
-    for _, unit in ipairs(selected_units) do
-        trade.goodflag[1][unit.item_idx].selected = true
-        -- if it's a container, also select all contained items
-        for _, cidx in ipairs(unit.contained_indices) do
-            trade.goodflag[1][cidx].selected = true
+    for _, unit in ipairs(units) do
+        if unit.selected then
+            trade.goodflag[1][unit.item_idx].selected = true
+            -- if it's a container, also select all contained items
+            for _, cidx in ipairs(unit.contained_indices) do
+                trade.goodflag[1][cidx].selected = true
+            end
         end
     end
-    -- local value_str = dfhack.formatInt(running_total)
-    -- local target_str = dfhack.formatInt(target_value)
-    -- local merchant_str = dfhack.formatInt(math.ceil(merchant_value * markup))
-    -- print(('Auto Barter: Merchant goods(game)=%s, Target=%s (x%.2f, markup=%.2f), Offering=%s (%d items)'):format(
-    --     merchant_str, target_str, TARGET_MARGIN, markup, value_str, #selected_units))
 end
 TradeOverlay = defclass(TradeOverlay, overlay.OverlayWidget)
 TradeOverlay.ATTRS{
