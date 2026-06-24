@@ -43,31 +43,24 @@ end
 -- Helper: check material reaction product
 local function mat_has_product(mat, pid)
     if not mat then return false end
-    local ok, r = pcall(function()
-        for i = 0, #mat.reaction_product.id - 1 do
-            if tostring(mat.reaction_product.id[i].value) == pid then return true end
-        end
-        return false
-    end)
-    return ok and r or false
+    for i = 0, #mat.reaction_product.id - 1 do
+        if tostring(mat.reaction_product.id[i].value) == pid then return true end
+    end
+    return false
 end
 
 -- Helper: check material reaction class
 local function mat_has_class(mat, cname)
     if not mat then return false end
-    local ok, r = pcall(function()
-        for i = 0, #mat.reaction_class - 1 do
-            if tostring(mat.reaction_class[i].value) == cname then return true end
-        end
-        return false
-    end)
-    return ok and r or false
+    for i = 0, #mat.reaction_class - 1 do
+        if tostring(mat.reaction_class[i].value) == cname then return true end
+    end
+    return false
 end
 
 local function has_flag(name)
     if not material then return false end
-    local ok, v = pcall(function() return material.flags[name] end)
-    return ok and v
+    return material.flags[name]
 end
 
 -- Map enum names to readable workshop names
@@ -93,33 +86,30 @@ local BTYPE_WORKSHOP = tonumber(df.building_type.Workshop)
 local BTYPE_FURNACE = tonumber(df.building_type.Furnace)
 
 local function get_workshop_name(r)
-    local count = 0
-    pcall(function() count = #r.building.type end)
+    local count = #r.building.type
     if count == 0 then return 'Unknown workshop' end
 
     for idx = 0, count - 1 do
         local name = nil
-        pcall(function()
-            local btype = tonumber(r.building.type[idx])
-            local st = tonumber(r.building.subtype[idx])
-            local custom = tonumber(r.building.custom[idx])
+        local btype = tonumber(r.building.type[idx])
+        local st = tonumber(r.building.subtype[idx])
+        local custom = tonumber(r.building.custom[idx])
 
-            if btype == BTYPE_WORKSHOP then
-                local enum_name = df.workshop_type[st]
-                if enum_name and enum_name ~= 'Custom' then
-                    name = workshop_readable[enum_name] or enum_name
-                elseif custom and custom >= 0 then
-                    name = df.global.world.raws.buildings.all[custom].name
-                end
-            elseif btype == BTYPE_FURNACE then
-                local enum_name = df.furnace_type[st]
-                if enum_name and enum_name ~= 'Custom' then
-                    name = furnace_readable[enum_name] or enum_name
-                elseif custom and custom >= 0 then
-                    name = df.global.world.raws.buildings.all[custom].name
-                end
+        if btype == BTYPE_WORKSHOP then
+            local enum_name = df.workshop_type[st]
+            if enum_name and enum_name ~= 'Custom' then
+                name = workshop_readable[enum_name] or enum_name
+            elseif custom and custom >= 0 then
+                name = df.global.world.raws.buildings.all[custom].name
             end
-        end)
+        elseif btype == BTYPE_FURNACE then
+            local enum_name = df.furnace_type[st]
+            if enum_name and enum_name ~= 'Custom' then
+                name = furnace_readable[enum_name] or enum_name
+            elseif custom and custom >= 0 then
+                name = df.global.world.raws.buildings.all[custom].name
+            end
+        end
         if name and #name > 0 then return name end
     end
     return 'Unknown workshop'
@@ -201,8 +191,7 @@ end
 ---------------------------------------------------------------------------
 if mi and mi.plant then
     local function has_pflag(n)
-        local ok, v = pcall(function() return mi.plant.flags[n] end)
-        return ok and v
+        return mi.plant.flags[n]
     end
     -- These plant flags only apply to PLANT items (not growths)
     local is_plant = (item_type == df.item_type.PLANT)
@@ -222,17 +211,15 @@ end
 
 -- Growth material checks
 if item_type == df.item_type.PLANT_GROWTH then
-    pcall(function()
-        local plant_raw = df.global.world.raws.plants.all[mat_index]
-        local growth = plant_raw.growths[item_subtype]
-        local gmi = dfhack.matinfo.decode(growth.mat_type, growth.mat_index)
-        if gmi and gmi.material then
-            -- DYE_MAT milling only applies to PLANT items, not growths
-            if mat_has_product(gmi.material, 'DRINK_MAT') then
-                add_use('Still', 'Brew drink from growth')
-            end
+    local plant_raw = df.global.world.raws.plants.all[mat_index]
+    local growth = plant_raw.growths[item_subtype]
+    local gmi = dfhack.matinfo.decode(growth.mat_type, growth.mat_index)
+    if gmi and gmi.material then
+        -- DYE_MAT milling only applies to PLANT items, not growths
+        if mat_has_product(gmi.material, 'DRINK_MAT') then
+            add_use('Still', 'Brew drink from growth')
         end
-    end)
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -293,8 +280,7 @@ for _, r in ipairs(df.global.world.raws.reactions.reactions) do
     local primary_ir = nil
     for _, reagent in ipairs(r.reagents) do
         if df.reaction_reagent_itemst:is_instance(reagent) then
-            local code = ''
-            pcall(function() code = reagent.code end)
+            local code = reagent.code
             if not skip_codes[code] then
                 primary_ir = reagent
                 break
@@ -322,21 +308,17 @@ for _, r in ipairs(df.global.world.raws.reactions.reactions) do
         -- require at least has_material_reaction_product or reaction_class
         local has_hmrp = false
         local hmrp_val = nil
-        pcall(function()
-            if ir.has_material_reaction_product and #ir.has_material_reaction_product > 0 then
-                has_hmrp = true
-                hmrp_val = ir.has_material_reaction_product
-            end
-        end)
+        if ir.has_material_reaction_product and #ir.has_material_reaction_product > 0 then
+            has_hmrp = true
+            hmrp_val = ir.has_material_reaction_product
+        end
 
         local has_rc = false
         local rc_val = nil
-        pcall(function()
-            if ir.reaction_class and #ir.reaction_class > 0 then
-                has_rc = true
-                rc_val = ir.reaction_class
-            end
-        end)
+        if ir.reaction_class and #ir.reaction_class > 0 then
+            has_rc = true
+            rc_val = ir.reaction_class
+        end
 
         -- Skip overly generic reagents (both type and mat are wildcard, no extra filters)
         if ir.item_type == -1 and ir.mat_type == -1 and not has_hmrp and not has_rc then
