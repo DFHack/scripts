@@ -38,23 +38,22 @@ function Editor_Body_Modifier:recalculateBodySize()
   self.target_unit.body.size_info.size_cur = new_size
 end
 
-function Editor_Body_Modifier:setPartModifier(indexList, value)
-  for _, index in ipairs(indexList) do
-    self.target_unit.appearance.bp_modifiers[index] = tonumber(value)
+function Editor_Body_Modifier:getModifier(index)
+  if self.partChoice.type == "part" then
+    return self.target_unit.appearance.bp_modifiers[index]
+  else
+    return self.target_unit.appearance.body_modifiers[index]
   end
-
-  -- Update the unit's portrait
-  self.target_unit.flags4.portrait_must_be_refreshed = true
-  -- Update the world texture
-  self.target_unit.flags4.any_texture_must_be_refreshed = true
-
-  self:recalculateBodySize()
-
-  self:updateChoices()
 end
 
-function Editor_Body_Modifier:setBodyModifier(modifierIndex, value)
-  self.target_unit.appearance.body_modifiers[modifierIndex] = tonumber(value)
+function Editor_Body_Modifier:setModifier(index_data, value)
+  if self.partChoice.type == "part" then
+    for _, idx in ipairs(index_data) do
+      self.target_unit.appearance.bp_modifiers[idx] = tonumber(value)
+    end
+  else
+    self.target_unit.appearance.body_modifiers[index_data] = tonumber(value)
+  end
 
   -- Update the unit's portrait
   self.target_unit.flags4.portrait_must_be_refreshed = true
@@ -73,12 +72,7 @@ function Editor_Body_Modifier:selected(index, selected)
     nil,
     tostring(selected.value),
     function(newValue)
-      local value = tonumber(newValue)
-      if self.partChoice.type == "part" then
-        self:setPartModifier(selected.modifier.idx, value)
-      else -- Body
-        self:setBodyModifier(selected.modifier.index, value)
-      end
+      self:setModifier(selected.modifier.idx or selected.modifier.index, tonumber(newValue))
     end,
     nil,nil
   )
@@ -105,11 +99,7 @@ function Editor_Body_Modifier:random()
   local value = min + roll
 
   -- Set the modifier to the new value
-  if self.partChoice.type == "part" then
-    self:setPartModifier(selected.modifier.idx, value)
-  else
-    self:setBodyModifier(selected.modifier.index, value)
-  end
+  self:setModifier(selected.modifier.idx or selected.modifier.index, value)
 end
 
 function Editor_Body_Modifier:step(amount)
@@ -126,16 +116,12 @@ function Editor_Body_Modifier:step(amount)
 
   -- Now determine what range the modifier currently falls into
   local currentValue = selected.value
-  local rangeIndex
+  local rangeIndex = #ranges
 
   for index, value in ipairs(ranges) do
-    if ranges[index+1] then -- There's still a next entry
-      if currentValue < ranges[index+1] then -- The current value is less than the next entry
-        rangeIndex = index
-        break
-      end
-    else -- This is the last entry
+    if ranges[index+1] and currentValue < ranges[index+1] then
       rangeIndex = index
+      break
     end
   end
 
@@ -143,23 +129,14 @@ function Editor_Body_Modifier:step(amount)
   local newTier = math.min(#ranges, math.max(1, rangeIndex + amount)) -- Clamp values to not go beyond bounds of ranges
   local newValue = ranges[newTier]
 
-  if self.partChoice.type == "part" then
-    self:setPartModifier(selected.modifier.idx, newValue)
-  else
-    self:setBodyModifier(selected.modifier.index, newValue)
-  end
+  self:setModifier(selected.modifier.idx or selected.modifier.index, newValue)
 end
 
 function Editor_Body_Modifier:updateChoices()
   local choices = {}
 
   for index, modifier in ipairs(self.partChoice.modifiers) do
-    local currentValue
-    if self.partChoice.type == "part" then
-      currentValue = self.target_unit.appearance.bp_modifiers[modifier.idx[1]]
-    else -- Body
-      currentValue = self.target_unit.appearance.body_modifiers[modifier.index]
-    end
+    local currentValue = self:getModifier(modifier.idx and modifier.idx[1] or modifier.index)
     table.insert(choices, {text = self:beautifyString(df.appearance_modifier_type[modifier.entry.modifier.type]) .. ": " .. currentValue, value = currentValue, modifier = modifier})
   end
 
