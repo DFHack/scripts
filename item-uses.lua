@@ -150,6 +150,7 @@ end
 if has_flag('WOOD') and is_raw then
     add_use("Carpenter's workshop", 'Make wooden items/furniture')
     add_use('Wood furnace', 'Make charcoal/ash')
+    add_use("Bowyer's workshop", 'Make crossbow')
 end
 if has_flag('IS_METAL') then
     if is_raw then add_use("Metalsmith's forge", 'Forge metal items') end
@@ -225,47 +226,24 @@ end
 ---------------------------------------------------------------------------
 -- 3. ITEM TYPE USES
 ---------------------------------------------------------------------------
-if item_type == df.item_type.PLANT then
-    add_use("Farmer's workshop", 'Process plant')
-elseif item_type == df.item_type.SEEDS then
+if item_type == df.item_type.SEEDS then
     add_use('Farm plot', 'Plant seeds')
-elseif item_type == df.item_type.BOULDER then
-    add_use("Mason's workshop", 'Construct furniture')
-    add_use("Craftsdwarf's workshop", 'Make crafts')
 elseif item_type == df.item_type.ROUGH then
     add_use("Jeweler's workshop", 'Cut rough gem')
 elseif item_type == df.item_type.SMALLGEM then
     add_use("Jeweler's workshop", 'Encrust with gem')
-elseif item_type == df.item_type.WOOD then
-    add_use("Carpenter's workshop", 'Make wooden furniture/items')
-    add_use('Wood furnace', 'Make charcoal/ash')
-    add_use("Bowyer's workshop", 'Make crossbow')
 elseif item_type == df.item_type.CLOTH then
     add_use("Clothier's shop", 'Make clothing')
     add_use("Dyer's shop", 'Dye cloth')
 elseif item_type == df.item_type.THREAD then
     add_use('Loom', 'Weave into cloth')
     add_use("Dyer's shop", 'Dye thread')
-elseif item_type == df.item_type.SKIN_TANNED then
-    add_use('Leatherworks', 'Make leather items')
-elseif item_type == df.item_type.MEAT then
-    add_use('Kitchen', 'Cook in meal')
 elseif item_type == df.item_type.FISH_RAW then
     add_use('Fishery', 'Prepare raw fish')
 elseif item_type == df.item_type.EGG then
-    add_use('Kitchen', 'Cook in meal')
     add_use('Nest box', 'Hatch (if fertile)')
-elseif item_type == df.item_type.GLOB then
-    add_use('Kitchen', 'Render fat / Cook tallow')
-elseif item_type == df.item_type.CHEESE then
-    add_use('Kitchen', 'Cook in meal')
 elseif item_type == df.item_type.DRINK then
     add_use('Tavern', 'Drink')
-elseif item_type == df.item_type.BAR then
-    if has_flag('IS_METAL') then
-        add_use("Metalsmith's forge", 'Forge weapons/armor/items')
-    end
-    if has_flag('SOAP') then add_use('Hospital', 'Cleaning') end
 elseif item_type == df.item_type.BLOCKS then
     add_use('Construction', 'Build walls/floors/stairs')
 end
@@ -306,34 +284,16 @@ for _, r in ipairs(df.global.world.raws.reactions.reactions) do
 
         -- If BOTH item_type and mat_type are -1 (accepts anything),
         -- require at least has_material_reaction_product or reaction_class
-        local has_hmrp = false
-        local hmrp_val = nil
-        if ir.has_material_reaction_product and #ir.has_material_reaction_product > 0 then
-            has_hmrp = true
-            hmrp_val = ir.has_material_reaction_product
-        end
-
-        local has_rc = false
-        local rc_val = nil
-        if ir.reaction_class and #ir.reaction_class > 0 then
-            has_rc = true
-            rc_val = ir.reaction_class
-        end
+        local hmrp = ir.has_material_reaction_product ~= "" and ir.has_material_reaction_product or nil
+        local rc = ir.reaction_class ~= "" and ir.reaction_class or nil
 
         -- Skip overly generic reagents (both type and mat are wildcard, no extra filters)
-        if ir.item_type == -1 and ir.mat_type == -1 and not has_hmrp and not has_rc then
+        if ir.item_type == -1 and ir.mat_type == -1 and not hmrp and not rc then
             goto next_reaction
         end
 
-        -- Verify has_material_reaction_product
-        if has_hmrp then
-            if not mat_has_product(material, hmrp_val) then goto next_reaction end
-        end
-
-        -- Verify reaction_class
-        if has_rc then
-            if not mat_has_class(material, rc_val) then goto next_reaction end
-        end
+        if hmrp and not mat_has_product(material, hmrp) then goto next_reaction end
+        if rc and not mat_has_class(material, rc) then goto next_reaction end
 
         -- Match!
         add_use(get_workshop_name(r), r.name)
