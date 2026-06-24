@@ -24,16 +24,7 @@ function Editor_Body_Modifier:beautifyString(text)
   return out
 end
 
-function Editor_Body_Modifier:setPartModifier(indexList, value)
-  for _, index in ipairs(indexList) do
-    self.target_unit.appearance.bp_modifiers[index] = tonumber(value)
-  end
-
-  -- Update the unit's portrait
-  self.target_unit.flags4.portrait_must_be_refreshed = true
-  -- Update the world texture
-  self.target_unit.flags4.any_texture_must_be_refreshed = true
-
+function Editor_Body_Modifier:recalculateBodySize()
   -- Manually recalculate body size
   local new_size = self.target_unit.body.size_info.size_base
   local caste = df.creature_raw.find(self.target_unit.race).caste[self.target_unit.caste]
@@ -45,6 +36,19 @@ function Editor_Body_Modifier:setPartModifier(indexList, value)
       end
   end
   self.target_unit.body.size_info.size_cur = new_size
+end
+
+function Editor_Body_Modifier:setPartModifier(indexList, value)
+  for _, index in ipairs(indexList) do
+    self.target_unit.appearance.bp_modifiers[index] = tonumber(value)
+  end
+
+  -- Update the unit's portrait
+  self.target_unit.flags4.portrait_must_be_refreshed = true
+  -- Update the world texture
+  self.target_unit.flags4.any_texture_must_be_refreshed = true
+
+  self:recalculateBodySize()
 
   self:updateChoices()
 end
@@ -57,17 +61,7 @@ function Editor_Body_Modifier:setBodyModifier(modifierIndex, value)
   -- Update the world texture
   self.target_unit.flags4.any_texture_must_be_refreshed = true
 
-  -- Manually recalculate body size
-  local new_size = self.target_unit.body.size_info.size_base
-  local caste = df.creature_raw.find(self.target_unit.race).caste[self.target_unit.caste]
-  for idx, mod_entry in ipairs(caste.body_appearance_modifiers) do
-      local t = mod_entry.modifier.type
-      if t >= 0 and t <= 2 then -- 0=HEIGHT, 1=BROADNESS, 2=LENGTH
-          local mod_val = self.target_unit.appearance.body_modifiers[idx]
-          new_size = math.floor((new_size * mod_val) / 100)
-      end
-  end
-  self.target_unit.body.size_info.size_cur = new_size
+  self:recalculateBodySize()
 
   self:updateChoices()
 end
