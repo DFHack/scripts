@@ -182,6 +182,26 @@ local function stack_type_new(type_vals)
     return stack_type
 end
 
+local function dye_profile_key(item)
+    -- signature of an item's dye_profile, so that dyes/dye-mixes with different
+    -- profiles are not treated as the same comparable item and merged together
+    -- (which would ruin the mix and revert it to a component color).
+    -- empty profiles (plain powders like flour) yield '', preserving the
+    -- original behavior for everything that isn't a mixed dye.
+    local ok, sig = pcall(function()
+        local dp = item.dye_profile
+        if dp.color_index == -1 and #dp.dye_material == 0 then return '' end
+        local parts = {'c' .. dp.color_index}
+        for _, v in ipairs(dp.dye_material)  do parts[#parts+1] = 'm' .. v end
+        for _, v in ipairs(dp.dye_matg)      do parts[#parts+1] = 'g' .. v end
+        for _, v in ipairs(dp.degree)        do parts[#parts+1] = 'd' .. v end
+        for _, v in ipairs(dp.target_index)  do parts[#parts+1] = 't' .. v end
+        return '+' .. table.concat(parts, ',')
+    end)
+    -- pcall guards item types in this branch that have no dye_profile field
+    return (ok and sig) or ''
+end
+
 local function stacks_add_item(stockpile, stacks, stack_type, item, container)
     -- add an item to the matching comp_items table; based on comp_key.
     local comp_key = ''
@@ -199,7 +219,7 @@ local function stacks_add_item(stockpile, stacks, stack_type, item, container)
             comp_key = ('%s+%s+%s+%s'):format(stack_type.type_id, item.mat_type, item.mat_index, item:getQuality())
         end
     else
-        comp_key = ('%s+%s+%s'):format(stack_type.type_id, item.mat_type, item.mat_index)
+        comp_key = ('%s+%s+%s%s'):format(stack_type.type_id, item.mat_type, item.mat_index, dye_profile_key(item))
     end
 
     if not stack_type.comp_items[comp_key] then
