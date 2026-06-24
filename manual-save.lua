@@ -81,28 +81,9 @@ if not dfhack.world.isFortressMode() then
     qerror('This script can only be used in fortress mode')
 end
 
--- ---------------------------------------------------------------------------
--- File helpers
--- ---------------------------------------------------------------------------
 
--- Recursively delete a directory tree. Returns true on success.
-local function deleteDir(path)
-    if dfhack.filesystem.rmdir_recursive then
-        return dfhack.filesystem.rmdir_recursive(path)
-    else
-        qerror("The --cleanup feature requires a newer version of DFHack. Please update.")
-    end
-end
 
--- ---------------------------------------------------------------------------
--- Save-directory resolution
--- ---------------------------------------------------------------------------
 
--- DF Premium stores saves under %APPDATA%/Bay 12 Games/Dwarf Fortress/save.
--- Classic/portable installs keep them next to the executable.
-local function getTrueSaveDir()
-    return dfhack.filesystem.getBaseDir() .. "/save"
-end
 
 -- ---------------------------------------------------------------------------
 -- Cleanup logic
@@ -113,10 +94,8 @@ local function pruneManualSaves(save_dir, keep)
     local items = dfhack.filesystem.listdir(save_dir)
     local manual_saves = {}
 
-    for _, item in ipairs(items or {}) do
-        local name = type(item) == "table" and item.name or item
-        local isdir = type(item) == "table" and item.isdir
-                      or dfhack.filesystem.isdir(save_dir .. "/" .. name)
+    for _, name in ipairs(items or {}) do
+        local isdir = dfhack.filesystem.isdir(save_dir .. "/" .. name)
 
         -- Only touch directories whose name contains "-Manual-"
         if isdir and name:find("-Manual-") then
@@ -136,7 +115,7 @@ local function pruneManualSaves(save_dir, keep)
     for idx = keep + 1, #manual_saves do
         local target = save_dir .. "/" .. manual_saves[idx].name
         print("Pruning old snapshot: " .. manual_saves[idx].name)
-        deleteDir(target)
+        dfhack.filesystem.rmdir_recursive(target)
     end
 
     if #manual_saves > keep then
@@ -180,7 +159,7 @@ local function triggerManualSave()
         print("Manual save completed successfully: " .. final_folder_name)
 
         if cleanup_count then
-            pruneManualSaves(getTrueSaveDir(), cleanup_count)
+            pruneManualSaves(dfhack.filesystem.getBaseDir() .. "/save", cleanup_count)
         end
     end)
 end
