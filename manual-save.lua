@@ -87,21 +87,11 @@ end
 
 -- Recursively delete a directory tree. Returns true on success.
 local function deleteDir(path)
-    local items = dfhack.filesystem.listdir(path)
-    for _, item in ipairs(items or {}) do
-        local name = type(item) == "table" and item.name or item
-        local isdir = type(item) == "table" and item.isdir
-                      or dfhack.filesystem.isdir(path .. "/" .. name)
-        if name ~= "." and name ~= ".." then
-            local child = path .. "/" .. name
-            if isdir then
-                deleteDir(child)
-            else
-                os.remove(child)
-            end
-        end
+    if dfhack.filesystem.rmdir_recursive then
+        return dfhack.filesystem.rmdir_recursive(path)
+    else
+        qerror("The --cleanup feature requires a newer version of DFHack. Please update.")
     end
-    return dfhack.filesystem.rmdir(path)
 end
 
 -- ---------------------------------------------------------------------------
@@ -111,14 +101,7 @@ end
 -- DF Premium stores saves under %APPDATA%/Bay 12 Games/Dwarf Fortress/save.
 -- Classic/portable installs keep them next to the executable.
 local function getTrueSaveDir()
-    local appdata = os.getenv("APPDATA")
-    if appdata then
-        local appdata_save = appdata .. "/Bay 12 Games/Dwarf Fortress/save"
-        if dfhack.filesystem.exists(appdata_save .. "/current") then
-            return appdata_save
-        end
-    end
-    return dfhack.getDFPath() .. "/save"
+    return dfhack.filesystem.getBaseDir() .. "/save"
 end
 
 -- ---------------------------------------------------------------------------
