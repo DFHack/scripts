@@ -40,15 +40,6 @@ local gui = require('gui')
 local guidm = require('gui.dwarfmode')
 local widgets = require('gui.widgets')
 
--- Debug logging: set to false to disable all file I/O for maximum performance
-local DEBUG_LOGGING = false
-local LOG_PATH = 'harvest_debug.log'
-local log_buffer = {}
-
-local function log(msg)
-    if not DEBUG_LOGGING then return end
-    log_buffer[#log_buffer + 1] = tostring(msg)
-end
 
 local function flush_log()
     if not DEBUG_LOGGING or #log_buffer == 0 then return end
@@ -64,6 +55,18 @@ end
 if DEBUG_LOGGING then
     local f = io.open(LOG_PATH, 'w')
     if f then f:write('=== harvest.lua loaded ===\n'); f:close() end
+end
+
+local function is_in_season(g, tick)
+    if g.timing_1 == -1 or g.timing_2 == -1 then return true end
+    if g.timing_1 >= 0 and g.timing_2 >= 0 then
+        if g.timing_1 <= g.timing_2 then
+            return (tick >= g.timing_1 and tick <= g.timing_2)
+        else
+            return (tick >= g.timing_1 or tick <= g.timing_2)
+        end
+    end
+    return false
 end
 
 local function is_empty_container(item)
@@ -100,27 +103,16 @@ local function remove_shrub_tile(plant)
     local lx, ly = pos.x % 16, pos.y % 16
     local tt = block.tiletype[lx][ly]
     local attrs = df.tiletype.attrs[tt]
-    log('  remove_shrub_tile: tt=' .. tt .. ' shape=' .. tostring(attrs.shape) .. ' mat=' .. tostring(attrs.material))
 
     if attrs.shape == df.tiletype_shape.SHRUB or attrs.shape == df.tiletype_shape.SAPLING then
         local floor_tt = FLOOR_TILETYPE_CACHE[attrs.material]
         if floor_tt then
             block.tiletype[lx][ly] = floor_tt
-            log('  remove_shrub_tile: set tiletype=' .. floor_tt .. ' (cached)')
         else
             block.tiletype[lx][ly] = 348  -- generic soil floor fallback
-            log('  remove_shrub_tile: set tiletype=348 (fallback)')
         end
     else
-        log('  remove_shrub_tile: tile is not SHRUB/SAPLING shape, skipping')
     end
-end
-
-local function pure_ensure_key(t, k, default)
-    if t[k] == nil then
-        t[k] = default or {}
-    end
-    return t[k]
 end
 
 -- Check if a shrub (non-tree) has harvestable growths or is a plain harvestable plant
@@ -134,15 +126,7 @@ local function is_shrub_harvestable(plant_obj)
     for _, g in ipairs(raw.growths) do
         if g.timing_1 == -1 or g.timing_2 == -1 then
             return true
-        elseif g.timing_1 >= 0 and g.timing_2 >= 0 then
-            local active = false
-            if g.timing_1 <= g.timing_2 then
-                active = (tick >= g.timing_1 and tick <= g.timing_2)
-            else
-                active = (tick >= g.timing_1 or tick <= g.timing_2)
-            end
-            if active then return true end
-        end
+        elseif is_in_season(g, tick) then return true end
     end
     return false
 end
@@ -178,12 +162,8 @@ local function tree_has_harvestable_fruit(plant_obj)
         local active = false
         if g.timing_1 == -1 or g.timing_2 == -1 then
             active = true
-        elseif g.timing_1 >= 0 and g.timing_2 >= 0 then
-            if g.timing_1 <= g.timing_2 then
-                active = (tick >= g.timing_1 and tick <= g.timing_2)
-            else
-                active = (tick >= g.timing_1 or tick <= g.timing_2)
-            end
+        else
+            active = is_in_season(g, tick)
         end
         if active and is_harvestable_growth(g, raw) then
             return true
@@ -195,7 +175,6 @@ end
 local function spawn_plant_yield_raw(mat_index, target_container, pos, stack_size, check_season)
     local raw = df.global.world.raws.plants.all[mat_index]
     if not raw then
-        log('  spawn_plant_yield_raw: raw not found for mat_index=' .. tostring(mat_index))
         return 0
     end
 
@@ -207,80 +186,51 @@ local function spawn_plant_yield_raw(mat_index, target_container, pos, stack_siz
         end
     end
 
-    log('  spawn_plant_yield_raw: plant=' .. raw.id .. ' mat_index=' .. mat_index .. ' growths=' .. #raw.growths .. ' stack=' .. stack_size .. ' check_season=' .. tostring(check_season))
     local tick = df.global.cur_year_tick
-    log('  cur_year_tick=' .. tostring(tick))
     local spawned_any = false
     local count = 0
 
     for gi, g in ipairs(raw.growths) do
         local active = true
-        log('    growth[' .. gi .. ']: timing_1=' .. tostring(g.timing_1) .. ' timing_2=' .. tostring(g.timing_2))
         if g.timing_1 == -1 or g.timing_2 == -1 then
             active = true
-            log('      -> perpetual, active=true')
-        elseif g.timing_1 >= 0 and g.timing_2 >= 0 then
-            if check_season then
-                active = false
-                if g.timing_1 <= g.timing_2 then
-                    active = (tick >= g.timing_1 and tick <= g.timing_2)
-                else
-                    active = (tick >= g.timing_1 or tick <= g.timing_2)
-                end
-                log('      -> seasonal check, active=' .. tostring(active))
-            else
-                log('      -> skipping season check, active=true')
-            end
         else
-            active = false
-            log('      -> unknown timing, active=false')
+            if check_season then
+                active = is_in_season(g, tick)
+            end
         end
 
         if active then
             local matinfo = dfhack.matinfo.decode(g)
-            log('      matinfo.decode result: ' .. tostring(matinfo))
             if matinfo then
-                log('      matinfo.type=' .. tostring(matinfo.type) .. ' matinfo.index=' .. tostring(matinfo.index))
-                log('      calling createItem(creator, PLANT_GROWTH, ' .. tostring(g.item_subtype) .. ', ' .. tostring(matinfo.type) .. ', ' .. tostring(matinfo.index) .. ')')
-                local ok, new_items = pcall(dfhack.items.createItem, creator, df.item_type.PLANT_GROWTH, g.item_subtype, matinfo.type, matinfo.index)
-                log('      createItem ok=' .. tostring(ok) .. ' result=' .. tostring(new_items))
-                if ok and new_items and type(new_items) == 'table' and new_items[1] then
+                local new_items = {dfhack.items.createItem(creator, df.item_type.PLANT_GROWTH, g.item_subtype, matinfo.type, matinfo.index)}
+                if new_items[1] then
                     new_items[1]:setStackSize(stack_size)
                     if target_container then dfhack.items.moveToContainer(new_items[1], target_container)
                     else dfhack.items.moveToGround(new_items[1], pos) end
                     spawned_any = true
                     count = count + 1
-                    log('      >>> SPAWNED growth item!')
                 else
-                    log('      createItem FAILED or returned empty')
                 end
             else
-                log('      matinfo.decode FAILED')
             end
         end
     end
 
     if not spawned_any then
-        log('    No growths spawned, trying base plant material...')
         local matinfo = dfhack.matinfo.find('PLANT', raw.id)
         if matinfo then
-            log('    matinfo.find(PLANT, ' .. raw.id .. ') = type:' .. tostring(matinfo.type) .. ' idx:' .. tostring(matinfo.index))
-            local ok, new_items = pcall(dfhack.items.createItem, creator, df.item_type.PLANT, -1, matinfo.type, matinfo.index)
-            log('    createItem ok=' .. tostring(ok) .. ' result=' .. tostring(new_items))
-            if ok and new_items and type(new_items) == 'table' and new_items[1] then
+            local new_items = {dfhack.items.createItem(creator, df.item_type.PLANT, -1, matinfo.type, matinfo.index)}
+                if new_items[1] then
                 new_items[1]:setStackSize(stack_size)
                 if target_container then dfhack.items.moveToContainer(new_items[1], target_container)
                 else dfhack.items.moveToGround(new_items[1], pos) end
                 count = count + 1
-                log('    >>> SPAWNED base plant item!')
             else
-                log('    createItem FAILED for base plant')
             end
         else
-            log('    matinfo.find FAILED for structural material')
         end
     end
-    log('  spawn_plant_yield_raw returning count=' .. count)
     return count
 end
 
@@ -454,12 +404,9 @@ end
 
 function Harvest:select_harvestables_in_box(bounds)
     if not bounds then
-        log('select_harvestables_in_box: bounds is nil!')
         return
     end
 
-    log('=== HARVEST DEBUG: select_harvestables_in_box ===')
-    log('Bounds: x=' .. bounds.x1 .. '-' .. bounds.x2 .. ' y=' .. bounds.y1 .. '-' .. bounds.y2 .. ' z=' .. bounds.z1 .. '-' .. bounds.z2)
 
     local seen_buildings = {}
     local seen_blocks = {}
@@ -476,16 +423,12 @@ function Harvest:select_harvestables_in_box(bounds)
 
                 -- 1. Try getPlantAtTile: only select SHRUBS, NOT trees
                 if not is_farm then
-                    local ok_gp, plant_at = pcall(dfhack.maps.getPlantAtTile, pos)
-                    if not ok_gp then
-                        log('  getPlantAtTile CRASHED at (' .. x .. ',' .. y .. ',' .. z .. '): ' .. tostring(plant_at))
-                    end
-                    if ok_gp and plant_at then
+                    local plant_at = dfhack.maps.getPlantAtTile(pos)
+                    if plant_at then
                         local raw = df.global.world.raws.plants.all[plant_at.material]
                         local name = raw and raw.id or 'UNKNOWN'
                         local is_tree = (plant_at.tree_info ~= nil)
                         local tree_str = is_tree and 'TREE' or 'SHRUB'
-                        log('  getPlantAtTile(' .. x .. ',' .. y .. ',' .. z .. '): ' .. name .. ' type=' .. tostring(plant_at.type) .. ' hp=' .. tostring(plant_at.hitpoints) .. ' gc=' .. tostring(plant_at.grow_counter) .. ' ' .. tree_str)
 
                         local dominated = not plant_at.damage_flags.dead
                         -- For trees, ignore season_dead (it's a normal seasonal state)
@@ -497,32 +440,26 @@ function Harvest:select_harvestables_in_box(bounds)
                         -- type=2 is always a shrub, type=0 with tree_info is a mature tree
                         local is_sapling = (not is_tree and plant_at.type ~= 2)
                         local allow_saplings = self.subviews.include_saplings:getOptionValue()
-                        log('    alive=' .. tostring(dominated) .. ' is_sapling=' .. tostring(is_sapling) .. ' allow_saplings=' .. tostring(allow_saplings))
 
                         if dominated and (not is_sapling or allow_saplings) then
                             if is_tree then
-                                log('    TREE: skipped (trees cannot be harvested via script safely)')
                             else
                                 -- Shrubs: select as before
                                 local hg = is_shrub_harvestable(plant_at)
-                                log('    is_shrub_harvestable=' .. tostring(hg))
                                 if hg then
                                     local pid = tostring(plant_at)
                                     if not self.selected_plants[pid] then
                                         self.selected_plants[pid] = {plant=plant_at, is_tree=false}
                                         local px, py, pz = plant_at.pos.x, plant_at.pos.y, plant_at.pos.z
-                                        pure_ensure_key(pure_ensure_key(self.selected_coords, pz), py)[px] = true
-                                        local sb = pure_ensure_key(self.selected_bounds, pz, {x1=px, x2=px, y1=py, y2=py})
+                                        self.selected_coords[pz] = self.selected_coords[pz] or {}; self.selected_coords[pz][py] = self.selected_coords[pz][py] or {}; self.selected_coords[pz][py][px] = true
+                                        self.selected_bounds[pz] = self.selected_bounds[pz] or {x1=px, x2=px, y1=py, y2=py}; local sb = self.selected_bounds[pz]
                                         sb.x1 = math.min(sb.x1, px); sb.x2 = math.max(sb.x2, px)
                                         sb.y1 = math.min(sb.y1, py); sb.y2 = math.max(sb.y2, py)
-                                        log('    >>> SELECTED SHRUB via getPlantAtTile!')
                                     else
-                                        log('    (already selected)')
                                     end
                                 end
                             end
                         else
-                            log('    SKIPPED (alive=' .. tostring(dominated) .. ' is_sapling=' .. tostring(is_sapling) .. ')')
                         end
                     end
                 end
@@ -532,24 +469,21 @@ function Harvest:select_harvestables_in_box(bounds)
                     local bid = tostring(bld)
                     if not seen_buildings[bid] then
                         seen_buildings[bid] = true
-                        log('  FarmPlot at (' .. x .. ',' .. y .. ',' .. z .. '), contained_items=' .. #bld.contained_items)
                         for ci, item_v in ipairs(bld.contained_items) do
                             local item = item_v.item
                             local itype = item:getType()
                             if itype == df.item_type.SEEDS then
                                 local crop_raw = df.global.world.raws.plants.all[item.mat_index]
                                 if crop_raw then
-                                    log('    seed: ' .. crop_raw.id .. ' grow=' .. item.grow_counter .. '/' .. crop_raw.growdur)
                                     if item.grow_counter >= crop_raw.growdur then
                                         if not self.selected_items[item.id] then
                                             self.selected_items[item.id] = item
                                             local ix, iy, iz = dfhack.items.getPosition(item)
                                             if ix then
-                                                pure_ensure_key(pure_ensure_key(self.selected_coords, iz), iy)[ix] = true
-                                                local sb = pure_ensure_key(self.selected_bounds, iz, {x1=ix, x2=ix, y1=iy, y2=iy})
+                                                self.selected_coords[iz] = self.selected_coords[iz] or {}; self.selected_coords[iz][iy] = self.selected_coords[iz][iy] or {}; self.selected_coords[iz][iy][ix] = true
+                                                self.selected_bounds[iz] = self.selected_bounds[iz] or {x1=ix, x2=ix, y1=iy, y2=iy}; local sb = self.selected_bounds[iz]
                                                 sb.x1 = math.min(sb.x1, ix); sb.x2 = math.max(sb.x2, ix)
                                                 sb.y1 = math.min(sb.y1, iy); sb.y2 = math.max(sb.y2, iy)
-                                                log('    >>> SELECTED farm crop!')
                                             end
                                         end
                                     end
@@ -564,7 +498,6 @@ function Harvest:select_harvestables_in_box(bounds)
                 local block_key = block and (math.floor(x/16) .. ',' .. math.floor(y/16) .. ',' .. z) or nil
                 if block and not seen_blocks[block_key] then
                     seen_blocks[block_key] = true
-                    log('  Scanning block ' .. block_key .. ' (' .. #block.items .. ' items)')
                     for _, item_id in ipairs(block.items) do
                         local item = df.item.find(item_id)
                         if item and not item.flags.garbage_collect then
@@ -574,15 +507,13 @@ function Harvest:select_harvestables_in_box(bounds)
                                 local on_gnd = item.flags.on_ground
                                 local rotten = item.flags.rotten
                                 local is_plant_type = (itype == df.item_type.PLANT or itype == df.item_type.PLANT_GROWTH)
-                                log('    item id=' .. item_id .. ' type=' .. tostring(itype) .. ' on_ground=' .. tostring(on_gnd) .. ' rotten=' .. tostring(rotten) .. ' at (' .. ix .. ',' .. iy .. ',' .. iz .. ')')
 
                                 if on_gnd and not rotten and is_plant_type and not self.selected_items[item_id] then
                                     self.selected_items[item_id] = item
-                                    pure_ensure_key(pure_ensure_key(self.selected_coords, iz), iy)[ix] = true
-                                    local sb = pure_ensure_key(self.selected_bounds, iz, {x1=ix, x2=ix, y1=iy, y2=iy})
+                                    self.selected_coords[iz] = self.selected_coords[iz] or {}; self.selected_coords[iz][iy] = self.selected_coords[iz][iy] or {}; self.selected_coords[iz][iy][ix] = true
+                                    self.selected_bounds[iz] = self.selected_bounds[iz] or {x1=ix, x2=ix, y1=iy, y2=iy}; local sb = self.selected_bounds[iz]
                                     sb.x1 = math.min(sb.x1, ix); sb.x2 = math.max(sb.x2, ix)
                                     sb.y1 = math.min(sb.y1, iy); sb.y2 = math.max(sb.y2, iy)
-                                    log('    >>> SELECTED fallen item id=' .. item_id)
                                 end
                             end
                         end
@@ -597,12 +528,9 @@ function Harvest:select_harvestables_in_box(bounds)
     for _ in pairs(self.selected_items) do item_count = item_count + 1 end
     local plant_count = 0
     for _ in pairs(self.selected_plants) do plant_count = plant_count + 1 end
-    log('=== TOTAL: ' .. item_count .. ' items, ' .. plant_count .. ' plants (checked ' .. tiles_checked .. ' tiles) ===')
-    flush_log()
 end
 
 function Harvest:do_harvest(pos)
-    log('=== do_harvest at (' .. pos.x .. ',' .. pos.y .. ',' .. pos.z .. ') ===')
     -- 1. Identify container Target
     local target_container = nil
 
@@ -638,29 +566,21 @@ function Harvest:do_harvest(pos)
     end
 
     if not target_container then
-        log('WARNING: No free containers! Items will drop on floor.')
     else
-        log('Using container: ' .. tostring(target_container))
     end
 
     -- 2. Setup skill values
     local sim_grower, sim_herbalist = 0, 0
-    local ok, err = pcall(function()
-        sim_grower, sim_herbalist = get_fortress_max_harvest_skills()
-        if self.subviews.force_max_yield:getOptionValue() then
-            sim_grower = 15
-            sim_herbalist = 15
-        end
-    end)
-    if not ok then
-        log('CRASH in setup: ' .. tostring(err))
+    sim_grower, sim_herbalist = get_fortress_max_harvest_skills()
+    if self.subviews.force_max_yield:getOptionValue() then
+        sim_grower = 15
+        sim_herbalist = 15
     end
 
     local stack_size = 1
     if sim_herbalist >= 5 then stack_size = 2 end
     if sim_herbalist >= 10 then stack_size = 4 end
     if sim_herbalist >= 15 then stack_size = 5 end
-    log('  skill: grower=' .. sim_grower .. ' herbalist=' .. sim_herbalist .. ' stack=' .. stack_size)
 
     -- 3. Iterate collected selections and Harvest
     local harvested_count = 0
@@ -693,10 +613,8 @@ function Harvest:do_harvest(pos)
     for plant_id, plant_data in pairs(self.selected_plants) do
         local plant = plant_data.plant
         local is_tree = plant_data.is_tree
-        log('  harvesting plant: ' .. tostring(plant) .. ' mat=' .. plant.material .. ' is_tree=' .. tostring(is_tree))
 
         if is_tree then
-            log('    TREE: skipped (trees cannot be harvested via script safely)')
         else
             -- Shrub: spawn yield and kill the shrub
             harvested_count = harvested_count + spawn_plant_yield_raw(plant.material, target_container, pos, stack_size, true)
@@ -706,8 +624,6 @@ function Harvest:do_harvest(pos)
         end
     end
 
-    log('=== Successfully harvested ' .. tostring(harvested_count) .. ' items ===')
-    flush_log()
     self:reset_selected_state()
 end
 
@@ -715,7 +631,6 @@ function Harvest:onInput(keys)
     if Harvest.super.onInput(self, keys) then return true end
 
     if keys._MOUSE_R and self.mark then
-        log('RIGHT CLICK: clearing mark')
         self.mark = nil
         self:updateLayout()
         return true
@@ -726,23 +641,17 @@ function Harvest:onInput(keys)
             self:reset_double_click()
             return false
         end
-        log('LEFT CLICK at (' .. pos.x .. ',' .. pos.y .. ',' .. pos.z .. ') mark=' .. tostring(self.mark ~= nil))
         local now_ms = dfhack.getTickCount()
         local is_dbl = same_xyz(pos, self.last_map_click_pos) and
                 now_ms - self.last_map_click_ms <= widgets.getDoubleClickMs()
-        log('  double_click=' .. tostring(is_dbl) .. ' has_selected=' .. tostring(next(self.selected_coords) ~= nil))
         if is_dbl then
             self:reset_double_click()
             if next(self.selected_coords) then
-                log('  -> HARVESTING!')
                 self:do_harvest(pos)
             else
-                log('  -> No harvestables selected! Dumping tile debug...')
                 local plant_at = dfhack.maps.getPlantAtTile(pos)
-                log('  getPlantAtTile=' .. tostring(plant_at))
                 if plant_at then
                     local raw = df.global.world.raws.plants.all[plant_at.material]
-                    log('    plant=' .. (raw and raw.id or '?') .. ' type=' .. plant_at.type .. ' hp=' .. plant_at.hitpoints .. ' gc=' .. plant_at.grow_counter .. ' tree=' .. tostring(plant_at.tree_info ~= nil))
                 end
             end
             self.mark = nil
@@ -752,13 +661,11 @@ function Harvest:onInput(keys)
         self.last_map_click_ms = now_ms
         self.last_map_click_pos = pos
         if self.mark then
-            log('  -> COMPLETING BOX SELECTION')
             self:select_harvestables_in_box(self:get_bounds(pos))
             self.mark = nil
             self:updateLayout()
             return true
         end
-        log('  -> SETTING MARK')
         self.mark = pos
         self:updateLayout()
         return true
