@@ -33,6 +33,8 @@ Template for new versions:
 
 ## Fixes
 
+- `gui/petitions`: fix deity display
+
 ## Misc Improvements
 - `trackstop`: ``pressureplate`` overlay moved to `machine-toggle` as an ``armok`` tool
 
