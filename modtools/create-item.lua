@@ -72,42 +72,19 @@ local function moveToBag(itemsToBag, creator)
     local items_list = type(itemsToBag) == 'table' and not itemsToBag._type and itemsToBag or {itemsToBag}
     if #items_list == 0 then return {} end
     -- Use plant thread for bag material (pig tail fiber)
-    local containerMat = dfhack.matinfo.find('PLANT_MAT:PIG_TAIL:THREAD')
-    if not containerMat then
-        for _, n in ipairs(df.global.world.raws.plants.all) do
-            for _, m in ipairs(n.material) do
-                if m.flags.THREAD_PLANT then
-                    containerMat = dfhack.matinfo.find('PLANT_MAT:' .. n.id .. ':' .. m.id)
-                    if containerMat then break end
-                end
-            end
-            if containerMat then break end
-        end
+    local containerMat
+    for _, token in ipairs{'PLANT_MAT:PIG_TAIL:THREAD', 'CREATURE_MAT:COW:LEATHER', 'CREATURE_MAT:CAVE_SPIDER:SILK'} do
+        containerMat = dfhack.matinfo.find(token)
+        if containerMat then break end
     end
     if not containerMat then
-        containerMat = dfhack.matinfo.find('CREATURE_MAT:COW:LEATHER')
-    end
-    if not containerMat then
-        for _, c in ipairs(df.global.world.raws.creatures.all) do
-            for _, m in ipairs(c.material) do
-                if m.flags.LEATHER then
-                    containerMat = dfhack.matinfo.find('CREATURE_MAT:' .. c.creature_id .. ':' .. m.id)
-                    if containerMat then break end
-                end
-            end
-            if containerMat then break end
-        end
-    end
-    if not containerMat then
-        -- print('[create-item] ERROR: no bag material found')
         return items_list
     end
     -- Use BAG item type, NOT BOX. BOX creates chests/coffers (item_boxst),
     -- BAG creates actual bags (item_bagst) for holding powder/seeds.
     local bagType = dfhack.items.findType('BAG:NONE')
-    local ok, bags = pcall(dfhack.items.createItem, creator, bagType, -1, containerMat.type, containerMat.index)
-    if not ok then
-        -- print('[create-item] ERROR creating bag: ' .. tostring(bags))
+    local bags = {dfhack.items.createItem(creator, bagType, -1, containerMat.type, containerMat.index)}
+    if not bags[1] then
         return items_list
     end
     local bag = bags[1]
@@ -380,14 +357,14 @@ function hackWish(accessors, opts)
     -- For PLANT_GROWTH, itemsubtype must be the growth index within the plant's raws.
     -- If it's -1, we search the plant raws to find the growth that matches this material.
     if df.item_type[itemtype] == 'PLANT_GROWTH' and itemsubtype == -1 then
-        for _, plant in ipairs(df.global.world.raws.plants.all) do
-            for i, growth in ipairs(plant.growths) do
+        local mi = dfhack.matinfo.decode(mattype, matindex)
+        if mi and mi.plant then
+            for i, growth in ipairs(mi.plant.growths) do
                 if growth.mat_type == mattype and growth.mat_index == matindex then
                     itemsubtype = i
                     break
                 end
             end
-            if itemsubtype ~= -1 then break end
         end
     end
     if not no_quality_item_types[df.item_type[itemtype]] then
