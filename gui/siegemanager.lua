@@ -489,7 +489,7 @@ function SiegeManager:init()
                 {label='Bolt Thrower', value=df.siegeengine_type.BoltThrower},
                 {label='Catapult', value=df.siegeengine_type.Catapult},
             },
-            initial_option=1,
+            initial_option=-1,
         },
         widgets.ToggleHotkeyLabel {
             view_id = 'configure_all',
