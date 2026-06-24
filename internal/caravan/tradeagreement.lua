@@ -32,220 +32,66 @@ local function decode_mat_list(mat)
 end
 
 local function decode_mat_density(mat)
-    local ok, result = pcall(function()
-        local minfo = dfhack.matinfo.decode(mat.type, mat.index)
-        return minfo and minfo.material.solid_density or 0
-    end)
-    return ok and result or 0
+    local minfo = dfhack.matinfo.decode(mat.type, mat.index)
+    return minfo and minfo.material.solid_density or 0
 end
 
-local select_by_value_tab = {
-    Leather={
-        get_mats=function(resources) return transform_mat_list(resources.organic.leather) end,
-        decode=decode_mat_list,
-    },
-    SmallCutGems={
-        get_mats=function(resources) return resources.gems end,
-        decode=function(id) return dfhack.matinfo.decode(0, id).material.material_value end,
-    },
-    Meat={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.meat) end,
-        decode=decode_mat_list,
-    },
-    Parchment={
-        get_mats=function(resources) return transform_mat_list(resources.organic.parchment) end,
-        decode=decode_mat_list,
-    },
-    Stone={
-        get_mats=function(resources) return resources.stones end,
-        decode=function(id) return dfhack.matinfo.decode(0, id).material.material_value end,
-    },
-    Wood={
-        get_mats=function(resources) return resources.wood_products end,
-        decode=function(id) return dfhack.matinfo.decode(df.builtin_mats.WOOD, id).material.material_value end,
-    },
-    MetalBars={
-        get_mats=function(resources) return resources.metals end,
-        decode=function(id) return dfhack.matinfo.decode(0, id).material.material_value end,
-    },
-    Cheese={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.cheese) end,
-        decode=decode_mat_list,
-    },
-    Powders={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.powders) end,
-        decode=decode_mat_list,
-    },
-    Extracts={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.extracts) end,
-        decode=decode_mat_list,
-    },
-    Drinks={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.booze) end,
-        decode=decode_mat_list,
-    },
-    CupsMugsGoblets={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.crafts) end,
-        decode=decode_mat_list,
-    },
-    Crafts={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.crafts) end,
-        decode=decode_mat_list,
-    },
-    FlasksWaterskins={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.flasks) end,
-        decode=decode_mat_list,
-    },
-    Quivers={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.quivers) end,
-        decode=decode_mat_list,
-    },
-    Backpacks={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.backpacks) end,
-        decode=decode_mat_list,
-    },
-    Barrels={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.barrels) end,
-        decode=decode_mat_list,
-    },
-    Sand={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.sand) end,
-        decode=decode_mat_list,
-    },
-    Glass={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.glass) end,
-        decode=decode_mat_list,
-    },
-    Clay={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.clay) end,
-        decode=decode_mat_list,
-    },
-    ClothPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_list },
-    ThreadPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_list },
-    RopesPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_list },
-    BagsPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_list },
-    ClothSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_list },
-    ThreadSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_list },
-    RopesSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_list },
-    BagsSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_list },
-    ClothYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_list },
-    ThreadYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_list },
-    RopesYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_list },
-    BagsYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_list },
-    Plants={
-        get_mats=function(resources) return resources.plants end,
-        decode=function(id) return dfhack.matinfo.decode(df.builtin_mats.PLANT, id).material.material_value end,
-    },
-    GardenVegetables={
-        get_mats=function(resources) return resources.shrub_fruit_plants end,
-        decode=function(id) return dfhack.matinfo.decode(df.builtin_mats.PLANT, id).material.material_value end,
-    },
-}
+local function build_tab(decode_list_fn, decode_stone_fn, decode_wood_fn, decode_plant_fn)
+    return {
+        Leather={get_mats=function(resources) return transform_mat_list(resources.organic.leather) end, decode=decode_list_fn},
+        SmallCutGems={get_mats=function(resources) return resources.gems end, decode=decode_stone_fn},
+        Meat={get_mats=function(resources) return transform_mat_list(resources.misc_mat.meat) end, decode=decode_list_fn},
+        Parchment={get_mats=function(resources) return transform_mat_list(resources.organic.parchment) end, decode=decode_list_fn},
+        Stone={get_mats=function(resources) return resources.stones end, decode=decode_stone_fn},
+        Wood={get_mats=function(resources) return resources.wood_products end, decode=decode_wood_fn},
+        MetalBars={get_mats=function(resources) return resources.metals end, decode=decode_stone_fn},
+        Cheese={get_mats=function(resources) return transform_mat_list(resources.misc_mat.cheese) end, decode=decode_list_fn},
+        Powders={get_mats=function(resources) return transform_mat_list(resources.misc_mat.powders) end, decode=decode_list_fn},
+        Extracts={get_mats=function(resources) return transform_mat_list(resources.misc_mat.extracts) end, decode=decode_list_fn},
+        Drinks={get_mats=function(resources) return transform_mat_list(resources.misc_mat.booze) end, decode=decode_list_fn},
+        CupsMugsGoblets={get_mats=function(resources) return transform_mat_list(resources.misc_mat.crafts) end, decode=decode_list_fn},
+        Crafts={get_mats=function(resources) return transform_mat_list(resources.misc_mat.crafts) end, decode=decode_list_fn},
+        FlasksWaterskins={get_mats=function(resources) return transform_mat_list(resources.misc_mat.flasks) end, decode=decode_list_fn},
+        Quivers={get_mats=function(resources) return transform_mat_list(resources.misc_mat.quivers) end, decode=decode_list_fn},
+        Backpacks={get_mats=function(resources) return transform_mat_list(resources.misc_mat.backpacks) end, decode=decode_list_fn},
+        Barrels={get_mats=function(resources) return transform_mat_list(resources.misc_mat.barrels) end, decode=decode_list_fn},
+        Sand={get_mats=function(resources) return transform_mat_list(resources.misc_mat.sand) end, decode=decode_list_fn},
+        Glass={get_mats=function(resources) return transform_mat_list(resources.misc_mat.glass) end, decode=decode_list_fn},
+        Clay={get_mats=function(resources) return transform_mat_list(resources.misc_mat.clay) end, decode=decode_list_fn},
+        ClothPlant={get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_list_fn},
+        ThreadPlant={get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_list_fn},
+        RopesPlant={get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_list_fn},
+        BagsPlant={get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_list_fn},
+        ClothSilk={get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_list_fn},
+        ThreadSilk={get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_list_fn},
+        RopesSilk={get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_list_fn},
+        BagsSilk={get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_list_fn},
+        ClothYarn={get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_list_fn},
+        ThreadYarn={get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_list_fn},
+        RopesYarn={get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_list_fn},
+        BagsYarn={get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_list_fn},
+        Plants={get_mats=function(resources) return resources.plants end, decode=decode_plant_fn},
+        GardenVegetables={get_mats=function(resources) return resources.shrub_fruit_plants end, decode=decode_plant_fn},
+    }
+end
+
+local select_by_value_tab = build_tab(
+    decode_mat_list,
+    function(id) return dfhack.matinfo.decode(0, id).material.material_value end,
+    function(id) return dfhack.matinfo.decode(df.builtin_mats.WOOD, id).material.material_value end,
+    function(id) return dfhack.matinfo.decode(df.builtin_mats.PLANT, id).material.material_value end
+)
 select_by_value_tab.LargeCutGems = select_by_value_tab.SmallCutGems
 
-local select_by_density_tab = {
-    Stone={
-        get_mats=function(resources) return resources.stones end,
-        decode=function(id) return dfhack.matinfo.decode(0, id).material.solid_density end,
-    },
-    Wood={
-        get_mats=function(resources) return resources.wood_products end,
-        decode=function(id) return dfhack.matinfo.decode(df.builtin_mats.WOOD, id).material.solid_density end,
-    },
-    MetalBars={
-        get_mats=function(resources) return resources.metals end,
-        decode=function(id) return dfhack.matinfo.decode(0, id).material.solid_density end,
-    },
-    Cheese={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.cheese) end,
-        decode=decode_mat_density,
-    },
-    Powders={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.powders) end,
-        decode=decode_mat_density,
-    },
-    Extracts={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.extracts) end,
-        decode=decode_mat_density,
-    },
-    Drinks={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.booze) end,
-        decode=decode_mat_density,
-    },
-    Meat={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.meat) end,
-        decode=decode_mat_density,
-    },
-    Leather={
-        get_mats=function(resources) return transform_mat_list(resources.organic.leather) end,
-        decode=decode_mat_density,
-    },
-    Parchment={
-        get_mats=function(resources) return transform_mat_list(resources.organic.parchment) end,
-        decode=decode_mat_density,
-    },
-    SmallCutGems={
-        get_mats=function(resources) return resources.gems end,
-        decode=function(id) return dfhack.matinfo.decode(0, id).material.solid_density end,
-    },
-    CupsMugsGoblets={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.crafts) end,
-        decode=decode_mat_density,
-    },
-    Crafts={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.crafts) end,
-        decode=decode_mat_density,
-    },
-    FlasksWaterskins={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.flasks) end,
-        decode=decode_mat_density,
-    },
-    Quivers={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.quivers) end,
-        decode=decode_mat_density,
-    },
-    Backpacks={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.backpacks) end,
-        decode=decode_mat_density,
-    },
-    Barrels={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.barrels) end,
-        decode=decode_mat_density,
-    },
-    Sand={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.sand) end,
-        decode=decode_mat_density,
-    },
-    Glass={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.glass) end,
-        decode=decode_mat_density,
-    },
-    Clay={
-        get_mats=function(resources) return transform_mat_list(resources.misc_mat.clay) end,
-        decode=decode_mat_density,
-    },
-    ClothPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_density },
-    ThreadPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_density },
-    RopesPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_density },
-    BagsPlant={ get_mats=function(resources) return transform_mat_list(resources.organic.fiber) end, decode=decode_mat_density },
-    ClothSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_density },
-    ThreadSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_density },
-    RopesSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_density },
-    BagsSilk={ get_mats=function(resources) return transform_mat_list(resources.organic.silk) end, decode=decode_mat_density },
-    ClothYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_density },
-    ThreadYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_density },
-    RopesYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_density },
-    BagsYarn={ get_mats=function(resources) return transform_mat_list(resources.organic.wool) end, decode=decode_mat_density },
-    Plants={
-        get_mats=function(resources) return resources.plants end,
-        decode=function(id) return dfhack.matinfo.decode(df.builtin_mats.PLANT, id).material.solid_density end,
-    },
-    GardenVegetables={
-        get_mats=function(resources) return resources.shrub_fruit_plants end,
-        decode=function(id) return dfhack.matinfo.decode(df.builtin_mats.PLANT, id).material.solid_density end,
-    },
-}
+local select_by_density_tab = build_tab(
+    decode_mat_density,
+    function(id) return dfhack.matinfo.decode(0, id).material.solid_density end,
+    function(id) return dfhack.matinfo.decode(df.builtin_mats.WOOD, id).material.solid_density end,
+    function(id) return dfhack.matinfo.decode(df.builtin_mats.PLANT, id).material.solid_density end
+)
 select_by_density_tab.LargeCutGems = select_by_density_tab.SmallCutGems
+
+
 
 local function get_cur_tab_category()
     return diplomacy.taking_requests_tablist[diplomacy.taking_requests_selected_tab]
