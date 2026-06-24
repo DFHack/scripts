@@ -83,7 +83,7 @@ local function moveToBag(itemsToBag, creator)
     -- Use BAG item type, NOT BOX. BOX creates chests/coffers (item_boxst),
     -- BAG creates actual bags (item_bagst) for holding powder/seeds.
     local bagType = dfhack.items.findType('BAG:NONE')
-    local bags = {dfhack.items.createItem(creator, bagType, -1, containerMat.type, containerMat.index)}
+    local bags = dfhack.items.createItem(creator, bagType, -1, containerMat.type, containerMat.index)
     if not bags[1] then
         return items_list
     end
