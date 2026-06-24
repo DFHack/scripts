@@ -27,13 +27,17 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `machine-toggle`: interface for toggling gear assemblies, as well as pressure plates (previously in `trackstop`) (available only if ``armok`` tools are shown)
 
 ## New Features
 
 ## Fixes
 - `gui/rename`: fix script error that sometimes caused the script to malfunction when started from the Launcher.
+- `gui/control-panel`: fixed incorrect description of deteriorate commands
+- `gui/petitions`: fix deity display
 
 ## Misc Improvements
+- `trackstop`: ``pressureplate`` overlay moved to `machine-toggle` as an ``armok`` tool
 
 ## Removed
 
