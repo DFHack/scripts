@@ -28,10 +28,44 @@ Template for new versions:
 
 ## New Tools
 - `saitama`: multiply the attribute potential (max_value) of a unit, squad, or all citizens
+- `machine-toggle`: interface for toggling gear assemblies, as well as pressure plates (previously in `trackstop`) (available only if ``armok`` tools are shown)
 
 ## New Features
 
 ## Fixes
+- `gui/control-panel`: fixed incorrect description of deteriorate commands
+
+- `gui/petitions`: fix deity display
+
+## Misc Improvements
+- `trackstop`: ``pressureplate`` overlay moved to `machine-toggle` as an ``armok`` tool
+
+## Removed
+
+# 53.14-r2
+
+## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+- ``gui/logcleaner``: Removed
+
+# 53.14-r1
+
+## New Tools
+
+## New Features
+
+## Fixes
+- `caravan`: fix ethics warning for wooden weapons
+- `gui/control-panel`: fixed inconsistent space in command help ("tweak" -> "tweak ", like with other commands)
+- `gui/siegemanager`: consistently set the initial filter to "All"
+- `immortal-cravings`: also take care of immortal units with alcohol dependence
 
 ## Misc Improvements
 
