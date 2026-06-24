@@ -43,32 +43,16 @@ Examples::
 
 ]====]
 
--- Manual arg parsing to support: --squad 1 100 (flag + value + positional)
-local raw_args = {...}
+local argparse = require('argparse')
 local args = {}
-local positional = {}
-local i = 1
-while i <= #raw_args do
-    local v = raw_args[i]
-    if v == '--help' or v == '-help' then
-        args.help = true
-    elseif v == '--all' or v == '-all' then
-        args.all = true
-    elseif v == '--citizens' or v == '-citizens' then
-        args.citizens = true
-    elseif v == '--listsquads' or v == '-listsquads' then
-        args.listsquads = true
-    elseif v == '--squad' or v == '-squad' then
-        i = i + 1
-        args.squad = raw_args[i]
-    elseif v == '--unit' or v == '-unit' then
-        i = i + 1
-        args.unit = raw_args[i]
-    else
-        table.insert(positional, v)
-    end
-    i = i + 1
-end
+local positional = argparse.processArgsGetopt({ ... }, {
+    {'h', 'help', handler=function() args.help = true end},
+    {'a', 'all', handler=function() args.all = true end},
+    {'c', 'citizens', handler=function() args.citizens = true end},
+    {'l', 'listsquads', handler=function() args.listsquads = true end},
+    {'s', 'squad', hasArg=true, handler=function(optarg) args.squad = optarg end},
+    {'u', 'unit', hasArg=true, handler=function(optarg) args.unit = optarg end},
+})
 
 if args.help then
     print(dfhack.script_help())
@@ -153,24 +137,7 @@ local function list_squads()
     end
 end
 
--- ---------------------------------------------------------------------------
--- Parse multiplier from remaining args
--- ---------------------------------------------------------------------------
-local function get_multiplier(raw_args)
-    -- The multiplier is the last positional argument
-    local val = nil
-    for _, v in ipairs(raw_args) do
-        local n = tonumber(v)
-        if n then val = n end
-    end
-    if not val then
-        qerror('No multiplier provided. Usage: saitama <multiplier>')
-    end
-    if val < 1 then
-        qerror('Multiplier must be >= 1.')
-    end
-    return math.floor(val)
-end
+
 
 -- ---------------------------------------------------------------------------
 -- Main
