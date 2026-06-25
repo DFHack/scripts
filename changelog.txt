@@ -66,6 +66,8 @@ Template for new versions:
 - `gui/siegemanager`: consistently set the initial filter to "All"
 - `immortal-cravings`: also take care of immortal units with alcohol dependence
 
+- `fix/stuck-worship`: fix lookup of units current prayer target(s).
+
 ## Misc Improvements
 
 ## Removed
