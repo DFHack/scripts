@@ -315,9 +315,9 @@ local function is_ethical_product(item, animal_ethics, wood_ethics)
         (not wood_ethics or not common.has_wood(item))
 end
 
-local function make_choice_text(value, desc)
+local function make_choice_text(value, threshold, desc)
     return {
-        {width=STATUS_COL_WIDTH+VALUE_COL_WIDTH, rjustify=true, text=common.obfuscate_value(value)},
+        {width=STATUS_COL_WIDTH+VALUE_COL_WIDTH, rjustify=true, text=common.obfuscate_value(value, threshold)},
         {gap=2, text=desc},
     }
 end
@@ -328,6 +328,7 @@ function Trade:cache_choices(list_idx, trade_bins)
     local goodflags = trade.goodflag[list_idx]
     local trade_bins_choices, notrade_bins_choices = {}, {}
     local parent_data
+    local cache_threshold = common.get_threshold(common.get_broker_skill())
     for item_idx, item in ipairs(trade.good[list_idx]) do
         local goodflag = goodflags[item_idx]
         if not goodflag.contained then
@@ -374,7 +375,7 @@ function Trade:cache_choices(list_idx, trade_bins)
             search_key=search_key,
             icon=curry(get_entry_icon, data),
             data=data,
-            text=make_choice_text(data.value, desc),
+            text=make_choice_text(data.value, cache_threshold, desc),
         }
         if not data.update_container_fn then
             table.insert(trade_bins_choices, choice)
