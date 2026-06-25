@@ -29,6 +29,8 @@ Template for new versions:
 ## New Tools
 - `machine-toggle`: interface for toggling gear assemblies, as well as pressure plates (previously in `trackstop`) (available only if ``armok`` tools are shown)
 
+- 'locate-stone': fork of 'locate-ore' but also includes stone and fuel sources
+
 ## New Features
 
 ## Fixes
