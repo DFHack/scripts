@@ -32,8 +32,8 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `add-recipe`: fix to include incorrectly excluded recipes
 - `gui/control-panel`: fixed incorrect description of deteriorate commands
-
 - `gui/petitions`: fix deity display
 
 ## Misc Improvements
