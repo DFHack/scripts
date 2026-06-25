@@ -182,24 +182,15 @@ local function stack_type_new(type_vals)
     return stack_type
 end
 
-local function dye_profile_key(item)
-    -- signature of an item's dye_profile, so that dyes/dye-mixes with different
-    -- profiles are not treated as the same comparable item and merged together
-    -- (which would ruin the mix and revert it to a component color).
-    -- empty profiles (plain powders like flour) yield '', preserving the
-    -- original behavior for everything that isn't a mixed dye.
-    local ok, sig = pcall(function()
-        local dp = item.dye_profile
-        if dp.color_index == -1 and #dp.dye_material == 0 then return '' end
-        local parts = {'c' .. dp.color_index}
-        for _, v in ipairs(dp.dye_material)  do parts[#parts+1] = 'm' .. v end
-        for _, v in ipairs(dp.dye_matg)      do parts[#parts+1] = 'g' .. v end
-        for _, v in ipairs(dp.degree)        do parts[#parts+1] = 'd' .. v end
-        for _, v in ipairs(dp.target_index)  do parts[#parts+1] = 't' .. v end
-        return '+' .. table.concat(parts, ',')
+local function isDye(item)
+    -- Dyes should not be combined as this will cause bugs when mixing them together
+    if item:getType() ~= df.item_type.POWDER_MISC then return false end
+    -- pcall guards items/materials that can't be decoded or lack the flag
+    local ok, is_dye = pcall(function()
+        local mat = dfhack.matinfo.decode(item.mat_type, item.mat_index)
+        return mat and mat.material.flags.IS_DYE or false
     end)
-    -- pcall guards item types in this branch that have no dye_profile field
-    return (ok and sig) or ''
+    return ok and is_dye or false
 end
 
 local function stacks_add_item(stockpile, stacks, stack_type, item, container)
@@ -219,7 +210,7 @@ local function stacks_add_item(stockpile, stacks, stack_type, item, container)
             comp_key = ('%s+%s+%s+%s'):format(stack_type.type_id, item.mat_type, item.mat_index, item:getQuality())
         end
     else
-        comp_key = ('%s+%s+%s%s'):format(stack_type.type_id, item.mat_type, item.mat_index, dye_profile_key(item))
+        comp_key = ('%s+%s+%s'):format(stack_type.type_id, item.mat_type, item.mat_index)
     end
 
     if not stack_type.comp_items[comp_key] then
@@ -456,7 +447,7 @@ local function stacks_add_items(stockpile, stacks, items, container, ind)
         local stack_type = stacks.stack_types[type_id]
 
         -- item type in list of included types?
-        if stack_type and not item:isSand() and not item:isPlaster() and isValidPart(item) then
+        if stack_type and not item:isSand() and not item:isPlaster() and not isDye(item) and isValidPart(item) then
             if not isRestrictedItem(item) and item.stack_size <= stack_type.max_stack_qty then
 
                 stacks_add_item(stockpile, stacks, stack_type, item, container)
