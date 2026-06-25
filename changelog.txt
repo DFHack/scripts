@@ -27,13 +27,25 @@ Template for new versions:
 # Future
 
 ## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 53.15-r1
+
+## New Tools
 - `machine-toggle`: interface for toggling gear assemblies, as well as pressure plates (previously in `trackstop`) (available only if ``armok`` tools are shown)
 
 ## New Features
 
 ## Fixes
+- `add-recipe`: fix to include incorrectly excluded recipes
 - `gui/control-panel`: fixed incorrect description of deteriorate commands
-
 - `gui/petitions`: fix deity display
 
 ## Misc Improvements
