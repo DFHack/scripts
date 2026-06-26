@@ -129,7 +129,7 @@ function BlueprintDialog:init()
                 },
                 widgets.HotkeyLabel{
                     frame={b=0, l=15},
-                    key='SELECT_ALL', -- TODO: change to SEC_SELECT once 51.01 is stable
+                    key='SEC_SELECT',
                     label='Delete selected blueprint',
                     on_activate=self:callback('delete_blueprint'),
                     enabled=function()
@@ -545,35 +545,8 @@ function Quickfort:on_transform_change(val)
     self.dirty = true
 end
 
-local origin, test_point = {x=0, y=0}, {x=1, y=-2}
-local minimal_sequence = {
-    ['x=1, y=-2'] = {},
-    ['x=2, y=-1'] = {'cw', 'flipv'},
-    ['x=2, y=1'] = {'cw'},
-    ['x=1, y=2'] = {'flipv'},
-    ['x=-1, y=2'] = {'cw', 'cw'},
-    ['x=-2, y=1'] = {'ccw', 'flipv'},
-    ['x=-2, y=-1'] = {'ccw'},
-    ['x=-1, y=-2'] = {'fliph'}
-}
-
--- reduces the list of transformations to a minimal sequence
-local function reduce_transform(elements)
-    local pos = test_point
-    for _,elem in ipairs(elements) do
-        pos = quickfort_transform.make_transform_fn_from_name(elem)(pos, origin)
-    end
-    local ret = quickfort_transform.resolve_vector(pos, minimal_sequence)
-    if #ret == #elements then
-        -- if we're not making the sequence any shorter, prefer the existing set
-        return elements
-    end
-    return copyall(ret)
-end
-
 function Quickfort:on_transform(val)
     table.insert(transformations, val)
-    transformations = reduce_transform(transformations)
     self:updateLayout()
     self.dirty = true
 end
@@ -683,26 +656,61 @@ function Quickfort:onRenderFrame(dc, rect)
 
     -- if the (non-locked) cursor has moved since last preview processing or any
     -- settings have changed, regenerate the preview
-    local cursor = dfhack.gui.getMousePos() or self.saved_cursor
-    if self.dirty or not same_xyz(self.saved_cursor, cursor) then
-        if not self.cursor_locked then
-            self.saved_cursor = cursor
+    local mouse_pos = dfhack.gui.getMousePos() or self.saved_cursor
+    local draw_cursor = self.cursor_locked and self.saved_cursor or mouse_pos
+
+    if not self.cursor_locked and not same_xyz(self.saved_cursor, mouse_pos) then
+        self.target_cursor = mouse_pos
+        self.dirty = true
+    end
+
+    if self.dirty then
+        local now = os.clock()
+        -- wait at least 0.05s (50ms) between heavy recalculations
+        if not self.last_refresh_time or (now - self.last_refresh_time > 0.05) then
+            if self.target_cursor then
+                self.saved_cursor = self.target_cursor
+                self.target_cursor = nil
+            end
+            self:refresh_preview()
+            -- record time AFTER the heavy computation to guarantee breathing room for the engine
+            self.last_refresh_time = os.clock()
+            self.dirty = false
         end
-        self:refresh_preview()
-        self.dirty = false
     end
 
     local tiles = self.saved_preview.tiles
-    if not tiles[cursor.z] then return end
+    local src_z = self.saved_cursor.z + (mouse_pos.z - draw_cursor.z)
+    if not tiles[src_z] then return end
+
+    local dx = draw_cursor.x - self.saved_cursor.x
+    local dy = draw_cursor.y - self.saved_cursor.y
+    local dz = draw_cursor.z - self.saved_cursor.z
+
+    local bounds = self.saved_preview.bounds[src_z]
+    if not bounds then return end
+
+    local shifted_bounds = {
+        x1 = bounds.x1 + dx,
+        x2 = bounds.x2 + dx,
+        y1 = bounds.y1 + dy,
+        y2 = bounds.y2 + dy
+    }
 
     local function get_overlay_pen(pos)
-        if same_xyz(pos, self.saved_cursor) then return CURSOR_PEN end
-        local preview_tile = quickfort_preview.get_preview_tile(tiles, pos)
+        if same_xyz(pos, draw_cursor) then return CURSOR_PEN end
+
+        local old_pos = {
+            x = pos.x - dx,
+            y = pos.y - dy,
+            z = pos.z - dz
+        }
+        local preview_tile = quickfort_preview.get_preview_tile(tiles, old_pos)
         if preview_tile == nil then return end
         return preview_tile and GOOD_PEN or BAD_PEN
     end
 
-    guidm.renderMapOverlay(get_overlay_pen, self.saved_preview.bounds[cursor.z])
+    guidm.renderMapOverlay(get_overlay_pen, shifted_bounds)
 end
 
 function Quickfort:onInput(keys)
@@ -713,6 +721,10 @@ function Quickfort:onInput(keys)
     if keys._MOUSE_L and not self:getMouseFramePos() then
         local pos = dfhack.gui.getMousePos()
         if pos then
+            if not self.cursor_locked then
+                self.saved_cursor = pos
+                self.target_cursor = nil
+            end
             self:commit()
             return true
         end

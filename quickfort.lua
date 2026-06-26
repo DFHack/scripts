@@ -93,9 +93,9 @@ setmetatable(action_switch, {__index=function() return do_help end})
 
 local args = {...}
 local action = table.remove(args, 1) or 'help'
-args.commands = argparse.stringList(action)
+args.commands = {action}
 
-local action_fn = action_switch[args.commands[1]]
+local action_fn = action_switch[action]
 
 if (action == 'run' or action == 'orders' or action == 'undo') and
         not dfhack.isMapLoaded() then
