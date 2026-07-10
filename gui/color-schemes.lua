@@ -611,7 +611,7 @@ function screen:onRegister()
         "Register",
         "Register color schemes by file or directory",
         COLOR_WHITE,
-        "/raw/colors/",
+        "/dfhack-config/colors/",
         function(path)
             ColorSchemes.register(path)
             self:populateList()
