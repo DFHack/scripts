@@ -20,7 +20,9 @@ local translations = df.language_translation.get_vector()
 -- target selection
 --
 
-local entity_names = {
+---@alias target_type { name:df.language_name, sync_names:(df.language_name|fun():nil)[]?, civ_id:df.historical_entity.id? }
+
+local entity_names = {      ---@type table<df.language_name_type, df.entity_name_type>
     [df.language_name_type.Figure]=df.entity_name_type.OTHER,
     [df.language_name_type.FigureFirstOnly]=df.entity_name_type.OTHER,
     [df.language_name_type.FigureNoFirst]=df.entity_name_type.OTHER,
@@ -33,7 +35,7 @@ local entity_names = {
     [df.language_name_type.Hospital]=df.entity_name_type.HOSPITAL,
 }
 
-local category_names = {
+local category_names = {    ---@type table<df.language_name_type, df.language_name_category>
     [df.language_name_type.World]=df.language_name_category.Region,
     [df.language_name_type.Region]=df.language_name_category.Region,
     [df.language_name_type.LegendaryFigure]=df.language_name_category.Unit,
@@ -50,6 +52,9 @@ local category_names = {
 
 local wt = language.word_table
 
+---@param name_type df.language_name_type
+---@param civ df.historical_entity
+---@return df.language_word_table major, df.language_word_table minor
 local function get_word_selectors(name_type, civ)
     -- special cases
     if name_type == df.language_name_type.Artifact then
@@ -78,15 +83,19 @@ local function get_word_selectors(name_type, civ)
     return wt[0][df.language_name_category.River], wt[1][df.language_name_category.River]
 end
 
+---@param item df.item
+---@return target_type?
 local function get_artifact_target(item)
     if not item or not item.flags.artifact then return end
-    local gref = dfhack.items.getGeneralRef(item, df.general_ref_type.IS_ARTIFACT)
+    local gref = dfhack.items.getGeneralRef(item, df.general_ref_type.IS_ARTIFACT)  ---@cast gref df.general_ref_is_artifactst?
     if not gref then return end
     local rec = df.artifact_record.find(gref.artifact_id)
     if not rec then return end
     return {name=rec.name}
 end
 
+---@param hf df.historical_figure
+---@return target_type?
 local function get_hf_target(hf)
     if not hf then return end
     local name = dfhack.units.getVisibleName(hf)
@@ -101,6 +110,8 @@ local function get_hf_target(hf)
     return {name=name, sync_names=sync_names, civ_id=hf.civ_id}
 end
 
+---@param unit df.unit
+---@return target_type?
 local function get_unit_target(unit)
     if not unit then return end
     local hf = df.historical_figure.find(unit.hist_figure_id)
@@ -111,6 +122,8 @@ local function get_unit_target(unit)
     return {name=dfhack.units.getVisibleName(unit), civ_id=unit.civ_id}
 end
 
+---@param entity df.historical_entity?
+---@return df.historical_entity.id?
 local function get_civ_id_from_entity(entity)
     if not entity then return end
     if entity.type == df.historical_entity_type.Civilization then return entity.id end
@@ -124,6 +137,8 @@ local function get_civ_id_from_entity(entity)
     end
 end
 
+---@param site df.world_site?
+---@return df.historical_entity.id?
 local function get_civ_id_from_site(site)
     if not site then return end
     for _,he_link in ipairs(site.entity_links) do
@@ -136,16 +151,23 @@ local function get_civ_id_from_site(site)
     end
 end
 
+---@param entity df.historical_entity
+---@return target_type?
 local function get_entity_target(entity)
     if not entity then return end
     return {name=entity.name, civ_id=get_civ_id_from_entity(entity)}
 end
 
+---@param site df.world_site
+---@return target_type?
 local function get_site_target(site)
     if not site then return end
     return {name=site.name, civ_id=get_civ_id_from_site(site)}
 end
 
+---@param site df.world_site
+---@param loc_id integer  index into site.buildings
+---@return target_type?
 local function get_location_target(site, loc_id)
     if not site or loc_id < 0 then return end
     local loc = utils.binsearch(site.buildings, loc_id, 'id')
@@ -153,10 +175,14 @@ local function get_location_target(site, loc_id)
     return {name=loc.name, civ_id=get_civ_id_from_site(site)}
 end
 
+---@param fort df.historical_entity
+---@param squad df.squad
+---@return target_type?
 local function get_squad_target(fort, squad)
     return {name=squad.name, civ_id=get_civ_id_from_entity(fort)}
 end
 
+---@return target_type?
 local function get_world_target()
     local name = df.global.world.world_data.name
     local sync_names = {
@@ -185,12 +211,15 @@ local function select_artifact(cb)
         choices, function(_, choice) cb(choice.data.target) end, nil, nil, true)
 end
 
+---@param site df.world_site
 local function select_location(site, cb)
     local choices = {}
     for _,loc in ipairs(site.buildings) do
-        local desc, pen = sitemap.get_location_desc(loc)
+        ---@diagnostic disable-next-line: need-check-nil
+        local desc, pen = sitemap.get_location_desc(loc)    ---@type string, dfhack.colors|dfhack.pen
         table.insert(choices, {
-            text={
+            text={  -- note: the df.abstract_building base class doesn't have a name field, but all relevant subclasses do, so using the name field is ok.
+                ---@diagnostic disable-next-line: undefined-field
                 dfhack.translation.translateName(loc.name, true),
                 ' (',
                 {text=desc, pen=pen},
@@ -203,16 +232,21 @@ local function select_location(site, cb)
         choices, function(_, choice) cb(choice.data.target) end, nil, nil, true)
 end
 
+---@param entity df.historical_entity
+---@param cb fun(target:target_type?):nil
 local function select_entity(entity, cb)
     cb(get_entity_target(entity))
 end
 
+---@param cb fun(target:target_type?):nil
 local function select_site(site, cb)
     cb(get_site_target(site))
 end
 
+---@param fort df.historical_entity
+---@param cb fun(target:target_type?):nil
 local function select_squad(fort, cb)
-    local choices = {}
+    local choices = {}  ---@type { text:string, data:{ target:target_type? } }[]
     for _,squad_id in ipairs(fort.squads) do
         local squad = df.squad.find(squad_id)
         if squad then
@@ -226,8 +260,9 @@ local function select_squad(fort, cb)
         choices, function(_, choice) cb(choice.data.target) end, nil, nil, true)
 end
 
+---@param cb fun(target:target_type?):nil
 local function select_unit(cb)
-    local choices = {}
+    local choices = {}  ---@type { text:string, data:{ target:target_type? } }[]
     -- scan through units.all instead of units.active so we can choose starting dwarves on embark prep screen
     for _,unit in ipairs(df.global.world.units.all) do
         if not dfhack.units.isActive(unit) then goto continue end
@@ -244,6 +279,7 @@ local function select_unit(cb)
         nil, nil, true)
 end
 
+---@param cb fun(target:target_type?):nil
 local function select_world(cb)
     cb(get_world_target())
 end
@@ -293,7 +329,7 @@ Rename.ATTRS {
 }
 
 local function get_language_options()
-    local options, max_width = {}, 5
+    local options, max_width = {}, 5    ---@type { label:string, value:integer, pen:dfhack.colors|dfhack.pen }[], integer
     for idx, lang in ipairs(translations) do
         max_width = math.max(max_width, #lang.name)
         table.insert(options, {label=dfhack.capitalizeStringWords(dfhack.lowerCp437(lang.name)), value=idx, pen=COLOR_CYAN})
@@ -371,9 +407,10 @@ local function sort_by_part_of_speech_asc(a, b)
     return a_native < b_native
 end
 
+---@param info { target:target_type, show_selector:boolean? }
 function Rename:init(info)
     self.target = info.target
-    self.cache = {}
+    self.cache = {}     ---@type table< df.language_name_component, { text:(string|table)[]|string, search_key:(fun():string), data:{idx:integer, english:string, native_fn:(fun():string), part_of_speech:df.part_of_speech} }[] >
 
     local function normalize_name()
         if self.target.name.type == df.language_name_type.NONE then
@@ -510,6 +547,7 @@ function Rename:init(info)
                             enabled=function()
                                 local _, comp_choice = self.subviews.component_list:getSelected()
                                 if comp_choice.data.is_first_name then return false end
+                                if comp_choice.data.val == df.language_name_component.NONE then return false end
                                 return self.target.name.words[comp_choice.data.val] >= 0
                             end,
                         },
@@ -605,10 +643,11 @@ function Rename:get_component_choices()
             },
             data={val=df.language_name_component.TheX, is_first_name=true}})
     for val, comp in ipairs(df.language_name_component) do
-        if val < 0 then goto continue end -- ignore language_name_component NONE element with value -1
+        if val == df.language_name_component.NONE then goto continue end
         local text = {
             {text=comp:gsub('(%l)(%u)', '%1 %2')}, NEWLINE,
             {gap=2, pen=COLOR_YELLOW, text=function()
+                if val == df.language_name_component.NONE then return '' end
                 local word = self.target.name.words[val]
                 if word < 0 then return end
                 return ('%s'):format(language.words[word].forms[self.target.name.parts_of_speech[val]])
@@ -636,7 +675,7 @@ function Rename:get_component_action_choices()
 
     local randomize_text = {{text='[', pen=COLOR_RED}, 'Random', {text=']', pen=COLOR_RED}}
     for val, comp in ipairs(df.language_name_component) do
-        if val < 0 then goto continue end -- ignore language_name_component NONE element with value -1
+        if val == df.language_name_component.NONE then goto continue end
         local randomize_fn = self:callback('randomize_component_word', comp)
         table.insert(choices, {text=randomize_text, data={fn=randomize_fn}})
         local clear_text = {
@@ -653,6 +692,7 @@ function Rename:get_component_action_choices()
     return choices
 end
 
+---@param comp df.language_name_component
 function Rename:clear_component_word(comp)
     self.target.name.words[comp] = -1
     for _, sync_name in ipairs(self.target.sync_names) do
@@ -664,6 +704,7 @@ function Rename:clear_component_word(comp)
     end
 end
 
+---@param word_idx integer
 function Rename:set_first_name(word_idx)
     -- support giving names to previously unnamed units
     self.target.name.has_name = true
@@ -673,11 +714,15 @@ function Rename:set_first_name(word_idx)
         if type(sync_name) == 'function' then
             sync_name()
         else
+            sync_name.has_name = true
             sync_name.first_name = self.target.name.first_name
         end
     end
 end
 
+---@param component df.language_name_component
+---@param word_idx integer
+---@param part_of_speech df.part_of_speech
 function Rename:set_component_word_by_data(component, word_idx, part_of_speech)
     self.target.name.words[component] = word_idx
     self.target.name.parts_of_speech[component] = part_of_speech
@@ -700,6 +745,8 @@ function Rename:set_component_word(_, choice)
     self:set_component_word_by_data(comp_choice.data.val, choice.data.idx, choice.data.part_of_speech)
 end
 
+---@param val      integer  index into df.language_translation:get_vector()
+---@param prev_val integer  index into df.language_translation:get_vector()
 function Rename:set_language(val, prev_val)
     self.target.name.language = val
     -- translate current first name into target language
@@ -721,6 +768,7 @@ function Rename:randomize_first_name()
     self:set_first_name(choices[math.random(#choices)].data.idx)
 end
 
+---@param comp df.language_name_component
 function Rename:randomize_component_word(comp)
     local choices = self:get_word_choices(df.language_name_component.TheX)
     local choice = choices[math.random(#choices)]
@@ -756,6 +804,10 @@ local part_of_speech_to_display = {
     [df.part_of_speech.VerbGerund] = 'Present Participle',
 }
 
+---@param comp df.language_name_component
+---@param idx integer
+---@param word df.language_word
+---@param part_of_speech df.part_of_speech
 function Rename:add_word_choice(choices, comp, idx, word, part_of_speech)
     local english = word.forms[part_of_speech]
     if #english == 0 then return end
@@ -784,12 +836,13 @@ function Rename:add_word_choice(choices, comp, idx, word, part_of_speech)
     })
 end
 
+---@param comp df.language_name_component
 function Rename:get_word_choices(comp)
     if self.cache[comp] then
         return self.cache[comp]
     end
 
-    local choices = {}
+    local choices = {}  ---@type {text:(string|table)[]|string, search_key:(fun():string), data:{idx:integer, english:string, native_fn:(fun():string), part_of_speech:df.part_of_speech}}
     for idx, word in ipairs(language.words) do
         local flags = word.flags
         if comp == df.language_name_component.FrontCompound then
@@ -831,9 +884,11 @@ function Rename:get_word_choices(comp)
     end
 
     self.cache[comp] = choices
-    return choices
+    return self.cache[comp]
 end
 
+---@param sort_widget widgets.CycleHotkeyLabel?
+---@param sort_fn function?
 function Rename:refresh_list(sort_widget, sort_fn)
     local clist = self.subviews.component_list
     if not clist then return end
@@ -870,6 +925,7 @@ RenameScreen.ATTRS {
     focus_path='rename',
 }
 
+---@param info { target:target_type, show_selector:boolean? }
 function RenameScreen:init(info)
     self:addviews{
         Rename{
@@ -924,7 +980,7 @@ UnitEmbarkRenameOverlay.ATTRS {
 }
 
 local function get_selected_embark_unit()
-    local scr = dfhack.gui.getDFViewscreen(true)
+    local scr = dfhack.gui.getDFViewscreen(true)    ---@cast scr df.viewscreen_setupdwarfgamest
     return scr.s_unit[scr.selected_u]
 end
 
@@ -984,6 +1040,7 @@ if not dfhack.isWorldLoaded() then
     qerror('This script requires a world to be loaded')
 end
 
+---@return target_type?
 local function get_target(opts)
     local target
     if opts.histfig_id then
@@ -1009,6 +1066,7 @@ local function get_target(opts)
         if not squad then qerror('Squad not found') end
         target = squad.name
     elseif opts.unit_id then
+        ---@diagnostic disable-next-line: param-type-mismatch
         target = get_unit_target(df.unit.find(opts.unit_id))
         if not target then qerror('Unit not found') end
     elseif opts.world then
@@ -1048,6 +1106,7 @@ local function main(args)
         return
     end
 
+    ---@param target target_type
     local function launch(target)
         view = view and view:raise() or RenameScreen{
             target=target,
