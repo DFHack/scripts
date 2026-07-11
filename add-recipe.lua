@@ -63,7 +63,7 @@ function addItems(category, exotic)
     --category: the category of items we're adding
     --exotic: whether to add exotic items
   --returns: list of item objects that were added
-  local known = category[1]
+  local known_category = category[1]
   local native = category[2]
   local all = category[3]
   local added = {} --as:df.itemdef[]
@@ -72,16 +72,20 @@ function addItems(category, exotic)
     local item = item --as:df.itemdef_weaponst
     local subtype = item.subtype
     local itemOk = false
+    local known = known_category
+    -- digging implements are seperate from weapons in entity resources.
+    if (df.itemdef_weaponst:is_instance(item) and item.skill_melee == df.job_skill.MINING) then
+      known = diggers
+    end
 
     --check if it's a training weapon
     local t1, t2 = pcall(function () return item.flags.TRAINING == false end)
     local training = not(not t1 or t2)
 
-    --we don't want procedural items with adjectives such as "wavy spears"
-    --(because they don't seem to be craftable even if added)
+    --excludes procedural items, eg: "wavy spears" for divine origins
     --nor do we want known items or training items (because adding training
     --items seems to allow them to be made out of metals)
-    if (item.adjective == "" and not training and not checkKnown(known, subtype)) then
+    if (not item.base_flags.GENERATED and not training and not checkKnown(known, subtype)) then
       itemOk = true
     end
 
@@ -89,10 +93,12 @@ function addItems(category, exotic)
       itemOk = false
     end
 
-    --check that the weapon we're adding is not already known to the civ as
-    --a digging implement so picks don't get duplicated
-    if (checkKnown(diggers, subtype)) then
-      itemOk = false
+    --if the weapon we're adding is a digging implement, add to diggers instead of weapons
+    --prevents picks from being duplicated, and puts great picks in correct category
+    if (df.itemdef_weaponst:is_instance(item) and item.skill_melee == df.job_skill.MINING) then
+      if (checkKnown(diggers, subtype)) then
+        itemOk = false
+      end
     end
 
     if (itemOk) then
