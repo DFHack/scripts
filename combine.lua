@@ -182,6 +182,17 @@ local function stack_type_new(type_vals)
     return stack_type
 end
 
+local function isDye(item)
+    -- Dyes should not be combined as this will cause bugs when mixing them together
+    if item:getType() ~= df.item_type.POWDER_MISC then return false end
+    -- pcall guards items/materials that can't be decoded or lack the flag
+    local ok, is_dye = pcall(function()
+        local mat = dfhack.matinfo.decode(item.mat_type, item.mat_index)
+        return mat and mat.material.flags.IS_DYE or false
+    end)
+    return ok and is_dye or false
+end
+
 local function stacks_add_item(stockpile, stacks, stack_type, item, container)
     -- add an item to the matching comp_items table; based on comp_key.
     local comp_key = ''
@@ -436,7 +447,7 @@ local function stacks_add_items(stockpile, stacks, items, container, ind)
         local stack_type = stacks.stack_types[type_id]
 
         -- item type in list of included types?
-        if stack_type and not item:isSand() and not item:isPlaster() and isValidPart(item) then
+        if stack_type and not item:isSand() and not item:isPlaster() and not isDye(item) and isValidPart(item) then
             if not isRestrictedItem(item) and item.stack_size <= stack_type.max_stack_qty then
 
                 stacks_add_item(stockpile, stacks, stack_type, item, container)
