@@ -31,6 +31,8 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `combine`: stopgap fix for incorrectly combining dyes, no longer affects dyes
+- `gui/rename`: fix script error that sometimes caused the script to malfunction when started from the Launcher.
 
 ## Misc Improvements
 
@@ -45,10 +47,8 @@ Template for new versions:
 
 ## Fixes
 - `add-recipe`: fix to include incorrectly excluded recipes
-- `combine`: stopgap fix for incorrectly combining dyes, no longer affects dyes
 - `gui/control-panel`: fixed incorrect description of deteriorate commands
 - `gui/petitions`: fix deity display
-- `gui/rename`: fix script error that sometimes caused the script to malfunction when started from the Launcher.
 
 ## Misc Improvements
 - `trackstop`: ``pressureplate`` overlay moved to `machine-toggle` as an ``armok`` tool
