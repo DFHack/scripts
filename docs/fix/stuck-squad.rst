@@ -2,25 +2,18 @@ fix/stuck-squad
 ===============
 
 .. dfhack-tool::
-    :summary: Allow squads and messengers to rescue lost squads.
+    :summary: Rescue stranded squads.
     :tags: fort bugfix military
 
 Occasionally, squads that you send out on a mission get stuck on the world map.
 They lose their ability to navigate and are unable to return to your fortress.
-This tool allows a messenger that is returning from a holding or any other of
-your squads that is returning from a mission to rescue the lost squad along the
-way and bring them home.
+This tool brings them back to their senses and redirects them back home.
 
 This fix is enabled by default in the DFHack
-`control panel <gui/control-panel>`, or you can run it as needed. However, it
-is still up to you to send out a messenger or squad that can be tasked with the
-rescue. If you have a holding that is linked to your fort, you can send out a
-messenger -- you don't have to actually request any workers. Otherwise, you can
-send a squad out on a mission with minimal risk, like "Demand one-time tribute".
+`control panel <gui/control-panel>`, or you can run it as needed.
 
 This tool is integrated with `gui/notify`, so you will get a notification in
-the DFHack notification panel when a squad is stuck and there are no squads or
-messengers currently out traveling that can rescue them.
+the DFHack notification panel when a squad is stuck and hasn't been fixed yet.
 
 Note that there might be other reasons why your squad appears missing -- if it
 got wiped out in combat and nobody survived to report back, for example -- but
@@ -31,4 +24,27 @@ Usage
 
 ::
 
-    fix/stuck-squad
+    fix/stuck-squad [<options>]
+
+Fix stuck squads and direct their armies back home. Multiple squads can share
+a single army if sent on the same mission, and only armies are counted in the
+total.
+
+Examples
+--------
+
+``fix/stuck-squad``
+    Fix stuck squads and print the number of affected armies.
+``fix/stuck-squad -v``
+    Same as above, but also print info about armies, etc.
+
+Options
+-------
+
+``-v``, ``--verbose``
+    Print IDs for the affected armies, controllers, and player fort.
+    Indicate which specific armies were ignored (due to controller not fully
+    removed).
+``-q``, ``--quiet``
+    Don't print the number of affected armies if it's zero. Intended for
+    automatic use.

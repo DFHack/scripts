@@ -35,6 +35,7 @@ Template for new versions:
 - `gui/rename`: fix script error that sometimes caused the script to malfunction when started from the Launcher.
 
 ## Misc Improvements
+- `fix/stuck-squad`: don't require a returning army, verbose and quiet options
 
 ## Removed
 

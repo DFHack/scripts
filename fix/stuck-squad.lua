@@ -1,126 +1,131 @@
+--Rescue stranded squads. (Also contains functions for messing with armies.)
 --@ module=true
 
-local utils = require('utils')
+local argparse = require('argparse')
+local plotinfo = df.global.plotinfo
 
--- from observing bugged saves, this condition appears to be unique to stuck armies
-local function is_army_stuck(army)
-    return army.controller_id ~= 0 and not army.controller
+function new_controller(site_id) --Create army controller aimed at site
+    local controllers = df.global.world.army_controllers.all
+    local cid = df.global.army_controller_next_id
+
+    controllers:insert('#', {
+        new = true,
+        id = cid,
+        site_id = site_id,
+        pos_x = -1, --DF will assign to site center
+        pos_y = -1,
+        year = df.global.cur_year,
+        year_tick = df.global.cur_year_tick,
+        master_id = cid,
+        origin_task_id = -1,
+        origin_plot_id = -1,
+        data = {goal_move_to_site = {new = true, flag = {RETURNING_TO_CURRENT_HOME = true}}},
+        goal = df.army_controller_goal_type.MOVE_TO_SITE,
+    })
+    df.global.army_controller_next_id = cid+1
+    return cid, controllers[#controllers-1]
 end
 
--- if army is currently camping, we'll need to go up the chain
-local function get_top_controller(controller)
-    if not controller then return end
-    if controller.master_id == controller.id then return controller end
-    return df.army_controller.find(controller.master_id)
-end
-
-local function is_army_valid_and_returning(army)
-    local controller = get_top_controller(army.controller)
-    if not controller then return false, false end
-    if controller.goal == df.army_controller_goal_type.SITE_INVASION then
-        return true, controller.data.goal_site_invasion.flag.RETURNING_HOME
-    elseif controller.goal == df.army_controller_goal_type.MAKE_REQUEST then
-        return true, controller.data.goal_make_request.flag.RETURNING_HOME
+function rescue_army(army, site, verbose) --Migrate stranded army to site
+    site = site or df.world_site.find(plotinfo.site_id)
+    if not army or not site then
+        qerror('Invalid army or destination site')
+    elseif verbose then
+        print(('Rescuing army #%d to site #%d'):format(army.id, site.id))
     end
-    return false, false
-end
 
-local function get_hf_army(hf)
-    if not hf then return end
-    return df.army.find(hf.info and hf.info.whereabouts and hf.info.whereabouts.army_id or -1)
-end
-
--- need to check all squad positions since some members may have died
-local function get_squad_army(squad)
-    if not squad then return end
-    for _,sp in ipairs(squad.positions) do
-        local hf = df.historical_figure.find(sp.occupant)
-        if not hf then goto continue end
-        local army = get_hf_army(hf)
-        if army then return army end
-        ::continue::
+    if df.army_controller.find(army.controller_id) then --Controller still exists
+        if verbose then
+            print(('Army controller #%d still exists. Aborting.'):format(army.controller_id))
+        end
+        return false --Don't mess with anything; DF may re-create the army rather than reattach
     end
+
+    army.controller_id, army.controller = new_controller(site.id)
+    if verbose then
+        print(('Attached new controller #%d to army.'):format(army.controller_id))
+    end
+    return true
 end
 
--- called by gui/notify notification
-function scan_fort_armies()
-    local stuck_armies, outbound_army, returning_army = {}, nil, nil
-    local govt = df.historical_entity.find(df.global.plotinfo.group_id)
-    if not govt then return stuck_armies, outbound_army, returning_army end
+local function get_hf_army(hfid) --Return army ID of HF or -1
+    local hf = df.historical_figure.find(hfid)
+    return hf and hf.info and hf.info.whereabouts and hf.info.whereabouts.army_id or -1
+end
 
-    for _,squad_id in ipairs(govt.squads) do
-        local squad = df.squad.find(squad_id)
-        local army = get_squad_army(squad)
-        if not army then goto continue end
-        if is_army_stuck(army) then
-            table.insert(stuck_armies, {squad=squad, army=army})
-        elseif not returning_army then
-            local valid, returning = is_army_valid_and_returning(army)
-            if valid then
-                if returning then
-                    returning_army = {squad=squad, army=army}
-                else
-                    outbound_army = {squad=squad, army=army}
+function get_fort_armies(govt) --Return a set of all squad armies; squads can share armies
+    govt = govt or df.historical_entity.find(plotinfo.group_id)
+    local armies = {}
+    for _,sqid in ipairs(govt.squads) do --Iterate squads
+        local squad = df.squad.find(sqid)
+        if squad then
+            for _,sp in ipairs(squad.positions) do --Iterate positions
+                local army = df.army.find(get_hf_army(sp.occupant))
+                --HF doesn't update while camping. If it's possible for the army to get
+                --stuck in that state, we'd probably have to scan all armies to find it.
+                if army then
+                    armies[army] = true
+                    break --Likely only one valid army per squad
                 end
             end
         end
-        ::continue::
     end
-
-    if #stuck_armies == 0 then return stuck_armies, nil, nil end
-
-    -- prefer returning with a messenger if one is readily available
-    for _,messenger in ipairs(dfhack.units.getUnitsByNobleRole('Messenger')) do
-        local army = get_hf_army(df.historical_figure.find(messenger.hist_figure_id))
-        if not army then goto continue end
-        local valid, returning = is_army_valid_and_returning(army)
-        if valid then
-            if returning then
-                returning_army = {army=army}
-            else
-                outbound_army = {army=army}
-            end
-        end
-        ::continue::
-    end
-
-    return stuck_armies, outbound_army, returning_army
+    return armies
 end
 
-local function unstick_armies()
-    local stuck_armies, outbound_army, returning_army = scan_fort_armies()
-    if #stuck_armies == 0 then return end
-    if not returning_army then
-        local instructions = outbound_army
-            and ('Please wait for %s to complete their objective and run this command again when they are on their way home.'):format(
-                outbound_army.squad and dfhack.df2console(dfhack.military.getSquadName(outbound_army.squad.id)) or 'the messenger')
-            or 'Please send a squad or a messenger out on a mission that will return to the fort, and'..
-            ' run this command again when they are on the way home.'
-        qerror(('%d stuck squad%s found, but no returning squads or messengers are available to rescue them!\n%s'):format(
-            #stuck_armies, #stuck_armies == 1 and '' or 's', instructions))
-        return
+--From observing bugged saves, this condition appears to be unique to stuck armies
+local function is_army_stuck(army)
+    return army and not army.flags.dwarf_mode_preparing and --Let DF handle cancelled missions
+        army.controller_id ~= 0 and not army.controller
+end
+
+function scan_fort_armies(govt) --Return a list of all squad armies that are stuck
+    govt = govt or df.historical_entity.find(plotinfo.group_id)
+    if not govt then
+        qerror('No site entity. Is fort loaded?')
     end
-    local returning_squad_name = returning_army.squad and dfhack.df2console(dfhack.military.getSquadName(returning_army.squad.id)) or 'the messenger'
-    for _,stuck in ipairs(stuck_armies) do
-        print(('fix/stuck-squad: Squad rescue operation underway! %s is rescuing %s'):format(
-            returning_squad_name, dfhack.military.getSquadName(stuck.squad.id)))
-        for _,member in ipairs(stuck.army.members) do
-            local nemesis = df.nemesis_record.find(member.nemesis_id)
-            if not nemesis or not nemesis.figure then goto continue end
-            local hf = nemesis.figure
-            if hf.info and hf.info.whereabouts then
-                hf.info.whereabouts.army_id = returning_army.army.id
-            end
-            utils.insert_sorted(returning_army.army.members, member, 'nemesis_id')
-            ::continue::
+    local stuck = {}
+    for army in pairs(get_fort_armies(govt)) do --Check each army from the set
+        if is_army_stuck(army) then
+            table.insert(stuck, army)
         end
-        stuck.army.members:resize(0)
-        utils.insert_sorted(get_top_controller(returning_army.army.controller).assigned_squads, stuck.squad.id)
     end
+    return stuck
+end
+
+function unstick_armies(verbose, quiet_result) --Recover all stuck squads for the current fort
+    local site = df.world_site.find(plotinfo.site_id)
+    local govt = df.historical_entity.find(plotinfo.group_id)
+    if not site or not govt then
+        qerror('No fort loaded')
+    end
+    local stuck = scan_fort_armies(govt)
+    if not next(stuck) then --No problems
+        if not quiet_result then
+            print('No stuck squads.')
+        end
+        return 0
+    elseif verbose then
+        print(('Unsticking armies for player site #%d, entity #%d'):format(site.id, govt.id))
+    end
+    local count = 0
+    for _,army in ipairs(stuck) do
+        count = count + (rescue_army(army, site, verbose) and 1 or 0)
+    end
+    if verbose or not quiet_result then
+        print(('Rescued %d of %d stuck armies.'):format(count, #stuck))
+    end
+    return count
 end
 
 if dfhack_flags.module then
     return
 end
 
-unstick_armies()
+local quiet, verbose = false, false
+argparse.processArgsGetopt({...}, {
+    {'q', 'quiet', handler=function() quiet = true end},
+    {'v', 'verbose', handler=function() verbose = true end},
+})
+
+unstick_armies(verbose, quiet)
