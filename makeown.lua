@@ -308,6 +308,14 @@ local function fix_histfig(unit)
             entity_link(hf, eid, true, false, k)
             ::continue::
         end
+        -- If you're makeown-ing an enemy of your civilization or group, people will feel vengeful without this
+        if el and df.histfig_entity_link_enemyst:is_instance(el) then
+            local eid = el.entity_id
+            if eid == civ_id or eid == group_id then
+                hf.entity_links:erase(k)
+                el:delete()
+            end
+        end
     end
 
     -- add them to our civ/site if they aren't already
