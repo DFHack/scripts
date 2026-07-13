@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `gui/probe`: Now you can check the properties of a tile by hovering the mouse over it.
 
 ## New Features
 
