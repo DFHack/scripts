@@ -77,7 +77,14 @@ local function fixUnit(unit)
         makeown.clear_enemy_status(unit)
     end
 
-    return makeown.remove_from_conflict(unit) or fixed
+    local calmed = makeown.remove_from_conflict(unit)
+
+    if calmed and not fixed then
+        dfhack.gui.showAnnouncement(
+            ('loyaltycascade: %s is now removed from miscellaneous conflicts'):format(unit_name), COLOR_WHITE)
+    end
+
+    return calmed or fixed
 end
 
 local count = 0
