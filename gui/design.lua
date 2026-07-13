@@ -38,6 +38,13 @@ local util = reqscript('internal/design/util')
 local utils = require('utils')
 local widgets = require('gui.widgets')
 
+local toolbar_textures = dfhack.textures.loadTileset('hack/data/art/design_toolbar.png', 8, 12)
+
+function launch_design()
+    dfhack.run_script('gui/design')
+end
+
+
 local Point = util.Point
 local getMousePoint = util.getMousePoint
 
@@ -167,11 +174,6 @@ function RightClickOverlay:onInput(keys)
         end
     end
 end
-
-OVERLAY_WIDGETS = {
-    dimensions=DimensionsOverlay,
-    rightclick=RightClickOverlay,
-}
 
 ---
 --- HelpWindow
@@ -1581,6 +1583,94 @@ end
 function DesignScreen:onDismiss()
     view = nil
 end
+
+
+-- --------------------------------
+-- DesignToolbarOverlay
+--
+
+DesignToolbarOverlay = defclass(DesignToolbarOverlay, overlay.OverlayWidget)
+DesignToolbarOverlay.ATTRS{
+    desc='Adds a button to the toolbar at the bottom of the screen for launching gui/design.',
+    default_pos={x=50, y=-1},
+    default_enabled=true,
+    viewscreens='dwarfmode',
+    frame={w=28, h=10},
+}
+
+function DesignToolbarOverlay:init()
+    local button_chars = {
+        {218, 196, 196, 191},
+        {179, '[', ']', 179},
+        {192, 196, 196, 217},
+    }
+
+    self:addviews{
+        widgets.Panel{
+            frame={t=0, l=0, w=20, h=6},
+            frame_style=gui.FRAME_PANEL,
+            frame_background=gui.CLEAR_PEN,
+            frame_inset={l=1, r=1},
+            visible=function() return self.subviews.icon:getMousePos() end,
+            subviews={
+                widgets.Label{
+                    text={
+                        'Open the design', NEWLINE,
+                        'interface.', NEWLINE,
+                        NEWLINE,
+                        {text='Hotkey: ', pen=COLOR_GRAY}, {key='CUSTOM_CTRL_D'},
+                    },
+                },
+            },
+        },
+        widgets.Panel{
+            view_id='icon',
+            frame={b=0, l=0, w=4, h=3},
+            subviews={
+                widgets.Label{
+                    text=widgets.makeButtonLabelText{
+                        chars=button_chars,
+                        pens={
+                            {COLOR_GRAY, COLOR_GRAY, COLOR_GRAY, COLOR_GRAY},
+                            {COLOR_GRAY, COLOR_BLUE, COLOR_BLUE, COLOR_GRAY},
+                            {COLOR_GRAY, COLOR_GRAY, COLOR_GRAY, COLOR_GRAY},
+                        },
+                        tileset=toolbar_textures,
+                        tileset_offset=1,
+                        tileset_stride=8,
+                    },
+                    on_click=launch_design,
+                    visible=function () return not self.subviews.icon:getMousePos() end,
+                },
+                widgets.Label{
+                    text=widgets.makeButtonLabelText{
+                        chars=button_chars,
+                        pens={
+                            {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE},
+                            {COLOR_WHITE, COLOR_BLUE,  COLOR_BLUE,  COLOR_WHITE},
+                            {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE},
+                        },
+                        tileset=toolbar_textures,
+                        tileset_offset=5,
+                        tileset_stride=8,
+                    },
+                    on_click=launch_design,
+                    visible=function() return self.subviews.icon:getMousePos() end,
+                },
+            },
+        },
+    }
+end
+
+function DesignToolbarOverlay:onInput(keys)
+    return DesignToolbarOverlay.super.onInput(self, keys)
+end
+
+OVERLAY_WIDGETS = {
+    dimensions=DimensionsOverlay,
+    rightclick=RightClickOverlay,
+    toolbar=DesignToolbarOverlay
+}
 
 if dfhack_flags.module then return end
 
