@@ -416,6 +416,10 @@ end
 function SiegeEngineList:set_selected_action(action)
     local _, selected = self.subviews.list:getSelected()
 
+    if not selected then
+        qerror('No siege engine selected')
+    end
+
     local successful = set_siege_engine_action({selected.data}, action)
     if not successful then
         self:refresh_view(true)
