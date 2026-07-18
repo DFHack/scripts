@@ -26,6 +26,9 @@ Usage
 
     instruments [list]
     instruments order <instrument_name> [<quantity>] [<options>]
+    instruments all <quantity> [<options>]
+    instruments handheld <quantity> [<options>]
+    instruments building <quantity> [<options>]
 
 When ordering, the default is to order one of the specified instrument
 (including all of its components).
@@ -43,6 +46,14 @@ Examples
 ``instruments order ilul``
     Creates work orders to assemble one ïlul. Spelling does not need to include
     the special ï character.
+``instruments all 5``
+    Creates work orders to produce five of every instrument available to your
+    civilization.
+``instruments handheld 2``
+    Creates work orders to produce two of each handheld instrument.
+``instruments building 3``
+    Creates work orders to produce three of each instrument that is placed as a
+    building.
 
 Options
 -------
