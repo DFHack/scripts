@@ -464,9 +464,9 @@ local function init_arena()
                 if mat.flags.DEEP_SPECIAL then break end
             end
             if data.want_leather then
-                leather_index_hint = scan_organic(df.organic_mat_category.Leather, RAWS.creatures.all, leather_index_hint, materials.CREATURE_BASE, do_insert)
+                leather_index_hint = scan_organic(df.organic_mat_category.Leather, RAWS.creatures.all, leather_index_hint, df.builtin_mats.CREATURE_1, do_insert)
             end
-            plant_index_hint = scan_organic(df.organic_mat_category.Wood, RAWS.plants.all, plant_index_hint, materials.PLANT_BASE, do_insert)
+            plant_index_hint = scan_organic(df.organic_mat_category.Wood, RAWS.plants.all, plant_index_hint, df.builtin_mats.PLANT_1, do_insert)
             ::inner_continue::
         end
         ::continue::
