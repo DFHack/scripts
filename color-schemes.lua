@@ -259,8 +259,8 @@ function Scheme:load()
     for c,color in ipairs(COLORS) do
         for l,channel in ipairs(CHANNELS) do
             -- Use `math.max` for -1 values (not parsed correctly)
-            local value = math.max(0, self.values[color][channel]) / 255
-            df.global.enabler.ccolor[c - 1][l - 1] = value
+            local value = math.max(0, self.values[color][channel])
+            df.global.gps.uccolor[c - 1][l - 1] = value
         end
     end
     df.global.gps.force_full_display_count = 1

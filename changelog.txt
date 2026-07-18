@@ -61,6 +61,7 @@ Template for new versions:
 - `add-recipe`: fix to include incorrectly excluded recipes
 - `gui/control-panel`: fixed incorrect description of deteriorate commands
 - `gui/petitions`: fix deity display
+- `color-schemes`: updated for v5X
 
 ## Misc Improvements
 - `trackstop`: ``pressureplate`` overlay moved to `machine-toggle` as an ``armok`` tool
