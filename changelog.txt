@@ -28,6 +28,8 @@ Template for new versions:
 
 ## New Tools
 
+- 'locate-stone': fork of 'locate-ore' but also includes stone and fuel sources
+
 ## New Features
 
 ## Fixes
