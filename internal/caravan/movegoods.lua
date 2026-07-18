@@ -399,10 +399,10 @@ local function get_entry_icon(data, item_id)
     return common.SOME_PEN
 end
 
-local function make_choice_text(at_depot, dist, value, quantity, desc)
+local function make_choice_text(at_depot, dist, value, quantity, desc, cache_threshold)
     return {
         {width=DIST_COL_WIDTH-2, rjustify=true, text=at_depot and 'depot' or tostring(dist)},
-        {gap=2, width=VALUE_COL_WIDTH, rjustify=true, text=common.obfuscate_value(value)},
+        {gap=2, width=VALUE_COL_WIDTH, rjustify=true, text=common.obfuscate_value(value, cache_threshold)},
         {gap=2, width=QTY_COL_WIDTH, rjustify=true, text=quantity},
         {gap=2, text=desc},
     }
@@ -559,18 +559,20 @@ function MoveGoods:cache_choices()
     end
 
     local group_choices, nogroup_choices = {}, {}
+    local cache_threshold = common.get_threshold(common.get_broker_skill())
     for _, group in pairs(groups) do
         local data = group.data
         for item_id, item_data in pairs(data.items) do
             local nogroup_choice = copyall(group)
             nogroup_choice.icon = curry(get_entry_icon, data, item_id)
             nogroup_choice.text = make_choice_text(item_data.item.flags.in_building,
-                data.dist, data.per_item_value, 1, data.desc)
+                data.dist, data.per_item_value, 1, data.desc, cache_threshold)
             nogroup_choice.item_id = item_id
             table.insert(nogroup_choices, nogroup_choice)
         end
         data.total_value = data.per_item_value * data.quantity
-        group.text = make_choice_text(data.num_at_depot == data.quantity, data.dist, data.total_value, data.quantity, data.desc)
+        group.text = make_choice_text(data.num_at_depot == data.quantity, data.dist,
+            data.total_value, data.quantity, data.desc, cache_threshold)
         table.insert(group_choices, group)
         self.value_pending = self.value_pending + (data.per_item_value * data.selected)
     end
