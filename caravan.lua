@@ -24,6 +24,7 @@ OVERLAY_WIDGETS = {
     movegoods_hider=movegoods.MoveGoodsHiderOverlay,
     assigntrade=movegoods.AssignTradeOverlay,
     displayitemselector=pedestal.PedestalOverlay,
+    autobarter=trade.AutoBarterOverlay,
 }
 
 INTERESTING_FLAGS = {
