@@ -3,8 +3,7 @@
 fix/exploding-trees
 ===================
 
-This script is normally run once a month by the Control Panel's Bug Fixes tab,
-tool identifier "fix/exploding-trees".
+By default, this script runs once a month by the Control Panel's Bug Fixes tab.
 
 This script mitigates a longstanding Dwarf Fortress bug.
 
