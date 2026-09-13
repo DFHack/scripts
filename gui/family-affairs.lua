@@ -253,9 +253,7 @@ function RelationshipsPage:init()
                 local unit = self:get_unit()
                 local selected = dfhack.gui.getSelectedUnit(true)
                 return unit and not get_spouse_hf(unit) and can_have_spouse(unit) and
-                    selected and selected.race == unit.race and selected.id ~= unit.id and
-                    (selected.sex == df.pronoun_type.she and unit.sex == df.pronoun_type.he or
-                     selected.sex == df.pronoun_type.he and unit.sex == df.pronoun_type.she)
+                    selected and selected.race == unit.race and selected.id ~= unit.id
             end,
         },
         widgets.Panel{
@@ -777,7 +775,7 @@ end
 FamilyAffairs = defclass(FamilyAffairs, widgets.Window)
 FamilyAffairs.ATTRS {
     frame_title='Family manager',
-    frame={w=65, h=30, r=2, t=18},
+    frame={w=50, h=30, r=2, t=18},
     frame_inset={t=1, l=1, r=1},
     resizable=true,
     initial_tab=DEFAULT_NIL,
