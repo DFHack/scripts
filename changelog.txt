@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `multihaul`: add multiple items to a single haul job with wheelbarrow
 
 ## New Features
 
