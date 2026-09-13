@@ -128,19 +128,33 @@ local function creature_name(race)
     return raw and dfhack.df2utf(raw.name[1]) or ('unknown creature ' .. race)
 end
 
-local function add_population(populations, race, count, unnumbered)
+local function add_population(populations, race, count, unnumbered, label)
     if race < 0 then return end
-    local population = populations[race] or {count=0, unnumbered=false}
+    local key = tostring(race) .. ':' .. (label or '')
+    local population = populations[key] or {race=race, label=label, count=0, unnumbered=false}
     population.count = population.count + math.max(0, count or 0)
     population.unnumbered = population.unnumbered or unnumbered
-    populations[race] = population
+    populations[key] = population
+end
+
+local function population_label(pop_spec)
+    if pop_spec.interaction_index < 0 then return nil end
+    local interaction = df.interaction.find(pop_spec.interaction_index)
+    if not interaction then return nil end
+    local effect = interaction.effects[pop_spec.interaction_effect_index]
+    local effect_type = effect and effect:getType()
+    if effect_type == df.interaction_effect_type.ANIMATE
+            or effect_type == df.interaction_effect_type.RESURRECT then
+        return 'undead ' .. creature_name(pop_spec.race)
+    end
+    return nil
 end
 
 local function write_populations(file, populations)
     local rows = {}
-    for race, population in pairs(populations) do
+    for _, population in pairs(populations) do
         if population.unnumbered or population.count > 0 then
-            table.insert(rows, {race=race, population=population})
+            table.insert(rows, {race=population.race, population=population})
         end
     end
     table.sort(rows, function(a, b)
@@ -154,7 +168,8 @@ local function write_populations(file, populations)
     end)
     for _, row in ipairs(rows) do
         local count = row.population.unnumbered and 'Unnumbered' or row.population.count
-        file:write(('\t%s %s\n'):format(count, creature_name(row.race)))
+        file:write(('\t%s %s\n'):format(count,
+            row.population.label or creature_name(row.race)))
     end
 end
 
@@ -168,7 +183,15 @@ local function collect_wild_populations(populations, records)
             local unnumbered = pop.type == df.world_population_type.VerminInnumerable
                 or pop.count_min >= 10000001
                 or pop.count_max >= 10000001
-            add_population(populations, pop.race, pop.count_min, unnumbered)
+            local label
+            if pop.interaction_idx >= 0 then
+                label = population_label{
+                    race=pop.race,
+                    interaction_index=pop.interaction_idx,
+                    interaction_effect_index=pop.interaction_effect,
+                }
+            end
+            add_population(populations, pop.race, pop.count_min, unnumbered, label)
         end
     end
 end
@@ -216,9 +239,24 @@ local function export_sites_and_pops()
 
         local populations = {}
         for _, inhabitant in ipairs(site.populace.inhabitants) do
-            add_population(populations, inhabitant.pop_spec.race, inhabitant.count)
+            add_population(populations, inhabitant.pop_spec.race, inhabitant.count, false,
+                population_label(inhabitant.pop_spec))
         end
-        collect_wild_populations(populations, site.populace.animals)
+        for _, animal in ipairs(site.populace.animals) do
+            local unnumbered = animal.type == df.world_population_type.VerminInnumerable
+                or animal.count_min >= 10000001 or animal.count_max >= 10000001
+            local label
+            if animal.interaction_idx >= 0 then
+                label = population_label{
+                    race=animal.race,
+                    interaction_index=animal.interaction_idx,
+                    interaction_effect_index=animal.interaction_effect,
+                }
+            end
+            if not unnumbered then
+                add_population(populations, animal.race, animal.count_min, false, label)
+            end
+        end
         write_populations(file, populations)
         yield_if_timeout()
     end
