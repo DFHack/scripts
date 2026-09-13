@@ -218,6 +218,7 @@ local function export_sites_and_pops()
         for _, inhabitant in ipairs(site.populace.inhabitants) do
             add_population(populations, inhabitant.pop_spec.race, inhabitant.count)
         end
+        collect_wild_populations(populations, site.populace.animals)
         write_populations(file, populations)
         yield_if_timeout()
     end
