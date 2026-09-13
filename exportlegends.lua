@@ -195,6 +195,25 @@ local function export_sites_and_pops()
         local native_name = dfhack.df2utf(dfhack.translation.translateName(site.name))
         local english_name = dfhack.df2utf(dfhack.translation.translateName(site.name, true))
         file:write(('%d: %s, %s\n'):format(site.id, native_name, english_name))
+
+        local owner = df.historical_entity.find(site.cur_owner_id)
+        if owner and owner.race >= 0 then
+            file:write(('Owner: %s, %s\n'):format(
+                dfhack.df2utf(dfhack.translation.translateName(owner.name, true)), creature_name(owner.race)))
+            if owner.type ~= df.historical_entity_type.Civilization then
+                for _, link in ipairs(owner.entity_links) do
+                    if link.type == df.entity_entity_link_type.PARENT then
+                        local parent = df.historical_entity.find(link.target)
+                        if parent and parent.race >= 0 then
+                            file:write(('Parent Civ: %s, %s\n'):format(
+                                dfhack.df2utf(dfhack.translation.translateName(parent.name, true)), creature_name(parent.race)))
+                            break
+                        end
+                    end
+                end
+            end
+        end
+
         local populations = {}
         for _, inhabitant in ipairs(site.populace.inhabitants) do
             add_population(populations, inhabitant.pop_spec.race, inhabitant.count)
