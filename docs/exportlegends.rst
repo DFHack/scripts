@@ -28,6 +28,21 @@ To use:
 You can also generate just the extended data export by manually running the
 ``exportlegends`` command while legends mode is open.
 
+In addition to ``legends_plus.xml``, ``exportlegends`` recreates the companion
+files that Classic Dwarf Fortress produced with its "Export Map/Gen
+Information" action:
+
+- ``world_sites_and_pops.txt`` contains civilized, site, outdoor animal, and
+  underground animal population totals.
+- ``world_history.txt`` contains civilizations, worship relationships, and
+  current position holders.
+- ``world_map.bmp`` is a geographically aligned terrain map generated from the
+  current world data. Its terrain colors approximate the Classic map since
+  Premium does not expose the removed renderer.
+
+These files use the Classic names and structure expected by external legends
+viewers.
+
 Usage
 -----
 
