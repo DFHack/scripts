@@ -341,81 +341,60 @@ local function export_world_history()
     print('Done exporting world history to: ' .. filename)
 end
 
-local function map_color(tile)
-    if tile.flags.is_lake then return 45, 105, 170 end
-    if tile.elevation < 100 then
-        local blue = math.max(90, math.min(190, 190 - (100 - tile.elevation)))
-        return 30, 75, blue
-    end
-    if tile.flags.is_peak or tile.elevation >= 150 then
-        local shade = math.max(105, math.min(210, tile.elevation + 35))
-        return shade, shade, shade
-    end
-    if tile.temperature < -500 then return 220, 230, 225 end
-    if tile.rainfall < 20 or tile.vegetation < 20 then return 190, 165, 95 end
-    if tile.vegetation > 65 then return 45, 115, 55 end
-    return 95, 145, 70
-end
-
-local function export_world_map()
+-- Compact terrain companion for Premium world-map renderers. It contains no
+-- proprietary graphics; viewers load those from the user's DF installation.
+local function export_world_map_metadata()
     local filename = world.cur_savegame.save_dir .. '-' .. get_world_date_str()
-        .. '-world_map.bmp'
-    local file = io.open(filename, 'wb')
+        .. '-world_map.csv'
+    local file = io.open(filename, 'w')
     if not file then qerror('could not open file: ' .. filename) end
 
-    local scale = 16
-    local width = world.world_data.world_width * scale
-    local height = world.world_data.world_height * scale
-    local row_size = width * 3
-    local padding = (4 - row_size % 4) % 4
-    local image_size = (row_size + padding) * height
-    file:write('BM', string.pack('<I4I2I2I4', 54 + image_size, 0, 0, 54))
-    file:write(string.pack('<I4i4i4I2I2I4I4i4i4I4I4',
-        40, width, height, 1, 24, 0, image_size, 2835, 2835, 0, 0))
-
-    local details = {}
-    for _, detail in ipairs(world.world_data.midmap_data.region_details) do
-        details[detail.pos.x .. ',' .. detail.pos.y] = detail
+    local width, height = world.world_data.world_width, world.world_data.world_height
+    local peaks, rivers = {}, {}
+    for _, peak in ipairs(world.world_data.mountain_peaks) do
+        peaks[peak.pos.x .. ',' .. peak.pos.y] = peak.flags.is_volcano and 2 or 1
     end
-    local offsets = {
-        [1]={-1, 1}, [2]={0, 1}, [3]={1, 1},
-        [4]={-1, 0}, [5]={0, 0}, [6]={1, 0},
-        [7]={-1, -1}, [8]={0, -1}, [9]={1, -1},
-    }
-
-    for pixel_y = height - 1, 0, -1 do
-        local world_y = pixel_y // scale
-        local detail_y = pixel_y % scale
-        local row = {}
-        for pixel_x = 0, width - 1 do
-            local world_x = pixel_x // scale
-            local detail_x = pixel_x % scale
-            local detail = details[world_x .. ',' .. world_y]
-            local tile = world.world_data.region_map[world_x]:_displace(world_y)
-            local elevation = tile.elevation
-            if detail then
-                local offset = offsets[(detail.biome[detail_x][detail_y] & 15)] or offsets[5]
-                local biome_x = math.max(0, math.min(world.world_data.world_width - 1,
-                    world_x + offset[1]))
-                local biome_y = math.max(0, math.min(world.world_data.world_height - 1,
-                    world_y + offset[2]))
-                tile = world.world_data.region_map[biome_x]:_displace(biome_y)
-                elevation = detail.elevation[detail_x][detail_y]
-            end
-            local r, g, b = map_color(tile)
-            local shade = math.max(-25, math.min(25, elevation - tile.elevation))
-            table.insert(row, string.char(
-                math.max(0, math.min(255, b + shade)),
-                math.max(0, math.min(255, g + shade)),
-                math.max(0, math.min(255, r + shade))))
+    local function connect(x1, y1, x2, y2)
+        local dx, dy = x2 - x1, y2 - y1
+        local bit1, bit2
+        if dx == 0 and dy == -1 then bit1, bit2 = 1, 2
+        elseif dx == 0 and dy == 1 then bit1, bit2 = 2, 1
+        elseif dx == -1 and dy == 0 then bit1, bit2 = 4, 8
+        elseif dx == 1 and dy == 0 then bit1, bit2 = 8, 4
+        else return end
+        local key1, key2 = x1 .. ',' .. y1, x2 .. ',' .. y2
+        rivers[key1] = (rivers[key1] or 0) | bit1
+        if x2 >= 0 and x2 < width and y2 >= 0 and y2 < height then
+            rivers[key2] = (rivers[key2] or 0) | bit2
         end
-        file:write(table.concat(row), string.rep('\0', padding))
+    end
+    for _, river in ipairs(world.world_data.rivers) do
+        for i = 0, #river.path.x - 2 do
+            connect(river.path.x[i], river.path.y[i], river.path.x[i + 1], river.path.y[i + 1])
+        end
+        local last = #river.path.x - 1
+        if last >= 0 then
+            connect(river.path.x[last], river.path.y[last], river.end_pos.x, river.end_pos.y)
+        end
+    end
+
+    file:write(('DFHACK_WORLD_MAP,3,%d,%d\n'):format(width, height))
+    file:write('x,y,biome_type,evilness,savagery,elevation,flags,volcanism,peak,river_dirs\n')
+    for y = 0, height - 1 do
+        for x = 0, width - 1 do
+            local tile = world.world_data.region_map[x]:_displace(y)
+            local flags = (tile.flags.is_lake and 1 or 0)
+                + (tile.flags.has_river and 2 or 0)
+                + (tile.flags.has_road and 4 or 0)
+            file:write(('%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n'):format(x, y,
+                dfhack.maps.getBiomeType(x, y), tile.evilness, tile.savagery,
+                tile.elevation, flags, tile.volcanism, peaks[x .. ',' .. y] or 0,
+                rivers[x .. ',' .. y] or 0))
+        end
         yield_if_timeout()
     end
     file:close()
-    print(('Done exporting world map to: %s (%d/%d detailed tiles available)')
-        :format(filename, #world.world_data.midmap_data.region_details,
-            world.world_data.world_width * world.world_data.world_height))
+    print('Done exporting world map metadata to: ' .. filename)
 end
 
 -- Export additional legends data, legends_plus.xml
@@ -1322,7 +1301,7 @@ local function wrap_export()
     if not ok then dfhack.printerr(err) end
     ok, err = pcall(export_world_history)
     if not ok then dfhack.printerr(err) end
-    ok, err = pcall(export_world_map)
+    ok, err = pcall(export_world_map_metadata)
     if not ok then dfhack.printerr(err) end
     asyncexport.reset_state()
 end

@@ -36,12 +36,16 @@ Information" action:
   underground animal population totals.
 - ``world_history.txt`` contains civilizations, worship relationships, and
   current position holders.
-- ``world_map.bmp`` is a geographically aligned terrain map generated from the
-  current world data. Its terrain colors approximate the Classic map since
-  Premium does not expose the removed renderer.
+- ``world_map.csv`` is a compact per-world-tile companion containing biome,
+  alignment, savagery, elevation, volcanism, mountain-peak metadata, and
+  lake/river/road flags and exact cardinal river connections. Compatible
+  viewers can combine it with the Premium world-map graphics installed with
+  the game; no proprietary graphics are copied into the export. Road
+  connections can be inferred between adjacent road tiles, but the available
+  data does not identify paving, so compatible viewers render them as dirt.
 
-These files use the Classic names and structure expected by external legends
-viewers.
+The text files use the Classic names and structure expected by external legends
+viewers. The CSV companion is a DFHack extension.
 
 Usage
 -----
