@@ -28,6 +28,25 @@ To use:
 You can also generate just the extended data export by manually running the
 ``exportlegends`` command while legends mode is open.
 
+In addition to ``legends_plus.xml``, ``exportlegends`` recreates the companion
+files that Classic Dwarf Fortress produced with its "Export Map/Gen
+Information" action:
+
+- ``world_sites_and_pops.txt`` contains civilized, site, outdoor animal, and
+  underground animal population totals.
+- ``world_history.txt`` contains civilizations, worship relationships, and
+  current position holders.
+- ``world_map.csv`` is a compact per-world-tile companion containing biome,
+  alignment, savagery, elevation, volcanism, mountain-peak metadata, and
+  lake/river/road flags and exact cardinal river connections. Compatible
+  viewers can combine it with the Premium world-map graphics installed with
+  the game; no proprietary graphics are copied into the export. Road
+  connections can be inferred between adjacent road tiles, but the available
+  data does not identify paving, so compatible viewers render them as dirt.
+
+The text files use the Classic names and structure expected by external legends
+viewers. The CSV companion is a DFHack extension.
+
 Usage
 -----
 
