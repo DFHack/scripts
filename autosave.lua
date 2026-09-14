@@ -100,7 +100,7 @@ end
 local function status()
     print(('autosave is %s'):format(state.enabled and 'enabled' or 'disabled'))
     local interval = get_interval_minutes()
-    print(('autosave interval: %d minute%s'):format(
+    print(('autosave interval: %s minute%s'):format(
         interval, interval == 1 and '' or 's'))
     if dfhack.isMapLoaded() then
         local unsaved_min = dfhack.persistent.getUnsavedSeconds() // 60
