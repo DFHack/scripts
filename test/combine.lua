@@ -63,6 +63,36 @@ function test.powder_without_profile()
               p.make_comp_key(stack_type, p2))
 end
 
+local function find_dye_mat()
+    for _, plant in ipairs(df.global.world.raws.plants.all) do
+        local mtype = plant.material_defs.type.mill
+        local midx = plant.material_defs.idx.mill
+        if mtype ~= -1 then
+            local matinfo = dfhack.matinfo.decode(mtype, midx)
+            if matinfo and matinfo.material.flags.IS_DYE then
+                return mtype, midx
+            end
+        end
+    end
+end
+
+function test.unprofiled_dye_never_combines()
+    -- merchant dyes can lose their dye_profile to a vanilla bug; such items
+    -- must not be merged, not even with each other
+    local mtype, midx = find_dye_mat()
+    if not mtype then return end
+    local stack_type = {type_id=POWDER_MISC}
+    local d1 = mock_item(POWDER_MISC, {mat_type=mtype, mat_index=midx, id=101})
+    local d2 = mock_item(POWDER_MISC, {mat_type=mtype, mat_index=midx, id=102})
+    local d3 = mock_item(POWDER_MISC, {mat_type=mtype, mat_index=midx, id=103,
+        dye_profile={color_index=1, dye_material={1}, dye_matg={}, degree={},
+                     target_index={}}})
+    expect.ne(p.make_comp_key(stack_type, d1),
+              p.make_comp_key(stack_type, d2))
+    expect.ne(p.make_comp_key(stack_type, d1),
+              p.make_comp_key(stack_type, d3))
+end
+
 function test.dye_key_ignores_other_types()
     local stack_type = {type_id=DRINK}
     local d1 = mock_item(DRINK, {mat_type=1, mat_index=2})

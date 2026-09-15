@@ -185,12 +185,28 @@ local function stack_type_new(type_vals)
     return stack_type
 end
 
+local function isDye(item)
+    -- pcall guards items/materials that can't be decoded or lack the flag
+    local ok, is_dye = pcall(function()
+        local mat = dfhack.matinfo.decode(item.mat_type, item.mat_index)
+        return mat and mat.material.flags.IS_DYE or false
+    end)
+    return ok and is_dye or false
+end
+
 -- produce a fingerprint of an item's dye_profile, which distinguishes mixed
 -- dyes (e.g. a blend of two dyes) from their components; they all share the
 -- same mat_type/mat_index
 local function dye_profile_key(item)
     local profile = item.dye_profile
-    if not profile then return '' end
+    if not profile then
+        if isDye(item) then
+            -- merchant dyes can be missing their profile due to a vanilla
+            -- bug; give each such item its own key so they never combine
+            return 'unprofiled+' .. item.id
+        end
+        return ''
+    end
     local parts = {profile.color_index}
     for _,v in ipairs(profile.dye_material) do parts[#parts+1] = v end
     for _,v in ipairs(profile.dye_matg) do parts[#parts+1] = v end
