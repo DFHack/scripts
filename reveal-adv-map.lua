@@ -12,15 +12,16 @@ function revealAdvMap(hide)
     -- update the quest log configuration if it is already open (restricts map cursor movement):
     local view = dfhack.gui.getDFViewscreen(true)
     if view._type == df.viewscreen_adventure_logst then
-        local player = view.player_region
+        local mapDisplay = view.map_display
+        local player = mapDisplay.cur_loc
         if hide then
-            view.cursor.x = player.x
-            view.cursor.y = player.y
+            mapDisplay.cursor.x = player.x
+            mapDisplay.cursor.y = player.y
         end
-        view.min_discovered.x = (hide and player.x) or 0
-        view.min_discovered.y = (hide and player.y) or 0
-        view.max_discovered.x = (hide and player.x) or world.world_width - 1
-        view.max_discovered.y = (hide and player.y) or world.world_height - 1
+        mapDisplay.min.x = (hide and player.x) or 0
+        mapDisplay.min.y = (hide and player.y) or 0
+        mapDisplay.max.x = (hide and player.x) or world.world_width - 1
+        mapDisplay.max.y = (hide and player.y) or world.world_height - 1
     end
 end
 

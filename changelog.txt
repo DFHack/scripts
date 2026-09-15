@@ -33,6 +33,8 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `questport`: fix crash on current DF versions and make the teleport actually move the player in fast travel
+- `reveal-adv-map`: fix live quest log map update when revealing or hiding the map
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
 - `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map

@@ -7,7 +7,7 @@ local function processTravelNoArmy(advmode, advScreen, target_x, target_y)
     gui.simulateInput(advScreen.child, 'LEAVESCREEN') -- close map
     gui.simulateInput(advScreen.child, 'LEAVESCREEN') -- close log
     advmode.site_level_zoom = 1 -- zoom in to shrink the following travel movement, reducing the risk of failure
-    gui.simulateInput(advScreen, 'CURSOR_DOWN') -- the player army is only created once the player moves in travel mode; ensure that this movement occurs as the player will otherwise find themselves at their original location if they end travel mode immediately
+    gui.simulateInput(advScreen, 'A_MOVE_S') -- the player army is only created once the player moves in travel mode; ensure that this movement occurs as the player will otherwise find themselves at their original location if they end travel mode immediately
 --  note: the above movement may be blocked by an impassable tile (especially if trying to teleport into a mountain range); it would be more ideal to create and move the player army directly instead
 end
 
@@ -20,9 +20,14 @@ local advScreen = dfhack.gui.getViewscreenByType(df.viewscreen_dungeonmodest, 0)
 local questMap = dfhack.gui.getViewscreenByType(df.viewscreen_adventure_logst, 0)
     or qerror("You must first select your destination on the quest log map!")
 
-local target_x = questMap.cursor.x
-local target_y = questMap.cursor.y
-if questMap.player_region.x == target_x and questMap.player_region.y == target_y then
+local mapDisplay = questMap.map_display
+if mapDisplay.midmap ~= 0 or mapDisplay.localmap ~= 0 then
+    qerror("Please zoom the quest log map out to the world map!")
+end
+
+local target_x = mapDisplay.cursor.x
+local target_y = mapDisplay.cursor.y
+if mapDisplay.cur_loc.x == target_x and mapDisplay.cur_loc.y == target_y then
     qerror("You already seem to be at the target location!")
 end
 
@@ -38,8 +43,8 @@ if advmode.menu == df.ui_advmode_menu.Default then
     processTravelNoArmy(advmode, advScreen, target_x, target_y)
 
 elseif advmode.menu == df.ui_advmode_menu.Travel then
-    if not advmode.travel_not_moved then -- player is already moving in fast travel mode; just relocate the player army
-        local army = df.army.find(advmode.player_army_id)
+    local army = df.army.find(advmode.player_army_id)
+    if advmode.travel_not_moved == 0 and army then -- player is already moving in fast travel mode; just relocate the player army
         army.pos.x = target_x
         army.pos.y = target_y
         gui.simulateInput(advScreen.child, 'LEAVESCREEN') -- close map
@@ -47,4 +52,6 @@ elseif advmode.menu == df.ui_advmode_menu.Travel then
     else -- player has opened travel mode but hasn't moved yet, so the player army hasn't been created
         processTravelNoArmy(advmode, advScreen, target_x, target_y)
     end
+else
+    qerror("Please close the open menu before questporting!")
 end

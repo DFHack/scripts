@@ -3,12 +3,13 @@ questport
 
 .. dfhack-tool::
     :summary: Teleport to your quest log map cursor.
-    :tags: unavailable
+    :tags: adventure armok map
 
 If you open the quest log map and move the cursor to your target location, you
 can run this command to teleport straight there. This can be done both within
 and outside of fast travel mode, and it is possible to ``questport`` in
-situations where fast travel is normally prohibited.
+situations where fast travel is normally prohibited. The quest log map must be
+zoomed out to the world map when running this command.
 
 It is not possible to ``questport`` into inaccessible locations like ocean and
 mountain tiles.
