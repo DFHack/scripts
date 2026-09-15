@@ -33,6 +33,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `load-save`: fix script for the current title screen, which no longer responds to `sel_menu_line` and requires mouse input
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
 - `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map
