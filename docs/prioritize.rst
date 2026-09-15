@@ -30,6 +30,7 @@ Usage
 
     enable prioritize
     prioritize [<options>] [defaults|<job_type> ...]
+    prioritize this
 
 Examples
 --------
@@ -44,6 +45,10 @@ Examples
     right now.
 ``prioritize ConstructBuilding DestroyBuilding``
     Prioritize all current building construction and destruction jobs.
+``prioritize this``
+    Prioritize the job related to the selected entity (a job, dwarf, animal,
+    item, building, plant, or work order). This is a good candidate for a
+    keybinding.
 ``prioritize -a --haul-labor=Food,Body StoreItemInStockpile``
     Prioritize all current and future food and corpse hauling jobs.
 ``disable prioritize``
