@@ -30,6 +30,7 @@ COMMANDS_BY_IDX = {
         desc='Automatically milk creatures that are ready for milking.',
         params={'--time', '14', '--timeUnits', 'days', '--command', '[', 'workorder', '"{\\"job\\":\\"MilkCreature\\",\\"item_conditions\\":[{\\"condition\\":\\"AtLeast\\",\\"value\\":2,\\"flags\\":[\\"empty\\"],\\"item_type\\":\\"BUCKET\\"}]}"', ']'}},
     {command='autonestbox', group='automation', mode='enable'},
+    {command='autosave', group='automation', mode='enable'},
     {command='autoshear', help_command='workorder', group='automation', mode='repeat',
         desc='Automatically shear creatures that are ready for shearing.',
         params={'--time', '14', '--timeUnits', 'days', '--command', '[', 'workorder', 'ShearCreature', ']'}},
