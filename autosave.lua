@@ -16,10 +16,6 @@ local DEFAULT_INTERVAL_MINUTES = 30
 -- real time
 local POLL_FRAMES = 100
 
--- if a requested save hasn't completed within this long, assume it failed
--- and allow another attempt
-local SAVE_TIMEOUT_MS = 10 * 60 * 1000
-
 local function get_default_state()
     return {
         enabled=false,
@@ -41,26 +37,25 @@ local function get_interval_minutes()
     return config.data.interval_minutes or DEFAULT_INTERVAL_MINUTES
 end
 
+-- a save is in flight from when it is requested until the saver finishes;
+-- save_progress.substage keeps its final value (Finishing) after completion
+local function is_save_in_progress()
+    local main = df.global.plotinfo.main
+    return main.autosave_request or
+        (main.save_progress.substage >= df.save_substage.Initializing and
+         main.save_progress.substage < df.save_substage.Finishing)
+end
+
 local function save_now()
-    save_requested_ms = dfhack.getTickCount()
     dfhack.run_script('quicksave')
 end
 
 local function event_loop()
     if not state.enabled then return end
 
-    local interval_sec = get_interval_minutes() * 60
-    local unsaved_sec = dfhack.persistent.getUnsavedSeconds()
-
-    if save_requested_ms then
-        -- the unsaved counter resets when the save completes; if it never
-        -- does (e.g. the save failed), eventually give up and try again
-        if unsaved_sec < interval_sec or
-                dfhack.getTickCount() - save_requested_ms > SAVE_TIMEOUT_MS then
-            save_requested_ms = nil
-        end
-    elseif unsaved_sec >= interval_sec and
-            dfhack.isMapLoaded() and dfhack.world.isFortressMode() then
+    if dfhack.persistent.getUnsavedSeconds() >= get_interval_minutes() * 60 and
+            dfhack.isMapLoaded() and dfhack.world.isFortressMode() and
+            not is_save_in_progress() then
         save_now()
     end
 
@@ -147,6 +142,9 @@ elseif command == 'set' then
 elseif command == 'now' then
     if not dfhack.isMapLoaded() or not dfhack.world.isFortressMode() then
         qerror('a fortress must be loaded to save')
+    end
+    if is_save_in_progress() then
+        qerror('a save is already in progress')
     end
     save_now()
 else
