@@ -31,6 +31,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `combine`: dyes are combined again, but only when their ``dye_profile`` matches, so mixed dyes no longer revert to a component dye
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
 - `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map

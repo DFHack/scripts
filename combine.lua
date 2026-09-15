@@ -1,3 +1,6 @@
+-- Combine items in stockpiles into stacks.
+--@module = true
+
 local argparse = require('argparse')
 local utils = require('utils')
 
@@ -183,8 +186,6 @@ local function stack_type_new(type_vals)
 end
 
 local function isDye(item)
-    -- Dyes should not be combined as this will cause bugs when mixing them together
-    if item:getType() ~= df.item_type.POWDER_MISC then return false end
     -- pcall guards items/materials that can't be decoded or lack the flag
     local ok, is_dye = pcall(function()
         local mat = dfhack.matinfo.decode(item.mat_type, item.mat_index)
@@ -193,10 +194,29 @@ local function isDye(item)
     return ok and is_dye or false
 end
 
-local function stacks_add_item(stockpile, stacks, stack_type, item, container)
-    -- add an item to the matching comp_items table; based on comp_key.
-    local comp_key = ''
+-- produce a fingerprint of an item's dye_profile, which distinguishes mixed
+-- dyes (e.g. a blend of two dyes) from their components; they all share the
+-- same mat_type/mat_index
+local function dye_profile_key(item)
+    local profile = item.dye_profile
+    if not profile then
+        if isDye(item) then
+            -- merchant dyes can be missing their profile due to a vanilla
+            -- bug; give each such item its own key so they never combine
+            return 'unprofiled+' .. item.id
+        end
+        return ''
+    end
+    local parts = {profile.color_index}
+    for _,v in ipairs(profile.dye_material) do parts[#parts+1] = v end
+    for _,v in ipairs(profile.dye_matg) do parts[#parts+1] = v end
+    for _,v in ipairs(profile.degree) do parts[#parts+1] = v end
+    for _,v in ipairs(profile.target_index) do parts[#parts+1] = v end
+    return table.concat(parts, '+')
+end
 
+local function make_comp_key(stack_type, item)
+    local comp_key
     if typesThatUseCreatures[df.item_type[stack_type.type_id]] then
         if not typesThatUseMaterial[df.item_type[stack_type.type_id]] then
             comp_key = ('%s+%s+%s'):format(stack_type.type_id, item.race, item.caste)
@@ -212,6 +232,15 @@ local function stacks_add_item(stockpile, stacks, stack_type, item, container)
     else
         comp_key = ('%s+%s+%s'):format(stack_type.type_id, item.mat_type, item.mat_index)
     end
+    if stack_type.type_id == df.item_type.POWDER_MISC then
+        comp_key = ('%s+%s'):format(comp_key, dye_profile_key(item))
+    end
+    return comp_key
+end
+
+local function stacks_add_item(stockpile, stacks, stack_type, item, container)
+    -- add an item to the matching comp_items table; based on comp_key.
+    local comp_key = make_comp_key(stack_type, item)
 
     if not stack_type.comp_items[comp_key] then
         stack_type.comp_items[comp_key] = comp_item_new(comp_key, stack_type)
@@ -447,7 +476,7 @@ local function stacks_add_items(stockpile, stacks, items, container, ind)
         local stack_type = stacks.stack_types[type_id]
 
         -- item type in list of included types?
-        if stack_type and not item:isSand() and not item:isPlaster() and not isDye(item) and isValidPart(item) then
+        if stack_type and not item:isSand() and not item:isPlaster() and isValidPart(item) then
             if not isRestrictedItem(item) and item.stack_size <= stack_type.max_stack_qty then
 
                 stacks_add_item(stockpile, stacks, stack_type, item, container)
@@ -860,6 +889,13 @@ local function main()
     print_stacks_details(stacks)
     print_stacks_summary(stacks, opts.quiet, opts.dry_run)
 
+end
+
+if dfhack.internal.IN_TEST then
+    unit_test_hooks = {
+        make_comp_key=make_comp_key,
+        dye_profile_key=dye_profile_key,
+    }
 end
 
 if not dfhack_flags.module then
