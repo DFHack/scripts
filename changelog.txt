@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `fix/stuck-written-materials`: free written materials that are stuck in a non-existent job
 
 ## New Features
 
