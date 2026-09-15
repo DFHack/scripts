@@ -7,7 +7,9 @@ gui/create-item
 
 This tool provides a graphical interface for creating items of your choice. It
 walks you through the creation process with a series of prompts, asking you
-for the type of item, the material, the quality, and the quantity.
+for the type of item, the material, the quality, and the quantity. At the
+quality prompt, you can also press ``0``-``5`` to select a quality level
+directly.
 
 If a unit is selected, that unit will be designated the creator of the summoned
 items. Any item with a "sized for" property, like armor, will be created for

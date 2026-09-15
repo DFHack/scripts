@@ -165,12 +165,13 @@ local function getMatFilter(itemtype, opts)
 end
 
 local function qualityTable()
-    return { { 'None' },
-        { '-Well-crafted-' },
-        { '+Finely-crafted+' },
-        { '*Superior*' },
-        { string.char(240) .. 'Exceptional' .. string.char(240) },
-        { string.char(15) .. 'Masterwork' .. string.char(15) },
+    -- number the options 0-5 to match the item_quality enum
+    return { { 'None', key='STRING_A048' },
+        { '-Well-crafted-', key='STRING_A049' },
+        { '+Finely-crafted+', key='STRING_A050' },
+        { '*Superior*', key='STRING_A051' },
+        { string.char(240) .. 'Exceptional' .. string.char(240), key='STRING_A052' },
+        { string.char(15) .. 'Masterwork' .. string.char(15), key='STRING_A053' },
     }
 end
 

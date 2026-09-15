@@ -29,6 +29,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `gui/create-item`: quality selection prompt now has 0-5 hotkeys matching the quality levels
 
 ## Fixes
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
