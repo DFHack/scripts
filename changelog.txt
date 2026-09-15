@@ -29,6 +29,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `idle-crafting`: support cloth, silk, and yarn crafts
 
 ## Fixes
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record

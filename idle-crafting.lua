@@ -79,7 +79,7 @@ function makeTotem(unit, workshop)
     return dfhack.job.addWorker(job, unit)
 end
 
----make totem at specified workshop
+---make horn crafts at specified workshop
 ---@param unit df.unit
 ---@param workshop df.building_workshopst
 ---@return boolean
@@ -177,6 +177,67 @@ function makeRockCraft(unit, workshop)
     return dfhack.job.addWorker(job, unit)
 end
 
+-- the game distinguishes plant-fiber cloth, silk cloth, and yarn cloth crafts by
+-- the job's material_category; the matching job_item flags2 bit differs in name
+local CLOTH_ITEM_FLAG = { cloth = 'plant', silk = 'silk', yarn = 'yarn' }
+
+---which cloth craft material category a cloth item belongs to
+---@param item df.item
+---@return 'cloth'|'silk'|'yarn'|nil
+local function cloth_category(item)
+    local mat = dfhack.matinfo.decode(item)
+    if not mat then return nil end
+    if mat.material.flags.SILK then return 'silk' end
+    if mat.material.flags.YARN then return 'yarn' end
+    if mat.material.flags.THREAD_PLANT then return 'cloth' end
+end
+
+---make cloth crafts at specified workshop
+---@param unit df.unit
+---@param workshop df.building_workshopst
+---@param category 'cloth'|'silk'|'yarn'
+---@return boolean
+function makeClothCraft(unit, workshop, category)
+    local job = dfhack.job.createLinked()
+    job.job_type = df.job_type.MakeCrafts
+    job.mat_type = -1
+    job.material_category[category] = true
+
+    local jitem = df.job_item:new()
+    jitem.item_type = df.item_type.CLOTH
+    jitem.mat_type = -1
+    jitem.mat_index = -1
+    jitem.quantity = 1
+    jitem.vector_id = df.job_item_vector_id.CLOTH
+    jitem.flags2[CLOTH_ITEM_FLAG[category]] = true
+    job.job_items.elements:insert('#', jitem)
+
+    dfhack.job.assignToWorkshop(job, workshop)
+    return dfhack.job.addWorker(job, unit)
+end
+
+---count available cloth in play by craft category (for workshops without links)
+---cloth is never equipped, so in_inventory items are stored in containers and
+---still fetchable by jobs
+---@return table<string,integer>
+local function cloth_categories_in_play()
+    local counts = {}
+    for _, item in ipairs(df.global.world.items.other.CLOTH) do
+        local flags = item.flags
+        if not flags.in_job and not flags.forbid and not flags.garbage_collect
+                and not flags.hidden and not flags.removed and not flags.dump
+                and not flags.owned and not flags.hostile and not flags.trader
+                and not flags.in_building and not flags.encased
+                and not flags.on_fire then
+            local category = cloth_category(item)
+            if category then
+                counts[category] = (counts[category] or 0) + 1
+            end
+        end
+    end
+    return counts
+end
+
 ---categorize and count crafting materials (for Craftsdwarf's workshop)
 ---@param tab table<string,integer>
 ---@param item df.item
@@ -193,6 +254,11 @@ local function categorize_craft(tab,item)
         end
     elseif df.item_boulderst:is_instance(item) then
         tab['boulder'] = (tab['boulder'] or 0) + 1
+    elseif df.item_clothst:is_instance(item) then
+        local category = cloth_category(item)
+        if category then
+            tab[category] = (tab[category] or 0) + 1
+        end
     end
 end
 
@@ -270,6 +336,7 @@ end
 local CraftObject = df.need_type['CraftObject']
 local BONE_CARVE = df.unit_labor['BONE_CARVE']
 local STONE_CRAFT = df.unit_labor['STONE_CRAFT']
+local CLOTHESMAKER = df.unit_labor['CLOTHESMAKER']
 
 ---negative crafting focus penalty
 ---@generic T
@@ -331,12 +398,19 @@ function select_crafting_job(workshop)
         tab['horn'] = nil
         tab['shell'] = nil
     end
+    if blocked_labors[CLOTHESMAKER] then
+        tab['cloth'] = nil
+        tab['silk'] = nil
+        tab['yarn'] = nil
+    end
     local material = weightedChoice(tab)
     if material == 'bone' then return makeBoneCraft
     elseif material == 'skull' then return makeTotem
     elseif material == 'horn' then return makeHornCrafts
     elseif material == 'shell' then return makeShellCraft
     elseif material == 'boulder' then return makeRockCraft
+    elseif CLOTH_ITEM_FLAG[material] then
+        return function(unit, ws) return makeClothCraft(unit, ws, material) end
     else
         return nil
     end
@@ -371,8 +445,14 @@ local function processUnit(workshop, idx, unit_id)
         if not success and workshop.profile.blocked_labors[BONE_CARVE] == false then
             success = makeBoneCraft(unit, workshop)
         end
+        if not success and workshop.profile.blocked_labors[CLOTHESMAKER] == false then
+            local category = weightedChoice(cloth_categories_in_play())
+            if category then
+                success = makeClothCraft(unit, workshop, category)
+            end
+        end
         if not success then
-            dfhack.printerr('idle-crafting: profile allows neither bone carving nor stonecrafting')
+            dfhack.printerr('idle-crafting: profile allows neither bone carving, stonecrafting, nor clothesmaking')
         end
     else
         local craftItem = select_crafting_job(workshop)
@@ -397,7 +477,8 @@ end
 local function invalidProfile(workshop)
     local profile = workshop.profile
     return (#profile.permitted_workers > 0) or
-        (profile.blocked_labors[BONE_CARVE] and profile.blocked_labors[STONE_CRAFT])
+        (profile.blocked_labors[BONE_CARVE] and profile.blocked_labors[STONE_CRAFT]
+            and profile.blocked_labors[CLOTHESMAKER])
 end
 
 -- try to catch units that currently don't have a job and send them to satisfy
@@ -611,6 +692,14 @@ end
 OVERLAY_WIDGETS = {
     idlecrafting = IdleCraftingOverlay
 }
+
+if dfhack.internal.IN_TEST then
+    unit_test_hooks = {
+        cloth_category=cloth_category,
+        cloth_categories_in_play=cloth_categories_in_play,
+        categorize_craft=categorize_craft,
+    }
+end
 
 --
 -- commandline interface
