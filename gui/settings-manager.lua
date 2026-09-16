@@ -46,6 +46,8 @@ local function save_difficulty(df_difficulty)
 end
 
 local function load_difficulty(df_difficulty)
+    -- re-read in case the file changed since the config was first opened
+    config:read()
     local difficulty = utils.clone(config.data.difficulty or {}, true)
     for _, v in pairs(difficulty) do
         if type(v) == 'table' and v[1] then
@@ -398,6 +400,8 @@ local function save_standing_orders()
 end
 
 local function load_standing_orders()
+    -- re-read in case the file changed since the config was first opened
+    config:read()
     for name, val in pairs(config.data.standing_orders or {}) do
         df.global[name] = val
     end
@@ -517,31 +521,49 @@ local function save_work_details()
 end
 
 local function apply_work_detail(detail, wd)
-    local flags = wd.flags or wd.work_detail_flags -- compat for old name
-    detail.name = wd.name
-    detail.icon = wd.icon
+    local flags = wd.flags or wd.work_detail_flags or {} -- compat for old name
+    if wd.name then detail.name = wd.name end
+    if wd.icon then detail.icon = wd.icon end
     detail.flags.cannot_be_everybody = flags.cannot_be_everybody
     detail.flags.no_modify = flags.no_modify
     detail.flags.mode = flags.mode
-    for i,v in ipairs(wd.allowed_labors) do
+    for i,v in ipairs(wd.allowed_labors or {}) do
         detail.allowed_labors[i-1] = v
     end
 end
 
+-- built-in work details are identified by their unique icon; custom details
+-- get CUSTOM_* icons (or NONE), so a built-in icon can only belong to a
+-- built-in
+local function is_builtin_icon(icon)
+    return type(icon) == 'number' and icon >= 0 and
+        (icon < df.work_detail_icon_type.CUSTOM_1 or
+         icon == df.work_detail_icon_type.SIEGE_OPERATORS)
+end
+
 local function load_work_details()
+    -- re-read in case the file changed since the config was first opened
+    config:read()
     if not config.data.work_details or #config.data.work_details < 10 then
         -- not enough data to cover built-in work details
         return
     end
 
-    local saved_builtins, saved_custom = {}, {}
+    local saved_builtins, builtin_by_icon, saved_custom = {}, {}, {}
     for _,wd in ipairs(config.data.work_details) do
-        local flags = wd.flags or wd.work_detail_flags
-        if flags.no_modify then
+        local flags = type(wd) == 'table' and
+            (wd.flags or wd.work_detail_flags) or nil
+        if flags and flags.no_modify then
             saved_builtins[('%s\0%s'):format(wd.icon, wd.name)] = wd
-        else
+            if is_builtin_icon(wd.icon) then
+                -- built-ins may have been renamed by the user or by a DF
+                -- version update, so fall back to matching by icon
+                builtin_by_icon[wd.icon] = wd
+            end
+        elseif flags then
             table.insert(saved_custom, wd)
         end
+        -- entries without flag data are malformed; skip them
     end
 
     local builtin_count = 0
@@ -549,7 +571,8 @@ local function load_work_details()
         local detail = li.work_details[idx]
         if not detail.flags.no_modify then break end
         builtin_count = builtin_count + 1
-        local wd = saved_builtins[('%s\0%s'):format(detail.icon, detail.name)]
+        local wd = saved_builtins[('%s\0%s'):format(detail.icon, detail.name)] or
+            builtin_by_icon[detail.icon]
         if wd then apply_work_detail(detail, wd) end
     end
 
@@ -563,9 +586,14 @@ local function load_work_details()
             flags=wd.flags or wd.work_detail_flags,
         }
         local al = li.work_details[detail_idx].allowed_labors
-        for i,v in ipairs(wd.allowed_labors) do
+        for i,v in ipairs(wd.allowed_labors or {}) do
             al[i-1] = v
         end
+    end
+    -- applying work details through the UI recomputes each unit's effective
+    -- labors; do the same here so the imported details take effect
+    for _,unit in ipairs(dfhack.units.getCitizens()) do
+        dfhack.units.setAutomaticProfessions(unit)
     end
     local scr = dfhack.gui.getDFViewscreen(true)
     if dfhack.gui.matchFocusString('dwarfmode/Info/LABOR/WORK_DETAILS', scr) then

@@ -45,7 +45,11 @@ local function with_work_details(work_details, saved, fn)
     end
     local old_config = settings_manager.config
     debug.setupvalue(load_fn, li_idx, {work_details=work_details})
-    settings_manager.config = {data={work_details=saved}, write=function() end}
+    settings_manager.config = {
+        data={work_details=saved},
+        read=function() end,
+        write=function() end,
+    }
     dfhack.with_finalize(
         function()
             debug.setupvalue(load_fn, li_idx, old_li)
@@ -99,6 +103,87 @@ function test.loading_legacy_work_detail_flags()
     with_work_details(work_details, saved, function(load_fn)
         load_fn()
         expect.eq(3, work_details[0].flags.mode)
+    end)
+end
+
+function test.loading_renamed_builtin_matches_by_icon()
+    -- a saved built-in whose name was changed (by the user or a DF update)
+    -- is still identified by its unique built-in icon
+    local saved = {}
+    for i = 1, 10 do saved[i] = saved_detail(i) end
+    saved[3] = {
+        name='Old Hunters Name',
+        icon=3,
+        flags={cannot_be_everybody=false, no_modify=true, mode=3},
+        allowed_labors={true, false, true},
+    }
+    local work_details = make_vector(current_details())
+
+    with_work_details(work_details, saved, function(load_fn)
+        load_fn()
+        local detail = work_details[2]
+        expect.eq('Old Hunters Name', detail.name)
+        expect.eq(3, detail.flags.mode)
+        expect.eq(true, detail.allowed_labors[0])
+        expect.eq(true, detail.allowed_labors[2])
+    end)
+end
+
+function test.builtin_icon_fallback_ignores_custom_icons()
+    -- a saved no_modify entry with a custom icon must not steal a built-in
+    local saved = {}
+    for i = 1, 10 do saved[i] = saved_detail(i) end
+    saved[3] = {
+        name='built-in 3',
+        icon=df.work_detail_icon_type.CUSTOM_1,
+        flags={cannot_be_everybody=false, no_modify=true, mode=3},
+        allowed_labors={true},
+    }
+    local work_details = make_vector(current_details())
+
+    with_work_details(work_details, saved, function(load_fn)
+        load_fn()
+        local detail = work_details[2]
+        expect.eq('built-in 3', detail.name)
+        expect.eq(1, detail.flags.mode)
+        expect.ne(true, detail.allowed_labors[0])
+    end)
+end
+
+function test.loading_malformed_entries_are_skipped()
+    local saved = {}
+    for i = 1, 10 do saved[i] = saved_detail(i) end
+    saved[5] = {name='no flags', icon=4} -- no flags/work_detail_flags
+    saved[6] = 'not a table'
+    local work_details = make_vector(current_details())
+
+    with_work_details(work_details, saved, function(load_fn)
+        load_fn()
+        -- the two malformed entries are skipped, not recreated as customs
+        expect.eq(11, #work_details)
+        expect.eq('Siege Operators', work_details[10].name)
+        -- unmatched built-ins are left alone
+        expect.eq('built-in 5', work_details[4].name)
+    end)
+end
+
+function test.loading_recomputes_unit_labors()
+    local saved = {}
+    for i = 1, 10 do saved[i] = saved_detail(i) end
+    local work_details = make_vector(current_details())
+    local citizens = {{id=1}, {id=2}}
+    local recomputed = {}
+    mock.patch({
+        {dfhack.units, 'getCitizens', function() return citizens end},
+        {dfhack.units, 'setAutomaticProfessions', function(unit)
+            recomputed[unit] = true
+        end},
+    }, function()
+        with_work_details(work_details, saved, function(load_fn)
+            load_fn()
+            expect.true_(recomputed[citizens[1]])
+            expect.true_(recomputed[citizens[2]])
+        end)
     end)
 end
 
