@@ -43,6 +43,7 @@ Template for new versions:
 
 ## Removed
 - `confirm`: removed the ``squad-disband`` and ``hotkey-reset`` confirmations; the game asks for both itself now ("Really disband?" and "Really overwrite")
+- `quickfort`: removed unreachable code left over from the retired query/config blueprint modes, including the reference to the nonexistent `data/quickfort/aliases-common.txt` file
 
 # 53.15-r2
 
