@@ -11,6 +11,10 @@ local overlay = require('plugins.overlay')
 
 local getBuild = dfhack.gui.getSelectedBuilding
 
+local function isRenaming()
+  return df.global.game.main_interface.view_sheets.building_entering_nickname
+end
+
 local FLUID_DEPTHS = {}
 for i=1,8 do -- 0 to 7
   FLUID_DEPTHS[i] = {value=i-1, label=tostring(i-1)}
@@ -39,6 +43,12 @@ PlateOverlay.ATTRS{
   frame_style=gui.MEDIUM_FRAME,
   frame_background=gui.CLEAR_PEN,
 }
+
+function PlateOverlay:onInput(keys)
+  if not isRenaming() then
+    return PlateOverlay.super.onInput(self, keys)
+  end
+end
 
 local function clamp(value, low, high)
   return math.min(high, math.max(low, value))
@@ -352,6 +362,12 @@ GearOverlay.ATTRS{
   frame_style=gui.MEDIUM_FRAME,
   frame_background=gui.CLEAR_PEN,
 }
+
+function GearOverlay:onInput(keys)
+  if not isRenaming() then
+    return GearOverlay.super.onInput(self, keys)
+  end
+end
 
 function GearOverlay:render(dc)
   self.subviews.gear_toggle:setOption(not getBuild().gear_flags.disengaged)

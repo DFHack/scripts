@@ -36,6 +36,7 @@ Template for new versions:
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
 - `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map
+- `machine-toggle`/`trackstop`: overlays no longer steal keys while renaming a pressure plate, gear assembly, track stop, or roller
 
 ## Misc Improvements
 - `caravan`: the ``Bring goods to depot``, ``Trade``, and ``Assign items for display`` overlays now allow searching for items with non-ASCII characters in their description

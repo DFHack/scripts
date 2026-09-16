@@ -12,6 +12,10 @@ local utils = require('utils')
 
 local getBuild = dfhack.gui.getSelectedBuilding
 
+local function isRenaming()
+  return df.global.game.main_interface.view_sheets.building_entering_nickname
+end
+
 local NORTH = 'North '..string.char(24)
 local EAST = 'East '..string.char(26)
 local SOUTH = 'South '..string.char(25)
@@ -62,6 +66,12 @@ TrackStopOverlay.ATTRS{
   frame_style=gui.MEDIUM_FRAME,
   frame_background=gui.CLEAR_PEN,
 }
+
+function TrackStopOverlay:onInput(keys)
+  if not isRenaming() then
+    return TrackStopOverlay.super.onInput(self, keys)
+  end
+end
 
 function TrackStopOverlay:setFriction(friction)
   getBuild().track_stop_info.friction = FRICTION_MAP[friction]
@@ -165,6 +175,12 @@ RollerOverlay.ATTRS{
   frame_style=gui.MEDIUM_FRAME,
   frame_background=gui.CLEAR_PEN,
 }
+
+function RollerOverlay:onInput(keys)
+  if not isRenaming() then
+    return RollerOverlay.super.onInput(self, keys)
+  end
+end
 
 function RollerOverlay:setDirection(direction)
   getBuild().direction = DIRECTION_MAP[direction]
