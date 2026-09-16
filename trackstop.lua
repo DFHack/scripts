@@ -12,9 +12,7 @@ local utils = require('utils')
 
 local getBuild = dfhack.gui.getSelectedBuilding
 
-local function isRenaming()
-  return df.global.game.main_interface.view_sheets.building_entering_nickname
-end
+local vs = df.global.game.main_interface.view_sheets
 
 local NORTH = 'North '..string.char(24)
 local EAST = 'East '..string.char(26)
@@ -68,7 +66,7 @@ TrackStopOverlay.ATTRS{
 }
 
 function TrackStopOverlay:onInput(keys)
-  if not isRenaming() then
+  if not vs.building_entering_nickname then
     return TrackStopOverlay.super.onInput(self, keys)
   end
 end
@@ -177,7 +175,7 @@ RollerOverlay.ATTRS{
 }
 
 function RollerOverlay:onInput(keys)
-  if not isRenaming() then
+  if not vs.building_entering_nickname then
     return RollerOverlay.super.onInput(self, keys)
   end
 end
