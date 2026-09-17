@@ -40,6 +40,7 @@ Template for new versions:
 ## Misc Improvements
 - `caravan`: the ``Bring goods to depot``, ``Trade``, and ``Assign items for display`` overlays now allow searching for items with non-ASCII characters in their description
 - `caravan`: the ``Trade`` overlay will use the trader's appraisal skill instead of the broker's to round/obfuscate the value of items
+- `gui/create-item`: add 0-5 hotkeys to the item quality selection prompt
 
 ## Removed
 - `confirm`: removed the ``squad-disband`` and ``hotkey-reset`` confirmations; the game asks for both itself now ("Really disband?" and "Really overwrite")
