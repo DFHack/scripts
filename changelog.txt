@@ -29,6 +29,7 @@ Template for new versions:
 ## New Tools
 
 - `gui/export-world-map`: New GUI tool to configure world map exports from the embark selection screen.
+- `squads`: adds a "Select all" toggle (and a ``Ctrl-A`` hotkey) to the squads sidebar for selecting all squads at once
 
 ## New Features
 
