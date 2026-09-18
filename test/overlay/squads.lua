@@ -29,28 +29,39 @@ local function count_selected()
 end
 
 local function feed_keys(keys)
-    overlay.feed_viewscreen_widgets('viewscreen_dwarfmodest',
-        dfhack.gui.getCurViewscreen(true), keys)
+    gui.simulateInput(dfhack.gui.getCurViewscreen(true), keys)
+end
+
+local function panel_is_open()
+    return dfhack.gui.matchFocusString('dwarfmode/Squads',
+        dfhack.gui.getDFViewscreen(true))
+end
+
+local function set_panel_open(open)
+    if panel_is_open() ~= open then
+        feed_keys'D_SQUADS'
+    end
 end
 
 local function with_squads_panel(test_fn)
     expect.gt(#if_squads.squad_id, 0,
         'test fort must have at least one squad')
-    local saved_open = if_squads.open
     local saved_sel = {}
     for i = 0, #if_squads.squad_selected - 1 do
         saved_sel[i] = if_squads.squad_selected[i]
     end
+    local was_open = panel_is_open()
     dfhack.with_finalize(
         function()
-            if_squads.open = saved_open
+            set_panel_open(was_open)
             for i = 0, #saved_sel - 1 do
                 if_squads.squad_selected[i] = saved_sel[i]
             end
             overlay.setEnabled(was_overlay_enabled)
         end,
         function()
-            if_squads.open = true
+            set_panel_open(true)
+            expect.true_(panel_is_open())
             for i = 0, #if_squads.squad_selected - 1 do
                 if_squads.squad_selected[i] = false
             end
@@ -93,17 +104,17 @@ end
 
 function test.widget_tracks_external_selection_changes()
     with_squads_panel(function(widget)
-        -- widget state should reflect selection changes made outside the widget
+        -- the label should reflect selection changes made outside the widget
         local label = widget.subviews.select_all
         widget:onRenderBody()
-        expect.false_(label:getOptionValue())
+        expect.eq('Select all', label.label)
         if_squads.squad_selected[0] = true
         widget:onRenderBody()
-        expect.false_(label:getOptionValue())
+        expect.eq('Select all', label.label)
         for i = 0, #if_squads.squad_selected - 1 do
             if_squads.squad_selected[i] = true
         end
         widget:onRenderBody()
-        expect.true_(label:getOptionValue())
+        expect.eq('Deselect all', label.label)
     end)
 end

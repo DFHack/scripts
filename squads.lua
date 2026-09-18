@@ -17,6 +17,7 @@ Usage::
     squads
 ]====]
 
+local gui = require('gui')
 local overlay = require('plugins.overlay')
 local widgets = require('gui.widgets')
 
@@ -39,6 +40,10 @@ local function set_all(value)
     for i = 0, #sel - 1 do
         sel[i] = value
     end
+end
+
+local function toggle_all()
+    set_all(not all_selected())
 end
 
 -- the squads sidebar is docked to the right edge of the screen, but its
@@ -64,30 +69,31 @@ end
 SquadsOverlay = defclass(SquadsOverlay, overlay.OverlayWidget)
 SquadsOverlay.ATTRS{
     desc='Adds a "select all" toggle to the squads sidebar.',
-    default_pos={x=-7, y=44},
+    default_pos={x=-4, y=44},
+    version=1,
     viewscreens='dwarfmode/Squads',
     default_enabled=true,
-    overlay_onupdate_max_freq_seconds=0.5,
-    frame={w=23, h=1},
+    overlay_onupdate_max_freq_seconds=0.1,
+    frame={w=20, h=1},
 }
 
 function SquadsOverlay:init()
     self:addviews{
-        widgets.ToggleHotkeyLabel{
+        widgets.HotkeyLabel{
             view_id='select_all',
             frame={t=0, l=0},
             key='CUSTOM_CTRL_A',
             label='Select all',
-            initial_option=false,
-            on_change=set_all,
+            on_activate=toggle_all,
         },
     }
 end
 
 function SquadsOverlay:onRenderBody(dc)
-    -- keep the displayed state in sync with the actual selection so the toggle
-    -- is accurate when the user clicks individual squad checkboxes
-    self.subviews.select_all:setOption(all_selected())
+    -- keep the label in sync with the actual selection so it stays accurate
+    -- when the user clicks individual squad checkboxes
+    self.subviews.select_all:setLabel(
+        all_selected() and 'Deselect all' or 'Select all')
     SquadsOverlay.super.onRenderBody(self, dc)
 end
 
@@ -100,12 +106,31 @@ function SquadsOverlay:overlay_onupdate()
              config.pos.y ~= self.default_pos.y) then
         return
     end
+    -- cheap bail-out: only rescan when something that can move the "Create new
+    -- squad" button changes (squad count, list scroll, window height), and
+    -- only after a successful anchor so a transient miss doesn't stick
+    local _, sh = dfhack.screen.getWindowSize()
+    local scan_key = #if_squads.squad_id * 1000 +
+        if_squads.scroll_position * 10 + sh
+    if scan_key == self.scan_key and self.anchored then return end
+    self.scan_key = scan_key
     local y, x1, x2 = find_create_squad_button()
-    if not y then return end
+    if not y then
+        self.anchored = false
+        return
+    end
+    -- sit directly above the button, centered on it and nudged right so the
+    -- label text lines up under the squad checkmark column
+    local t = y - 2
     local sw = dfhack.screen.getWindowSize()
-    local w = self.frame.w or 23
-    self.frame.t = y + 2
-    self.frame.r = sw - math.floor((x1 + x2) / 2) - math.ceil(w / 2)
+    local w = self.frame.w or 20
+    local r = sw - math.floor((x1 + x2) / 2) - math.ceil(w / 2) - 2
+    if self.anchored and self.frame.t == t and self.frame.r == r then return end
+    self.frame.t = t
+    self.frame.l = nil
+    self.frame.r = r
+    self.anchored = true
+    self:updateLayout(gui.ViewRect{rect=gui.get_interface_rect()})
 end
 
 OVERLAY_WIDGETS = {select_all=SquadsOverlay}
