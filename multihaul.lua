@@ -5,9 +5,10 @@ multihaul
 =========
 
 When a citizen picks up an item for a stockpile, they also grab up to
-``max`` additional loose items of the same type within ``radius`` tiles,
-then drop everything off in one trip. Not enabled by default; run
-``multihaul enable`` or ``enable multihaul`` to turn it on.
+``max`` additional loose items of the same type within ``radius`` tiles --
+both at the pickup site and along the way -- then drop everything off in
+one trip. Not enabled by default; run ``multihaul enable`` or
+``enable multihaul`` to turn it on.
 
 Usage::
 
@@ -15,8 +16,11 @@ Usage::
     multihaul status
     multihaul max <n>        (default 4, max extra items per trip)
     multihaul radius <n>     (default 2, tiles around the pickup)
-    multihaul weight <n>     (default 0 = unlimited, max combined weight
-                             of everything carried, in DF mass units)
+    multihaul weight <n>     (max combined weight of everything carried,
+                             in DF mass units; default 0 = unlimited)
+    multihaul weight auto    (derive the cap per dwarf from their
+                             strength and body size)
+    multihaul weight unlimited
     multihaul types same|all (default same; "all" also grabs items that
                              other haul jobs are taking to the same
                              destination, regardless of type)
@@ -97,14 +101,18 @@ local function get_job_dest(job)
     if job.job_type == df.job_type.StoreItemInStockpile then
         local pile = get_job_stockpile(job)
         if not pile then return end
+        local anchor
         for _,ref in ipairs(job.items) do
-            -- wheelbarrows appear as extra refs on assisted haul jobs;
-            -- the goods are what we want to anchor on
-            if ref.item and not ref.item:isWheelbarrow()
-                    and (ref.role == df.job_role_type.Hauled
-                        or ref.role == df.job_role_type.Reagent) then
-                return {pile=pile, anchor=ref.item}
+            if ref.item and ref.item:isWheelbarrow() then
+                -- the wheelbarrow already multi-hauls for this job
+                return
+            elseif ref.item and (ref.role == df.job_role_type.Hauled
+                    or ref.role == df.job_role_type.Reagent) then
+                anchor = anchor or ref.item
             end
+        end
+        if anchor then
+            return {pile=pile, anchor=anchor}
         end
     elseif s_targets_all and #job.items > 1 then
         if job.job_type == df.job_type.StoreItemInVehicle then
@@ -196,7 +204,7 @@ local function claimed_for_dest(item, dest)
     return false
 end
 
-local function extra_ok(cand, anchor, dest, origin, taken_weight)
+local function extra_ok(cand, anchor, dest, origin, taken_weight, cap)
     local f = cand.flags
     if cand.id == anchor.id or not f.on_ground or f.in_inventory
             or f.in_building or f.forbid or f.owned or f.hostile
@@ -223,8 +231,8 @@ local function extra_ok(cand, anchor, dest, origin, taken_weight)
             return false
         end
     end
-    if s_weight > 0 and cand.weight
-            and taken_weight + cand.weight.whole > s_weight then
+    if cap > 0 and cand.weight
+            and taken_weight + cand.weight.whole > cap then
         return false
     end
     return true
@@ -332,6 +340,58 @@ local function item_weight(item)
     return (item and item.weight) and item.weight.whole or 0
 end
 
+-- 'weight auto': derive a per-unit carry cap from strength scaled by body
+-- size (a child or small race carries less). A typical dwarf (~1200
+-- strength) can manage ~900 units -- roughly three boulders of load.
+local AUTO_CAP_FACTOR = 0.75
+local AUTO_CAP_FALLBACK = 900
+
+local function unit_carry_cap(unit)
+    local ok, cap = pcall(function()
+        local attrs = unit.body.physical_attrs
+        local str = attrs.STRENGTH and attrs.STRENGTH.value or 0
+        local base = unit.body.size_info.size_base
+        local cur = unit.body.size_info.size_cur
+        local ratio = (base and base > 0) and (cur / base) or 1
+        ratio = math.max(0.25, math.min(ratio, 1.5))
+        return math.floor(str * ratio * AUTO_CAP_FACTOR)
+    end)
+    return (ok and cap > 0) and cap or AUTO_CAP_FALLBACK
+end
+
+-- 0 = unlimited, 'auto' = per-unit, >0 = fixed cap
+local function effective_weight_cap(unit)
+    if s_weight == 'auto' then return unit_carry_cap(unit) end
+    return s_weight
+end
+
+-- attach extras near origin until the count and weight caps are reached,
+-- nearest first
+local function grab_extras(t, unit, dest, anchor, origin)
+    local cands = {}
+    for _,cand in ipairs(df.global.world.items.other[
+            df.items_other_id.IN_PLAY]) do
+        if near(cand.pos, origin, s_radius) then
+            cands[#cands+1] = cand
+        end
+    end
+    table.sort(cands, function(a, b)
+        return math.abs(a.pos.x - origin.x) + math.abs(a.pos.y - origin.y)
+            < math.abs(b.pos.x - origin.x) + math.abs(b.pos.y - origin.y)
+    end)
+    local cap = effective_weight_cap(unit)
+    for _,cand in ipairs(cands) do
+        if attached_count(t) >= s_max then break end
+        if extra_ok(cand, anchor, dest, origin, t.weight, cap)
+                and dfhack.items.moveToInventory(
+                    cand, unit, df.inv_item_role_type.Hauled, -1) then
+            cand.flags.in_job = true
+            t.extras[cand.id] = cand
+            t.weight = t.weight + item_weight(cand)
+        end
+    end
+end
+
 local function scan_unit(unit)
     local job = unit.job.current_job
     local t = tracked[unit.id]
@@ -368,19 +428,10 @@ local function scan_unit(unit)
             weight = weight + item_weight(dest.container)
         end
         t = {job_id=job.id, primary_id=anchor.id, pile=dest.pile,
-             container=dest.container, extras={}, weight=weight}
+             container=dest.container, extras={}, weight=weight,
+             scan_cd=0}
         tracked[unit.id] = t
-        for _,cand in ipairs(df.global.world.items.other[
-                df.items_other_id.IN_PLAY]) do
-            if attached_count(t) >= s_max then break end
-            if extra_ok(cand, anchor, dest, anchor.pos, t.weight)
-                    and dfhack.items.moveToInventory(
-                        cand, unit, df.inv_item_role_type.Hauled, -1) then
-                cand.flags.in_job = true
-                t.extras[cand.id] = cand
-                t.weight = t.weight + item_weight(cand)
-            end
-        end
+        grab_extras(t, unit, dest, anchor, anchor.pos)
     else
         -- the game drops non-job-linked hauled items; keep re-attaching our
         -- extras while the job is in flight so they ride along
@@ -410,6 +461,13 @@ local function scan_unit(unit)
                     extra.flags.in_job = true
                 end
             end
+        end
+        -- opportunistically pick up more extras the dwarf walks past,
+        -- throttled to every few polls
+        t.scan_cd = (t.scan_cd or 0) - 1
+        if t.scan_cd <= 0 and attached_count(t) < s_max then
+            t.scan_cd = 5
+            grab_extras(t, unit, dest, anchor, unit.pos)
         end
     end
 end
@@ -458,7 +516,8 @@ end
 local function print_status()
     print(('multihaul is %s (max=%d, radius=%d, weight=%s, types=%s, targets=%s)')
         :format(enabled and 'enabled' or 'disabled', s_max, s_radius,
-            s_weight > 0 and tostring(s_weight) or 'unlimited',
+            s_weight == 'auto' and 'auto'
+                or (s_weight > 0 and tostring(s_weight) or 'unlimited'),
             s_types_all and 'all' or 'same',
             s_targets_all and 'all' or 'piles'))
 end
@@ -515,7 +574,17 @@ elseif cmd == 'radius' then
     persist_state()
     print_status()
 elseif cmd == 'weight' then
-    s_weight = math.max(0, math.floor(tonumber(args[2]) or s_weight))
+    if args[2] == 'auto' then
+        s_weight = 'auto'
+    elseif args[2] == 'unlimited' then
+        s_weight = 0
+    else
+        local n = tonumber(args[2])
+        if not n then
+            qerror('usage: multihaul weight <n>|auto|unlimited')
+        end
+        s_weight = math.max(0, math.floor(n))
+    end
     persist_state()
     print_status()
 elseif cmd == 'types' then

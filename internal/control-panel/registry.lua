@@ -141,6 +141,8 @@ COMMANDS_BY_IDX = {
     {command='immortal-cravings', group='gameplay', mode='enable'},
     {command='light-aquifers-only', group='gameplay', mode='run'},
     {command='misery', group='gameplay', mode='enable'},
+    {command='multihaul', group='gameplay', mode='enable',
+        desc='Let citizens carry extra nearby items to the same destination in one trip.'},
     {command='orders-reevaluate', help_command='orders', group='gameplay', mode='repeat',
         desc='Invalidates all work orders once a month, allowing conditions to be rechecked.',
         params={'--time', '1', '--timeUnits', 'months', '--command', '[', 'orders', 'recheck', ']'}},

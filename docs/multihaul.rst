@@ -6,10 +6,12 @@ multihaul
     :tags: fort productivity items
 
 When a citizen picks up an item for a stockpile, they will also grab up to
-``max`` additional loose items of the same type within ``radius`` tiles of
-the pickup, then drop everything off in one trip. Extras that are dropped or
-interrupted along the way are simply left for normal hauling, so a cancelled
-job never leaves items stuck or claimed.
+``max`` additional loose items of the same type within ``radius`` tiles --
+both at the pickup site and opportunistically along the way -- then drop
+everything off in one trip. Extras that are dropped or interrupted along
+the way are simply left for normal hauling, so a cancelled job never leaves
+items stuck or claimed. Jobs already assisted by a wheelbarrow are skipped,
+since the wheelbarrow already carries multiple items.
 
 This tool is not enabled by default. Enable it with ``enable multihaul`` or
 by running ``multihaul enable``.
@@ -29,7 +31,10 @@ Usage
     ``multihaul weight <n>``
         Maximum combined weight of the whole carried load, in DF mass units
         (default 0 = unlimited). Covers the job's own item plus all extras,
-        so a dwarf never carries more than this total.
+        so a dwarf never carries more than this total. Use
+        ``multihaul weight auto`` to derive the cap from each citizen's
+        strength and body size instead (a typical dwarf can manage roughly
+        three boulders), or ``multihaul weight unlimited`` to remove it.
     ``multihaul types same|all``
         ``same`` (default) only grabs loose items of the same type as the
         job's item. ``all`` also grabs items of other types that a different
