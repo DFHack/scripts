@@ -429,7 +429,7 @@ local function scan_unit(unit)
         end
         t = {job_id=job.id, primary_id=anchor.id, pile=dest.pile,
              container=dest.container, extras={}, weight=weight,
-             scan_cd=0}
+             scan_cd=5}
         tracked[unit.id] = t
         grab_extras(t, unit, dest, anchor, anchor.pos)
     else
