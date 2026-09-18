@@ -29,7 +29,7 @@ Template for new versions:
 ## New Tools
 
 - `gui/export-world-map`: New GUI tool to configure world map exports from the embark selection screen.
-- `multihaul`: optionally let citizens carry extra nearby items of the same type to a stockpile in one trip (disabled by default)
+- `multihaul`: optionally let citizens carry extra nearby items to a stockpile in one trip, with configurable item count, radius, carried weight, item types, and container destinations (disabled by default)
 
 ## New Features
 

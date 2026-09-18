@@ -1,4 +1,4 @@
--- Citizens carry extra loose items when hauling to a stockpile.
+-- Citizens carry extra loose items when hauling goods.
 --[====[
 
 multihaul
@@ -13,8 +13,16 @@ Usage::
 
     multihaul enable|disable
     multihaul status
-    multihaul max <n>      (default 4, max extra items per trip)
-    multihaul radius <n>   (default 2, tiles around the pickup)
+    multihaul max <n>        (default 4, max extra items per trip)
+    multihaul radius <n>     (default 2, tiles around the pickup)
+    multihaul weight <n>     (default 0 = unlimited, max combined weight
+                             of everything carried, in DF mass units)
+    multihaul types same|all (default same; "all" also grabs items that
+                             other haul jobs are taking to the same
+                             destination, regardless of type)
+    multihaul targets piles|all
+                             (default piles; "all" also piggybacks loads
+                             into minecarts, barrels, and bins)
 
 ]====]
 
@@ -32,9 +40,17 @@ local POLL_FRAMES = 3
 enabled = enabled or false
 s_max = s_max or 4
 s_radius = s_radius or 2
+s_weight = s_weight or 0
+s_types_all = s_types_all or false
+s_targets_all = s_targets_all or false
 
 -- transient state
--- unit_id -> {job_id=number, primary_id=number, pile=building, extras={item_id -> item}}
+-- unit_id -> {
+--     job_id=number, primary_id=number, extras={item_id -> item},
+--     weight=number (weight of primary + container + extras),
+--     pile=building        (stockpile destination), or
+--     container=item       (vehicle/barrel/bin destination)
+-- }
 tracked = tracked or {}
 
 function isEnabled()
@@ -46,6 +62,9 @@ local function persist_state()
         enabled=enabled,
         s_max=s_max,
         s_radius=s_radius,
+        s_weight=s_weight,
+        s_types_all=s_types_all,
+        s_targets_all=s_targets_all,
     })
 end
 
@@ -54,6 +73,9 @@ local function load_state()
     enabled = data.enabled or false
     s_max = data.s_max or 4
     s_radius = data.s_radius or 2
+    s_weight = data.s_weight or 0
+    s_types_all = data.s_types_all or false
+    s_targets_all = data.s_targets_all or false
 end
 
 local function get_job_stockpile(job)
@@ -67,14 +89,145 @@ local function get_job_stockpile(job)
     end
 end
 
-local function is_loose_item(item)
-    local f = item.flags
-    return f.on_ground and not f.in_job and not f.in_inventory
-        and not f.in_building and not f.forbid and not f.owned
-        and not f.hostile and not f.trader and not f.spider_web
-        and not f.construction and not f.encased and not f.removed
-        and not f.garbage_collect and not f.container and not f.rotten
-        and not f.dump and not f.melt and item:getStockpile() == nil
+-- resolve the job's delivery destination and the item that anchors the
+-- pickup. For piles and vehicles the anchor is the carried item; for
+-- barrels/bins it is the item being stored, since the dwarf carries the
+-- container to the goods.
+local function get_job_dest(job)
+    if job.job_type == df.job_type.StoreItemInStockpile then
+        local pile = get_job_stockpile(job)
+        if not pile then return end
+        for _,ref in ipairs(job.items) do
+            -- wheelbarrows appear as extra refs on assisted haul jobs;
+            -- the goods are what we want to anchor on
+            if ref.item and not ref.item:isWheelbarrow()
+                    and (ref.role == df.job_role_type.Hauled
+                        or ref.role == df.job_role_type.Reagent) then
+                return {pile=pile, anchor=ref.item}
+            end
+        end
+    elseif s_targets_all and #job.items > 1 then
+        if job.job_type == df.job_type.StoreItemInVehicle then
+            local load, vehicle
+            for _,ref in ipairs(job.items) do
+                if ref.role == df.job_role_type.TargetContainer then
+                    vehicle = ref.item
+                elseif ref.item and (ref.role == df.job_role_type.Hauled
+                        or ref.role == df.job_role_type.Reagent) then
+                    load = ref.item
+                end
+            end
+            -- wheelbarrows only ever hold one item
+            if load and vehicle and not vehicle:isWheelbarrow() then
+                return {container=vehicle, anchor=load}
+            end
+        elseif job.job_type == df.job_type.StoreItemInBarrel
+                or job.job_type == df.job_type.StoreItemInBin then
+            local container, queued
+            for _,ref in ipairs(job.items) do
+                if ref.role == df.job_role_type.Hauled then
+                    container = ref.item
+                elseif ref.role == df.job_role_type.QueuedContainer then
+                    queued = ref.item
+                end
+            end
+            if container and queued then
+                return {container=container, anchor=queued}
+            end
+        end
+    end
+end
+
+local function near(a, b, radius)
+    return a.z == b.z and math.abs(a.x - b.x) <= radius
+        and math.abs(a.y - b.y) <= radius
+end
+
+-- the container (vehicle, barrel, bin, ...) an item is inside, or nil
+local function contained_in(item)
+    for _,ref in ipairs(item.general_refs) do
+        if ref:getType() == df.general_ref_type.CONTAINED_IN_ITEM then
+            return ref:getItem()
+        end
+    end
+end
+
+-- true if a real job claims the item. Our own piggybacked extras only
+-- carry the in_job flag and never have a JOB specific_ref, so this
+-- distinguishes the two.
+local function real_job_claim(item)
+    for _,sref in ipairs(item.specific_refs) do
+        if sref.type == df.specific_ref_type.JOB and sref.data.job
+                and df.isvalid(sref.data.job) == 'ref' then
+            return true
+        end
+    end
+    return false
+end
+
+-- item:getStockpile() reads a .stockpile field that only exists on some
+-- item classes (tools, containers) and throws on others (cloth, bags)
+local function stockpile_assigned(item)
+    local ok, pile = pcall(function() return item:getStockpile() end)
+    return ok and pile ~= nil
+end
+
+-- the item is already claimed by a job; true only if that job is also
+-- delivering it to the given destination
+local function claimed_for_dest(item, dest)
+    if not item.flags.in_job then return false end
+    for _,sref in ipairs(item.specific_refs) do
+        if sref.type == df.specific_ref_type.JOB and sref.data.job
+                and df.isvalid(sref.data.job) == 'ref' then
+            local job = sref.data.job
+            if job.job_type == df.job_type.StoreItemInStockpile
+                    and dest.pile
+                    and get_job_stockpile(job) == dest.pile then
+                return true
+            end
+            if dest.container then
+                local other = get_job_dest(job)
+                if other and other.container == dest.container then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+local function extra_ok(cand, anchor, dest, origin, taken_weight)
+    local f = cand.flags
+    if cand.id == anchor.id or not f.on_ground or f.in_inventory
+            or f.in_building or f.forbid or f.owned or f.hostile
+            or f.trader or f.spider_web or f.construction or f.encased
+            or f.removed or f.garbage_collect or f.rotten or f.dump
+            or f.melt or f.hidden or f.on_fire
+            or not near(cand.pos, origin, s_radius)
+            or contained_in(cand) then
+        return false
+    end
+    if f.in_job then
+        -- claimed item: only valid if a job is already taking it to our
+        -- destination (lets one trip do several jobs' work)
+        if not (s_types_all and claimed_for_dest(cand, dest)) then
+            return false
+        end
+    else
+        -- unclaimed items must match the anchor's type: we cannot verify
+        -- that the destination accepts anything else
+        if cand:getType() ~= anchor:getType()
+                or stockpile_assigned(cand)
+                or dfhack.buildings.findAtTile(
+                    cand.pos.x, cand.pos.y, cand.pos.z) then
+            return false
+        end
+    end
+    if s_weight > 0 and cand.weight
+            and taken_weight + cand.weight.whole > s_weight then
+        return false
+    end
+    return true
 end
 
 local function held_by(unit, item)
@@ -100,11 +253,23 @@ local function nearest_pile_tile(pile, pos, max_dist)
     return (best_dist and best_dist <= max_dist) and best or nil
 end
 
--- release all piggybacked items. If the job completed normally, the primary
--- item was just placed on a stockpile tile: land the extras on that same
--- tile so they are stocked too. If the job ended while the unit was at or
--- next to the pile (e.g. a vehicle handoff), land them on the closest pile
--- tile instead. Otherwise drop them at the unit's feet.
+-- did the job's primary item actually reach the destination?
+local function primary_delivered(t, primary)
+    if t.pile then
+        return primary and df.isvalid(primary) == 'ref'
+            and dfhack.buildings.findAtTile(
+                primary.pos.x, primary.pos.y, primary.pos.z) == t.pile
+    end
+    -- containers: a stored item can merge into a stack inside the container
+    -- and be deleted, so a missing anchor counts as delivered
+    if not primary or df.isvalid(primary) ~= 'ref' then return true end
+    return contained_in(primary) == t.container
+end
+
+-- release all piggybacked items. If the job completed normally, land the
+-- extras at the destination too: on the primary's pile tile (or the nearest
+-- pile tile if the unit finished next to the pile, e.g. vehicle handoffs),
+-- or inside the container. Otherwise drop them at the unit's feet.
 local function release_all(unit_id)
     local t = tracked[unit_id]
     if not t then return end
@@ -112,29 +277,59 @@ local function release_all(unit_id)
 
     local unit = df.unit.find(unit_id)
     local drop_pos
+    local container
     local primary = t.primary_id and df.item.find(t.primary_id)
-    if primary and df.isvalid(primary) == 'ref'
-            and dfhack.buildings.findAtTile(
-                primary.pos.x, primary.pos.y, primary.pos.z) == t.pile then
-        drop_pos = primary.pos
-    elseif unit then
-        drop_pos = nearest_pile_tile(t.pile, unit.pos, 4) or unit.pos
+    if t.pile then
+        if primary_delivered(t, primary) then
+            drop_pos = primary.pos
+        elseif unit then
+            drop_pos = nearest_pile_tile(t.pile, unit.pos, 4) or unit.pos
+        end
+    elseif t.container then
+        if primary_delivered(t, primary)
+                and df.isvalid(t.container) == 'ref' then
+            container = t.container
+        elseif unit then
+            drop_pos = unit.pos
+        end
     end
     for item_id, item in pairs(t.extras) do
-        if df.isvalid(item) == 'ref' then
+        t.extras[item_id] = nil
+        -- if a real job claimed the extra in the meantime its in_job flag
+        -- is legitimate; leave it alone
+        if df.isvalid(item) == 'ref' and not real_job_claim(item) then
             item.flags.in_job = false
-            if unit and drop_pos and held_by(unit, item) then
-                dfhack.items.moveToGround(item, drop_pos)
+            if container then
+                -- insert items the unit still holds, and any the engine
+                -- dropped at the unit's feet during the handoff
+                if unit and (held_by(unit, item)
+                        or near(item.pos, unit.pos, 4)) then
+                    if not dfhack.items.moveToContainer(item, container) then
+                        dfhack.items.moveToGround(item, unit.pos)
+                    end
+                end
+                -- otherwise it was dropped mid-route: leave it there
+            elseif unit and drop_pos then
+                if held_by(unit, item) then
+                    dfhack.items.moveToGround(item, drop_pos)
+                elseif t.pile and item.flags.on_ground
+                        and near(item.pos, drop_pos, 4) then
+                    -- dropped by the engine at the destination
+                    dfhack.items.moveToGround(item, drop_pos)
+                end
             end
         end
-        t.extras[item_id] = nil
     end
 end
 
-local function job_item_of(job)
-    if #job.items == 0 then return nil end
-    local item = job.items[0].item
-    return (item and df.isvalid(item) == 'ref') and item or nil
+local function attached_count(t)
+    local n = 0
+    for _ in pairs(t.extras) do n = n + 1 end
+    return n
+end
+
+local function item_weight(item)
+    return (item and item.weight) and item.weight.whole or 0
 end
 
 local function scan_unit(unit)
@@ -142,49 +337,48 @@ local function scan_unit(unit)
     local t = tracked[unit.id]
 
     -- drop tracking if the job ended or changed
-    if t then
-        if not job or job.id ~= t.job_id then
-            release_all(unit.id)
-            t = nil
-        end
+    if t and (not job or job.id ~= t.job_id) then
+        release_all(unit.id)
+        t = nil
     end
 
-    if not job or job.job_type ~= df.job_type.StoreItemInStockpile then
-        return
+    if not job then return end
+    local dest = get_job_dest(job)
+    if not dest then return end
+    local anchor = dest.anchor
+    if not anchor or df.isvalid(anchor) ~= 'ref' then return end
+
+    local ready
+    if dest.pile or job.job_type == df.job_type.StoreItemInVehicle then
+        -- wait until the anchor item is actually picked up
+        ready = anchor.flags.in_inventory and held_by(unit, anchor)
+    else
+        -- barrel/bin jobs: the dwarf carries the container to the goods;
+        -- grab extras once the dwarf reaches the goods
+        ready = near(unit.pos, anchor.pos, math.max(s_radius, 2))
     end
+    if not ready then return end
 
-    local item = job_item_of(job)
-    if not item then return end
-    local pile = get_job_stockpile(job)
-    if not pile then return end
-
-    if not item.flags.in_inventory then
-        -- still walking to the pickup
-        return
-    end
-
-    -- job item has been picked up: deliver any extras we're carrying, or
-    -- attach extras if this is the first poll after pickup
     if not t then
-        t = {job_id=job.id, primary_id=item.id, pile=pile, extras={}}
+        -- weight covers the whole carried load: the primary item, the
+        -- container itself for barrel/bin runs, and every extra
+        local weight = item_weight(anchor)
+        if job.job_type == df.job_type.StoreItemInBarrel
+                or job.job_type == df.job_type.StoreItemInBin then
+            weight = weight + item_weight(dest.container)
+        end
+        t = {job_id=job.id, primary_id=anchor.id, pile=dest.pile,
+             container=dest.container, extras={}, weight=weight}
         tracked[unit.id] = t
-        local job_type = item:getType()
-        local attached = 0
         for _,cand in ipairs(df.global.world.items.other[
                 df.items_other_id.IN_PLAY]) do
-            if attached >= s_max then break end
-            if cand ~= item and is_loose_item(cand)
-                    and cand:getType() == job_type
-                    and not dfhack.buildings.findAtTile(
-                        cand.pos.x, cand.pos.y, cand.pos.z)
-                    and cand.pos.z == unit.pos.z
-                    and math.abs(cand.pos.x - unit.pos.x) <= s_radius
-                    and math.abs(cand.pos.y - unit.pos.y) <= s_radius
+            if attached_count(t) >= s_max then break end
+            if extra_ok(cand, anchor, dest, anchor.pos, t.weight)
                     and dfhack.items.moveToInventory(
                         cand, unit, df.inv_item_role_type.Hauled, -1) then
                 cand.flags.in_job = true
                 t.extras[cand.id] = cand
-                attached = attached + 1
+                t.weight = t.weight + item_weight(cand)
             end
         end
     else
@@ -192,22 +386,53 @@ local function scan_unit(unit)
         -- extras while the job is in flight so they ride along
         for item_id, extra in pairs(t.extras) do
             local valid = df.isvalid(extra) == 'ref'
-            if not valid or extra.flags.forbid
-                    or extra:getStockpile() ~= nil then
-                if valid then extra.flags.in_job = false end
+            local real_claim = valid and real_job_claim(extra)
+            if not valid or real_claim or extra.flags.forbid
+                    or extra.flags.removed
+                    or stockpile_assigned(extra) then
+                if valid and not real_claim then
+                    extra.flags.in_job = false
+                end
                 t.extras[item_id] = nil
-            elseif extra.flags.on_ground and dfhack.buildings.findAtTile(
-                    extra.pos.x, extra.pos.y, extra.pos.z) == t.pile then
+            elseif t.pile and extra.flags.on_ground
+                    and dfhack.buildings.findAtTile(
+                        extra.pos.x, extra.pos.y, extra.pos.z) == t.pile then
                 -- the game dropped it directly inside the pile: done
                 extra.flags.in_job = false
                 t.extras[item_id] = nil
+            elseif t.container and contained_in(extra) == t.container then
+                -- it is already inside the destination container: done
+                extra.flags.in_job = false
+                t.extras[item_id] = nil
             elseif not extra.flags.in_inventory then
-                dfhack.items.moveToInventory(
-                    extra, unit, df.inv_item_role_type.Hauled, -1)
+                if dfhack.items.moveToInventory(
+                        extra, unit, df.inv_item_role_type.Hauled, -1) then
+                    extra.flags.in_job = true
+                end
             end
         end
     end
 end
+
+-- self-healing sweep: our extras carry only the in_job flag, never a JOB
+-- specific_ref. If the tracking table is ever lost (script reload, env
+-- reset) a dropped extra would keep that flag forever and become
+-- unclaimable. Clear any in_job flag that has no job behind it and is not
+-- a currently-tracked extra.
+local function sweep_orphans()
+    local riding = {}
+    for _,t in pairs(tracked) do
+        for id in pairs(t.extras) do riding[id] = true end
+    end
+    for _,item in ipairs(df.global.world.items.all) do
+        if item.flags.in_job and not riding[item.id]
+                and not real_job_claim(item) then
+            item.flags.in_job = false
+        end
+    end
+end
+
+local sweep_countdown = 0
 
 local function event_loop()
     if not enabled then return end
@@ -218,22 +443,49 @@ local function event_loop()
                 unit.id, tostring(err)))
         end
     end
+    sweep_countdown = sweep_countdown - 1
+    if sweep_countdown <= 0 then
+        sweep_countdown = 500
+        local ok, err = pcall(sweep_orphans)
+        if not ok then
+            dfhack.printerr(('multihaul: sweep: %s\n'):format(tostring(err)))
+        end
+    end
     repeatutil.scheduleUnlessAlreadyScheduled(
         TIMER_NAME, POLL_FRAMES, 'frames', event_loop)
 end
 
 local function print_status()
-    print(('multihaul is %s (max=%d, radius=%d)'):format(
-        enabled and 'enabled' or 'disabled', s_max, s_radius))
+    print(('multihaul is %s (max=%d, radius=%d, weight=%s, types=%s, targets=%s)')
+        :format(enabled and 'enabled' or 'disabled', s_max, s_radius,
+            s_weight > 0 and tostring(s_weight) or 'unlimited',
+            s_types_all and 'all' or 'same',
+            s_targets_all and 'all' or 'piles'))
 end
 
 dfhack.onStateChange[GLOBAL_KEY] = function(sc)
     if sc == SC_WORLD_UNLOADED or sc == SC_MAP_UNLOADED then
+        -- best effort: unmark extras before the save is written so they
+        -- don't persist with a bogus in_job flag
+        for _,t in pairs(tracked) do
+            for _,item in pairs(t.extras) do
+                pcall(function()
+                    if df.isvalid(item) == 'ref'
+                            and not real_job_claim(item) then
+                        item.flags.in_job = false
+                    end
+                end)
+            end
+        end
         tracked = {}
     elseif sc == SC_WORLD_LOADED then
         load_state()
         if enabled then event_loop() end
     end
+end
+
+if dfhack_flags.module then
+    return
 end
 
 local args = {...}
@@ -245,6 +497,7 @@ local cmd = args[1]
 if cmd == 'enable' then
     enabled = true
     persist_state()
+    sweep_orphans()
     event_loop()
     print_status()
 elseif cmd == 'disable' then
@@ -261,6 +514,26 @@ elseif cmd == 'radius' then
     s_radius = math.max(0, math.floor(tonumber(args[2]) or s_radius))
     persist_state()
     print_status()
+elseif cmd == 'weight' then
+    s_weight = math.max(0, math.floor(tonumber(args[2]) or s_weight))
+    persist_state()
+    print_status()
+elseif cmd == 'types' then
+    if args[2] ~= 'same' and args[2] ~= 'all' then
+        qerror('usage: multihaul types same|all')
+    end
+    s_types_all = args[2] == 'all'
+    persist_state()
+    print_status()
+elseif cmd == 'targets' then
+    if args[2] ~= 'piles' and args[2] ~= 'all' then
+        qerror('usage: multihaul targets piles|all')
+    end
+    s_targets_all = args[2] == 'all'
+    persist_state()
+    print_status()
+elseif cmd == 'help' or cmd == '--help' then
+    print(dfhack.script_help())
 elseif cmd == 'status' or not cmd then
     print_status()
 else
