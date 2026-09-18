@@ -72,6 +72,11 @@ SquadsOverlay.ATTRS{
     default_pos={x=-4, y=44},
     version=1,
     viewscreens='dwarfmode/Squads',
+    -- hide while the disband confirmation is showing; it shares the
+    -- dwarfmode/Squads focus string so it can't be filtered by viewscreens
+    visible=function()
+        return not df.global.game.main_interface.squads.disband_confirmation
+    end,
     default_enabled=true,
     -- anchor on the first tick the panel opens so the widget never flashes
     -- at the default position; the rescan is gated by a cheap key check

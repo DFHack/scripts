@@ -102,6 +102,25 @@ function test.select_all_click_toggles()
     end)
 end
 
+function test.widget_hidden_during_disband_confirmation()
+    with_squads_panel(function(widget)
+        local getval = require('utils').getval
+        expect.false_(if_squads.disband_confirmation)
+        expect.true_(getval(widget.visible))
+        dfhack.with_finalize(
+            function()
+                if_squads.disband_confirmation = false
+            end,
+            function()
+                if_squads.disband_confirmation = true
+                expect.false_(getval(widget.visible))
+                -- hidden widgets must not consume the hotkey
+                feed_keys{CUSTOM_CTRL_A=true}
+                expect.eq(0, count_selected())
+            end)
+    end)
+end
+
 function test.widget_tracks_external_selection_changes()
     with_squads_panel(function(widget)
         -- the label should reflect selection changes made outside the widget
