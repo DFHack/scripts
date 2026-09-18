@@ -15,7 +15,10 @@ Usage::
     multihaul enable|disable
     multihaul status
     multihaul max <n>        (default 4, max extra items per trip)
-    multihaul radius <n>     (default 2, tiles around the pickup)
+    multihaul radius <n>     (default 2, tiles around the dwarf that are
+                             collected while passing)
+    multihaul fetch <n>      (default 8, how far around the pickup site the
+                             dwarf detours to collect extras)
     multihaul weight <n>     (max combined weight of everything carried,
                              in DF mass units; default 0 = unlimited)
     multihaul weight auto    (derive the cap per dwarf from their
@@ -44,6 +47,7 @@ local POLL_FRAMES = 3
 enabled = enabled or false
 s_max = s_max or 4
 s_radius = s_radius or 2
+s_fetch = s_fetch or 8
 s_weight = s_weight or 0
 s_types_all = s_types_all or false
 s_targets_all = s_targets_all or false
@@ -66,6 +70,7 @@ local function persist_state()
         enabled=enabled,
         s_max=s_max,
         s_radius=s_radius,
+        s_fetch=s_fetch,
         s_weight=s_weight,
         s_types_all=s_types_all,
         s_targets_all=s_targets_all,
@@ -77,6 +82,7 @@ local function load_state()
     enabled = data.enabled or false
     s_max = data.s_max or 4
     s_radius = data.s_radius or 2
+    s_fetch = data.s_fetch or 8
     s_weight = data.s_weight or 0
     s_types_all = data.s_types_all or false
     s_targets_all = data.s_targets_all or false
@@ -204,14 +210,15 @@ local function claimed_for_dest(item, dest)
     return false
 end
 
-local function extra_ok(cand, anchor, dest, origin, taken_weight, cap)
+local function extra_ok(cand, anchor, dest, origin, radius,
+        taken_weight, cap)
     local f = cand.flags
     if cand.id == anchor.id or not f.on_ground or f.in_inventory
             or f.in_building or f.forbid or f.owned or f.hostile
             or f.trader or f.spider_web or f.construction or f.encased
             or f.removed or f.garbage_collect or f.rotten or f.dump
             or f.melt or f.hidden or f.on_fire
-            or not near(cand.pos, origin, s_radius)
+            or not near(cand.pos, origin, radius)
             or contained_in(cand) then
         return false
     end
@@ -367,11 +374,11 @@ end
 
 -- attach extras near origin until the count and weight caps are reached,
 -- nearest first
-local function grab_extras(t, unit, dest, anchor, origin)
+local function grab_extras(t, unit, dest, anchor, origin, radius)
     local cands = {}
     for _,cand in ipairs(df.global.world.items.other[
             df.items_other_id.IN_PLAY]) do
-        if near(cand.pos, origin, s_radius) then
+        if near(cand.pos, origin, radius) then
             cands[#cands+1] = cand
         end
     end
@@ -382,7 +389,7 @@ local function grab_extras(t, unit, dest, anchor, origin)
     local cap = effective_weight_cap(unit)
     for _,cand in ipairs(cands) do
         if attached_count(t) >= s_max then break end
-        if extra_ok(cand, anchor, dest, origin, t.weight, cap)
+        if extra_ok(cand, anchor, dest, origin, radius, t.weight, cap)
                 and dfhack.items.moveToInventory(
                     cand, unit, df.inv_item_role_type.Hauled, -1) then
             cand.flags.in_job = true
@@ -431,7 +438,8 @@ local function scan_unit(unit)
              container=dest.container, extras={}, weight=weight,
              scan_cd=5}
         tracked[unit.id] = t
-        grab_extras(t, unit, dest, anchor, anchor.pos)
+        -- the dwarf detours around the pickup site to collect extras
+        grab_extras(t, unit, dest, anchor, anchor.pos, s_fetch)
     else
         -- the game drops non-job-linked hauled items; keep re-attaching our
         -- extras while the job is in flight so they ride along
@@ -467,7 +475,7 @@ local function scan_unit(unit)
         t.scan_cd = (t.scan_cd or 0) - 1
         if t.scan_cd <= 0 and attached_count(t) < s_max then
             t.scan_cd = 5
-            grab_extras(t, unit, dest, anchor, unit.pos)
+            grab_extras(t, unit, dest, anchor, unit.pos, s_radius)
         end
     end
 end
@@ -514,8 +522,8 @@ local function event_loop()
 end
 
 local function print_status()
-    print(('multihaul is %s (max=%d, radius=%d, weight=%s, types=%s, targets=%s)')
-        :format(enabled and 'enabled' or 'disabled', s_max, s_radius,
+    print(('multihaul is %s (max=%d, radius=%d, fetch=%d, weight=%s, types=%s, targets=%s)')
+        :format(enabled and 'enabled' or 'disabled', s_max, s_radius, s_fetch,
             s_weight == 'auto' and 'auto'
                 or (s_weight > 0 and tostring(s_weight) or 'unlimited'),
             s_types_all and 'all' or 'same',
@@ -571,6 +579,10 @@ elseif cmd == 'max' then
     print_status()
 elseif cmd == 'radius' then
     s_radius = math.max(0, math.floor(tonumber(args[2]) or s_radius))
+    persist_state()
+    print_status()
+elseif cmd == 'fetch' then
+    s_fetch = math.max(0, math.floor(tonumber(args[2]) or s_fetch))
     persist_state()
     print_status()
 elseif cmd == 'weight' then

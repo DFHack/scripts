@@ -27,7 +27,11 @@ Usage
     ``multihaul max <n>``
         Maximum extra items carried per trip (default 4).
     ``multihaul radius <n>``
-        Search radius in tiles around the pickup (default 2).
+        Search radius in tiles around the dwarf for opportunistic pickups
+        made along the way (default 2).
+    ``multihaul fetch <n>``
+        How far around the pickup site the dwarf will detour to collect
+        extras before departing (default 8).
     ``multihaul weight <n>``
         Maximum combined weight of the whole carried load, in DF mass units
         (default 0 = unlimited). Covers the job's own item plus all extras,
