@@ -73,7 +73,9 @@ SquadsOverlay.ATTRS{
     version=1,
     viewscreens='dwarfmode/Squads',
     default_enabled=true,
-    overlay_onupdate_max_freq_seconds=0.1,
+    -- anchor on the first tick the panel opens so the widget never flashes
+    -- at the default position; the rescan is gated by a cheap key check
+    overlay_onupdate_max_freq_seconds=0,
     frame={w=20, h=1},
 }
 
