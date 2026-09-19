@@ -593,8 +593,43 @@ function pile_accepts(pile, item)
 
     -- furniture and finished goods have type-indexed vectors that only
     -- hold true for types in their category, so a single generic check
-    -- covers every member type; TOOL items are skipped because their
-    -- furniture_type slot depends on itemdef flags we cannot map
+    -- covers every member type
+    if it == df.item_type.TOOL then
+        -- tools map onto furniture buckets through their itemdef's
+        -- tool_use (minecarts, wheelbarrows, large pots); furniture-
+        -- flagged tools without a named bucket are "other large tools".
+        -- small tools go to finished goods instead
+        local def = df.global.world.raws.itemdefs.tools[st]
+        if def then
+            local ft
+            for _, use in ipairs(def.tool_use) do
+                if use == df.tool_uses.TRACK_CART then
+                    ft = df.furniture_type.MINECART
+                elseif use == df.tool_uses.HEAVY_OBJECT_HAULING then
+                    ft = df.furniture_type.WHEELBARROW
+                elseif use == df.tool_uses.FOOD_STORAGE then
+                    ft = df.furniture_type.FOOD_STORAGE
+                end
+            end
+            if not ft and def.flags.FURNITURE then
+                ft = df.furniture_type.OTHER_LARGE_TOOLS
+            end
+            if ft then
+                return f.furniture and vget(s.furniture.type, ft)
+                    and quality_ok(item, s.furniture)
+                    and mat_ok(item, info, s.furniture.mats,
+                        s.furniture.other_mats,
+                        df.stockpile_furniture_mat)
+            end
+        end
+        -- not a furniture tool: only finished goods can take it
+        return f.finished_goods and vget(s.finished_goods.type, it)
+            and dye_ok(item, s.finished_goods)
+            and quality_ok(item, s.finished_goods)
+            and colors_ok(item, s.finished_goods)
+            and mat_ok(item, info, s.finished_goods.mats,
+                s.finished_goods.other_mats, df.stockpile_finished_mat)
+    end
     local ft = df.furniture_type[df.item_type[it]]
     if f.furniture and ft and ft >= 0 and vget(s.furniture.type, ft) then
         return quality_ok(item, s.furniture)

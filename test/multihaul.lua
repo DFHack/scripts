@@ -424,14 +424,75 @@ function test.furniture_type_and_material()
     end)
 end
 
+function test.tool_furniture_buckets()
+    run(function()
+        local tools = df.global.world.raws.itemdefs.tools
+        local function find_tool(pred)
+            for i = 0, #tools - 1 do
+                if pred(tools[i]) then return i end
+            end
+        end
+        local function has_use(def, use)
+            for _, u in ipairs(def.tool_use) do
+                if u == use then return true end
+            end
+        end
+        local wheelbarrow = find_tool(function(d)
+            return has_use(d, df.tool_uses.HEAVY_OBJECT_HAULING)
+        end)
+        local bookcase = find_tool(function(d)
+            return d.flags.FURNITURE and not has_use(d,
+                df.tool_uses.HEAVY_OBJECT_HAULING)
+                and not has_use(d, df.tool_uses.TRACK_CART)
+                and not has_use(d, df.tool_uses.FOOD_STORAGE)
+        end)
+        expect.true_(wheelbarrow ~= nil)
+        expect.true_(bookcase ~= nil)
+
+        -- a furniture pile allowing only wheelbarrows
+        local flags = base_flags()
+        flags.furniture = true
+        local wb_pile = mock_pile(flags, {furniture={
+            type=vec({[df.furniture_type.WHEELBARROW]=1})}})
+        local wb = mock_item(df.item_type.TOOL,
+            {subtype=wheelbarrow, mat=0, mindx=0})
+        local bk = mock_item(df.item_type.TOOL,
+            {subtype=bookcase, mat=0, mindx=0})
+        expect.true_(m.pile_accepts(wb_pile, wb))
+        expect.false_(m.pile_accepts(wb_pile, bk))
+
+        -- the same wheelbarrow must not leak into a finished-goods
+        -- pile even when its TOOL slot is enabled
+        local flags2 = base_flags()
+        flags2.finished_goods = true
+        local fg_vec = vec({})
+        fg_vec[df.item_type.TOOL] = 1
+        local fg_pile = mock_pile(flags2, {finished_goods={type=fg_vec}})
+        expect.false_(m.pile_accepts(fg_pile, wb))
+
+        -- a small tool (jug: no FURNITURE flag, no bucket use) is
+        -- finished-goods only
+        local jug = find_tool(function(d)
+            return not d.flags.FURNITURE and #d.tool_use > 0
+                and not has_use(d, df.tool_uses.HEAVY_OBJECT_HAULING)
+                and not has_use(d, df.tool_uses.TRACK_CART)
+                and not has_use(d, df.tool_uses.FOOD_STORAGE)
+        end)
+        expect.true_(jug ~= nil)
+        local jug_item = mock_item(df.item_type.TOOL,
+            {subtype=jug, mat=0, mindx=0})
+        expect.true_(m.pile_accepts(fg_pile, jug_item))
+        expect.false_(m.pile_accepts(wb_pile, jug_item))
+    end)
+end
+
 function test.unhandled_type_rejects()
     run(function()
         local flags = base_flags()
         for k in pairs(flags) do flags[k] = true end
         local pile = mock_pile(flags, {})
-        -- TOOL is deliberately unsupported: its furniture slot depends
-        -- on itemdef flags we cannot map
-        local tool = mock_item(df.item_type.TOOL)
-        expect.false_(m.pile_accepts(pile, tool))
+        -- loose vermin have no provable home in any category
+        local vermin = mock_item(df.item_type.VERMIN)
+        expect.false_(m.pile_accepts(pile, vermin))
     end)
 end
