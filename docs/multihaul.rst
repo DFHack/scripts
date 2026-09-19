@@ -39,11 +39,15 @@ Usage
         ``multihaul weight auto`` to derive the cap from each citizen's
         strength and body size instead (a typical dwarf can manage roughly
         three boulders), or ``multihaul weight unlimited`` to remove it.
-    ``multihaul types same|all``
+    ``multihaul types same|all|pile``
         ``same`` (default) only grabs loose items of the same type as the
         job's item. ``all`` also grabs items of other types that a different
         haul job has already claimed for the same destination, effectively
-        letting one trip do the work of several jobs.
+        letting one trip do the work of several jobs. ``pile`` is like
+        ``all``, plus it grabs unclaimed items of any type that the
+        destination stockpile's filter provably accepts, so a dwarf heading
+        to a mixed goods pile sweeps up everything nearby that belongs
+        there.
     ``multihaul targets piles|all``
         ``piles`` (default) only piggybacks stockpile jobs. ``all`` also
         piggybacks loads destined for minecarts, barrels, and bins, where

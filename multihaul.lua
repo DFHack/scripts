@@ -24,9 +24,13 @@ Usage::
     multihaul weight auto    (derive the cap per dwarf from their
                              strength and body size)
     multihaul weight unlimited
-    multihaul types same|all (default same; "all" also grabs items that
+    multihaul types same|all|pile
+                             (default same; "all" also grabs items that
                              other haul jobs are taking to the same
-                             destination, regardless of type)
+                             destination, regardless of type; "pile" is
+                             like "all" plus unclaimed items of any type
+                             the destination stockpile's filter provably
+                             accepts)
     multihaul targets piles|all
                              (default piles; "all" also piggybacks loads
                              into minecarts, barrels, and bins)
@@ -49,7 +53,7 @@ s_max = s_max or 4
 s_radius = s_radius or 2
 s_fetch = s_fetch or 8
 s_weight = s_weight or 0
-s_types_all = s_types_all or false
+s_types = s_types or (s_types_all and 'all' or 'same')
 s_targets_all = s_targets_all or false
 
 -- transient state
@@ -72,7 +76,7 @@ local function persist_state()
         s_radius=s_radius,
         s_fetch=s_fetch,
         s_weight=s_weight,
-        s_types_all=s_types_all,
+        s_types=s_types,
         s_targets_all=s_targets_all,
     })
 end
@@ -84,7 +88,9 @@ local function load_state()
     s_radius = data.s_radius or 2
     s_fetch = data.s_fetch or 8
     s_weight = data.s_weight or 0
-    s_types_all = data.s_types_all or false
+    -- s_types_all was the original persisted shape: a boolean that is
+    -- now the 'same'/'all' modes of s_types
+    s_types = data.s_types or (data.s_types_all and 'all' or 'same')
     s_targets_all = data.s_targets_all or false
 end
 
@@ -186,6 +192,191 @@ local function stockpile_assigned(item)
     return ok and pile ~= nil
 end
 
+-- the settings vectors surface as numbers (0/1), not booleans, and 0 is
+-- truthy in Lua -- normalize to a real boolean. an empty vector means
+-- the sub-filter was never configured (DF populates it lazily when the
+-- settings panel opens), which is the default "all allowed" state
+local function vget(vec, idx)
+    if #vec == 0 then return true end
+    if idx == nil or idx < 0 or idx >= #vec then return false end
+    local v = vec[idx]
+    return v ~= nil and v ~= false and v ~= 0
+end
+
+-- 'GLASS_GREEN' -> 'GlassGreen', matching the stockpile_*_mat enum names
+local function enum_slot(enum, mat_id)
+    local name = mat_id:lower():gsub('_(%l)', string.upper)
+        :gsub('^%l', string.upper)
+    return enum[name]
+end
+
+-- does the item's material pass a mats/other_mats pair? inorganic
+-- materials index into mats except glass, which lives in other_mats;
+-- organic and builtin materials map to other_mats slots via material id
+local function mat_ok(item, info, mats, other_mats, enum)
+    if item:getMaterial() == 0 then
+        local mi = item:getMaterialIndex()
+        local inorg = df.global.world.raws.inorganics.all[mi]
+        if inorg and inorg.id:sub(1, 6) == 'GLASS_' then
+            -- the material id of inorganic items is blank, so glass has
+            -- to be detected through the inorganic raw
+            local slot = enum_slot(enum, inorg.id)
+            return slot ~= nil and vget(other_mats, slot)
+        end
+        return vget(mats, mi)
+    end
+    if info == nil or info.material == nil then return false end
+    local id = info.material.id
+    local slot = enum_slot(enum, id)
+    if slot == nil and info.plant then
+        slot = enum[id == 'WOOD' and 'Wood' or 'Plant']
+    end
+    return slot ~= nil and vget(other_mats, slot)
+end
+
+-- a category that was never opened in the pile UI leaves its quality
+-- arrays entirely unset; like an empty vector, that means all allowed
+local function all_unset(vec)
+    for i = 0, #vec - 1 do
+        if vec[i] ~= 0 and vec[i] ~= false and vec[i] ~= nil then
+            return false
+        end
+    end
+    return true
+end
+
+-- core quality covers the item itself; total quality covers each
+-- improvement. undecorated items count their own quality as total
+local function quality_ok(item, params)
+    if all_unset(params.quality_core) and all_unset(params.quality_total) then
+        return true
+    end
+    local q = item:getQuality()
+    if not (vget(params.quality_core, q) and vget(params.quality_total, q)) then
+        return false
+    end
+    for _, imp in ipairs(item.improvements) do
+        if not vget(params.quality_total, imp.quality) then return false end
+    end
+    return true
+end
+
+-- usable/unusable and dyed/undyed need civ-context and dye state we
+-- cannot read reliably, so a pile that restricts either is a reject.
+-- both-unset again means unconfigured = all allowed
+local function unrestricted(a, b)
+    return (a and b) or (not a and not b)
+end
+
+-- color restrictions only apply to dyed goods; since dye state is not
+-- readable, any configured restriction is a reject
+local function colors_ok(params)
+    if all_unset(params.color) then return true end
+    for i = 0, #params.color - 1 do
+        if params.color[i] == 0 or params.color[i] == false then
+            return false
+        end
+    end
+    return true
+end
+
+-- does the pile's filter provably accept this item? DF exposes no
+-- item-vs-filter check, so this re-implements matching for the
+-- categories whose settings have usable indices (stone, wood,
+-- bars/blocks, gems, coins, weapons/trapcomps/ammo, armor, furniture,
+-- finished goods). Anything we cannot prove is rejected, so a wrong
+-- answer never mis-stores an item; it only means fewer extras are
+-- grabbed. Exported for tests.
+function pile_accepts(pile, item)
+    if not pile or df.isvalid(pile) ~= 'ref' then return false end
+    -- a links-only pile only receives items delivered via its links;
+    -- opportunistic extras would violate that intent
+    if pile.stockpile_flag.use_links_only then return false end
+    local s = pile.settings
+    local f = s.flags
+    local it = item:getType()
+    -- the raw field names differ per item class; the vmethods always work
+    local mi = item:getMaterialIndex()
+    local st = item:getSubtype()
+    local info = dfhack.matinfo.decode(item)
+
+    if it == df.item_type.BOULDER then
+        return f.stone and item:getMaterial() == 0
+            and vget(s.stone.mats, mi)
+    elseif it == df.item_type.WOOD then
+        if not f.wood then return false end
+        -- wood.mats is indexed by plant raw index, not material index
+        return info ~= nil and info.plant ~= nil
+            and vget(s.wood.mats, info.plant.index)
+    elseif it == df.item_type.BAR then
+        return f.bars_blocks and mat_ok(item, info, s.bars_blocks.bars_mats,
+            s.bars_blocks.bars_other_mats, df.stockpile_bar_mat)
+    elseif it == df.item_type.BLOCKS then
+        return f.bars_blocks and mat_ok(item, info, s.bars_blocks.blocks_mats,
+            s.bars_blocks.blocks_other_mats, df.stockpile_block_mat)
+    elseif it == df.item_type.ROUGH then
+        if not f.gems then return false end
+        -- other_mats is indexed by mat_type for non-inorganic roughs
+        if item:getMaterial() == 0 then return vget(s.gems.rough_mats, mi) end
+        return vget(s.gems.rough_other_mats, item:getMaterial())
+    elseif it == df.item_type.GEM or it == df.item_type.SMALLGEM then
+        if not f.gems then return false end
+        if item:getMaterial() == 0 then return vget(s.gems.cut_mats, mi) end
+        return vget(s.gems.cut_other_mats, item:getMaterial())
+    elseif it == df.item_type.COIN then
+        return f.coins and item:getMaterial() == 0
+            and vget(s.coins.mats, mi)
+    elseif it == df.item_type.WEAPON or it == df.item_type.TRAPCOMP then
+        local p = s.weapons
+        return f.weapons and unrestricted(p.usable, p.unusable)
+            and vget(it == df.item_type.WEAPON
+                and p.weapon_type or p.trapcomp_type, st)
+            and quality_ok(item, p)
+            and mat_ok(item, info, p.mats, p.other_mats,
+                df.stockpile_weapon_mat)
+    elseif it == df.item_type.AMMO then
+        local p = s.ammo
+        return f.ammo and vget(p.type, st) and quality_ok(item, p)
+            and mat_ok(item, info, p.mats, p.other_mats,
+                df.stockpile_ammo_mat)
+    elseif it == df.item_type.ARMOR or it == df.item_type.HELM
+            or it == df.item_type.SHOES or it == df.item_type.GLOVES
+            or it == df.item_type.PANTS or it == df.item_type.SHIELD then
+        local p = s.armor
+        local vec = it == df.item_type.ARMOR and p.body
+            or it == df.item_type.HELM and p.head
+            or it == df.item_type.SHOES and p.feet
+            or it == df.item_type.GLOVES and p.hands
+            or it == df.item_type.PANTS and p.legs
+            or p.shield
+        return f.armor and unrestricted(p.usable, p.unusable)
+            and unrestricted(p.dyed, p.undyed)
+            and vget(vec, st) and quality_ok(item, p)
+            and colors_ok(p)
+            and mat_ok(item, info, p.mats, p.other_mats,
+                df.stockpile_armor_mat)
+    end
+
+    -- furniture and finished goods have type-indexed vectors that only
+    -- hold true for types in their category, so a single generic check
+    -- covers every member type; TOOL items are skipped because their
+    -- furniture_type slot depends on itemdef flags we cannot map
+    local ft = df.furniture_type[df.item_type[it]]
+    if f.furniture and ft and ft >= 0 and vget(s.furniture.type, ft) then
+        return quality_ok(item, s.furniture)
+            and mat_ok(item, info, s.furniture.mats, s.furniture.other_mats,
+                df.stockpile_furniture_mat)
+    end
+    if f.finished_goods and vget(s.finished_goods.type, it) then
+        return unrestricted(s.finished_goods.dyed, s.finished_goods.undyed)
+            and quality_ok(item, s.finished_goods)
+            and colors_ok(s.finished_goods)
+            and mat_ok(item, info, s.finished_goods.mats,
+                s.finished_goods.other_mats, df.stockpile_finished_mat)
+    end
+    return false
+end
+
 -- the item is already claimed by a job; true only if that job is also
 -- delivering it to the given destination
 local function claimed_for_dest(item, dest)
@@ -225,14 +416,21 @@ local function extra_ok(cand, anchor, dest, origin, radius,
     if f.in_job then
         -- claimed item: only valid if a job is already taking it to our
         -- destination (lets one trip do several jobs' work)
-        if not (s_types_all and claimed_for_dest(cand, dest)) then
+        if s_types == 'same' or not claimed_for_dest(cand, dest) then
             return false
         end
     else
-        -- unclaimed items must match the anchor's type: we cannot verify
-        -- that the destination accepts anything else
-        if cand:getType() ~= anchor:getType()
-                or stockpile_assigned(cand)
+        -- unclaimed items: 'same' and 'all' only take the anchor's type
+        -- (a real job claim is the only trustworthy signal there);
+        -- 'pile' also takes anything the destination filter provably
+        -- accepts
+        if cand:getType() ~= anchor:getType() then
+            if not (s_types == 'pile' and dest.pile
+                    and pile_accepts(dest.pile, cand)) then
+                return false
+            end
+        end
+        if stockpile_assigned(cand)
                 or dfhack.buildings.findAtTile(
                     cand.pos.x, cand.pos.y, cand.pos.z) then
             return false
@@ -526,7 +724,7 @@ local function print_status()
         :format(enabled and 'enabled' or 'disabled', s_max, s_radius, s_fetch,
             s_weight == 'auto' and 'auto'
                 or (s_weight > 0 and tostring(s_weight) or 'unlimited'),
-            s_types_all and 'all' or 'same',
+            s_types,
             s_targets_all and 'all' or 'piles'))
 end
 
@@ -600,10 +798,10 @@ elseif cmd == 'weight' then
     persist_state()
     print_status()
 elseif cmd == 'types' then
-    if args[2] ~= 'same' and args[2] ~= 'all' then
-        qerror('usage: multihaul types same|all')
+    if args[2] ~= 'same' and args[2] ~= 'all' and args[2] ~= 'pile' then
+        qerror('usage: multihaul types same|all|pile')
     end
-    s_types_all = args[2] == 'all'
+    s_types = args[2]
     persist_state()
     print_status()
 elseif cmd == 'targets' then
