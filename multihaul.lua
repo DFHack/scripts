@@ -441,6 +441,15 @@ function pile_accepts(pile, item)
     local st = item:getSubtype()
     local info = dfhack.matinfo.decode(item)
 
+    -- pile-wide material gate: organic vs inorganic toggles. only
+    -- mat_type 0 counts as provably inorganic; anything else (organic,
+    -- builtin, or missing material info) is treated as organic
+    local inorg = item:getMaterial() == 0
+    if s.misc and ((inorg and s.misc.allow_inorganic == false)
+            or (not inorg and s.misc.allow_organic == false)) then
+        return false
+    end
+
     if it == df.item_type.BOULDER then
         return f.stone and item:getMaterial() == 0
             and vget(s.stone.mats, mi)

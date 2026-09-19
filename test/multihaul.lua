@@ -62,6 +62,7 @@ local CATEGORY_KEYS = {'stone', 'wood', 'gems', 'bars_blocks', 'coins',
 local function mock_pile(flags, settings, use_links_only)
     local s = {flags=flags}
     for _, k in ipairs(CATEGORY_KEYS) do s[k] = empty_category() end
+    s.misc = {allow_organic=true, allow_inorganic=true}
     for k, v in pairs(settings or {}) do
         s[k] = setmetatable(v, {__index=function() return EMPTY end})
     end
@@ -494,5 +495,26 @@ function test.unhandled_type_rejects()
         -- loose vermin have no provable home in any category
         local vermin = mock_item(df.item_type.VERMIN)
         expect.false_(m.pile_accepts(pile, vermin))
+    end)
+end
+
+function test.misc_organic_gate()
+    run(function()
+        local flags = base_flags()
+        flags.stone = true
+        local no_organic = mock_pile(flags,
+            {stone={mats=vec({})}},
+            false)
+        no_organic.settings.misc.allow_organic = false
+        local no_inorg = mock_pile(flags, {stone={mats=vec({})}})
+        no_inorg.settings.misc.allow_inorganic = false
+        local rock = mock_item(df.item_type.BOULDER, {mat=0, mindx=2})
+        -- inorganic item on an organic-forbidding pile: still fine
+        expect.true_(m.pile_accepts(no_organic, rock))
+        -- inorganic item on an inorganic-forbidding pile: rejected
+        expect.false_(m.pile_accepts(no_inorg, rock))
+        -- organic item on an organic-forbidding pile: rejected
+        local log = mock_item(df.item_type.BOULDER, {mat=42, mindx=1})
+        expect.false_(m.pile_accepts(no_organic, log))
     end)
 end
