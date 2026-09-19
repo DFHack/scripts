@@ -1013,11 +1013,25 @@ local function event_loop()
         dfhack.printerr(('multihaul: %s\n'):format(tostring(units)))
         return
     end
+    local seen = {}
     for _,unit in ipairs(units) do
+        seen[unit.id] = true
         local ok, err = pcall(scan_unit, unit)
         if not ok then
             dfhack.printerr(('multihaul: scan_unit(%d): %s\n'):format(
                 unit.id, tostring(err)))
+        end
+    end
+    -- units that leave the citizen list (died, went off-map) can never
+    -- finish their job and are never scanned again; release their extras
+    -- here instead of letting the tracking entry leak until unload
+    for uid in pairs(tracked) do
+        if not seen[uid] then
+            local ok, err = pcall(release_all, uid)
+            if not ok then
+                dfhack.printerr(('multihaul: release(%d): %s\n'):format(
+                    uid, tostring(err)))
+            end
         end
     end
     sweep_countdown = sweep_countdown - 1
