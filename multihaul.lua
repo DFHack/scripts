@@ -210,9 +210,48 @@ local function enum_slot(enum, mat_id)
     return enum[name]
 end
 
+-- organic settings vectors (food, leather, cloth, sheets) are indexed
+-- by position in world.raws.mat_table.organic_types/indexes[category].
+-- For most categories the entry is a (mat_type, mat_index) pair; for
+-- fish, unprepared fish, and eggs it is a (creature, caste) pair.
+-- organic_pos caches the reverse map per category -- raws are immutable
+-- during play, and pile_accepts is called once per candidate item
+local organic_pos_cache = {}
+local function organic_pos(cat_name, mtype, mindx)
+    local cat = df.organic_mat_category[cat_name]
+    local tab = organic_pos_cache[cat]
+    if not tab then
+        tab = {}
+        local types = df.global.world.raws.mat_table.organic_types[cat]
+        local idxs = df.global.world.raws.mat_table.organic_indexes[cat]
+        for i = 0, #types - 1 do
+            local sub = tab[types[i]]
+            if not sub then
+                sub = {}
+                tab[types[i]] = sub
+            end
+            sub[idxs[i]] = i
+        end
+        organic_pos_cache[cat] = tab
+    end
+    local sub = tab[mtype]
+    return sub and sub[mindx]
+end
+
+-- other_mats slots are filled by the material's organic class, not its
+-- id: a silk glove's material id is just 'THREAD', but its class
+-- membership tells us it belongs in the Silk slot. a material can sit
+-- in several usage-class tables (a plant fiber is also valid Paper/
+-- Paste), so only the material-kind classes are consulted, in order
+local ORGANIC_SLOT_CATS = {'Silk', 'PlantFiber', 'Yarn', 'MetalThread',
+    'Leather', 'Bone', 'Tooth', 'Horn', 'Pearl', 'Shell'}
+local ORGANIC_SLOT_NAME = {PlantFiber='Plant'}
+
 -- does the item's material pass a mats/other_mats pair? inorganic
 -- materials index into mats except glass, which lives in other_mats;
--- organic and builtin materials map to other_mats slots via material id
+-- organic materials map to other_mats slots via material id first, then
+-- via their organic class (a silk glove's material id is just 'THREAD',
+-- its class tells us it belongs in the Silk slot)
 local function mat_ok(item, info, mats, other_mats, enum)
     if item:getMaterial() == 0 then
         local mi = item:getMaterialIndex()
@@ -231,8 +270,72 @@ local function mat_ok(item, info, mats, other_mats, enum)
     if slot == nil and info.plant then
         slot = enum[id == 'WOOD' and 'Wood' or 'Plant']
     end
+    if slot == nil then
+        for _, cat_name in ipairs(ORGANIC_SLOT_CATS) do
+            if organic_pos(cat_name, item:getMaterial(),
+                    item:getMaterialIndex()) then
+                slot = enum[ORGANIC_SLOT_NAME[cat_name] or cat_name]
+                break
+            end
+        end
+    end
     return slot ~= nil and vget(other_mats, slot)
 end
+
+local CRITTER_CATS = {Fish=true, UnpreparedFish=true, Eggs=true}
+
+local function organic_item_pos(cat_name, item)
+    local mtype, mindx
+    if CRITTER_CATS[cat_name] then
+        mtype, mindx = item.race, item.caste
+    else
+        mtype, mindx = item:getMaterial(), item:getMaterialIndex()
+    end
+    if not mtype or not mindx or mtype < 0 or mindx < 0 then return nil end
+    return organic_pos(cat_name, mtype, mindx)
+end
+
+-- item types the food filter covers, each mapped to the (settings
+-- vector, organic category) pairs it can match
+local FOOD_SPECS = {
+    [df.item_type.MEAT] = {{'meat', 'Meat'}},
+    [df.item_type.FISH] = {{'fish', 'Fish'}},
+    [df.item_type.FISH_RAW] = {{'unprepared_fish', 'UnpreparedFish'}},
+    [df.item_type.EGG] = {{'egg', 'Eggs'}},
+    [df.item_type.PLANT] = {{'plants', 'Plants'}},
+    [df.item_type.DRINK] = {{'drink_plant', 'PlantDrink'},
+                          {'drink_animal', 'CreatureDrink'}},
+    [df.item_type.CHEESE] = {{'cheese_plant', 'PlantCheese'},
+                           {'cheese_animal', 'CreatureCheese'}},
+    [df.item_type.SEEDS] = {{'seeds', 'Seed'}},
+    [df.item_type.PLANT_GROWTH] = {{'leaves', 'PlantGrowth'}},
+    [df.item_type.POWDER_MISC] = {{'powder_plant', 'PlantPowder'},
+                                {'powder_creature', 'CreaturePowder'}},
+    [df.item_type.GLOB] = {{'glob', 'Glob'}, {'glob_paste', 'Paste'},
+                         {'glob_pressed', 'Pressed'}},
+    [df.item_type.LIQUID_MISC] = {{'liquid_plant', 'PlantLiquid'},
+                                {'liquid_animal', 'CreatureLiquid'},
+                                {'liquid_misc', 'MiscLiquid'}},
+}
+
+-- threads and cloth are gated by which organic class the material is in
+local CLOTH_SPECS = {
+    [df.item_type.THREAD] = {{'thread_silk', 'Silk'},
+                            {'thread_plant', 'PlantFiber'},
+                            {'thread_yarn', 'Yarn'},
+                            {'thread_metal', 'MetalThread'}},
+    [df.item_type.CLOTH] = {{'cloth_silk', 'Silk'},
+                           {'cloth_plant', 'PlantFiber'},
+                           {'cloth_yarn', 'Yarn'},
+                           {'cloth_metal', 'MetalThread'}},
+}
+
+-- corpsepiece materials that have their own per-race toggle in the
+-- refuse filter; pieces of other materials must pass all of them
+local PIECE_PART_VEC = {
+    SKULL='skulls', BONE='bones', HAIR='hair', SHELL='shells',
+    TOOTH='teeth', HORN='horns', HOOF='horns',
+}
 
 -- a category that was never opened in the pile UI leaves its quality
 -- arrays entirely unset; like an empty vector, that means all allowed
@@ -255,23 +358,60 @@ local function quality_ok(item, params)
     if not (vget(params.quality_core, q) and vget(params.quality_total, q)) then
         return false
     end
-    for _, imp in ipairs(item.improvements) do
-        if not vget(params.quality_total, imp.quality) then return false end
+    -- improvements only exist on item_constructed subclasses
+    if df.item_constructed:is_instance(item) then
+        for _, imp in ipairs(item.improvements) do
+            if not vget(params.quality_total, imp.quality) then
+                return false
+            end
+        end
     end
     return true
 end
 
--- usable/unusable and dyed/undyed need civ-context and dye state we
--- cannot read reliably, so a pile that restricts either is a reject.
--- both-unset again means unconfigured = all allowed
+-- usable/unusable needs civ-context we cannot read reliably, so a pile
+-- that restricts it is a reject. both-unset again means unconfigured =
+-- all allowed
 local function unrestricted(a, b)
     return (a and b) or (not a and not b)
 end
 
--- color restrictions only apply to dyed goods; since dye state is not
--- readable, any configured restriction is a reject
-local function colors_ok(params)
+-- the dye on an item is a COLORATION improvement whose dye material
+-- reports the stockpile color index via mill_dye_color. returns the
+-- color index, false when undyed, nil when dyed but undecidable
+local function dye_color(item)
+    if not df.item_constructed:is_instance(item) then return false end
+    for _, imp in ipairs(item.improvements) do
+        if imp:getType() == df.improvement_type.COLORATION then
+            local info = dfhack.matinfo.decode(imp.dye_matgloss,
+                imp.dye_material)
+            if info and info.material then
+                local c = info.material.mill_dye_color
+                if c and c >= 0 then return c end
+            end
+            return nil
+        end
+    end
+    return false
+end
+
+-- dyed/undyed is a real filter pair; equal values (both on or the
+-- unconfigured both-off) accept everything. an unreadable dye still
+-- counts as dyed -- the coloration improvement exists even when its
+-- profile is empty
+local function dye_ok(item, params)
+    if params.dyed == params.undyed then return true end
+    return (dye_color(item) ~= false) == params.dyed
+end
+
+-- the color vector gates the dye color of dyed goods; undyed items
+-- carry no dye color so they pass. when the dye cannot be resolved,
+-- only a fully-enabled vector is provably compatible
+local function colors_ok(item, params)
     if all_unset(params.color) then return true end
+    local c = dye_color(item)
+    if c == false then return true end
+    if c ~= nil then return vget(params.color, c) end
     for i = 0, #params.color - 1 do
         if params.color[i] == 0 or params.color[i] == false then
             return false
@@ -281,12 +421,13 @@ local function colors_ok(params)
 end
 
 -- does the pile's filter provably accept this item? DF exposes no
--- item-vs-filter check, so this re-implements matching for the
--- categories whose settings have usable indices (stone, wood,
+-- item-vs-filter check, so this re-implements matching for every
+-- category whose settings have usable indices: stone, wood,
 -- bars/blocks, gems, coins, weapons/trapcomps/ammo, armor, furniture,
--- finished goods). Anything we cannot prove is rejected, so a wrong
--- answer never mis-stores an item; it only means fewer extras are
--- grabbed. Exported for tests.
+-- finished goods, food, leather, cloth, sheets, corpses, corpse
+-- pieces/remains, and caged/trapped animals. Anything we cannot prove is
+-- rejected, so a wrong answer never mis-stores an item; it only means
+-- fewer extras are grabbed. Exported for tests.
 function pile_accepts(pile, item)
     if not pile or df.isvalid(pile) ~= 'ref' then return false end
     -- a links-only pile only receives items delivered via its links;
@@ -350,11 +491,104 @@ function pile_accepts(pile, item)
             or it == df.item_type.PANTS and p.legs
             or p.shield
         return f.armor and unrestricted(p.usable, p.unusable)
-            and unrestricted(p.dyed, p.undyed)
+            and dye_ok(item, p)
             and vget(vec, st) and quality_ok(item, p)
-            and colors_ok(p)
+            and colors_ok(item, p)
             and mat_ok(item, info, p.mats, p.other_mats,
                 df.stockpile_armor_mat)
+    end
+
+    if it == df.item_type.FOOD then
+        -- prepared meals are a single toggle, not a vector
+        return f.food and s.food.prepared_meals == true
+    end
+    local fspec = FOOD_SPECS[it]
+    if fspec then
+        if not f.food then return false end
+        for _, spec in ipairs(fspec) do
+            local pos = organic_item_pos(spec[2], item)
+            if pos and vget(s.food[spec[1]], pos) then return true end
+        end
+        return false
+    end
+
+    if it == df.item_type.SKIN_TANNED then
+        local p = s.leather
+        local pos = organic_item_pos('Leather', item)
+        return f.leather and pos ~= nil and vget(p.mats, pos)
+            and dye_ok(item, p) and colors_ok(item, p)
+    end
+    local cspec = CLOTH_SPECS[it]
+    if cspec then
+        local p = s.cloth
+        if not f.cloth then return false end
+        if not dye_ok(item, p) or not colors_ok(item, p) then
+            return false
+        end
+        for _, spec in ipairs(cspec) do
+            local pos = organic_item_pos(spec[2], item)
+            if pos and vget(p[spec[1]], pos) then return true end
+        end
+        return false
+    end
+    if it == df.item_type.SHEET then
+        if not f.sheet then return false end
+        local pos = organic_item_pos('Paper', item)
+        if pos and vget(s.sheet.paper, pos) then return true end
+        pos = organic_item_pos('Parchment', item)
+        return pos ~= nil and vget(s.sheet.parchment, pos)
+    end
+    if it == df.item_type.CORPSE then
+        -- citizen corpses are graveyard-bound, wildlife goes to refuse;
+        -- either filter accepting the race means DF stores it there
+        if f.corpses and vget(s.corpses.corpses, item.race) then
+            return true
+        end
+        return f.refuse and vget(s.refuse.type, it)
+            and vget(s.refuse.corpses, item.race)
+    end
+    if it == df.item_type.CORPSEPIECE or it == df.item_type.REMAINS then
+        if not (f.refuse and vget(s.refuse.type, it)) then
+            return false
+        end
+        local race = item.race
+        if not vget(s.refuse.body_parts, race) then return false end
+        -- pieces of specific part materials must also pass that part's
+        -- per-race toggle; raw hide has its own freshness flags
+        local mat_id = info and info.material and info.material.id
+        if mat_id == 'SKIN' then
+            return s.refuse[item.flags.rotten
+                and 'rotten_raw_hide' or 'fresh_raw_hide']
+        end
+        local vec = mat_id and PIECE_PART_VEC[mat_id]
+        if vec then return vget(s.refuse[vec], race) end
+        -- unrecognized part material: only provably allowed when the
+        -- race is enabled in every part-kind vector
+        for _, v in ipairs({'skulls', 'bones', 'hair', 'shells', 'teeth',
+                'horns'}) do
+            if not vget(s.refuse[v], race) then return false end
+        end
+        return true
+    end
+    if it == df.item_type.CAGE or it == df.item_type.ANIMALTRAP then
+        if f.animals then
+            local unit
+            for _, ref in ipairs(item.general_refs) do
+                if df.general_ref_contains_unitst:is_instance(ref) then
+                    unit = df.unit.find(ref.unit_id)
+                    break
+                end
+            end
+            if unit then
+                if vget(s.animals.enabled, unit.race) then return true end
+            elseif (it == df.item_type.CAGE and s.animals.empty_cages)
+                    or (it == df.item_type.ANIMALTRAP
+                        and s.animals.empty_traps) then
+                return true
+            end
+        end
+        -- cages and traps without an accepted occupant may still be
+        -- storable as furniture, so fall through
     end
 
     -- furniture and finished goods have type-indexed vectors that only
@@ -368,9 +602,9 @@ function pile_accepts(pile, item)
                 df.stockpile_furniture_mat)
     end
     if f.finished_goods and vget(s.finished_goods.type, it) then
-        return unrestricted(s.finished_goods.dyed, s.finished_goods.undyed)
+        return dye_ok(item, s.finished_goods)
             and quality_ok(item, s.finished_goods)
-            and colors_ok(s.finished_goods)
+            and colors_ok(item, s.finished_goods)
             and mat_ok(item, info, s.finished_goods.mats,
                 s.finished_goods.other_mats, df.stockpile_finished_mat)
     end
