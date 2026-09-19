@@ -58,7 +58,7 @@ s_targets_all = s_targets_all or false
 
 -- transient state
 -- unit_id -> {
---     job_id=number, primary_id=number, extras={item_id -> item},
+--     job_id=number, primary_id=number, extras={item_id -> {item,w}},
 --     weight=number (weight of primary + container + extras),
 --     pile=building        (stockpile destination), or
 --     container=item       (vehicle/barrel/bin destination)
@@ -83,15 +83,19 @@ end
 
 local function load_state()
     local data = dfhack.persistent.getSiteData(GLOBAL_KEY, {})
-    enabled = data.enabled or false
-    s_max = data.s_max or 4
-    s_radius = data.s_radius or 2
-    s_fetch = data.s_fetch or 8
-    s_weight = data.s_weight or 0
+    enabled = not not data.enabled
+    s_max = math.max(1, math.floor(tonumber(data.s_max) or 4))
+    s_radius = math.max(0, math.floor(tonumber(data.s_radius) or 2))
+    s_fetch = math.max(0, math.floor(tonumber(data.s_fetch) or 8))
+    s_weight = data.s_weight == 'auto' and 'auto'
+        or math.max(0, math.floor(tonumber(data.s_weight) or 0))
     -- s_types_all was the original persisted shape: a boolean that is
     -- now the 'same'/'all' modes of s_types
     s_types = data.s_types or (data.s_types_all and 'all' or 'same')
-    s_targets_all = data.s_targets_all or false
+    if s_types ~= 'same' and s_types ~= 'all' and s_types ~= 'pile' then
+        s_types = 'same'
+    end
+    s_targets_all = not not data.s_targets_all
 end
 
 local function get_job_stockpile(job)
@@ -657,32 +661,34 @@ end
 
 -- the item is already claimed by a job; true only if that job is also
 -- delivering it to the given destination
-local function claimed_for_dest(item, dest)
+-- module-level for unit tests
+function claimed_for_dest(item, dest)
     if not item.flags.in_job then return false end
     for _,sref in ipairs(item.specific_refs) do
         if sref.type == df.specific_ref_type.JOB and sref.data.job
                 and df.isvalid(sref.data.job) == 'ref' then
-            local job = sref.data.job
-            if job.job_type == df.job_type.StoreItemInStockpile
-                    and dest.pile
-                    and get_job_stockpile(job) == dest.pile then
+            -- resolve the claiming job the same way ours are resolved;
+            -- unresolvable jobs (e.g. wheelbarrow-assisted hauls, which
+            -- already multi-haul on their own) are not stealable
+            local other = get_job_dest(sref.data.job)
+            if other and ((dest.pile and other.pile == dest.pile)
+                    or (dest.container
+                        and other.container == dest.container)) then
                 return true
-            end
-            if dest.container then
-                local other = get_job_dest(job)
-                if other and other.container == dest.container then
-                    return true
-                end
             end
         end
     end
     return false
 end
 
-local function extra_ok(cand, anchor, dest, origin, radius,
-        taken_weight, cap)
+-- module-level for unit tests
+function extra_ok(cand, anchor, dest, origin, radius, taken_weight, cap)
     local f = cand.flags
-    if cand.id == anchor.id or not f.on_ground or f.in_inventory
+    -- the destination container itself (e.g. a minecart waiting on the
+    -- ground for its StoreItemInVehicle job) is a claimed item whose job
+    -- matches our destination; it must never be pocketed as an extra
+    if cand.id == anchor.id or cand == dest.container
+            or not f.on_ground or f.in_inventory
             or f.in_building or f.forbid or f.owned or f.hostile
             or f.trader or f.spider_web or f.construction or f.encased
             or f.removed or f.garbage_collect or f.rotten or f.dump
@@ -784,8 +790,9 @@ local function release_all(unit_id)
             drop_pos = unit.pos
         end
     end
-    for item_id, item in pairs(t.extras) do
+    for item_id, e in pairs(t.extras) do
         t.extras[item_id] = nil
+        local item = e.item
         -- if a real job claimed the extra in the meantime its in_job flag
         -- is legitimate; leave it alone
         if df.isvalid(item) == 'ref' and not real_job_claim(item) then
@@ -848,14 +855,35 @@ local function effective_weight_cap(unit)
     return s_weight
 end
 
+-- drop an extra from tracking and credit its weight back so later scans
+-- do not see a cap inflated by items no longer riding along
+local function drop_extra(t, item_id)
+    local e = t.extras[item_id]
+    if not e then return end
+    t.extras[item_id] = nil
+    t.weight = t.weight - (e.w or 0)
+end
+
 -- attach extras near origin until the count and weight caps are reached,
--- nearest first
+-- nearest first. candidates come from the map blocks overlapping the
+-- search square instead of a full IN_PLAY scan (tens of thousands of
+-- items in a mature fort); held and contained items are not registered
+-- in block item lists, which filters out a large share of rejects upfront
 local function grab_extras(t, unit, dest, anchor, origin, radius)
     local cands = {}
-    for _,cand in ipairs(df.global.world.items.other[
-            df.items_other_id.IN_PLAY]) do
-        if near(cand.pos, origin, radius) then
-            cands[#cands+1] = cand
+    local bx1 = math.max(0, math.floor((origin.x - radius) / 16))
+    local by1 = math.max(0, math.floor((origin.y - radius) / 16))
+    local bx2 = math.floor((origin.x + radius) / 16)
+    local by2 = math.floor((origin.y + radius) / 16)
+    for by = by1, by2 do
+        for bx = bx1, bx2 do
+            local blk = dfhack.maps.getTileBlock(bx * 16, by * 16, origin.z)
+            if blk then
+                for _,id in ipairs(blk.items) do
+                    local cand = df.item.find(id)
+                    if cand then cands[#cands+1] = cand end
+                end
+            end
         end
     end
     table.sort(cands, function(a, b)
@@ -869,8 +897,9 @@ local function grab_extras(t, unit, dest, anchor, origin, radius)
                 and dfhack.items.moveToInventory(
                     cand, unit, df.inv_item_role_type.Hauled, -1) then
             cand.flags.in_job = true
-            t.extras[cand.id] = cand
-            t.weight = t.weight + item_weight(cand)
+            local w = item_weight(cand)
+            t.extras[cand.id] = {item=cand, w=w}
+            t.weight = t.weight + w
         end
     end
 end
@@ -919,7 +948,8 @@ local function scan_unit(unit)
     else
         -- the game drops non-job-linked hauled items; keep re-attaching our
         -- extras while the job is in flight so they ride along
-        for item_id, extra in pairs(t.extras) do
+        for item_id, e in pairs(t.extras) do
+            local extra = e.item
             local valid = df.isvalid(extra) == 'ref'
             local real_claim = valid and real_job_claim(extra)
             if not valid or real_claim or extra.flags.forbid
@@ -928,17 +958,17 @@ local function scan_unit(unit)
                 if valid and not real_claim then
                     extra.flags.in_job = false
                 end
-                t.extras[item_id] = nil
+                drop_extra(t, item_id)
             elseif t.pile and extra.flags.on_ground
                     and dfhack.buildings.findAtTile(
                         extra.pos.x, extra.pos.y, extra.pos.z) == t.pile then
                 -- the game dropped it directly inside the pile: done
                 extra.flags.in_job = false
-                t.extras[item_id] = nil
+                drop_extra(t, item_id)
             elseif t.container and contained_in(extra) == t.container then
                 -- it is already inside the destination container: done
                 extra.flags.in_job = false
-                t.extras[item_id] = nil
+                drop_extra(t, item_id)
             elseif not extra.flags.in_inventory then
                 if dfhack.items.moveToInventory(
                         extra, unit, df.inv_item_role_type.Hauled, -1) then
@@ -977,8 +1007,13 @@ end
 local sweep_countdown = 0
 
 local function event_loop()
-    if not enabled then return end
-    for _,unit in ipairs(dfhack.units.getCitizens()) do
+    if not enabled or not dfhack.isMapLoaded() then return end
+    local ok, units = pcall(dfhack.units.getCitizens)
+    if not ok then
+        dfhack.printerr(('multihaul: %s\n'):format(tostring(units)))
+        return
+    end
+    for _,unit in ipairs(units) do
         local ok, err = pcall(scan_unit, unit)
         if not ok then
             dfhack.printerr(('multihaul: scan_unit(%d): %s\n'):format(
@@ -993,6 +1028,11 @@ local function event_loop()
             dfhack.printerr(('multihaul: sweep: %s\n'):format(tostring(err)))
         end
     end
+end
+
+-- scheduleEvery invokes the callback immediately and re-arms after each
+-- call, so this both starts the first scan and keeps the chain alive
+local function start()
     repeatutil.scheduleUnlessAlreadyScheduled(
         TIMER_NAME, POLL_FRAMES, 'frames', event_loop)
 end
@@ -1011,11 +1051,11 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
         -- best effort: unmark extras before the save is written so they
         -- don't persist with a bogus in_job flag
         for _,t in pairs(tracked) do
-            for _,item in pairs(t.extras) do
+            for _,e in pairs(t.extras) do
                 pcall(function()
-                    if df.isvalid(item) == 'ref'
-                            and not real_job_claim(item) then
-                        item.flags.in_job = false
+                    if df.isvalid(e.item) == 'ref'
+                            and not real_job_claim(e.item) then
+                        e.item.flags.in_job = false
                     end
                 end)
             end
@@ -1023,7 +1063,7 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
         tracked = {}
     elseif sc == SC_WORLD_LOADED then
         load_state()
-        if enabled then event_loop() end
+        if enabled then start() end
     end
 end
 
@@ -1041,7 +1081,7 @@ if cmd == 'enable' then
     enabled = true
     persist_state()
     sweep_orphans()
-    event_loop()
+    start()
     print_status()
 elseif cmd == 'disable' then
     enabled = false
@@ -1050,15 +1090,27 @@ elseif cmd == 'disable' then
     persist_state()
     print_status()
 elseif cmd == 'max' then
-    s_max = math.max(1, math.floor(tonumber(args[2]) or s_max))
+    local n = tonumber(args[2])
+    if args[2] ~= nil and not n then
+        qerror('usage: multihaul max <n>')
+    end
+    if n then s_max = math.max(1, math.floor(n)) end
     persist_state()
     print_status()
 elseif cmd == 'radius' then
-    s_radius = math.max(0, math.floor(tonumber(args[2]) or s_radius))
+    local n = tonumber(args[2])
+    if args[2] ~= nil and not n then
+        qerror('usage: multihaul radius <n>')
+    end
+    if n then s_radius = math.max(0, math.floor(n)) end
     persist_state()
     print_status()
 elseif cmd == 'fetch' then
-    s_fetch = math.max(0, math.floor(tonumber(args[2]) or s_fetch))
+    local n = tonumber(args[2])
+    if args[2] ~= nil and not n then
+        qerror('usage: multihaul fetch <n>')
+    end
+    if n then s_fetch = math.max(0, math.floor(n)) end
     persist_state()
     print_status()
 elseif cmd == 'weight' then
@@ -1066,7 +1118,7 @@ elseif cmd == 'weight' then
         s_weight = 'auto'
     elseif args[2] == 'unlimited' then
         s_weight = 0
-    else
+    elseif args[2] ~= nil then
         local n = tonumber(args[2])
         if not n then
             qerror('usage: multihaul weight <n>|auto|unlimited')

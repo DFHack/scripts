@@ -1,6 +1,7 @@
--- unit tests for multihaul's pile_accepts destination filter matcher.
--- piles and items are plain mock tables; df enums and the organic
--- material raws come from the real loaded world.
+-- unit tests for multihaul's pile_accepts destination filter matcher and
+-- the extra_ok/claimed_for_dest candidate filters. piles, items, jobs and
+-- refs are plain mock tables; df enums and the organic material raws come
+-- from the real loaded world.
 
 config = {mode = 'fortress', target = 'multihaul'}
 
@@ -26,6 +27,7 @@ local function mock_item(itype, opts)
         id = opts.id or 1,
         flags = opts.flags or {},
         general_refs = {},
+        specific_refs = opts.specific_refs or {},
         pos = {x=0, y=0, z=0},
         race = opts.race or 0,
         caste = opts.caste or 0,
@@ -80,13 +82,24 @@ local DF_PROXY = setmetatable(
      -- improvement-bearing items is proxied to the improvements field
      item_constructed={is_instance=function(_, item)
          return item.improvements ~= nil
+     end},
+     -- mock building-holder general refs carry the building in .bld
+     general_ref_building_holderst={is_instance=function(_, ref)
+         return type(ref) == 'table' and ref.bld ~= nil
+     end},
+     -- mock stockpiles are plain tables carrying .settings
+     building_stockpilest={is_instance=function(_, bld)
+         return type(bld) == 'table' and bld.settings ~= nil
      end}},
     {__index=df})
 local MATINFO_PROXY = setmetatable(
     {decode=function(item) return INFO_MAP[item] end},
     {__index=dfhack.matinfo})
 local DFHACK_PROXY = setmetatable(
-    {matinfo=MATINFO_PROXY},
+    {matinfo=MATINFO_PROXY,
+     -- extra_ok rejects candidates standing on a building tile; mock
+     -- positions never sit on one
+     buildings={findAtTile=function() return nil end}},
     {__index=dfhack})
 
 local function with_info(info_map, fn)
@@ -517,4 +530,139 @@ function test.misc_organic_gate()
         local log = mock_item(df.item_type.BOULDER, {mat=42, mindx=1})
         expect.false_(m.pile_accepts(no_organic, log))
     end)
+end
+
+-- helpers for extra_ok/claimed_for_dest tests: mock jobs and the refs
+-- connecting them to items and buildings
+
+local ORIGIN = {x=0, y=0, z=0}
+
+local function loose(itype, opts)
+    opts = opts or {}
+    opts.flags = opts.flags or {on_ground=true}
+    return mock_item(itype, opts)
+end
+
+local function bld_ref(bld)
+    local r = {bld=bld}
+    function r:getBuilding() return self.bld end
+    return r
+end
+
+local function job_ref(item, job)
+    item.specific_refs = {{type=df.specific_ref_type.JOB, data={job=job}}}
+end
+
+local function pile_job(pile, item)
+    return {job_type=df.job_type.StoreItemInStockpile,
+            general_refs={bld_ref(pile)},
+            items={{role=df.job_role_type.Hauled, item=item}}}
+end
+
+-- s_types/s_targets_all are module globals; restore them even if the
+-- test fails so later tests still see the real settings
+local function with_settings(fn)
+    local saved_types, saved_targets = m.s_types, m.s_targets_all
+    local ok, err = pcall(fn)
+    m.s_types, m.s_targets_all = saved_types, saved_targets
+    if not ok then error(err, 0) end
+end
+
+function test.extra_ok_type_modes()
+    run(function() with_settings(function()
+        local flags = base_flags()
+        flags.wood = true
+        -- a wood pile allowing all wood materials (empty mats vector)
+        local pile = mock_pile(flags, {wood={mats=vec({})}})
+        local anchor = mock_item(df.item_type.BOULDER, {id=30})
+        local dest = {pile=pile, anchor=anchor}
+        local rock = loose(df.item_type.BOULDER, {id=31})
+        local log = loose(df.item_type.WOOD, {id=32, mat=419, mindx=10})
+        m.s_types = 'same'
+        -- unclaimed same-type items pass, cross-type do not
+        expect.true_(m.extra_ok(rock, anchor, dest, ORIGIN, 2, 0, 0))
+        expect.false_(m.extra_ok(log, anchor, dest, ORIGIN, 2, 0, 0))
+        m.s_types = 'all'
+        -- 'all' widens only through real job claims, not pile filters
+        expect.false_(m.extra_ok(log, anchor, dest, ORIGIN, 2, 0, 0))
+        m.s_types = 'pile'
+        -- 'pile' admits anything the destination filter provably accepts
+        expect.true_(m.extra_ok(rock, anchor, dest, ORIGIN, 2, 0, 0))
+        with_info({[log]={material={id='PLANT:TEST'}, plant={index=0}}},
+            function()
+                expect.true_(m.extra_ok(log, anchor, dest,
+                    ORIGIN, 2, 0, 0))
+            end)
+    end) end)
+end
+
+function test.extra_ok_weight_cap()
+    run(function() with_settings(function()
+        m.s_types = 'same'
+        local pile = mock_pile(base_flags(), {})
+        local anchor = mock_item(df.item_type.BOULDER, {id=60})
+        local dest = {pile=pile, anchor=anchor}
+        local heavy = loose(df.item_type.BOULDER, {id=61})
+        heavy.weight = {whole=500}
+        -- taken 401 + 500 would exceed a 900 cap; exactly 900 is allowed
+        expect.false_(m.extra_ok(heavy, anchor, dest, ORIGIN, 2, 401, 900))
+        expect.true_(m.extra_ok(heavy, anchor, dest, ORIGIN, 2, 400, 900))
+        -- cap 0 means unlimited
+        expect.true_(m.extra_ok(heavy, anchor, dest, ORIGIN, 2, 99999, 0))
+    end) end)
+end
+
+function test.extra_ok_rejects_dest_container()
+    run(function() with_settings(function()
+        m.s_types = 'all'
+        m.s_targets_all = true
+        -- a vehicle sitting on the ground, claimed by the very job we are
+        -- hauling to: claimed_for_dest matches it, but the destination
+        -- itself must never be pocketed as an extra
+        local veh = loose(df.item_type.TOOL, {id=40,
+            flags={on_ground=true, in_job=true}})
+        local load = loose(df.item_type.WOOD, {id=41})
+        local job = {job_type=df.job_type.StoreItemInVehicle,
+            general_refs={},
+            items={{role=df.job_role_type.TargetContainer, item=veh},
+                   {role=df.job_role_type.Hauled, item=load}}}
+        job_ref(veh, job)
+        local dest = {container=veh, anchor=load}
+        expect.true_(m.claimed_for_dest(veh, dest))
+        expect.false_(m.extra_ok(veh, load, dest, ORIGIN, 2, 0, 0))
+    end) end)
+end
+
+function test.claimed_for_dest_pile_matching()
+    run(function() with_settings(function()
+        m.s_types = 'all'
+        local pile = mock_pile(base_flags(), {})
+        local other_pile = mock_pile(base_flags(), {})
+        local dest = {pile=pile,
+                      anchor=mock_item(df.item_type.BOULDER, {id=50})}
+        -- unclaimed item: not claimed for anyone
+        local free = loose(df.item_type.WOOD, {id=51})
+        expect.false_(m.claimed_for_dest(free, dest))
+        -- claimed by a plain haul job to our pile: stealable
+        local same = loose(df.item_type.WOOD, {id=52,
+            flags={on_ground=true, in_job=true}})
+        job_ref(same, pile_job(pile, same))
+        expect.true_(m.claimed_for_dest(same, dest))
+        -- claimed by a job to a different pile: not stealable
+        local away = loose(df.item_type.WOOD, {id=53,
+            flags={on_ground=true, in_job=true}})
+        job_ref(away, pile_job(other_pile, away))
+        expect.false_(m.claimed_for_dest(away, dest))
+        -- claimed by a wheelbarrow-assisted job to our pile: wheelbarrows
+        -- already multi-haul on their own, so the item is left alone
+        local wb = mock_item(df.item_type.TOOL, {id=54})
+        function wb:isWheelbarrow() return true end
+        local carted = loose(df.item_type.WOOD, {id=55,
+            flags={on_ground=true, in_job=true}})
+        local wbjob = pile_job(pile, carted)
+        table.insert(wbjob.items, 1,
+            {role=df.job_role_type.Hauled, item=wb})
+        job_ref(carted, wbjob)
+        expect.false_(m.claimed_for_dest(carted, dest))
+    end) end)
 end
