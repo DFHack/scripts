@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `autosave`: automatically save the game every N minutes of real time
 
 - `devel/infinite-sky-probe`: tool for testing whether infinite sky is working correctly
 - `gui/export-world-map`: New GUI tool to configure world map exports from the embark selection screen.
