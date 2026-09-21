@@ -421,6 +421,19 @@ function Cache_nemesis_all:get_affected_unit_ids()
     return self.ATTRS.affected_unit_ids
 end
 
+-- mandate.timeout_counter increments once per 10 frames
+local function count_expiring_mandates(remaining)
+    local count = 0
+    for _, mandate in ipairs(df.global.world.mandates.all) do
+        if mandate.mode == df.mandate_type.Make and
+            mandate.timeout_limit - mandate.timeout_counter < remaining
+        then
+            count = count + 1
+        end
+    end
+    return count
+end
+
 -- the order of this list controls the order the notifications will appear in the overlay
 NOTIFICATIONS_BY_IDX = {
     {
@@ -585,16 +598,26 @@ NOTIFICATIONS_BY_IDX = {
         desc='Notifies when a production mandate is within 1 month of expiring.',
         default=true,
         dwarf_fn=function()
-            local count = 0
-            for _, mandate in ipairs(df.global.world.mandates.all) do
-                if mandate.mode == df.mandate_type.Make and
-                    mandate.timeout_limit - mandate.timeout_counter < 2500
-                then
-                    count = count + 1
-                end
-            end
+            local count = count_expiring_mandates(2500)
             if count > 0 then
                 return ('%d production mandate%s near deadline'):format(
+                    count,
+                    count == 1 and '' or 's'
+                )
+            end
+        end,
+        on_click=function()
+            gui.simulateInput(dfhack.gui.getDFViewscreen(), 'D_NOBLES')
+        end,
+    },
+    {
+        name='mandates_expiring_early',
+        desc='Notifies when a production mandate is within 3 months of expiring.',
+        default=false,
+        dwarf_fn=function()
+            local count = count_expiring_mandates(10080)
+            if count > 0 then
+                return ('%d production mandate%s expire within 3 months'):format(
                     count,
                     count == 1 and '' or 's'
                 )
