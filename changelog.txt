@@ -28,13 +28,14 @@ Template for new versions:
 
 ## New Tools
 
+- `devel/infinite-sky-probe`: tool for testing whether infinite sky is working correctly
 - `gui/export-world-map`: New GUI tool to configure world map exports from the embark selection screen.
 
 ## New Features
 
 ## Fixes
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
-- `source`: report a useful error when no keyboard cursor is active
+- `caravan`: fix doubled "total value of items marked for trade" after toggling filter options, and keep item marks when switching between filter views in the ``Bring goods to depot`` overlay
 - `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map
 
