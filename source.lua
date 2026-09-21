@@ -132,12 +132,12 @@ function main(args)
     end
 
     local targetPos = guidm.getCursorPos()
-    local index = find_liquid_source_at_pos(targetPos)
 
     if command == 'delete' then
         if not targetPos then
             qerror("Please place the cursor where there is a source to delete")
         end
+        local index = find_liquid_source_at_pos(targetPos)
         if index then
             delete_liquid_source(targetPos)
             print(('Deleted source at %s'):format(formatPos(targetPos)))
