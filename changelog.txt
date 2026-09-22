@@ -39,6 +39,8 @@ Template for new versions:
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
 - `caravan`: fix doubled "total value of items marked for trade" after toggling filter options, and keep item marks when switching between filter views in the ``Bring goods to depot`` overlay
 - `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
+- `gui/settings-manager`: preserve built-in work details added after saved settings were created
+- `gui/settings-manager`: apply imported work details to renamed built-ins and recompute unit labors so imported settings take effect immediately
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map
 
 ## Misc Improvements

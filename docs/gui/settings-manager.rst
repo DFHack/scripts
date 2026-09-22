@@ -50,8 +50,4 @@ Autostart page.
 There is a similar panel on the Labor -> Work Details page that allows for
 saving and restoring of work detail definitions. Be aware that work detail
 assignments to units cannot be saved, so you have to assign the work details to
-individual units after you restore the definitions. Another caveat is that DF
-doesn't evaluate work detail definitions until a change (any change) is made on
-the work details screen. Therefore, after importing work detail definitions,
-including auto-loading them for new embarks, you have to go to the work details
-page and make a change before your imported work details will take effect.
+individual units after you restore the definitions.
