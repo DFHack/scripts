@@ -14,9 +14,8 @@ influences output quality.  Examples::
 
 local artisan_labors = {
     "CARPENTER",
-    "DETAIL",
+    "ENGRAVER",
     "MASON",
-    "ARCHITECT",
     "ANIMALTRAIN",
     "LEATHER",
     "WEAVER",

@@ -21,12 +21,38 @@ end
 --- @return boolean
 function fastReachable(item,wgroups)
     local x, y, z = dfhack.items.getPosition(item)
-    if x then -- item has a valid position
-        local igroup = dfhack.maps.getWalkableGroup(xyz2pos(x, y, z))
-        return not not wgroups[igroup]
-    else
+    if not x then
+        return false -- item has no valid position (e.g., inside inventories)
+    end
+    local igroup = dfhack.maps.getWalkableGroup(xyz2pos(x, y, z))
+    if wgroups[igroup] then
+        return true
+    end
+    -- items on unwalkable building tiles can still be retrieved by standing
+    -- next to the building, unless they are installed parts (use_mode PERM)
+    local bld = dfhack.items.getHolderBuilding(item) or
+            dfhack.buildings.findAtTile(xyz2pos(x, y, z))
+    if not bld or bld:getType() == df.building_type.Construction then
         return false
     end
+    if df.building_actual:is_instance(bld) then
+        for _, ci in ipairs(bld.contained_items) do
+            if ci.item == item then
+                if ci.use_mode == df.building_item_role_type.PERM then
+                    return false
+                end
+                break
+            end
+        end
+    end
+    for bx = bld.x1 - 1, bld.x2 + 1 do
+        for by = bld.y1 - 1, bld.y2 + 1 do
+            if wgroups[dfhack.maps.getWalkableGroup(xyz2pos(bx, by, bld.z))] then
+                return true
+            end
+        end
+    end
+    return false
 end
 
 --- @return table<integer,boolean>

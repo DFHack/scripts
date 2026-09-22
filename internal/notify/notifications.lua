@@ -9,6 +9,12 @@ local repeat_util = require('repeat-util')
 local stuck_squad = reqscript('fix/stuck-squad')
 local warn_stranded = reqscript('warn-stranded')
 
+-- may be nil if the autolabor plugin binary is not loaded
+local ok, autolabor_plugin = pcall(require, 'plugins.autolabor')
+if not ok or not autolabor_plugin.autolabor_getStarvingJobs then
+    autolabor_plugin = nil
+end
+
 local CONFIG_FILE = 'dfhack-config/notify.json'
 
 local buildings = df.global.world.buildings
@@ -710,6 +716,30 @@ NOTIFICATIONS_BY_IDX = {
         default=true,
         dwarf_fn=curry(injured_units, for_injured, 'injured citizen'),
         on_click=curry(zoom_to_next, for_injured),
+    },
+    {
+        name='labor_starvation',
+        desc='Warns when job postings stay unclaimed for more than a day while labormanager (or monitor mode) is active.',
+        default=true,
+        dwarf_fn=function()
+            if not autolabor_plugin then return end
+            local count, job, ticks = autolabor_plugin.autolabor_getStarvingJobs()
+            if count > 0 then
+                local msg = ('task starvation: %d unclaimed job%s'):format(
+                    count, count == 1 and '' or 's')
+                if job then
+                    msg = ('%s (oldest: %s, %d ticks)'):format(msg, job, ticks)
+                end
+                return {{text=msg, pen=COLOR_LIGHTRED}}
+            end
+        end,
+        on_click=function()
+            if not autolabor_plugin then return end
+            local count, _, _, x, y, z = autolabor_plugin.autolabor_getStarvingJobs()
+            if count > 0 and x then
+                dfhack.gui.revealInDwarfmodeMap(xyz2pos(x, y, z), true)
+            end
+        end,
     },
     {
         name='suffocation_adv',

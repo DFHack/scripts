@@ -501,7 +501,47 @@ local function clone_wd_flags(flags)
     }
 end
 
+-- the autolabor plugin provides the labor automation controls; it may be
+-- unavailable if the plugin binary is not loaded
+local ok, autolabor_plugin = pcall(require, 'plugins.autolabor')
+if not ok or not autolabor_plugin.autolabor_getMode then
+    autolabor_plugin = nil
+end
+
+local MODE_LEGACY = 0
+local MODE_MODERN = 1
+local MODE_MONITOR = 2
+
+local function automation_active()
+    return autolabor_plugin and autolabor_plugin.isEnabled()
+end
+
+local function automation_opt()
+    return autolabor_plugin.isEnabled() and
+        autolabor_plugin.autolabor_getMode() or 'off'
+end
+
+local function modern_active()
+    return automation_active() and
+        autolabor_plugin.autolabor_getMode() == MODE_MODERN
+end
+
+local function monitor_active()
+    return automation_active() and
+        autolabor_plugin.autolabor_getMode() == MODE_MONITOR
+end
+
+-- true while an engine that rewrites labors/work details is running;
+-- monitor mode leaves work details alone, so save/load stays available
+local function managed_active()
+    return automation_active() and not monitor_active()
+end
+
 local function save_work_details()
+    if managed_active() then
+        dfhack.printerr('not saving work details while labor automation is active')
+        return
+    end
     local details = {}
     for idx, wd in ipairs(li.work_details) do
         local detail = {
@@ -529,6 +569,12 @@ local function apply_work_detail(detail, wd)
 end
 
 local function load_work_details()
+    -- loading deletes the plugin-managed 'auto:' details out from under the
+    -- running tool (and they are meaningless in legacy mode anyway)
+    if managed_active() then
+        dfhack.printerr('not loading work details while labor automation is active')
+        return
+    end
     if not config.data.work_details or #config.data.work_details < 10 then
         -- not enough data to cover built-in work details
         return
@@ -580,10 +626,10 @@ end
 
 WorkDetailsOverlay = defclass(WorkDetailsOverlay, ImportExportAutoOverlay)
 WorkDetailsOverlay.ATTRS {
-    desc='Adds buttons to the work details screen for saving and restoring settings.',
+    desc='Adds buttons to the work details screen for saving and restoring settings and for controlling labor automation.',
     default_pos={x=80, y=-5},
     viewscreens='dwarfmode/Info/LABOR/WORK_DETAILS/Default',
-    frame={w=35, h=5},
+    frame={w=50, h=5},
     save_label='Save work details',
     load_label='Load work details',
     auto_label='Load for new embarks:',
@@ -601,6 +647,157 @@ function WorkDetailsOverlay:init()
     self.subviews.load.frame.w = 25
     self.subviews.load_flash.frame.t = 1
     self.subviews.load_flash.frame.l = 10
+    if not autolabor_plugin then return end
+    self:addviews{
+        widgets.CycleHotkeyLabel{
+            view_id='labor_mode',
+            frame={t=0, l=0},
+            key='CUSTOM_SHIFT_M',
+            label='Labor automation:',
+            options={
+                {label='off', value='off'},
+                {label='legacy (autolabor)', value=MODE_LEGACY},
+                {label='modern (labormanager)', value=MODE_MODERN},
+                {label='monitor (warnings only)', value=MODE_MONITOR},
+            },
+            initial_option=automation_opt(),
+            on_change=function(val)
+                if val == 'off' then
+                    autolabor_plugin.setEnabled(false)
+                else
+                    autolabor_plugin.autolabor_setMode(val)
+                    if not autolabor_plugin.isEnabled() then
+                        autolabor_plugin.setEnabled(true)
+                    end
+                end
+            end,
+        },
+        widgets.Label{
+            view_id='status_line1',
+            frame={t=1, l=0},
+            text={{text=function()
+                if not autolabor_plugin.isEnabled() then
+                    return 'Labor automation is off.'
+                elseif autolabor_plugin.autolabor_getMode() == MODE_LEGACY then
+                    return 'Legacy mode: edits here have no effect.'
+                elseif autolabor_plugin.autolabor_getMode() == MODE_MONITOR then
+                    return 'Monitor mode: no labor management.'
+                end
+                return "Modern mode: 'auto:' details are managed."
+            end}},
+        },
+        widgets.Label{
+            view_id='status_line2',
+            frame={t=2, l=0},
+            text='Manual edits will be overwritten.',
+            visible=modern_active,
+        },
+        widgets.Label{
+            view_id='priority_label',
+            frame={t=3, l=0, w=9},
+            text='Priority:',
+            visible=modern_active,
+        },
+        widgets.Slider{
+            view_id='balance_slider',
+            frame={t=3, l=10, w=36},
+            num_stops=select('#', autolabor_plugin.autolabor_getBalanceStops()),
+            get_idx_fn=function() return autolabor_plugin.autolabor_getBalance() + 1 end,
+            on_change=function(idx) autolabor_plugin.autolabor_setBalance(idx - 1) end,
+            visible=modern_active,
+        },
+        widgets.Label{
+            view_id='balance_name',
+            frame={t=4, l=0},
+            text={{text=function()
+                local names = {autolabor_plugin.autolabor_getBalanceStops()}
+                return (names[autolabor_plugin.autolabor_getBalance() + 1] or '')
+                    .. '  (staffing <-> skills)'
+            end}},
+            visible=modern_active,
+        },
+        widgets.Label{
+            view_id='role_counts',
+            frame={t=5, l=0},
+            text={{text=function()
+                if monitor_active() then
+                    local n = autolabor_plugin.autolabor_getStarvingJobs()
+                    return ('%d starving job%s'):format(n, n == 1 and '' or 's')
+                end
+                return autolabor_plugin.autolabor_getStatus()
+            end}},
+            visible=function() return modern_active() or monitor_active() end,
+        },
+    }
+end
+
+-- packs the visible rows tightly and shrinks the frame to fit; called on
+-- every render so mode changes made elsewhere are reflected immediately
+function WorkDetailsOverlay:updateAutomationLayout()
+    if not autolabor_plugin then return end
+    local on = automation_active()
+    local modern = modern_active()
+    local monitor = monitor_active()
+    local managed = managed_active()
+    local s = self.subviews
+    -- the save/load feature is unusable while a managing engine runs
+    -- (monitor mode doesn't touch work details, so it stays available);
+    -- hide it entirely so the overlay stays small. assert this every
+    -- render since the 'saved'/'loaded' flash timer can set a button
+    -- visible again
+    s.save.visible = not managed
+    s.load.visible = not managed
+    s.auto.visible = not managed
+    if managed then
+        s.save_flash.visible = false
+        s.load_flash.visible = false
+    end
+
+    local sig = ('%s:%s:%s'):format(on, modern, monitor)
+    if self.automation_sig == sig then return end
+    self.automation_sig = sig
+
+    local t = 0
+    local function place(v)
+        v.frame.t = t
+        t = t + 1
+    end
+    place(s.labor_mode)
+    place(s.status_line1)
+    if modern then
+        place(s.status_line2)
+        s.priority_label.frame.t = t
+        s.balance_slider.frame.t = t
+        t = t + 1
+        place(s.balance_name)
+        place(s.role_counts)
+    elseif monitor then
+        place(s.role_counts)
+    end
+    if not managed then
+        t = t + 1
+        place(s.save)
+        s.save_flash.frame.t = s.save.frame.t
+        place(s.load)
+        s.load_flash.frame.t = s.load.frame.t
+        place(s.auto)
+    end
+    self.frame.h = t + 2
+    self:updateLayout()
+end
+
+function WorkDetailsOverlay:onRenderFrame(dc, rect)
+    self:updateAutomationLayout()
+    WorkDetailsOverlay.super.onRenderFrame(self, dc, rect)
+    -- keep the mode selector truthful if the state changes elsewhere
+    -- (console commands, control panel, another overlay)
+    if autolabor_plugin then
+        local opt = automation_opt()
+        local cycle = self.subviews.labor_mode
+        if cycle:getOptionValue() ~= opt then
+            cycle:setOption(opt)
+        end
+    end
 end
 
 OVERLAY_WIDGETS = {

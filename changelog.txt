@@ -37,6 +37,7 @@ Template for new versions:
 - `exportlegends`: recreate the Classic population and history exports, and add a compact world-map metadata companion with river and road connectivity
 - `gui/mod-manager`: warn when loading a preset that doesn't include vanilla mods that were added to the game after the preset was saved
 - `gui/unit-info-viewer`: the unit character sheet now shows the viewed unit's current and long-term mood, color-coded by stress level
+- `idle-crafting`: support cloth, silk, and yarn crafts
 
 ## Fixes
 - `combine`: dyes are combined again, but only when their ``dye_profile`` matches, so mixed dyes no longer revert to a component dye
@@ -45,6 +46,7 @@ Template for new versions:
 - `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
 - `gui/settings-manager`: preserve built-in work details added after saved settings were created
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map
+- `item`: the ``reachable``/``unreachable`` filters no longer count installed building parts, and now treat loose contents of unwalkable buildings (like bolts loaded in a bolt thrower) as reachable when a citizen can stand next to the building
 
 ## Misc Improvements
 - `caravan`: the ``Bring goods to depot``, ``Trade``, and ``Assign items for display`` overlays now allow searching for items with non-ASCII characters in their description

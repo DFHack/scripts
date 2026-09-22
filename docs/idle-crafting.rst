@@ -58,12 +58,15 @@ jobs and assign them to idle dwarves who have a need for crafting objects. This
 script respects the setting for permitted general work order labors from the "Workers"
 tab.
 
-For workshops without input stockpile links, bone carving and stonecrafting are
-supported, with stonecrafting being the default option. Thus, to designate a
-workshop for bone carving, disable the stonecrafting labor while keeping the
-bone carving labor enabled.
+For workshops without input stockpile links, bone carving, stonecrafting, and
+clothesmaking (cloth, silk, and yarn crafts) are supported. Stonecrafting is
+tried first, then bone carving, then clothesmaking if usable cloth exists
+anywhere on the map. Thus, to designate a workshop for bone carving, disable
+the stonecrafting labor while keeping the bone carving labor enabled. To
+designate a workshop for cloth crafts, disable both stonecrafting and bone
+carving.
 
-For workshops with input stockpile links, the creation of totems, shell crafts,
-and horn crafts are supported as well. In this case, the choice of job is made
-randomly based on the resources available in the input stockpiles (respecting
-the permitted labors from the workshop profile).
+For workshops with input stockpile links, the creation of totems, shell
+crafts, horn crafts, and cloth crafts are supported as well. In this case, the
+choice of job is made randomly based on the resources available in the input
+stockpiles (respecting the permitted labors from the workshop profile).
