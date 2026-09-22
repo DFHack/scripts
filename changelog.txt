@@ -38,6 +38,7 @@ Template for new versions:
 - `caravan`: fix doubled "total value of items marked for trade" after toggling filter options, and keep item marks when switching between filter views in the ``Bring goods to depot`` overlay
 - `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map
+- `source`: report a useful error when no keyboard cursor is active
 
 ## Misc Improvements
 - `caravan`: the ``Bring goods to depot``, ``Trade``, and ``Assign items for display`` overlays now allow searching for items with non-ASCII characters in their description
