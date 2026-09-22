@@ -34,8 +34,9 @@ Template for new versions:
 - `devel/datamine`: watch live values for changes and diff structure snapshots to aid script development and reverse engineering
 
 ## New Features
-- `gui/unit-info-viewer`: the unit character sheet now shows the viewed unit's current and long-term mood, color-coded by stress level
+- `exportlegends`: recreate the Classic population and history exports, and add a compact world-map metadata companion with river and road connectivity
 - `gui/mod-manager`: warn when loading a preset that doesn't include vanilla mods that were added to the game after the preset was saved
+- `gui/unit-info-viewer`: the unit character sheet now shows the viewed unit's current and long-term mood, color-coded by stress level
 - `idle-crafting`: support cloth, silk, and yarn crafts
 
 ## Fixes
