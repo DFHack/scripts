@@ -31,6 +31,7 @@ Template for new versions:
 - `devel/infinite-sky-probe`: tool for testing whether infinite sky is working correctly
 - `fix/stuck-written-materials`: free written materials that are stuck in a non-existent job
 - `gui/export-world-map`: New GUI tool to configure world map exports from the embark selection screen.
+- `multihaul`: optionally let citizens carry extra nearby items to a stockpile in one trip, with configurable item count, radius, carried weight, item types (including a mode that takes whatever the destination pile's filter accepts), and container destinations (disabled by default)
 
 ## New Features
 - `gui/create-item`: quality selection prompt now has 0-5 hotkeys matching the quality levels
