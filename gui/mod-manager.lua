@@ -161,6 +161,19 @@ local function get_active_modlist(viewscreen)
     return t
 end
 
+-- ids of the vanilla mods currently installed with the base game, so presets
+-- can detect when Bay12 adds a new vanilla mod that the preset doesn't cover
+function get_vanilla_mod_ids(viewscreen)
+    local fields = get_modlist_fields("base_available", viewscreen)
+    local ids = {}
+    for i, v in ipairs(fields.id) do
+        if vanilla(fields.src_dir[i]) then
+            table.insert(ids, v.value)
+        end
+    end
+    return ids
+end
+
 --- @return string[]
 --- @return { id: string, new: string }[]
 local function swap_modlist(viewscreen, modlist)
@@ -204,7 +217,11 @@ ModmanageMenu.ATTRS {
 local function save_new_preset(preset_name)
     local viewscreen = get_any_moddable_viewscreen()
     local modlist = get_active_modlist(viewscreen)
-    table.insert(presets_file.data, { name = preset_name, modlist = modlist })
+    table.insert(presets_file.data, {
+        name = preset_name,
+        modlist = modlist,
+        vanilla_mods = get_vanilla_mod_ids(viewscreen),
+    })
     presets_file:write()
 end
 
@@ -225,6 +242,7 @@ local function overwrite_preset(idx)
     local viewscreen = get_any_moddable_viewscreen()
     local modlist = get_active_modlist(viewscreen)
     presets_file.data[idx].modlist = modlist
+    presets_file.data[idx].vanilla_mods = get_vanilla_mod_ids(viewscreen)
     presets_file:write()
 end
 
@@ -272,7 +290,32 @@ local function load_preset(idx, unset_default_on_failure)
     end
 
     local viewscreen = get_any_moddable_viewscreen()
-    local modlist = presets_file.data[idx].modlist
+    local preset = presets_file.data[idx]
+    local modlist = preset.modlist
+
+    -- detect vanilla mods that were added to the base game after this preset
+    -- last recorded the vanilla mod set and that the preset doesn't include
+    local in_modlist = {}
+    for _, v in ipairs(modlist) do
+        in_modlist[v.id] = true
+    end
+    local vanilla_ids = get_vanilla_mod_ids(viewscreen)
+    local new_vanilla = {}
+    if preset.vanilla_mods then
+        local recorded = {}
+        for _, id in ipairs(preset.vanilla_mods) do
+            recorded[id] = true
+        end
+        for _, id in ipairs(vanilla_ids) do
+            if not recorded[id] and not in_modlist[id] then
+                table.insert(new_vanilla, id)
+            end
+        end
+    end
+    -- update the recorded set so the warning only fires once per new mod
+    preset.vanilla_mods = vanilla_ids
+    presets_file:write()
+
     local failures, changes = swap_modlist(viewscreen, modlist)
     local text = {}
 
@@ -309,7 +352,23 @@ local function load_preset(idx, unset_default_on_failure)
         end
     end
 
-    if failed or changed then
+    if #new_vanilla > 0 then
+        if failed or changed then
+            table.insert(text, NEWLINE) -- just to separate the sections
+        end
+        table.insert(text, {
+            text='New vanilla mods are not included in the preset.',
+            pen=COLOR_YELLOW,
+        })
+        table.insert(text, NEWLINE)
+        table.insert(text, NEWLINE)
+        for _, v in ipairs(new_vanilla) do
+            table.insert(text, ('- %s'):format(v))
+            table.insert(text, NEWLINE)
+        end
+    end
+
+    if failed or changed or #new_vanilla > 0 then
         dialogs.showMessage("Warning", text)
     end
 end

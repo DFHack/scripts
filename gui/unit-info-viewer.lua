@@ -4,6 +4,7 @@ local gui = require('gui')
 local widgets = require('gui.widgets')
 
 local skills_progress = reqscript('internal/unit-info-viewer/skills-progress')
+local overall_mood = reqscript('internal/unit-info-viewer/overall-mood')
 
 --------------------------------------------------
 ---------------------- Time ----------------------
@@ -549,6 +550,7 @@ end
 
 OVERLAY_WIDGETS = {
     skillprogress=skills_progress.SkillProgressOverlay,
+    mood=overall_mood.OverallMoodOverlay,
 }
 
 if dfhack_flags.module then

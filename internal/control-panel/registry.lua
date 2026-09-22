@@ -103,6 +103,8 @@ COMMANDS_BY_IDX = {
         params={'--time', '1', '--timeUnits', 'days', '--command', '[', 'fix/stuck-squad', ']'}},
     {command='fix/stuck-worship', group='bugfix', mode='repeat', default=true,
         params={'--time', '1', '--timeUnits', 'days', '--command', '[', 'fix/stuck-worship', '-q', ']'}},
+    {command='fix/stuck-written-materials', group='bugfix', mode='repeat', default=true,
+        params={'--time', '1', '--timeUnits', 'days', '--command', '[', 'fix/stuck-written-materials', ']'}},
     {command='fix/noexert-exhaustion', group='bugfix', mode='repeat', default=true,
         params={'--time', '439', '--timeUnits', 'ticks', '--command', '[', 'fix/noexert-exhaustion', ']'}},
     {command='fix/wildlife', group='bugfix', mode='repeat',

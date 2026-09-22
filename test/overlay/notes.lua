@@ -14,9 +14,15 @@ config = {
 
 local map_points_backup = nil
 local was_overlay_enabled = overlay.isEnabled()
+local was_paused = nil
 
 local function install_notes_overlay(options)
     options = options or {}
+
+    -- the overlay does not draw note pins in text mode unless the game is
+    -- paused, so don't depend on whatever pause state the test harness left
+    was_paused = dfhack.world.ReadPauseState()
+    dfhack.world.SetPauseState(true)
 
     map_points_backup = utils.clone(map_points)
     map_points:resize(0)
@@ -50,6 +56,11 @@ local function cleanup(notes_overlay)
         df.global.plotinfo.waypoints.points[ind - 1] = map_point
     end
     map_points_backup = nil
+
+    if was_paused ~= nil then
+        dfhack.world.SetPauseState(was_paused)
+        was_paused = nil
+    end
 
     reload_notes()
 

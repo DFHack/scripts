@@ -27,18 +27,29 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `fix/stuck-written-materials`: free written materials that are stuck in a non-existent job
+
+- `devel/infinite-sky-probe`: tool for testing whether infinite sky is working correctly
+- `gui/export-world-map`: New GUI tool to configure world map exports from the embark selection screen.
+- `devel/datamine`: watch live values for changes and diff structure snapshots to aid script development and reverse engineering
 
 ## New Features
 - `exportlegends`: recreate the Classic population and history exports, and add a compact world-map metadata companion with river and road connectivity
+- `gui/mod-manager`: warn when loading a preset that doesn't include vanilla mods that were added to the game after the preset was saved
+- `gui/unit-info-viewer`: the unit character sheet now shows the viewed unit's current and long-term mood, color-coded by stress level
 
 ## Fixes
+- `combine`: dyes are combined again, but only when their ``dye_profile`` matches, so mixed dyes no longer revert to a component dye
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
+- `caravan`: fix doubled "total value of items marked for trade" after toggling filter options, and keep item marks when switching between filter views in the ``Bring goods to depot`` overlay
 - `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
+- `gui/settings-manager`: preserve built-in work details added after saved settings were created
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map
 
 ## Misc Improvements
 - `caravan`: the ``Bring goods to depot``, ``Trade``, and ``Assign items for display`` overlays now allow searching for items with non-ASCII characters in their description
 - `caravan`: the ``Trade`` overlay will use the trader's appraisal skill instead of the broker's to round/obfuscate the value of items
+- `gui/quickfort`: transform hotkeys changed from ``()_=`` to ``,.[]`` since ``()`` is easily confused with ``<>`` in the game font
 
 ## Removed
 - `confirm`: removed the ``squad-disband`` and ``hotkey-reset`` confirmations; the game asks for both itself now ("Really disband?" and "Really overwrite")

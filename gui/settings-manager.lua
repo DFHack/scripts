@@ -516,22 +516,53 @@ local function save_work_details()
     config:write()
 end
 
+local function apply_work_detail(detail, wd)
+    local flags = wd.flags or wd.work_detail_flags -- compat for old name
+    detail.name = wd.name
+    detail.icon = wd.icon
+    detail.flags.cannot_be_everybody = flags.cannot_be_everybody
+    detail.flags.no_modify = flags.no_modify
+    detail.flags.mode = flags.mode
+    for i,v in ipairs(wd.allowed_labors) do
+        detail.allowed_labors[i-1] = v
+    end
+end
+
 local function load_work_details()
     if not config.data.work_details or #config.data.work_details < 10 then
         -- not enough data to cover built-in work details
         return
     end
-    li.work_details:resize(#config.data.work_details)
-    -- keep unit assignments for overwritten indices
-    for idx, wd in ipairs(config.data.work_details) do
-        local detail = {
+
+    local saved_builtins, saved_custom = {}, {}
+    for _,wd in ipairs(config.data.work_details) do
+        local flags = wd.flags or wd.work_detail_flags
+        if flags.no_modify then
+            saved_builtins[('%s\0%s'):format(wd.icon, wd.name)] = wd
+        else
+            table.insert(saved_custom, wd)
+        end
+    end
+
+    local builtin_count = 0
+    for idx = 0, #li.work_details - 1 do
+        local detail = li.work_details[idx]
+        if not detail.flags.no_modify then break end
+        builtin_count = builtin_count + 1
+        local wd = saved_builtins[('%s\0%s'):format(detail.icon, detail.name)]
+        if wd then apply_work_detail(detail, wd) end
+    end
+
+    li.work_details:resize(builtin_count + #saved_custom)
+    for idx,wd in ipairs(saved_custom) do
+        local detail_idx = builtin_count + idx - 1
+        li.work_details[detail_idx] = {
             new=df.work_detail,
             name=wd.name,
             icon=wd.icon,
-            flags=wd.flags or wd.work_detail_flags, -- compat for old name
+            flags=wd.flags or wd.work_detail_flags,
         }
-        li.work_details[idx-1] = detail
-        local al = li.work_details[idx-1].allowed_labors
+        local al = li.work_details[detail_idx].allowed_labors
         for i,v in ipairs(wd.allowed_labors) do
             al[i-1] = v
         end

@@ -144,6 +144,11 @@ end
 
 function MoveGoods:init()
     self.value_pending = 0
+    -- marked state is shared across all cached choice lists so toggles made
+    -- in one filter view are not lost when switching to another
+    self.marked = {}
+    self.item_values = {}
+    self.items_by_id = {}
 
     self.animal_ethics, self.wood_ethics = get_ethics_restrictions()
     self.banned_items = common.get_banned_items()
@@ -499,8 +504,14 @@ function MoveGoods:cache_choices()
         local item_id = item.id
         local value = common.get_perceived_value(item)
         if value <= 0 then goto continue end
+        self.item_values[item_id] = value
+        self.items_by_id[item_id] = item
+        -- explicit user marks win; otherwise fall back to the initial state
+        local is_pending = self.marked[item_id]
+        if is_pending == nil then
+            is_pending = not not pending[item_id] or item.flags.in_building
+        end
         local dist = get_distance(self.depot, xyz2pos(dfhack.items.getPosition(item)))
-        local is_pending = not not pending[item_id] or item.flags.in_building
         local is_forbidden = item.flags.forbid
         local is_banned, is_risky = common.scan_banned(item, self.risky_items)
         local is_requested = dfhack.items.isRequestedTradeGood(item)
@@ -540,7 +551,6 @@ function MoveGoods:cache_choices()
                 has_requested=is_requested,
                 has_ethical=has_ethical,
                 ethical_mixed=is_ethical_mixed,
-                dirty=false,
             }
             local search_key
             if not inside_containers and is_container(item) then
@@ -574,7 +584,17 @@ function MoveGoods:cache_choices()
         group.text = make_choice_text(data.num_at_depot == data.quantity, data.dist,
             data.total_value, data.quantity, data.desc, cache_threshold)
         table.insert(group_choices, group)
-        self.value_pending = self.value_pending + (data.per_item_value * data.selected)
+    end
+
+    self.value_pending = 0
+    for item_id, item in pairs(self.items_by_id) do
+        local is_marked = self.marked[item_id]
+        if is_marked == nil then
+            is_marked = not not pending[item_id] or item.flags.in_building
+        end
+        if is_marked then
+            self.value_pending = self.value_pending + (self.item_values[item_id] or 0)
+        end
     end
 
     self.choices_cache[get_cache_index(true, inside_containers)] = group_choices
@@ -654,29 +674,47 @@ function MoveGoods:get_choices()
     return choices
 end
 
+-- keeps the marked flag consistent in every cached choice list that contains
+-- this item so other filter views reflect the toggle
+function MoveGoods:sync_marked(item_id)
+    local marked = self.marked[item_id]
+    for _, choices in pairs(self.choices_cache) do
+        for _, choice in ipairs(choices) do
+            local items = choice.data.items
+            if items[item_id] then
+                items[item_id].pending = marked
+                local selected = 0
+                for _, item_data in pairs(items) do
+                    if item_data.pending then selected = selected + 1 end
+                end
+                choice.data.selected = selected
+            end
+        end
+    end
+end
+
+function MoveGoods:set_marked(item_id, marked)
+    if self.marked[item_id] == marked then return end
+    self.marked[item_id] = marked
+    self.value_pending = self.value_pending +
+            (self.item_values[item_id] or 0) * (marked and 1 or -1)
+    self:sync_marked(item_id)
+end
+
 function MoveGoods:toggle_item_base(choice, target_value)
     if choice.item_id then
-        local item_data = choice.data.items[choice.item_id]
-        if item_data.pending then
-            self.value_pending = self.value_pending - choice.data.per_item_value
-            choice.data.selected = choice.data.selected - 1
+        if target_value == nil then
+            target_value = not choice.data.items[choice.item_id].pending
         end
-        if target_value == nil then target_value = not item_data.pending end
-        item_data.pending = target_value
-        if item_data.pending then
-            self.value_pending = self.value_pending + choice.data.per_item_value
-            choice.data.selected = choice.data.selected + 1
-        end
+        self:set_marked(choice.item_id, target_value)
     else
-        self.value_pending = self.value_pending - (choice.data.selected * choice.data.per_item_value)
-        if target_value == nil then target_value = (choice.data.selected ~= choice.data.quantity) end
-        for _, item_data in pairs(choice.data.items) do
-            item_data.pending = target_value
+        if target_value == nil then
+            target_value = (choice.data.selected ~= choice.data.quantity)
         end
-        choice.data.selected = target_value and choice.data.quantity or 0
-        self.value_pending = self.value_pending + (choice.data.selected * choice.data.per_item_value)
+        for item_id in pairs(choice.data.items) do
+            self:set_marked(item_id, target_value)
+        end
     end
-    choice.data.dirty = true
     return target_value
 end
 
@@ -748,30 +786,29 @@ function MoveGoodsModal:onDismiss()
     -- mark/unmark selected goods for trade
     local depot = self.depot
     if not depot then return end
+    local move_goods = self.subviews.move_goods
+    move_goods:cache_choices()  -- make sure marked/items_by_id are populated
     local pending = self.pending_item_ids
-    for _, choice in ipairs(self.subviews.move_goods:cache_choices()) do
-        if not choice.data.dirty then goto continue end
-        for item_id, item_data in pairs(choice.data.items) do
-            local item = item_data.item
-            if item_data.pending and not pending[item_id] then
-                item.flags.forbid = false
-                if dfhack.items.getHolderBuilding(item) == depot then
-                    item.flags.in_building = true
-                else
-                    -- TODO: if there is just one (ethical, if filtered) item inside of a bin, mark the item for
-                    -- trade instead of the bin
-                    -- TODO: give containers that have some items inside of them marked for trade a ":" marker in the UI
-                    -- TODO: correlate items inside containers marked for trade across the cached choices so no choices are lost
-                    dfhack.items.markForTrade(item, depot)
-                end
-            elseif not item_data.pending and pending[item_id] then
-                local spec_ref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
-                if spec_ref then
-                    dfhack.job.removeJob(spec_ref.data.job)
-                end
-            elseif not item_data.pending and item.flags.in_building and dfhack.items.getHolderBuilding(item) == depot then
-                item.flags.in_building = false
+    for item_id, marked in pairs(move_goods.marked) do
+        local item = move_goods.items_by_id[item_id]
+        if not item then goto continue end
+        if marked and not pending[item_id] then
+            item.flags.forbid = false
+            if dfhack.items.getHolderBuilding(item) == depot then
+                item.flags.in_building = true
+            else
+                -- TODO: if there is just one (ethical, if filtered) item inside of a bin, mark the item for
+                -- trade instead of the bin
+                -- TODO: give containers that have some items inside of them marked for trade a ":" marker in the UI
+                dfhack.items.markForTrade(item, depot)
             end
+        elseif not marked and pending[item_id] then
+            local spec_ref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
+            if spec_ref then
+                dfhack.job.removeJob(spec_ref.data.job)
+            end
+        elseif marked == false and item.flags.in_building and dfhack.items.getHolderBuilding(item) == depot then
+            item.flags.in_building = false
         end
         ::continue::
     end

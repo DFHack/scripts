@@ -44,10 +44,10 @@ filters, the id numbers in the list may not be contiguous.
 To rotate or flip the blueprint around, enable transformations with :kbd:`t` and
 use the following keys to add a transformation step:
 
-:kbd:`(`:  Rotate counterclockwise (ccw)
-:kbd:`)`: Rotate clockwise (cw)
-:kbd:`_`:    Flip vertically (vflip)
-:kbd:`=`:  Flip horizontally (hflip)
+:kbd:`,`:  Rotate counterclockwise (ccw)
+:kbd:`.`: Rotate clockwise (cw)
+:kbd:`[`:    Flip vertically (vflip)
+:kbd:`]`:  Flip horizontally (hflip)
 
 If you have applied several transformations, but there is a shorter sequence
 that can be used to get the blueprint into the configuration you want, it will
