@@ -27,3 +27,6 @@ panels, color-coded to highlight rust and the highest skill levels:
 - If a skill is rusty, then the level marker is colored light red
 - If a skill is at Legendary level or higher, it is colored light cyan
 - Other skills are colored plain white
+
+It also shows the viewed unit's current and long-term mood at the top of
+their character sheet, color-coded by stress level.

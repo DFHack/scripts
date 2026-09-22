@@ -28,15 +28,19 @@ Template for new versions:
 
 ## New Tools
 
+- `devel/infinite-sky-probe`: tool for testing whether infinite sky is working correctly
 - `gui/export-world-map`: New GUI tool to configure world map exports from the embark selection screen.
+- `devel/datamine`: watch live values for changes and diff structure snapshots to aid script development and reverse engineering
 
 ## New Features
+- `gui/unit-info-viewer`: the unit character sheet now shows the viewed unit's current and long-term mood, color-coded by stress level
 
 ## Fixes
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
+- `caravan`: fix doubled "total value of items marked for trade" after toggling filter options, and keep item marks when switching between filter views in the ``Bring goods to depot`` overlay
+- `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
 - `gui/settings-manager`: preserve built-in work details added after saved settings were created
 - `gui/settings-manager`: apply imported work details to renamed built-ins and recompute unit labors so imported settings take effect immediately
-- `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map
 
 ## Misc Improvements
