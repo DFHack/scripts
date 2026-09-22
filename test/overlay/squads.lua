@@ -32,37 +32,61 @@ local function feed_keys(keys)
     gui.simulateInput(dfhack.gui.getCurViewscreen(true), keys)
 end
 
-local function panel_is_open()
-    return dfhack.gui.matchFocusString('dwarfmode/Squads',
-        dfhack.gui.getDFViewscreen(true))
-end
-
+-- if_squads.open toggles synchronously on D_SQUADS; focus strings for the
+-- squads tab only update on the next frame, so they cannot be used here
 local function set_panel_open(open)
-    if panel_is_open() ~= open then
+    if if_squads.open ~= open then
         feed_keys'D_SQUADS'
     end
 end
 
-local function with_squads_panel(test_fn)
-    expect.gt(#if_squads.squad_id, 0,
-        'test fort must have at least one squad')
-    local saved_sel = {}
-    for i = 0, #if_squads.squad_selected - 1 do
-        saved_sel[i] = if_squads.squad_selected[i]
+-- the CI test fort may not have any squads; create one on a free squad
+-- position (positions with squad_size > 0) so the panel lists something
+local function ensure_test_squad()
+    local fort = df.historical_entity.find(df.global.plotinfo.group_id)
+    if not fort then return end
+    local free_aid
+    for _, a in ipairs(fort.positions.assignments) do
+        if a.squad_id ~= -1 then return end
+        if not free_aid then
+            for _, p in ipairs(fort.positions.own) do
+                if p.id == a.position_id and p.squad_size > 0 then
+                    free_aid = a.id
+                    break
+                end
+            end
+        end
     end
-    local was_open = panel_is_open()
+    if free_aid then
+        dfhack.military.makeSquad(free_aid)
+    end
+end
+
+local function with_squads_panel(test_fn)
+    ensure_test_squad()
+    local was_open = if_squads.open
+    local saved_sel
     dfhack.with_finalize(
         function()
             set_panel_open(was_open)
-            for i = 0, #saved_sel - 1 do
-                if_squads.squad_selected[i] = saved_sel[i]
+            if saved_sel then
+                for i = 0, #saved_sel - 1 do
+                    if i < #if_squads.squad_selected then
+                        if_squads.squad_selected[i] = saved_sel[i]
+                    end
+                end
             end
             overlay.setEnabled(was_overlay_enabled)
         end,
         function()
+            -- squad_id/squad_selected are only populated while the panel is open
             set_panel_open(true)
-            expect.true_(panel_is_open())
+            expect.true_(if_squads.open)
+            expect.gt(#if_squads.squad_id, 0,
+                'test fort must have at least one squad')
+            saved_sel = {}
             for i = 0, #if_squads.squad_selected - 1 do
+                saved_sel[i] = if_squads.squad_selected[i]
                 if_squads.squad_selected[i] = false
             end
             test_fn(get_widget())
