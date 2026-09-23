@@ -40,6 +40,7 @@ Template for new versions:
 - `prioritize`: ``prioritize this`` boosts the job related to the currently selected entity, absorbing the functionality of `do-job-now` (which still works and forwards to the new command)
 
 ## Fixes
+- `load-save`: fix script for the current title screen, which no longer responds to `sel_menu_line` and requires mouse input
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
 - `caravan`: fix doubled "total value of items marked for trade" after toggling filter options, and keep item marks when switching between filter views in the ``Bring goods to depot`` overlay
 - `combine`: dyes are combined again, but only when their ``dye_profile`` matches, so mixed dyes no longer revert to a component dye
