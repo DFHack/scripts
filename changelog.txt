@@ -44,6 +44,7 @@ Template for new versions:
 - `caravan`: fix doubled "total value of items marked for trade" after toggling filter options, and keep item marks when switching between filter views in the ``Bring goods to depot`` overlay
 - `combine`: dyes are combined again, but only when their ``dye_profile`` matches, so mixed dyes no longer revert to a component dye
 - `fix/loyaltycascade`: guard against citizens that are not historical figures and emit a warning.
+- `full-heal`: ``--all-citizens`` still matches dead citizens (for resurrection) now that ``dfhack.units.isCitizen`` excludes the dead
 - `gui/settings-manager`: preserve built-in work details added after saved settings were created
 - `gui/siegemanager`: fix nil index if there are no siege engines on the map
 - `hide-tutorials`: also suppress the adventure mode start tutorial (defaults its checkbox to off and dismisses the popups)
