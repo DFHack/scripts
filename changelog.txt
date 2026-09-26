@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `export-worldgen`: export the loaded world's generation parameters as a ``world_gen.txt`` stanza that can regenerate it, with optional world painter (``PS_*``) map data
 - `devel/datamine`: watch live values for changes and diff structure snapshots to aid script development and reverse engineering
 - `devel/infinite-sky-probe`: tool for testing whether infinite sky is working correctly
 - `fix/stuck-written-materials`: free written materials that are stuck in a non-existent job
