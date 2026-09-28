@@ -39,6 +39,22 @@ function skip_tutorial_prompt()
     end
 end
 
+local ADVENTURE_TUTORIAL_CONTEXTS = utils.invert{
+    'ADVENTURE_START_MESSAGE',
+    'ADVENTURE_START_TUTORIAL_CAMERA_CONTROLS',
+    'ADVENTURE_START_TUTORIAL_MOVEMENT',
+    'ADVENTURE_START_TUTORIAL_MENU_OVERVIEW',
+    'ADVENTURE_DONE_WITH_FIRST_STEPS_MESSAGE',
+}
+
+function skip_adventure_tutorial()
+    if not dfhack.world.isAdventureMode() then return end
+    df.global.plotinfo.flags.need_to_do_tutorial = false
+    if help.open and ADVENTURE_TUTORIAL_CONTEXTS[df.help_context_type[help.context]] then
+        close_help()
+    end
+end
+
 local function get_prefix()
     if dfhack.world.isFortressMode() then
         return 'POPUP_'
@@ -81,9 +97,19 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
             dfhack.timeout(10, 'frames', skip_tutorial_prompt)
             dfhack.timeout(100, 'frames', skip_tutorial_prompt)
             dfhack.timeout(1000, 'frames', skip_tutorial_prompt)
+        elseif df.viewscreen_setupadventurest:is_instance(scr) then
+            -- default the "tutorial" checkbox to off; the player can still
+            -- check it if they want the tutorial
+            scr.want_tutorial = false
+        elseif df.viewscreen_dungeonmodest:is_instance(scr) then
+            -- the start tutorial can pop up shortly after the screen appears
+            skip_adventure_tutorial()
+            dfhack.timeout(10, 'frames', skip_adventure_tutorial)
+            dfhack.timeout(100, 'frames', skip_adventure_tutorial)
         end
     elseif sc == SC_MAP_LOADED then
         hide_all_popups()
+        skip_adventure_tutorial()
     end
 end
 
@@ -100,6 +126,7 @@ if args[1] == "enable" then
     enabled = true
     if dfhack.isMapLoaded() then
         hide_all_popups()
+        skip_adventure_tutorial()
     end
 elseif args[1] == "disable" then
     enabled = false
@@ -107,6 +134,7 @@ elseif args[1] == "reset" then
     show_all_popups()
 elseif dfhack.isMapLoaded() then
     hide_all_popups()
+    skip_adventure_tutorial()
 else
     qerror('hide-tutorials needs a loaded fortress or adventure map to work')
 end

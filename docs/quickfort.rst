@@ -3,7 +3,7 @@ quickfort
 
 .. dfhack-tool::
     :summary: Apply layout blueprints to your fort.
-    :tags: fort design productivity buildings map stockpiles
+    :tags: fort design productivity buildings map stockpile
 
 Quickfort reads stored blueprint files and applies them to the game map.
 You can apply blueprints that designate digging, build buildings, place

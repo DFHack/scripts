@@ -235,9 +235,12 @@ if args.all then
         heal(unit,args.r,args.keep_corpse)
     end
 elseif args.all_citizens then
-    -- can't use dfhack.units.getCitizens since we want dead ones too
+    -- can't use dfhack.units.getCitizens since we want dead ones too;
+    -- isCitizen/isResident exclude the dead, but dead citizens retain
+    -- their group membership link
     for _,unit in ipairs(df.global.world.units.active) do
-        if dfhack.units.isCitizen(unit, true) or dfhack.units.isResident(unit) then
+        if dfhack.units.isCitizen(unit, true) or dfhack.units.isResident(unit) or
+                (dfhack.units.isDead(unit) and dfhack.units.isOwnGroup(unit)) then
             heal(unit,args.r,args.keep_corpse)
         end
     end

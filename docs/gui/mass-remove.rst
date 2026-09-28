@@ -3,7 +3,7 @@ gui/mass-remove
 
 .. dfhack-tool::
     :summary: Mass select things to remove.
-    :tags: fort design productivity buildings stockpiles
+    :tags: fort design productivity buildings stockpile
 
 This tool lets you remove buildings, constructions, stockpiles, and/or zones
 using a mouse-driven box selection. You can choose which you want to remove

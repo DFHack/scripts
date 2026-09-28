@@ -3,7 +3,7 @@ gui/quantum
 
 .. dfhack-tool::
     :summary: Quickly and easily create quantum stockpiles.
-    :tags: fort productivity map stockpiles
+    :tags: fort productivity map stockpile
 
 This tool provides a visual, interactive interface for creating quantum
 stockpiles.

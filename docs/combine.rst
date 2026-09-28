@@ -3,7 +3,7 @@ combine
 
 .. dfhack-tool::
     :summary: Combine items that can be stacked together.
-    :tags: fort productivity items plants stockpiles
+    :tags: fort productivity items plants stockpile
 
 This handy tool "defragments" your items without giving your fort the undue
 advantage of unreasonably large stacks. Within each stockpile, similar items

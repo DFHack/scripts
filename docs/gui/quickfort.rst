@@ -3,7 +3,7 @@ gui/quickfort
 
 .. dfhack-tool::
     :summary: Apply layout blueprints to your fort.
-    :tags: fort design productivity buildings map stockpiles
+    :tags: fort design productivity buildings map stockpile
 
 This is the graphical interface for the `quickfort` script. Once you load a
 blueprint, you will see a highlight over the tiles that will be modified. You

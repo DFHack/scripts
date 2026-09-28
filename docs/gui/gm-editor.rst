@@ -3,7 +3,7 @@ gui/gm-editor
 
 .. dfhack-tool::
     :summary: Inspect and edit DF game data.
-    :tags: dfhack armok inspection animals buildings items jobs map plants stockpiles units workorders
+    :tags: dfhack armok inspection animals buildings items jobs map plants stockpile units workorders
 
 This editor allows you to inspect or modify almost anything in DF. Press
 :kbd:`?` for in-game help.

@@ -18,6 +18,9 @@ Specifically, this tool hides:
   other similar screens in a new fort
 - Popups displayed when you perform certain actions for the first time in an
   adventure
+- The tutorial checkbox when creating an adventurer (it will default to
+  unchecked, but you can still enable it if you want the tutorial) and the
+  tutorial popups it would otherwise show at the start of the game
 
 Note that only unsolicited tutorial popups are hidden. If you directly request
 a tutorial page from the help, then it will still function normally.

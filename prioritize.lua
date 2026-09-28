@@ -468,6 +468,156 @@ local function print_current_jobs(job_matchers, opts)
     if first then print('No current prioritizable jobs.') end
 end
 
+--------------------------------
+-- "prioritize this": boost the job related to the selected entity
+--
+
+-- encapsulate df state in functions so unit tests can mock them out
+function get_selected_job() return dfhack.gui.getSelectedJob(true) end
+function get_selected_item() return dfhack.gui.getSelectedItem(true) end
+function get_selected_building() return dfhack.gui.getSelectedBuilding(true) end
+function get_selected_unit() return dfhack.gui.getSelectedUnit(true) end
+function get_selected_plant() return dfhack.gui.getSelectedPlant(true) end
+function get_selected_work_order()
+    local scr = dfhack.gui.getCurViewscreen()
+    local orders, idx
+    -- viewscreen class descriptors are unavailable without a loaded map
+    if df.viewscreen_jobmanagementst and
+            df.viewscreen_jobmanagementst:is_instance(scr) then
+        orders = df.global.world.manager_orders.all
+        idx = scr.sel_idx
+    elseif df.viewscreen_workshop_profilest and
+            df.viewscreen_workshop_profilest:is_instance(scr) and
+            scr.tab == df.viewscreen_workshop_profilest.T_tab.Orders then
+        orders = scr.orders
+        idx = scr.order_idx
+    end
+    if orders then
+        if idx < #orders then
+            return orders[idx]
+        else
+            qerror('Invalid work order selected')
+        end
+    end
+end
+
+local function boost_job(job)
+    local job_str = dfhack.job.getName(job)
+    if not job.flags.do_now then
+        job.flags.do_now = true
+        print(('Made the job %s top priority'):format(job_str))
+    else
+        print(('The job %s is already top priority'):format(job_str))
+    end
+    local building = dfhack.job.getHolder(job)
+    if building then
+        print('... at ' .. utils.getBuildingName(building))
+    end
+    local unit = dfhack.job.getWorker(job)
+    if unit then
+        print('... by ' ..
+              dfhack.df2console(dfhack.units.getReadableName(unit)))
+    end
+end
+
+local function boost_item_job(item)
+    if not item.flags.in_job then
+        qerror(dfhack.items.getDescription(item, 0) ..
+               ' must be in a job! (look for \'TSK\')')
+    end
+    local sref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
+    if sref then
+        boost_job(sref.data.job)
+        return
+    end
+    print('Couldn\'t find any job for ' .. dfhack.items.getDescription(item, 0))
+end
+
+local function boost_building_job(building)
+    if #building.jobs > 0 and
+            (building.jobs[0].job_type == df.job_type.ConstructBuilding or
+             building.jobs[0].job_type == df.job_type.DestroyBuilding) then
+        boost_job(building.jobs[0])
+        return
+    end
+    print('Couldn\'t find either construct or destroy building job for ' ..
+          utils.getBuildingName(building))
+end
+
+local function boost_unit_job(unit)
+    if dfhack.units.isCitizen(unit) then
+        local job = unit.job and unit.job.current_job
+        if job then
+            boost_job(job)
+            return
+        end
+        print('Couldn\'t find any job for ' ..
+              dfhack.df2console(dfhack.units.getReadableName(unit)))
+        return
+    end
+    for _,job in utils.listpairs(df.global.world.jobs.list) do
+        for _,gref in ipairs(job.general_refs) do
+            local u = gref:getUnit()
+            if u and u.id == unit.id then
+                boost_job(job)
+                return
+            end
+        end
+    end
+    print('Couldn\'t find any job involving ' ..
+          dfhack.df2console(dfhack.units.getReadableName(unit)))
+end
+
+local function boost_plant_job(plant)
+    for _,job in utils.listpairs(df.global.world.jobs.list) do
+        if plant.pos.x == job.pos.x and plant.pos.y == job.pos.y and
+                plant.pos.z == job.pos.z then
+            boost_job(job)
+            return
+        end
+    end
+    print('Couldn\'t find any job involving this plant.')
+end
+
+local function boost_order_jobs(order)
+    local count = 0
+    for _,job in utils.listpairs(df.global.world.jobs.list) do
+        if job.order_id == order.id then
+            boost_job(job)
+            count = count + 1
+        end
+    end
+    if count > 0 then
+        print(('Found %d jobs for this work order.'):format(count))
+    else
+        print('Couldn\'t find any job for this work order.')
+    end
+end
+
+-- mark the job related to the selected entity (job, item, building, unit,
+-- plant, or work order) as high priority
+function prioritize_this()
+    local job = get_selected_job()
+    if job then return boost_job(job) end
+
+    local item = get_selected_item()
+    if item then return boost_item_job(item) end
+
+    local building = get_selected_building()
+    if building then return boost_building_job(building) end
+
+    local unit = get_selected_unit()
+    if unit then return boost_unit_job(unit) end
+
+    local plant = get_selected_plant()
+    if plant then return boost_plant_job(plant) end
+
+    local order = get_selected_work_order()
+    if order then return boost_order_jobs(order) end
+
+    qerror('Select something job-related in game.')
+end
+
 local function print_registry_section(header, t)
     print('\n' .. header .. ':')
     table.sort(t)
@@ -532,6 +682,17 @@ local function parse_commandline(args)
 
     if positionals[1] == 'help' then opts.help = true end
     if opts.help then return opts end
+
+    -- "prioritize this" boosts the job related to the selected entity
+    if positionals[1] == 'this' then
+        if #positionals > 1 or action ~= status or
+                unit_labors or reaction_names then
+            qerror('"this" cannot be combined with other arguments')
+        end
+        opts.action = prioritize_this
+        opts.job_matchers = {}
+        return opts
+    end
 
     -- expand defaults, if requested
     for i,job_type_name in ipairs(positionals) do
