@@ -39,6 +39,8 @@ Template for new versions:
 - `idle-crafting`: support cloth, silk, and yarn crafts
 - `prioritize`: ``prioritize this`` boosts the job related to the currently selected entity, absorbing the functionality of `do-job-now` (which still works and forwards to the new command)
 
+- `gui/notify`: new `mandates_expiring_early` notification warns when a production mandate is within 3 months of expiring (disabled by default)
+
 ## Fixes
 - `bodyswap`: fix "invalid argument count" when the target unit has no nemesis record
 - `caravan`: fix doubled "total value of items marked for trade" after toggling filter options, and keep item marks when switching between filter views in the ``Bring goods to depot`` overlay
