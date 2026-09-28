@@ -15,7 +15,6 @@ function refresh_scripts()
     -- reqscript all internal files here, even if they're not directly used by this
     -- top-level file. this ensures modified transitive dependencies are properly
     -- reloaded when this script is run.
-    reqscript('internal/quickfort/aliases')
     reqscript('internal/quickfort/api')
     reqscript('internal/quickfort/build')
     reqscript('internal/quickfort/building')
@@ -23,7 +22,6 @@ function refresh_scripts()
     reqscript('internal/quickfort/command')
     reqscript('internal/quickfort/common')
     reqscript('internal/quickfort/dig')
-    reqscript('internal/quickfort/keycodes')
     reqscript('internal/quickfort/list')
     reqscript('internal/quickfort/map')
     reqscript('internal/quickfort/meta')
