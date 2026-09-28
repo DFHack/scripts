@@ -33,6 +33,7 @@ Template for new versions:
 - `gui/export-world-map`: New GUI tool to configure world map exports from the embark selection screen.
 
 ## New Features
+- `exportlegends`: recreate the Classic population and history exports, and add a compact world-map metadata companion with river and road connectivity
 - `gui/create-item`: quality selection prompt now has 0-5 hotkeys matching the quality levels
 - `gui/mod-manager`: warn when loading a preset that doesn't include vanilla mods that were added to the game after the preset was saved
 - `gui/unit-info-viewer`: the unit character sheet now shows the viewed unit's current and long-term mood, color-coded by stress level

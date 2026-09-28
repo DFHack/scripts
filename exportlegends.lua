@@ -123,6 +123,280 @@ end
 
 local world = df.global.world
 
+local function creature_name(race)
+    local raw = df.creature_raw.find(race)
+    return raw and dfhack.df2utf(raw.name[1]) or ('unknown creature ' .. race)
+end
+
+local function add_population(populations, race, count, unnumbered, label)
+    if race < 0 then return end
+    local key = tostring(race) .. ':' .. (label or '')
+    local population = populations[key] or {race=race, label=label, count=0, unnumbered=false}
+    population.count = population.count + math.max(0, count or 0)
+    population.unnumbered = population.unnumbered or unnumbered
+    populations[key] = population
+end
+
+local function population_label(pop_spec)
+    if pop_spec.interaction_index < 0 then return nil end
+    local interaction = df.interaction.find(pop_spec.interaction_index)
+    if not interaction then return nil end
+    local effect = interaction.effects[pop_spec.interaction_effect_index]
+    local effect_type = effect and effect:getType()
+    if effect_type == df.interaction_effect_type.ANIMATE
+            or effect_type == df.interaction_effect_type.RESURRECT then
+        return 'undead ' .. creature_name(pop_spec.race)
+    end
+    return nil
+end
+
+local function write_populations(file, populations)
+    local rows = {}
+    for _, population in pairs(populations) do
+        if population.unnumbered or population.count > 0 then
+            table.insert(rows, {race=population.race, population=population})
+        end
+    end
+    table.sort(rows, function(a, b)
+        if a.population.unnumbered ~= b.population.unnumbered then
+            return a.population.unnumbered
+        end
+        if a.population.count ~= b.population.count then
+            return a.population.count > b.population.count
+        end
+        return creature_name(a.race) < creature_name(b.race)
+    end)
+    for _, row in ipairs(rows) do
+        local count = row.population.unnumbered and 'Unnumbered' or row.population.count
+        file:write(('\t%s %s\n'):format(count,
+            row.population.label or creature_name(row.race)))
+    end
+end
+
+local function collect_wild_populations(populations, records)
+    for _, pop in ipairs(records) do
+        local creature_type = pop.type == df.world_population_type.Animal
+            or pop.type == df.world_population_type.Vermin
+            or pop.type == df.world_population_type.VerminInnumerable
+            or pop.type == df.world_population_type.ColonyInsect
+        if creature_type then
+            local unnumbered = pop.type == df.world_population_type.VerminInnumerable
+                or pop.count_min >= 10000001
+                or pop.count_max >= 10000001
+            local label
+            if pop.interaction_idx >= 0 then
+                label = population_label{
+                    race=pop.race,
+                    interaction_index=pop.interaction_idx,
+                    interaction_effect_index=pop.interaction_effect,
+                }
+            end
+            add_population(populations, pop.race, pop.count_min, unnumbered, label)
+        end
+    end
+end
+
+-- Recreates the population companion file that Classic DF generated with
+-- "Export Map/Gen Information". Premium removed that export path.
+local function export_sites_and_pops()
+    local filename = world.cur_savegame.save_dir .. '-' .. get_world_date_str()
+        .. '-world_sites_and_pops.txt'
+    local file = io.open(filename, 'w')
+    if not file then qerror('could not open file: ' .. filename) end
+
+    local civilized = {}
+    for _, entity_population in ipairs(world.entity_populations) do
+        for i, race in ipairs(entity_population.races) do
+            add_population(civilized, race, entity_population.counts[i])
+        end
+    end
+    file:write('Civilized World Population\n\n')
+    write_populations(file, civilized)
+    file:write('\nSites\n\n')
+
+    for _, site in ipairs(world.world_data.sites) do
+        local native_name = dfhack.df2utf(dfhack.translation.translateName(site.name))
+        local english_name = dfhack.df2utf(dfhack.translation.translateName(site.name, true))
+        file:write(('%d: %s, %s\n'):format(site.id, native_name, english_name))
+
+        local owner = df.historical_entity.find(site.cur_owner_id)
+        if owner and owner.race >= 0 then
+            file:write(('Owner: %s, %s\n'):format(
+                dfhack.df2utf(dfhack.translation.translateName(owner.name, true)), creature_name(owner.race)))
+            if owner.type ~= df.historical_entity_type.Civilization then
+                for _, link in ipairs(owner.entity_links) do
+                    if link.type == df.entity_entity_link_type.PARENT then
+                        local parent = df.historical_entity.find(link.target)
+                        if parent and parent.race >= 0 then
+                            file:write(('Parent Civ: %s, %s\n'):format(
+                                dfhack.df2utf(dfhack.translation.translateName(parent.name, true)), creature_name(parent.race)))
+                            break
+                        end
+                    end
+                end
+            end
+        end
+
+        local populations = {}
+        for _, inhabitant in ipairs(site.populace.inhabitants) do
+            add_population(populations, inhabitant.pop_spec.race, inhabitant.count, false,
+                population_label(inhabitant.pop_spec))
+        end
+        for _, animal in ipairs(site.populace.animals) do
+            local unnumbered = animal.type == df.world_population_type.VerminInnumerable
+                or animal.count_min >= 10000001 or animal.count_max >= 10000001
+            local label
+            if animal.interaction_idx >= 0 then
+                label = population_label{
+                    race=animal.race,
+                    interaction_index=animal.interaction_idx,
+                    interaction_effect_index=animal.interaction_effect,
+                }
+            end
+            if not unnumbered then
+                add_population(populations, animal.race, animal.count_min, false, label)
+            end
+        end
+        write_populations(file, populations)
+        yield_if_timeout()
+    end
+
+    local outdoor = {}
+    for _, region in ipairs(world.world_data.regions) do
+        collect_wild_populations(outdoor, region.population)
+    end
+    file:write('\nOutdoor Animal Populations (Including Undead)\n\n')
+    write_populations(file, outdoor)
+
+    local underground = {}
+    for _, region in ipairs(world.world_data.underground_regions) do
+        local feature = region.feature_init and region.feature_init:getFeature()
+        if feature then collect_wild_populations(underground, feature.population) end
+    end
+    file:write('\nUnderground Animal Populations (Including Undead)\n')
+    write_populations(file, underground)
+    file:close()
+    print('Done exporting population data to: ' .. filename)
+end
+
+local function translated_name(name, english)
+    return dfhack.df2utf(dfhack.translation.translateName(name, english))
+end
+
+local function export_world_history()
+    local filename = world.cur_savegame.save_dir .. '-' .. get_world_date_str()
+        .. '-world_history.txt'
+    local file = io.open(filename, 'w')
+    if not file then qerror('could not open file: ' .. filename) end
+
+    file:write(translated_name(world.world_data.name), '\n')
+    file:write(translated_name(world.world_data.name, true), '\n\n')
+    file:write('Civilizations\n\n')
+
+    for _, entity in ipairs(world.entities.all) do
+        if entity.type == df.historical_entity_type.Civilization and entity.race >= 0 then
+            file:write(translated_name(entity.name), ', ', creature_name(entity.race), '\n')
+
+            if #entity.relations.deities > 0 then
+                file:write(' Worship List\n')
+                for _, hfid in ipairs(entity.relations.deities) do
+                    local deity = df.historical_figure.find(hfid)
+                    if deity then
+                        file:write('  ', translated_name(deity.name), ', deity\n')
+                    end
+                end
+            end
+
+            local positions = {}
+            for _, position in ipairs(entity.positions.own) do
+                positions[position.id] = position
+            end
+            for _, assignment in ipairs(entity.positions.assignments) do
+                local holder = df.historical_figure.find(assignment.histfig)
+                local position = positions[assignment.position_id]
+                if holder and position then
+                    local start_year = 0
+                    for _, link in ipairs(holder.entity_links) do
+                        if df.histfig_entity_link_positionst:is_instance(link)
+                                and link.entity_id == entity.id
+                                and link.assignment_id == assignment.id then
+                            start_year = link.start_year
+                            break
+                        end
+                    end
+                    local title = position.name[0] or ''
+                    if title == '' then title = position.name_male[0] or '' end
+                    if title == '' then title = position.name_female[0] or '' end
+                    if title ~= '' then
+                        file:write(' ', dfhack.df2utf(title), ' List\n')
+                        file:write(('  [*] %s (b. 0), Reign began: %d), current ruler\n')
+                            :format(translated_name(holder.name), start_year))
+                    end
+                end
+            end
+        end
+        yield_if_timeout()
+    end
+    file:close()
+    print('Done exporting world history to: ' .. filename)
+end
+
+-- Compact terrain companion for Premium world-map renderers. It contains no
+-- proprietary graphics; viewers load those from the user's DF installation.
+local function export_world_map_metadata()
+    local filename = world.cur_savegame.save_dir .. '-' .. get_world_date_str()
+        .. '-world_map.csv'
+    local file = io.open(filename, 'w')
+    if not file then qerror('could not open file: ' .. filename) end
+
+    local width, height = world.world_data.world_width, world.world_data.world_height
+    local peaks, rivers = {}, {}
+    for _, peak in ipairs(world.world_data.mountain_peaks) do
+        peaks[peak.pos.x .. ',' .. peak.pos.y] = peak.flags.is_volcano and 2 or 1
+    end
+    local function connect(x1, y1, x2, y2)
+        local dx, dy = x2 - x1, y2 - y1
+        local bit1, bit2
+        if dx == 0 and dy == -1 then bit1, bit2 = 1, 2
+        elseif dx == 0 and dy == 1 then bit1, bit2 = 2, 1
+        elseif dx == -1 and dy == 0 then bit1, bit2 = 4, 8
+        elseif dx == 1 and dy == 0 then bit1, bit2 = 8, 4
+        else return end
+        local key1, key2 = x1 .. ',' .. y1, x2 .. ',' .. y2
+        rivers[key1] = (rivers[key1] or 0) | bit1
+        if x2 >= 0 and x2 < width and y2 >= 0 and y2 < height then
+            rivers[key2] = (rivers[key2] or 0) | bit2
+        end
+    end
+    for _, river in ipairs(world.world_data.rivers) do
+        for i = 0, #river.path.x - 2 do
+            connect(river.path.x[i], river.path.y[i], river.path.x[i + 1], river.path.y[i + 1])
+        end
+        local last = #river.path.x - 1
+        if last >= 0 then
+            connect(river.path.x[last], river.path.y[last], river.end_pos.x, river.end_pos.y)
+        end
+    end
+
+    file:write(('DFHACK_WORLD_MAP,3,%d,%d\n'):format(width, height))
+    file:write('x,y,biome_type,evilness,savagery,elevation,flags,volcanism,peak,river_dirs\n')
+    for y = 0, height - 1 do
+        for x = 0, width - 1 do
+            local tile = world.world_data.region_map[x]:_displace(y)
+            local flags = (tile.flags.is_lake and 1 or 0)
+                + (tile.flags.has_river and 2 or 0)
+                + (tile.flags.has_road and 4 or 0)
+            file:write(('%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n'):format(x, y,
+                dfhack.maps.getBiomeType(x, y), tile.evilness, tile.savagery,
+                tile.elevation, flags, tile.volcanism, peaks[x .. ',' .. y] or 0,
+                rivers[x .. ',' .. y] or 0))
+        end
+        yield_if_timeout()
+    end
+    file:close()
+    print('Done exporting world map metadata to: ' .. filename)
+end
+
 -- Export additional legends data, legends_plus.xml
 local function export_more_legends_xml()
     local problem_elements = {}
@@ -1022,9 +1296,13 @@ local function wrap_export()
     asyncexport.progress_item = 'basic info'
     yield_if_timeout()
     local ok, err = pcall(export_more_legends_xml)
-    if not ok then
-        dfhack.printerr(err)
-    end
+    if not ok then dfhack.printerr(err) end
+    ok, err = pcall(export_sites_and_pops)
+    if not ok then dfhack.printerr(err) end
+    ok, err = pcall(export_world_history)
+    if not ok then dfhack.printerr(err) end
+    ok, err = pcall(export_world_map_metadata)
+    if not ok then dfhack.printerr(err) end
     asyncexport.reset_state()
 end
 
