@@ -27,6 +27,18 @@ Template for new versions:
 # Future
 
 ## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 53.16-r2
+
+## New Tools
 - `devel/datamine`: watch live values for changes and diff structure snapshots to aid script development and reverse engineering
 - `devel/infinite-sky-probe`: tool for testing whether infinite sky is working correctly
 - `fix/stuck-written-materials`: free written materials that are stuck in a non-existent job
