@@ -1,5 +1,5 @@
-if not dfhack.world.isAdventureMode() then
-    qerror('This script must be used in adventure mode')
+if gamemode ~= df.game_mode.ADVENTURER then
+    qerror('This script must be used in adventure mode or the arena!')
 end
 
 local unit = dfhack.world.getAdventurer()

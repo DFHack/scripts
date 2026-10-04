@@ -1,7 +1,7 @@
 local fullHeal = reqscript('full-heal')
 
-if not dfhack.world.isAdventureMode() then
-    qerror("This script can only be used in adventure mode!")
+if gamemode ~= df.game_mode.ADVENTURER then
+    qerror("This script can only be used in adventure mode or the arena!")
 end
 
 local adventurer = dfhack.world.getAdventurer()
@@ -13,4 +13,4 @@ fullHeal.heal(adventurer, true)
 
 -- this ensures that the player will be able to regain control of their unit after
 -- resurrection if the script is run before hitting DONE at the "You are deceased" message
-df.global.adventure.player_control_state = 1
+df.global.adventure.player_control_state = df.adventure_game_loop_type.ENTER

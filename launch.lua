@@ -4,7 +4,7 @@
 local guidm = require('gui.dwarfmode')
 
 function launch(unitSource,unitRider)
-    if not dfhack.world.isAdventureMode() then
+    if gamemode ~= df.game_mode.ADVENTURER then
         qerror("Must be used in adventurer mode or the arena!")
     end
     local curpos = guidm.getCursorPos()

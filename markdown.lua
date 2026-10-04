@@ -93,7 +93,7 @@ if item then
 elseif unit then
     -- Unit processing
     -- Simulate UI interactions to load data into memory (click through tabs). Note: Constant might change with DF updates/patches
-    local is_adv = dfhack.world.isAdventureMode()
+    local is_adv = gamemode == df.game_mode.ADVENTURER
     local screen = dfhack.gui.getDFViewscreen()
     local windowSize = dfhack.screen.getWindowSize()
 

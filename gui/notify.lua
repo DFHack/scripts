@@ -70,7 +70,7 @@ end
 
 function NotifyOverlay:overlay_onupdate()
     local choices = {}
-    local is_adv = dfhack.world.isAdventureMode()
+    local is_adv = gamemode == df.game_mode.ADVENTURER
     self.critical = false
     for _, notification in ipairs(notifications.NOTIFICATIONS_BY_IDX) do
         if not notifications.config.data[notification.name].enabled then goto continue end
@@ -246,7 +246,7 @@ end
 
 function Notify:refresh()
     local choices = {}
-    local is_adv = dfhack.world.isAdventureMode()
+    local is_adv = gamemode == df.game_mode.ADVENTURER
     for name, conf in pairs(notifications.config.data) do
         local notification = notifications.NOTIFICATIONS_BY_NAME[name]
         if not get_fn(notification, is_adv) then goto continue end

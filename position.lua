@@ -77,7 +77,7 @@ local function print_world_info()
             format(site.pos.x, site.pos.y, wd.world_width, wd.world_height))
     end
 
-    if dfhack.world.isAdventureMode() then
+    if gamemode ~= df.game_mode.ADVENTURER then
         local x, y = get_adv_region_pos()
         print(('    The adventurer is at x=%d, y=%d on the %dx%d world map.'):
             format(x, y, wd.world_width, wd.world_height))
