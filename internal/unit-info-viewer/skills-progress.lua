@@ -90,7 +90,7 @@ function SkillProgressOverlay:onRenderFrame(dc, rect)
         table.insert(annotations, "\n\n")
     end
 
-    local progress_bar_needed = gamemode ~= df.game_mode.ADVENTURER or not dfhack.screen.inGraphicsMode()
+    local progress_bar_needed = df.global.gamemode ~= df.game_mode.ADVENTURE or not dfhack.screen.inGraphicsMode()
     self.subviews.toggle_progress.visible = progress_bar_needed
     local progress_bar = self.subviews.toggle_progress:getOptionValue() and progress_bar_needed
     local experience = self.subviews.toggle_experience:getOptionValue()

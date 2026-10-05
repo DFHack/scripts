@@ -31,7 +31,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
-- `launch`, `ghostly`, `resurrect-adv`, `position`, `resize-armor`, `toggle-kbd-cursor`, `markdown`, `advtools`, `gui/create-item`, `gui/notify`: now detect arena adventure mode
+- `launch`, `ghostly`, `resurrect-adv`, `resize-armor`, `toggle-kbd-cursor`, `markdown`, `advtools`, `gui/create-item`, `gui/notify`: now detect arena adventure mode
 - `gui/unit-info-viewer`: show skill progress for arena adventurer
 - `gui/reveal`: don't allow use in arena, since underlying `reveal` plugin doesn't support it
 

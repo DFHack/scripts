@@ -1,7 +1,7 @@
 local gui = require('gui')
 local guidm = require('gui.dwarfmode')
 
-if gamemode == df.game_mode.ADVENTURER then
+if df.global.gamemode == df.game_mode.ADVENTURE then
     local open = df.global.game.main_interface.adventure.look.open
     gui.simulateInput(dfhack.gui.getDFViewscreen(), open and 'LEAVESCREEN' or 'A_LOOK')
     print('Look mode '..(open and 'disabled.' or 'enabled.'))

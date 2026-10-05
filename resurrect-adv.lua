@@ -1,11 +1,9 @@
 local fullHeal = reqscript('full-heal')
 
-if gamemode ~= df.game_mode.ADVENTURER then
-    qerror("This script can only be used in adventure mode or the arena!")
-end
-
 local adventurer = dfhack.world.getAdventurer()
-if not adventurer or not adventurer.flags2.killed then
+if not adventurer then
+    qerror("This script can only be used in adventure mode or adventure arena!")
+elseif not adventurer.flags2.killed then
     qerror("Your adventurer hasn't died yet!")
 end
 

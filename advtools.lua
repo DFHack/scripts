@@ -26,7 +26,7 @@ if not command or command == 'help' or not commands[command] then
 end
 
 -- since these are "advtools", maybe don't let them run outside adventure mode.
-if gamemode ~= df.game_mode.ADVENTURER then
+if df.global.gamemode ~= df.game_mode.ADVENTURE then
     qerror("This script can only be used during adventure mode!")
 end
 commands[command](args)
