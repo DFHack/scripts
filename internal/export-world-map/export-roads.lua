@@ -5,7 +5,7 @@ local util = reqscript('internal/export-world-map/util')
 local constructions = df.global.world.world_data.constructions
 
 local function getConstructionAndGeometryType(construction, bridge_squares_by_id)
-    if df.world_construction_roadst:is_instance(construction) then
+    if construction:getType() == df.world_construction_type.ROAD then
         local square = construction.square_obj[0] -- df populates square_obj for roads and tunnels (only)
         local subtype = ""
         local material = ""
@@ -18,7 +18,7 @@ local function getConstructionAndGeometryType(construction, bridge_squares_by_id
         end
 
         return "road", "LineString", subtype, material
-    elseif df.world_construction_bridgest:is_instance(construction) then
+    elseif construction:getType() == df.world_construction_type.BRIDGE then
         local square = bridge_squares_by_id[construction.id] -- df does NOT populate square_obj for bridges
         local subtype = ""
         local material = ""
@@ -32,7 +32,7 @@ local function getConstructionAndGeometryType(construction, bridge_squares_by_id
         end
 
         return "bridge", "Point", subtype, material
-    elseif df.world_construction_tunnelst:is_instance(construction) then
+    elseif construction:getType() == df.world_construction_type.TUNNEL then
         -- df assigns world construction squares to tunnels like it does to roads,
         -- but tunnel squares have nothing besides positional data: no material info, no nothing.
         return "tunnel", "LineString", "", ""
@@ -85,7 +85,7 @@ local function gatherFeatures()
         else
             coordinates = {}
             for _, square_obj in ipairs(construction.square_obj) do
-                for i = 0, (#square_obj.embark_x - 1) do
+                for i = 0, #square_obj.embark_x - 1 do
                     table.insert(coordinates, {
                         square_obj.region_pos.x * 768 + square_obj.embark_x[i] * 48 + 24,
                         -(square_obj.region_pos.y * 768 + square_obj.embark_y[i] * 48 + 24)
