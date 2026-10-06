@@ -2,19 +2,38 @@
 local json = require('json')
 local util = reqscript('internal/export-world-map/util')
 
-local function getConstructionAndGeometryType(construction)
+local function getConstructionAndGeometryType(construction, bridge_squares_by_id)
     if df.world_construction_roadst:is_instance(construction) then
+        local square = construction.square_obj[0] -- df populates square_obj for roads and tunnels (only)
         local subtype = ""
-        if df.item_type[construction.square_obj[0]["item_type"]] == "BLOCKS" then
+        local material = ""
+
+        if df.item_type[square.item_type] == "BLOCKS" then
             subtype = "paved"
-        else
+            material = dfhack.matinfo.decode(square.mat_type, square.mat_index):toString()
+        elseif df.item_type[square.item_type] == "NONE" then
             subtype = "dirt"
         end
-        return "road", "LineString", subtype
+
+        return "road", "LineString", subtype, material
     elseif df.world_construction_bridgest:is_instance(construction) then
-        return "bridge", "Point", ""
+        local square = bridge_squares_by_id[construction.id] -- df does NOT populate square_obj for bridges
+        local subtype = ""
+        local material = ""
+
+        if df.item_type[square.item_type] == "WOOD" then
+            subtype = "wooden"
+            material = dfhack.matinfo.decode(square.mat_type, square.mat_index):toString()
+        elseif df.item_type[square.item_type] == "BLOCKS" then
+            subtype = "stone"
+            material = dfhack.matinfo.decode(square.mat_type, square.mat_index):toString()
+        end
+
+        return "bridge", "Point", subtype, material
     elseif df.world_construction_tunnelst:is_instance(construction) then
-        return "tunnel", "LineString", ""
+        -- df assigns world construction squares to tunnels like it does to roads,
+        -- but tunnel squares have nothing besides positional data: no material info, no nothing.
+        return "tunnel", "LineString", "", ""
     else
         qerror("unknown construction type")
     end
@@ -45,7 +64,7 @@ local function gatherFeatures()
     local bridge_squares_by_id = listBridgeSquaresById()
 
     for _, construction in ipairs(df.global.world.world_data.constructions.list) do
-        local type, geometry_type, subtype = getConstructionAndGeometryType(construction)
+        local type, geometry_type, subtype, material = getConstructionAndGeometryType(construction, bridge_squares_by_id)
 
         local coordinates
         if geometry_type == "Point" then
@@ -81,6 +100,7 @@ local function gatherFeatures()
                 name_en = dfhack.df2utf(dfhack.translation.translateName(construction["name"], true)),
                 construction_type = type,
                 construction_subtype = subtype,
+                construction_material = material,
             },
             geometry = {
                 type = geometry_type,
