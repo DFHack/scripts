@@ -2,6 +2,8 @@
 local json = require('json')
 local util = reqscript('internal/export-world-map/util')
 
+local constructions = df.global.world.world_data.constructions
+
 local function getConstructionAndGeometryType(construction, bridge_squares_by_id)
     if df.world_construction_roadst:is_instance(construction) then
         local square = construction.square_obj[0] -- df populates square_obj for roads and tunnels (only)
@@ -42,12 +44,12 @@ end
 local function listBridgeSquaresById()
     local squares = {}
 
-    local tile_array_width = df.global.world.world_data.constructions.width
-    local tile_array_height = df.global.world.world_data.constructions.height
+    local tile_array_width = constructions.width
+    local tile_array_height = constructions.height
 
-    for i = 1, tile_array_width do
-        for j = 1, tile_array_height do
-            for _, square in ipairs(df.global.world.world_data.constructions.map[i - 1]:_displace(j - 1).square) do
+    for i = 0, (tile_array_width - 1) do
+        for j = 0, (tile_array_height - 1) do
+            for _, square in ipairs(constructions.map[i]:_displace(j).square) do
                 if df.world_construction_square_bridgest:is_instance(square) then
                     squares[square.construction_id] = square
                 end
@@ -63,7 +65,7 @@ local function gatherFeatures()
 
     local bridge_squares_by_id = listBridgeSquaresById()
 
-    for _, construction in ipairs(df.global.world.world_data.constructions.list) do
+    for _, construction in ipairs(constructions.list) do
         local type, geometry_type, subtype, material = getConstructionAndGeometryType(construction, bridge_squares_by_id)
 
         local coordinates
@@ -83,10 +85,10 @@ local function gatherFeatures()
         else
             coordinates = {}
             for _, square_obj in ipairs(construction.square_obj) do
-                for i = 0, #square_obj.embark_x - 1 do
+                for i = 0, (#square_obj.embark_x - 1) do
                     table.insert(coordinates, {
-                        square_obj.region_pos["x"] * 768 + square_obj.embark_x[i] * 48 + 24,
-                        -(square_obj.region_pos["y"] * 768 + square_obj.embark_y[i] * 48 + 24)
+                        square_obj.region_pos.x * 768 + square_obj.embark_x[i] * 48 + 24,
+                        -(square_obj.region_pos.y * 768 + square_obj.embark_y[i] * 48 + 24)
                     })
                 end
             end
