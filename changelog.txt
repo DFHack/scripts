@@ -19,7 +19,7 @@ Template for new versions:
 ## Fixes
 
 ## Misc Improvements
-export-world-map: narrowing the coordinates of bridges down more precisely
+gui/export-world-map: narrowing the coordinates of bridges down more precisely
 
 
 ## Removed
