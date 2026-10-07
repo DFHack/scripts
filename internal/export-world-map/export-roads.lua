@@ -50,7 +50,7 @@ local function listBridgeSquaresById()
     for i = 0, (tile_array_width - 1) do
         for j = 0, (tile_array_height - 1) do
             for _, square in ipairs(constructions.map[i]:_displace(j).square) do
-                if df.world_construction_square_bridgest:is_instance(square) then
+                if square:getType() == df.world_construction_square_type.BRIDGE then
                     squares[square.construction_id] = square
                 end
             end
