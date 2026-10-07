@@ -124,7 +124,7 @@ end
 if not dfhack.isMapLoaded() then
     qerror('This script requires a map to be loaded')
 elseif dfhack.world.isArena() then
-    qerror('This script doesn\'t work in arena mode')
+    qerror("This script doesn't work in arena mode")
 end
 
 local opts = {aquifers_only=false}
