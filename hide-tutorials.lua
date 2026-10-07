@@ -108,8 +108,8 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
             dfhack.timeout(100, 'frames', skip_adventure_tutorial)
 
             if dfhack.world.isArena() then
-				hide_all_popups() -- hide adventure arena popups
-			end
+                hide_all_popups() -- hide adventure arena popups
+            end
         end
     elseif sc == SC_MAP_LOADED then
         hide_all_popups()
