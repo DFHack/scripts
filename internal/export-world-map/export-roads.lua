@@ -12,7 +12,7 @@ local function getConstructionAndGeometryType(construction, bridge_squares_by_id
 
         if df.item_type[square.item_type] == "BLOCKS" then
             subtype = "paved"
-            material = dfhack.matinfo.decode(square.mat_type, square.mat_index):toString()
+            material = dfhack.matinfo.decode(square):toString()
         elseif df.item_type[square.item_type] == "NONE" then
             subtype = "dirt"
         end
@@ -25,10 +25,10 @@ local function getConstructionAndGeometryType(construction, bridge_squares_by_id
 
         if df.item_type[square.item_type] == "WOOD" then
             subtype = "wooden"
-            material = dfhack.matinfo.decode(square.mat_type, square.mat_index):toString()
+            material = dfhack.matinfo.decode(square):toString()
         elseif df.item_type[square.item_type] == "BLOCKS" then
             subtype = "stone"
-            material = dfhack.matinfo.decode(square.mat_type, square.mat_index):toString()
+            material = dfhack.matinfo.decode(square):toString()
         end
 
         return "bridge", "Point", subtype, material
@@ -73,8 +73,8 @@ local function gatherFeatures()
             -- dwarf fortress doesn't populate square_obj for bridges, only for roads and tunnels.
             -- but all world tiles are listed in df.global.world.world_data.constructions.map (not list),
             -- a 2D array that has to be iterated over with _displace()
-            local region_x = construction.square_pos["x"][0]
-            local region_y = construction.square_pos["y"][0]
+            local region_x = construction.square_pos.y[0]
+            local region_y = construction.square_pos.y[0]
             local midmap_x = bridge_squares_by_id[construction.id].embark_x[0]
             local midmap_y = bridge_squares_by_id[construction.id].embark_y[0]
 
@@ -98,8 +98,8 @@ local function gatherFeatures()
             type = "Feature",
             properties = {
                 id = construction.id,
-                name_df = dfhack.df2utf(dfhack.translation.translateName(construction["name"], false)),
-                name_en = dfhack.df2utf(dfhack.translation.translateName(construction["name"], true)),
+                name_df = dfhack.df2utf(dfhack.translation.translateName(construction.name, false)),
+                name_en = dfhack.df2utf(dfhack.translation.translateName(construction.name, true)),
                 construction_type = type,
                 construction_subtype = subtype,
                 construction_material = material,
