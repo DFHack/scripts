@@ -19,9 +19,6 @@ Template for new versions:
 ## Fixes
 
 ## Misc Improvements
-gui/export-world-map: more precise bridge coordinates
-gui/export-world-map: export of bridge and road materials
-
 
 ## Removed
 
@@ -36,6 +33,8 @@ gui/export-world-map: export of bridge and road materials
 ## Fixes
 
 ## Misc Improvements
+
+`gui/export-world-map`: export of bridge and road materials and more precise bridge coordinates
 
 ## Removed
 
