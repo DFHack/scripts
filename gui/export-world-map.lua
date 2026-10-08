@@ -118,7 +118,6 @@ local SELECTED_ICON = dfhack.pen.parse{ch=string.char(251), fg=COLOR_LIGHTGREEN}
 local DISABLED_ICON = dfhack.pen.parse{ch='x', fg=COLOR_RED}
 
 function ExportMap:getChoices()
-    print("getChoices")
     local choices = {}
     for _, export in ipairs(exports) do
         table.insert(choices, {
