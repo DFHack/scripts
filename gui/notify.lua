@@ -70,7 +70,7 @@ end
 
 function NotifyOverlay:overlay_onupdate()
     local choices = {}
-    local is_adv = dfhack.world.isAdventureMode()
+    local is_adv = df.global.gamemode == df.game_mode.ADVENTURE
     self.critical = false
     for _, notification in ipairs(notifications.NOTIFICATIONS_BY_IDX) do
         if not notifications.config.data[notification.name].enabled then goto continue end
@@ -154,7 +154,7 @@ AdvNotifyOverlay = defclass(AdvNotifyOverlay, NotifyOverlay)
 AdvNotifyOverlay.ATTRS{
     desc='Shows list of active notifications in adventure mode.',
     default_pos={x=18,y=-5},
-    viewscreens='dungeonmode/Default',
+    viewscreens={'dungeonmode/Default','dungeonmode/ADVENTURE_ARENA'},
     overlay_onupdate_max_freq_seconds=1,
     right_offset=13,
 }
@@ -246,7 +246,7 @@ end
 
 function Notify:refresh()
     local choices = {}
-    local is_adv = dfhack.world.isAdventureMode()
+    local is_adv = df.global.gamemode == df.game_mode.ADVENTURE
     for name, conf in pairs(notifications.config.data) do
         local notification = notifications.NOTIFICATIONS_BY_NAME[name]
         if not get_fn(notification, is_adv) then goto continue end

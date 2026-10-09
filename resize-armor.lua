@@ -58,7 +58,7 @@ end
 
 local function GetRace()
     local race
-    if dfhack.world.isAdventureMode() then
+    if df.global.gamemode == df.game_mode.ADVENTURE then
         race = dfhack.world.getAdventurer().race
     elseif dfhack.world.isFortressMode() then
         local site = dfhack.world.getCurrentSite()
@@ -132,7 +132,7 @@ local function Main(args)
         end
         ResizeItems(items, race)
     else
-        if dfhack.world.isAdventureMode() then
+        if df.global.gamemode == df.game_mode.ADVENTURE then
             qerror('No item selected.')
         elseif dfhack.world.isFortressMode() then
             qerror('No item or stockpile selected.')
@@ -141,7 +141,7 @@ local function Main(args)
 end
 
 if not dfhack.isMapLoaded() or (
-        not dfhack.world.isAdventureMode() and not dfhack.world.isFortressMode()
+        df.global.gamemode ~= df.game_mode.ADVENTURE and not dfhack.world.isFortressMode()
     )
 then
     qerror('This script requires the game to be in adventure or fortress mode.')

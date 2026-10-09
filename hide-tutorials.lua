@@ -58,7 +58,7 @@ end
 local function get_prefix()
     if dfhack.world.isFortressMode() then
         return 'POPUP_'
-    elseif dfhack.world.isAdventureMode() then
+    elseif df.global.gamemode == df.game_mode.ADVENTURE then
         return 'ADVENTURE_POPUP_'
     end
 end
@@ -106,6 +106,10 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
             skip_adventure_tutorial()
             dfhack.timeout(10, 'frames', skip_adventure_tutorial)
             dfhack.timeout(100, 'frames', skip_adventure_tutorial)
+
+            if dfhack.world.isArena() then
+                hide_all_popups() -- hide adventure arena popups
+            end
         end
     elseif sc == SC_MAP_LOADED then
         hide_all_popups()

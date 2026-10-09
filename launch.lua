@@ -4,9 +4,6 @@
 local guidm = require('gui.dwarfmode')
 
 function launch(unitSource,unitRider)
-    if not dfhack.world.isAdventureMode() then
-        qerror("Must be used in adventurer mode or the arena!")
-    end
     local curpos = guidm.getCursorPos()
     if not curpos then
         qerror("No cursor located! You would have slammed into the ground and exploded.")
@@ -77,7 +74,9 @@ end
 
 local unitSource = dfhack.world.getAdventurer()
 local unitRider = nil --as:df.unit
-if unitSource.job.hunt_target ~= nil then
+if not unitSource then
+    qerror("Must be used in adventurer mode or adventure arena!")
+elseif unitSource.job.hunt_target ~= nil then
     unitRider = unitSource
     unitSource = unitSource.job.hunt_target
     unitSource.general_refs:insert("#",{new=df.general_ref_unit_riderst,unit_id=unitRider.id})

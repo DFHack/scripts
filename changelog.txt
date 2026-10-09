@@ -31,6 +31,8 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `advtools`, `ghostly`, 'hide-tutorials`, `launch`, `markdown`, `resize-armor`, `resurrect-adv`, `toggle-kbd-cursor`, `gui/create-item`, `gui/notify`, `gui/unit-info-viewer`: now detect arena adventure mode
+- `gui/reveal`: don't allow use in arena, since underlying `reveal` plugin doesn't support it
 
 ## Misc Improvements
 
