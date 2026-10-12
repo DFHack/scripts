@@ -35,6 +35,7 @@ Template for new versions:
 ## Misc Improvements
 
 - `gui/export-world-map`: export of bridge and road materials and more precise bridge coordinates
+- `gui/gm-editor`: Added toggle to sort fields alphabetically when displayed
 
 ## Removed
 
