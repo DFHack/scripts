@@ -228,6 +228,21 @@ function create_orders(orders, quiet)
                                .. df.item_type[order.item_type] .. ":" .. it["item_subtype"] )
         end
 
+        -- An item that has subtypes (shoes, armor, weapons, tools, ammo, toys, ...) needs one:
+        -- an order left at item_subtype -1 validates, but DF crashes when it names the resulting job.
+        -- Meals are the exception: they keep item_subtype -1 and store the ingredient count in mat_type.
+        if order.item_subtype == -1 then
+            local produced = order.item_type ~= df.item_type.NONE and order.item_type
+                             or df.job_type.attrs[order.job_type].item
+            if produced and produced ~= df.item_type.NONE and produced ~= df.item_type.FOOD then
+                local def = df['itemdef_' .. string.lower(df.item_type[produced]) .. 'st']
+                if def and #def.get_vector() > 0 then
+                    qerror(("Manager order %s needs an item_subtype (e.g. %s)"):format(
+                        df.job_type[order.job_type], def.get_vector()[0].id))
+                end
+            end
+        end
+
         if it["meal_ingredients"] then
             order.mat_type = tonumber(it["meal_ingredients"])
                         or qerror ( "Invalid meal ingredients for managed order: " .. it["meal_ingredients"]
