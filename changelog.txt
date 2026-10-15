@@ -30,6 +30,8 @@ Template for new versions:
 
 ## New Features
 
+- `gui/notify`: new `mandates_expiring_early` notification warns when a production mandate is within 3 months of expiring (disabled by default)
+
 ## Fixes
 
 ## Misc Improvements
