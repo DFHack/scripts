@@ -53,10 +53,8 @@ function test.all_modes()
         build='/2',
         place='/3',
         zone='/4',
-        query='/5',
-        config='/6',
-        meta='/7',
-        notes='/8',
+        meta='/5',
+        notes='/6',
     }
     test_modes(fname, modes_and_labels)
 end
@@ -68,8 +66,6 @@ function test.all_modes_separate_sheets()
         build='build_sheet',
         place='place_sheet',
         zone='zone_sheet',
-        query='query_sheet',
-        config='config_sheet',
         meta='meta_sheet',
         notes='notes_sheet',
     }
@@ -83,10 +79,8 @@ function test.all_modes_single_sheet()
         build='Sheet1/2',
         place='Sheet1/3',
         zone='Sheet1/4',
-        query='Sheet1/5',
-        config='Sheet1/6',
-        meta='Sheet1/7',
-        notes='Sheet1/8',
+        meta='Sheet1/5',
+        notes='Sheet1/6',
     }
     test_modes(fname, modes_and_labels)
 end

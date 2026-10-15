@@ -47,19 +47,19 @@ function test.apply_blueprint_all_ctx_params()
              aliases={somealias='ab{analias}'}, dry_run=true, quiet=false,
              preserve_engravings=df.item_quality.Masterful})
 
-    q.apply_blueprint{mode='query', data=data, command='undo',
+    q.apply_blueprint{mode='dig', data=data, command='undo',
                       pos={x=2, y=1, z=-1}, aliases={somealias='ab{analias}'},
                       dry_run=true, verbose=true}
 
     expect.eq(2, mock_do_command_raw.call_count)
     local args = mock_do_command_raw.call_args[1]
-    expect.eq(args[1], 'query')
+    expect.eq(args[1], 'dig')
     expect.eq(args[2], 1)
     expect.table_eq(args[3], {[21]={[10]={cell='8,20,2', text='somekeys'}}})
     expect.table_eq(args[4], expected_ctx)
 
     args = mock_do_command_raw.call_args[2]
-    expect.eq(args[1], 'query')
+    expect.eq(args[1], 'dig')
     expect.eq(args[2], 2)
     expect.table_eq(args[3], {[10]={[22]={cell='20,9,3', text='somealias'}}})
     expect.table_eq(args[4], expected_ctx)
