@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `autosave`: automatically save the game every N minutes of real time
 
 ## New Features
 
