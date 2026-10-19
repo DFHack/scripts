@@ -27,6 +27,18 @@ Template for new versions:
 # Future
 
 ## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 53.16-r3
+
+## New Tools
 - `export-worldgen`: export the loaded world's generation parameters as a ``world_gen.txt`` stanza that can regenerate it, with optional world painter (``PS_*``) map data
 
 ## New Features
@@ -36,7 +48,6 @@ Template for new versions:
 - `gui/reveal`: don't allow use in arena, since underlying `reveal` plugin doesn't support it
 
 ## Misc Improvements
-
 - `gui/export-world-map`: export of bridge and road materials and more precise bridge coordinates
 
 ## Removed
