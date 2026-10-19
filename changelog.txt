@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `export-worldgen`: export the loaded world's generation parameters as a ``world_gen.txt`` stanza that can regenerate it, with optional world painter (``PS_*``) map data
 
 ## New Features
 
