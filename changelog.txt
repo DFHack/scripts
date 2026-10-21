@@ -27,7 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
-- `gui/civ-styles`: view, add, and remove the item styles a civ can make
+- `gui/recipes`: view, add, and remove the item recipes a civ knows
 
 ## New Features
 

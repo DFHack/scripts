@@ -1,6 +1,7 @@
 local gui = require('gui')
 local widgets = require('gui.widgets')
 local dialogs = require('gui.dialogs')
+local utils = require('utils')
 
 -- res:  historical_entity.resources field holding the known subtypes
 -- defs: world.raws.itemdefs field holding every itemdef of that kind
@@ -43,9 +44,7 @@ local function try_field(obj, field)
 end
 
 local function get_civ()
-    local civ_id = df.global.plotinfo.civ_id
-    if not civ_id or civ_id < 0 then return nil end
-    return df.historical_entity.find(civ_id)
+    return df.historical_entity.find(df.global.plotinfo.civ_id)
 end
 
 -- weapons, diggers, and training weapons all share the weapon itemdef list
@@ -99,27 +98,19 @@ local function build_category(civ, cat)
     return built
 end
 
-local function count_in(vec, subtype)
-    local n = 0
-    for _, v in ipairs(vec) do
-        if v == subtype then n = n + 1 end
-    end
-    return n
-end
-
 --
--- CivStyles window
+-- Recipes window
 --
 
-CivStyles = defclass(CivStyles, widgets.Window)
-CivStyles.ATTRS{
-    frame_title='Civilization styles',
+Recipes = defclass(Recipes, widgets.Window)
+Recipes.ATTRS{
+    frame_title='Civilization recipes',
     frame={w=80, h=34},
     resizable=true,
     resize_min={w=72, h=20},
 }
 
-function CivStyles:init()
+function Recipes:init()
     self.civ_id = df.global.plotinfo.civ_id
 
     local civ = get_civ()
@@ -154,7 +145,7 @@ function CivStyles:init()
             view_id='list',
             frame={t=0, l=28, r=0, b=4},
             row_height=2,
-            not_found_label='No styles match',
+            not_found_label='No recipes match',
             on_submit=self:callback('on_toggle'),
         },
         widgets.Divider{
@@ -205,7 +196,7 @@ function CivStyles:init()
             frame={b=0, l=28},
             text={
                 {text='Enter', pen=COLOR_LIGHTGREEN},
-                ' or click toggles a style.',
+                ' or click toggles a recipe.',
             },
         },
     }
@@ -214,18 +205,18 @@ function CivStyles:init()
     self:refresh_list()
 end
 
-function CivStyles:get_civ()
+function Recipes:get_civ()
     return df.historical_entity.find(self.civ_id)
 end
 
-function CivStyles:get_vec(cat)
+function Recipes:get_vec(cat)
     local civ = self:get_civ()
     if not civ then return nil end
     return try_field(civ.resources, cat.res)
 end
 
 -- run after every edit so nothing has to be recounted per frame
-function CivStyles:refresh_data()
+function Recipes:refresh_data()
     for _, cat in ipairs(self.cats) do
         local counts = {}
         local vec = self:get_vec(cat)
@@ -244,7 +235,7 @@ function CivStyles:refresh_data()
     end
 end
 
-function CivStyles:get_category_choices()
+function Recipes:get_category_choices()
     local choices = {{
         text={
             {text='All', width=CAT_W},
@@ -274,20 +265,20 @@ function CivStyles:get_category_choices()
     return choices
 end
 
-function CivStyles:on_category(_, choice)
+function Recipes:on_category(_, choice)
     if not choice then return end
     if self.cur_cat_key == choice.key_val and self.list_built then return end
     self.cur_cat_key = choice.key_val
     if self.list_built then self:refresh_list() end
 end
 
-function CivStyles:selected_cats()
+function Recipes:selected_cats()
     if not self.cur_cat_key then return self.cats end
     local cat = self.by_key[self.cur_cat_key]
     return cat and {cat} or self.cats
 end
 
-function CivStyles:make_row(cat, item)
+function Recipes:make_row(cat, item)
     -- must go through self: refresh_data() replaces the table rather than
     -- mutating it, so a captured reference would go stale
     local function count()
@@ -329,7 +320,7 @@ function CivStyles:make_row(cat, item)
     }
 end
 
-function CivStyles:refresh_list(preserve)
+function Recipes:refresh_list(preserve)
     local list = self.subviews.list
     local filter = preserve and list:getFilter() or ''
     local _, prev = list:getSelected()
@@ -370,16 +361,16 @@ end
 -- edits
 --
 
-function CivStyles:add(cat_key, subtype)
+function Recipes:add(cat_key, subtype)
     local cat = self.by_key[cat_key]
     local vec = cat and self:get_vec(cat)
     if not vec then return end
-    if count_in(vec, subtype) == 0 then
+    if not utils.linear_index(vec, subtype) then
         vec:insert('#', subtype)
     end
 end
 
-function CivStyles:remove(cat_key, subtype)
+function Recipes:remove(cat_key, subtype)
     local cat = self.by_key[cat_key]
     local vec = cat and self:get_vec(cat)
     if not vec then return end
@@ -388,7 +379,7 @@ function CivStyles:remove(cat_key, subtype)
     end
 end
 
-function CivStyles:after_edit()
+function Recipes:after_edit()
     self:refresh_data()
     -- rows read their state live; only a filtered view needs rebuilding
     if self.subviews.show:getOptionValue() ~= 'all' then
@@ -396,7 +387,7 @@ function CivStyles:after_edit()
     end
 end
 
-function CivStyles:on_toggle(_, choice)
+function Recipes:on_toggle(_, choice)
     if not choice then return end
     local counts = self.known[choice.cat_key]
     if counts[choice.subtype] then
@@ -407,22 +398,22 @@ function CivStyles:on_toggle(_, choice)
     self:after_edit()
 end
 
-function CivStyles:add_all_shown()
+function Recipes:add_all_shown()
     for _, choice in ipairs(self.subviews.list:getVisibleChoices()) do
         self:add(choice.cat_key, choice.subtype)
     end
     self:after_edit()
 end
 
-function CivStyles:remove_all_shown()
+function Recipes:remove_all_shown()
     local shown = self.subviews.list:getVisibleChoices()
     local n = 0
     for _, choice in ipairs(shown) do
         if self.known[choice.cat_key][choice.subtype] then n = n + 1 end
     end
     if n == 0 then return end
-    dialogs.showYesNoPrompt('Remove styles',
-        ('Take %d style%s away from your civilization?\n\nAnything already made stays; you just lose the ability to order more.')
+    dialogs.showYesNoPrompt('Remove recipes',
+        ('Take %d recipe%s away from your civilization?\n\nAnything already made stays; you just lose the ability to order more.')
             :format(n, n == 1 and '' or 's'),
         COLOR_YELLOW,
         function()
@@ -433,7 +424,7 @@ function CivStyles:remove_all_shown()
         end)
 end
 
-function CivStyles:dedupe()
+function Recipes:dedupe()
     local removed = 0
     for _, cat in ipairs(self:selected_cats()) do
         local vec = self:get_vec(cat)
@@ -464,16 +455,16 @@ end
 -- screen
 --
 
-CivStylesScreen = defclass(CivStylesScreen, gui.ZScreen)
-CivStylesScreen.ATTRS{
-    focus_path='civ-styles',
+RecipesScreen = defclass(RecipesScreen, gui.ZScreen)
+RecipesScreen.ATTRS{
+    focus_path='recipes',
 }
 
-function CivStylesScreen:init()
-    self:addviews{CivStyles{}}
+function RecipesScreen:init()
+    self:addviews{Recipes{}}
 end
 
-function CivStylesScreen:onDismiss()
+function RecipesScreen:onDismiss()
     view = nil
 end
 
@@ -486,4 +477,4 @@ if not civ then
     qerror('Could not find your civilization -- load a fortress first')
 end
 
-view = view and view:raise() or CivStylesScreen{}:show()
+view = view and view:raise() or RecipesScreen{}:show()
