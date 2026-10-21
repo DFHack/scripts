@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `gui/recipes`: view, add, and remove the item recipes a civ knows
 
 ## New Features
 
