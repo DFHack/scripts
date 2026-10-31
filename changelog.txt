@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `gui/autofarm`: configuration interface for the `autofarm` plugin; also accessible from the controls on the farm plot information sheet
 
 ## New Features
 
