@@ -214,15 +214,32 @@ local SORT_WIDGETS = {
     'sort_threshold',
 }
 
-local function make_row_text(name, stock, threshold, custom, row_width)
+local function make_row_text(name, stock, threshold, annotation, row_width)
     return {
         {text=name, width=row_width-24, pad_char=' '},
         '  ', {text=tostring(stock), width=6, rjustify=true, pad_char=' '},
-        '  ', {text=tostring(threshold)..(custom and '' or ' (def)'), width=11, rjustify=true, pad_char=' '},
+        '  ', {text=tostring(threshold)..(annotation or ''), width=11, rjustify=true, pad_char=' '},
     }
 end
 
 local plants_all = df.global.world.raws.plants.all
+
+-- returns the unique stockpile growths of a plant as a list of
+-- {id=, name=} tables; only stockpile-marked growths ever become items
+local function stockpile_growths(plant)
+    local growths, seen = {}, {}
+    for _,growth in ipairs(plant.growths) do
+        if growth.id and not seen[growth.id] then
+            local matinfo = dfhack.matinfo.decode(growth)
+            if matinfo and matinfo.material and
+                matinfo.material.flags.STOCKPILE_PLANT_GROWTH then
+                seen[growth.id] = true
+                table.insert(growths, {id=growth.id, name=growth.name})
+            end
+        end
+    end
+    return growths
+end
 
 function Autofarm:refresh(sort_widget, sort_fn)
     sort_widget = sort_widget or 'sort'
@@ -252,16 +269,47 @@ function Autofarm:refresh(sort_widget, sort_fn)
         local custom = data.thresholds[plant.index]
         local threshold = custom or data.default_threshold
         local stock = data.last_counts[plant.index] or 0
-        if hide_stocked and stock >= threshold then goto continue end
-        table.insert(choices, {
-            text=make_row_text(plant.name, stock, threshold, custom, row_width),
-            data={
-                idx=plant.index,
-                name=plant.name,
-                stock=stock,
-                threshold=threshold,
-            },
-        })
+        if not (hide_stocked and stock >= threshold) then
+            table.insert(choices, {
+                text=make_row_text(plant.name, stock, threshold,
+                        custom and '' or ' (def)', row_width),
+                data={
+                    idx=plant.index,
+                    name=plant.name,
+                    stock=stock,
+                    threshold=threshold,
+                },
+            })
+        end
+        -- stockpile growths are separate products of the plant; each can
+        -- have its own threshold, or count toward the plant's pooled
+        -- threshold if unset
+        local growth_thresholds = data.growth_thresholds[plant.index] or {}
+        local growth_counts = data.growth_counts[plant.index] or {}
+        for _,growth in ipairs(stockpile_growths(plant)) do
+            local gthreshold = growth_thresholds[growth.id]
+            local gstock = growth_counts[growth.id] or 0
+            -- untracked growths count toward the plant's pooled stock,
+            -- so their "below threshold" state is the plant row's
+            if hide_stocked and
+                (gthreshold and gstock >= gthreshold or
+                 not gthreshold and stock >= threshold) then
+                goto continue_growth
+            end
+            table.insert(choices, {
+                text=make_row_text('  '..growth.name, gstock,
+                        gthreshold or threshold,
+                        gthreshold and '' or ' (pool)', row_width),
+                data={
+                    idx=plant.index,
+                    growth=growth.id,
+                    name=growth.name,
+                    stock=gstock,
+                    threshold=gthreshold or threshold,
+                },
+            })
+            ::continue_growth::
+        end
         ::continue::
     end
 
@@ -291,7 +339,12 @@ function Autofarm:prompt_for_new_threshold(_, choice)
         function(text)
             local target = tonumber(text)
             if check_number(target, text) then
-                plugin.autofarm_setThreshold(choice.data.idx, math.floor(target))
+                if choice.data.growth then
+                    plugin.autofarm_setGrowthThreshold(choice.data.idx,
+                        choice.data.growth, math.floor(target))
+                else
+                    plugin.autofarm_setThreshold(choice.data.idx, math.floor(target))
+                end
                 self:refresh()
             end
         end
@@ -338,7 +391,11 @@ end
 function Autofarm:reset_selected_threshold()
     local _, choice = self.subviews.list:getSelected()
     if not choice then return end
-    plugin.autofarm_removeThreshold(choice.data.idx)
+    if choice.data.growth then
+        plugin.autofarm_removeGrowthThreshold(choice.data.idx, choice.data.growth)
+    else
+        plugin.autofarm_removeThreshold(choice.data.idx)
+    end
     self:refresh()
 end
 
