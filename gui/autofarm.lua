@@ -77,9 +77,9 @@ function Autofarm:init()
         },
         widgets.ToggleHotkeyLabel{
             view_id='hide_stocked',
-            frame={t=0, l=34, w=31},
+            frame={t=0, r=0, w=33},
             key='CUSTOM_CTRL_H',
-            label='Show only below threshold:',
+            label='Show below threshold:',
             on_change=self:callback('refresh', 'sort'),
         },
         widgets.Panel{
@@ -180,7 +180,7 @@ function Autofarm:init()
                     on_activate=self:callback('prompt_for_default_threshold'),
                 },
                 widgets.HotkeyLabel{
-                    frame={t=4, r=0},
+                    frame={t=2, r=0},
                     label='Reset selected to default',
                     key='CUSTOM_CTRL_R',
                     auto_width=true,
@@ -262,15 +262,16 @@ function Autofarm:refresh(sort_widget, sort_fn)
 
     local list = self.subviews.list
     local row_width = list.frame_body.width
-    local choices = {}
+    local groups = {}
 
     for _,plant in ipairs(plants_all) do
         if not plant.flags.SEED or plant.flags.TREE then goto continue end
+        local group = {children={}}
         local custom = data.thresholds[plant.index]
         local threshold = custom or data.default_threshold
         local stock = data.last_counts[plant.index] or 0
         if not (hide_stocked and stock >= threshold) then
-            table.insert(choices, {
+            group.parent = {
                 text=make_row_text(plant.name, stock, threshold,
                         custom and '' or ' (def)', row_width),
                 data={
@@ -279,7 +280,7 @@ function Autofarm:refresh(sort_widget, sort_fn)
                     stock=stock,
                     threshold=threshold,
                 },
-            })
+            }
         end
         -- stockpile growths are separate products of the plant; each can
         -- have its own threshold, or count toward the plant's pooled
@@ -296,7 +297,7 @@ function Autofarm:refresh(sort_widget, sort_fn)
                  not gthreshold and stock >= threshold) then
                 goto continue_growth
             end
-            table.insert(choices, {
+            table.insert(group.children, {
                 text=make_row_text('  '..growth.name, gstock,
                         gthreshold or threshold,
                         gthreshold and '' or ' (pool)', row_width),
@@ -310,10 +311,29 @@ function Autofarm:refresh(sort_widget, sort_fn)
             })
             ::continue_growth::
         end
+        if group.parent or #group.children > 0 then
+            table.insert(groups, group)
+        end
         ::continue::
     end
 
-    table.sort(choices, self.subviews.sort:getOptionValue())
+    -- sort each plant's growths among themselves, then sort the groups by
+    -- their first visible row so a plant always stays above its growths
+    local cmp = self.subviews.sort:getOptionValue()
+    for _,group in ipairs(groups) do
+        table.sort(group.children, cmp)
+    end
+    table.sort(groups, function(a, b)
+        return cmp(a.parent or a.children[1], b.parent or b.children[1])
+    end)
+    local choices = {}
+    for _,group in ipairs(groups) do
+        if group.parent then table.insert(choices, group.parent) end
+        for _,child in ipairs(group.children) do
+            table.insert(choices, child)
+        end
+    end
+
     local selected = list:getSelected()
     list:setChoices(choices, selected)
 end
