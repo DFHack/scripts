@@ -203,7 +203,7 @@ end
 --#region UI Utilities
 
 ---@type widgets.LabelToken
-local EMPTY_TOKEN = { text=' ', hpen=dfhack.pen.make(COLOR_RESET), width=1 }
+local EMPTY_TOKEN = { text=' ', hpen=UI_COLORS.HIGHLIGHTED, width=1 }
 
 ---@class InlineButtonLabelSpec
 ---@field left_specs? widgets.ButtonLabelSpec
