@@ -15,6 +15,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `fix/exploding-trees`: periodically kill trees which have been removed from the map but still exist in the internal list of plants; this prevents them from collapsing once a year.
 
 ## Fixes
 
