@@ -18,6 +18,11 @@ local SpawnLiquidPaintMode = {
     AREA = 3,
 }
 
+local SpawnLiquidPaintShape = {
+    SQUARE = 1,
+    ROUND = 2,
+}
+
 local SpawnLiquidCursor = {
     [df.tile_liquid.Water] = dfhack.screen.findGraphicsTile('MINING_INDICATORS', 0, 0),
     [df.tile_liquid.Magma] = dfhack.screen.findGraphicsTile('MINING_INDICATORS', 1, 0),
@@ -30,11 +35,35 @@ SpawnLiquid.ATTRS {
     frame={b = 4, r = 4, w = 50, h = 12},
 }
 
+
+function SpawnLiquid:preUpdateLayout()
+    local level_change_position = 1
+    local brush_mode_position = 2
+
+    if self:useBrushSize() then
+        level_change_position = level_change_position + 1
+        brush_mode_position = brush_mode_position + 1
+    end
+
+    for k, v in pairs(self.subviews) do
+        if type(k) == "string" then
+            if k:startswith("level_increase") or k:startswith("level_decrease") then
+                v.frame.b = level_change_position
+            elseif k:startswith("brush") then
+                v.frame.b = brush_mode_position
+            end
+        end
+    end
+end
+
+
 function SpawnLiquid:init()
     self.type = df.tile_liquid.Water
     self.mode = SpawnLiquidMode.SET
     self.level = 3
-    self.paint_mode = SpawnLiquidPaintMode.AREA
+    self.paint_mode = SpawnLiquidPaintMode.DRAG
+    self.paint_shape = SpawnLiquidPaintShape.SQUARE
+    self.brush_radius = 0
     self.tile = SpawnLiquidCursor[self.type]
 
     self:addviews{
@@ -43,6 +72,7 @@ function SpawnLiquid:init()
             text = {{ text = self:callback('getLabel') }}
         },
         widgets.HotkeyLabel{
+            view_id = "level_decrease",
             frame = {l = 0, b = 1},
             label = 'Decrease level',
             auto_width = true,
@@ -51,11 +81,13 @@ function SpawnLiquid:init()
             disabled = function() return self.level == 1 end
         },
         widgets.Label{
+            view_id = "level_decrease_glyph",
             frame = { l = 0, b = 1, w = 1},
             text_pen=COLOR_LIGHTGREEN,
             text=string.char(27),
         },
         widgets.HotkeyLabel{
+            view_id = "level_increase",
             frame = { l = 19, b = 1},
             label = 'Increase level',
             auto_width = true,
@@ -64,12 +96,44 @@ function SpawnLiquid:init()
             disabled = function() return self.level == 7 end
         },
         widgets.Label{
+            view_id = "level_increase_glyph",
             frame = { l = 19, b = 1, w = 1},
             text_pen=COLOR_LIGHTGREEN,
             text=string.char(26),
         },
+        widgets.HotkeyLabel{
+            frame = {l = 0, b = 1},
+            label = 'Decrease radius',
+            auto_width = true,
+            key = 'KEYBOARD_CURSOR_DOWN',
+            on_activate = self:callback('decreaseBrushSize'),
+            visible = self:callback("useBrushSize"),
+            disabled = function() return self.brush_radius <= 0 end
+        },
+        widgets.Label{
+            frame = { l = 0, b = 1, w = 1},
+            text_pen=COLOR_LIGHTGREEN,
+            text=string.char(25),
+            visible = self:callback("useBrushSize"),
+        },
+        widgets.HotkeyLabel{
+            frame = { l = 19, b = 1},
+            label = 'Increase radius',
+            auto_width = true,
+            key = 'KEYBOARD_CURSOR_UP',
+            on_activate = self:callback('increaseBrushSize'),
+            visible = self:callback("useBrushSize"),
+            disabled = function() return self.brush_radius >= 10 end
+        },
+        widgets.Label{
+            frame = { l = 19, b = 1, w = 1},
+            text_pen=COLOR_LIGHTGREEN,
+            text=string.char(24),
+            visible = self:callback("useBrushSize"),
+        },
         widgets.CycleHotkeyLabel{
-            frame = {l = 0, b = 2},
+            view_id = "brush",
+            frame = {l = 0, b = 3},
             label = 'Brush:',
             auto_width = true,
             key = 'CUSTOM_Q',
@@ -95,11 +159,30 @@ function SpawnLiquid:init()
                 { label = "Drag ", value = SpawnLiquidPaintMode.DRAG, pen = COLOR_WHITE },
             },
             initial_option = SpawnLiquidPaintMode.DRAG,
-            on_change = function(new, _) self.paint_mode = new end,
+            on_change = function(new, _)
+                self.paint_mode = new
+                self:updateLayout()
+            end,
         },
         widgets.CycleHotkeyLabel{
-            view_id = 'mode1',
-            frame = {l = 18, b = 2},
+            frame = {l = 21, b = 0},
+            label = 'Paint Shape:',
+            auto_width = true,
+            key = 'CUSTOM_V',
+            options = {
+                { label = "Square", value = SpawnLiquidPaintShape.SQUARE, pen = COLOR_WHITE },
+                { label = "Round", value = SpawnLiquidPaintShape.ROUND, pen = COLOR_WHITE },
+            },
+            initial_option = SpawnLiquidPaintMode.SQUARE,
+            visible = self:callback("useBrushSize"),
+            on_change = function(new, _)
+                self.paint_shape = new
+                self:updateLayout()
+            end,
+        },
+        widgets.CycleHotkeyLabel{
+            view_id = 'brush_mode1',
+            frame = {l = 18, b = 3},
             label = 'Mode:',
             auto_width = true,
             key = 'CUSTOM_X',
@@ -112,13 +195,13 @@ function SpawnLiquid:init()
             initial_option = SpawnLiquidMode.SET,
             on_change = function(new, _)
                 self.mode = new
-                self.subviews.mode2:setOption(new)
+                self.subviews.brush_mode2:setOption(new)
             end,
             visible = function() return self.type ~= df.tiletype.RiverSource end
         },
         widgets.CycleHotkeyLabel{
-            view_id = 'mode2',
-            frame = {l = 18, b = 2},
+            view_id = 'brush_mode2',
+            frame = {l = 18, b = 3},
             label = 'Mode:',
             auto_width = true,
             key = 'CUSTOM_X',
@@ -128,7 +211,7 @@ function SpawnLiquid:init()
             },
             on_change = function(new, _)
                 self.mode = new
-                self.subviews.mode1:setOption(new)
+                self.subviews.brush_mode1:setOption(new)
             end,
             visible = function() return self.type == df.tiletype.RiverSource end
         },
@@ -137,9 +220,27 @@ end
 
 -- TODO: More reactive label dependant on options selected.
 function SpawnLiquid:getLabel()
-    return ([[Click on a tile to spawn a %s/7 level of %s]]):format(
+    local tile_string = "a tile"
+    local liquid_string
+
+    if self.type == 0 then
+        liquid_string = "Water"
+    elseif self.type == 1 then
+        liquid_string = "Magma"
+    else
+        liquid_string = "River"
+    end
+
+    if self:useBrushSize() and self.brush_radius > 0 then
+        local brush_size = self.brush_radius*2
+        tile_string = string.format("%dx%d tiles", brush_size, brush_size)
+    end
+
+
+    return ([[Click to spawn %s with %s/7 %s]]):format(
+        tile_string,
         self.level,
-        self.type == 0 and "Water" or self.type == 1 and "Magma" or "River"
+        liquid_string
     )
 end
 
@@ -162,6 +263,15 @@ end
 function SpawnLiquid:decreaseLiquidLevel()
     self.level = math.max(self.level - 1, 1)
 end
+
+function SpawnLiquid:increaseBrushSize()
+    self.brush_radius = math.min(self.brush_radius + 1, 10)
+end
+
+function SpawnLiquid:decreaseBrushSize()
+    self.brush_radius = math.max(self.brush_radius - 1, 0)
+end
+
 
 local function isFlowPassable(pos)
     local tt = dfhack.maps.getTileType(pos)
@@ -203,8 +313,59 @@ function SpawnLiquid:spawn(pos)
     end
 end
 
+function SpawnLiquid:paintLiquid(pos, bounds)
+    if not bounds then
+        local start_position, end_position = self:getBrushSizeBounds(pos)
+
+        bounds = self:getBounds(start_position, end_position)
+    end
+
+    for x = bounds.x1, bounds.x2 do
+        for y = bounds.y1, bounds.y2 do
+            if self:inBounds(pos, {x=x, y=y}) then
+                self:spawn({x=x, y=y, z=pos.z})
+            end
+        end
+    end
+end
+
+
 function SpawnLiquid:getPen()
     return self.type == df.tile_liquid.Water and COLOR_BLUE or COLOR_RED, "X", self.tile
+end
+
+function SpawnLiquid:inBounds(mouse_pos, pos)
+    if not self:useBrushSize() or self.paint_shape ~= SpawnLiquidPaintShape.ROUND then
+        return true
+    end
+
+    local diff = {
+        x=mouse_pos.x - pos.x,
+        y=mouse_pos.y - pos.y
+    }
+    local dist = diff.x*diff.x+diff.y*diff.y
+
+    return dist <= self.brush_radius*self.brush_radius
+end
+
+
+function SpawnLiquid:getBrushSizeBounds(mouse_pos)
+    local start_position = xyz2pos(
+            mouse_pos.x - self.brush_radius,
+            mouse_pos.y - self.brush_radius,
+            mouse_pos.z)
+
+    local end_position = xyz2pos(
+            mouse_pos.x + self.brush_radius,
+            mouse_pos.y + self.brush_radius,
+            mouse_pos.z)
+
+    return start_position, end_position
+end
+
+
+function SpawnLiquid:useBrushSize()
+    return self.paint_mode ~= SpawnLiquidPaintMode.AREA
 end
 
 function SpawnLiquid:getBounds(start_position, end_position)
@@ -221,22 +382,38 @@ end
 function SpawnLiquid:onRenderFrame(dc, rect)
     SpawnLiquid.super.onRenderFrame(self, dc, rect)
 
+    if self.is_dragging and df.global.enabler.mouse_lbut_down == 0 then
+        self.is_dragging = false
+    end
+
     local mouse_pos = dfhack.gui.getMousePos()
 
-    if self.is_dragging then
-        if df.global.enabler.mouse_lbut_down == 0 then
-            self.is_dragging = false
-        elseif mouse_pos and not self:getMouseFramePos() then
-            self:spawn(mouse_pos)
-        end
+    if not mouse_pos then
+        return
     end
 
-    if mouse_pos then
-        guidm.renderMapOverlay(self:callback('getPen'), self:getBounds(
-            self.is_dragging_area and self.area_first_pos or mouse_pos,
-            mouse_pos
-        ))
+    local start_position = copyall(mouse_pos)
+    local end_position = copyall(mouse_pos)
+
+    if self.is_dragging_area then
+        start_position = self.area_first_pos or mouse_pos
     end
+
+    if self:useBrushSize() then
+        start_position, end_position = self:getBrushSizeBounds(mouse_pos)
+    end
+
+    local bounds = self:getBounds(start_position, end_position)
+
+    if self.is_dragging and not self:getMouseFramePos() then
+        self:paintLiquid(mouse_pos, bounds)
+    end
+
+    guidm.renderMapOverlay(function(pos, _)
+        if self:inBounds(mouse_pos, pos) then
+            return self:getPen()
+        end
+    end, bounds)
 end
 
 function SpawnLiquid:onInput(keys)
@@ -246,7 +423,7 @@ function SpawnLiquid:onInput(keys)
         local mouse_pos = dfhack.gui.getMousePos()
 
         if self.paint_mode == SpawnLiquidPaintMode.CLICK and mouse_pos then
-            self:spawn(mouse_pos)
+            self:paintLiquid(mouse_pos)
             return true
         elseif self.paint_mode == SpawnLiquidPaintMode.AREA and mouse_pos then
             if self.is_dragging_area then

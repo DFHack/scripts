@@ -30,7 +30,11 @@ Template for new versions:
 
 ## New Features
 
+- `gui/liquids`: "Drag" and "Click" paint modes have a brush radius option, and can toggle between square and round brushes
+
 ## Fixes
+
+- `gui/liquids`: Match initial paint mode with what's shown
 
 ## Misc Improvements
 
