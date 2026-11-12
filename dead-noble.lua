@@ -6,82 +6,7 @@ dead-noble
 Diagnose and fix a fortress that has lost its baron, count, or duke and
 can no longer receive a replacement.
 
-A land-holder assignment lives on the parent civilization
-(``plotinfo.civ_id``), and the civilization's site link to the fort's site
-points at it via ``position_profile_id``.  When the holder dies, the game
-is supposed to clear ``assignment.histfig`` and re-classify the vacancy so
-that the normal succession/appointment/claimant pipeline can fill it.
-When that fails, the slot stays occupied by a dead historical figure and
-the fortress is never eligible for another land holder.
-
-Usage:
-
-``dead-noble status``
-    Dump the state of every land-holder assignment linked to this site:
-    assignment/def ids, current and last holder (alive/dead, whereabouts),
-    site-link pointers, and the vacancy caches the assignment sits in.
-
-``dead-noble army``
-    For the site's land-holder(s): resolve their nemesis record, check the
-    civilized-actor sweep list, and report any army/army-controller moving
-    them (the native succession-traveler mechanism) plus the destination
-    the native logic would pick.
-
-``dead-noble vacate [--living]``
-    For each land-holder assignment tied to this site whose holder is dead
-    (or absent; ``--living`` also strips a living off-site holder), perform
-    the same cleanup the native death path performs: remove the holder's
-    POSITION entity link, record a FORMER_POSITION link and a
-    ``remove_hf_entity_link`` history event, clear ``histfig`` while
-    keeping ``histfig2`` (last holder, used for heir searches), pull the
-    assignment out of the responsibility caches, and re-queue it for
-    evaluation.  On the next entity-advance tick the game itself will run
-    succession (rightful heir), then appointment, then a spawned claimant
-    -- i.e. vanilla behaviour resumes.
-
-``dead-noble claim``
-    Like ``vacate``, but additionally force the claimant path: the
-    assignment is pushed onto ``possible_claimable`` so the native
-    position-claim machinery spawns a claimant who travels to the fort
-    (same-landmass restriction applies, as in vanilla).
-
-``dead-noble install``
-    Directly install the selected (or ``--unit``) citizen as the holder of
-    the fort's current land-holder position, replicating the diplomat
-    ESTABLISH_LAND_HOLDER path: the assignment is created or reused,
-    ``histfig``/``histfig2`` are set, a POSITION link plus
-    ``add_hf_entity_link`` history event are recorded, the responsibility
-    caches and the civilization's site link are updated, and the native
-    position-activity evaluation is re-triggered.
-
-``dead-noble install --position BARON``
-    Install into a specific land-holder position code instead of the one
-    currently associated with the site.
-
-``dead-noble settle``
-    Finish the arrival half of a recall: a holder brought home by a
-    MOVE_TO_SITE army materializes at the fort still flagged as a
-    visitor/guest (the native sweep delivers the body but never performs
-    the take-office step).  Runs the native ``unitst::make_own`` routine
-    on the materialized holder -- the same code path as a petition for
-    citizenship -- which grants the MEMBER link to the fort's site
-    government, updates the entity's member lists, switches the
-    whereabouts record to settler, and clears guest/visitor flags.  Also
-    resets ``st_id`` to -1, matching settled land-holders.
-
-``dead-noble fetch``
-    Patch-free alternative to ``recall`` for land-holder positions: the
-    native sweep's ``land_holder > 0`` gate skips barons/counts/dukes no
-    matter what ``st_id`` says, so instead of patching the binary this
-    command emulates the sweep's army-creation tail directly -- allocates
-    an ``army_controller`` (``MOVE_TO_SITE``, destination = fort) and an
-    ``army`` at the holder's position, adds their nemesis, and switches
-    their whereabouts to in-army.  It also pre-instates the holder:
-    grants the MEMBER link to the fort's site government and updates its
-    member lists immediately, so that when the army arrives the native
-    ingress machinery delivers them as a citizen and officeholder (the
-    'has returned' announcement) rather than a guest.  The native
-    army-advance code does the march; no ``settle`` step is needed.
+See dead-noble.rst for full documentation.
 
 ]====]
 
@@ -234,7 +159,7 @@ local function trace_sweep(nem, hf)
         print(('  [%s] %s'):format(ok and 'PASS' or 'FAIL', name))
         return ok
     end
-    if not gate(rd_i32(hf, 0x30) == -1,
+    if not gate(hf.died_year == -1,
                ('figure+0x30 (died_year?) == -1 [=%d]'):format(rd_i32(hf, 0x30)))
         then return end
     if not gate(nem.group_leader_id == -1, 'group_leader_id == -1') then return end
@@ -289,8 +214,8 @@ local function trace_sweep(nem, hf)
                     ent and ent.id or 'nil', best_prec)) then return end
     local wb = hf.info and hf.info.whereabouts
     if not gate(wb ~= nil, 'whereabouts present') then return end
-    if not gate(wb.state ~= 3 and wb.state ~= 4,
-                ('whereabouts.state %d not in {3,4}'):format(wb.state))
+    if not gate(wb.state ~= whereabouts_type.army_died and wb.state ~= whereabouts_type.army_survived,
+                ('whereabouts.state %d not in {army_died,army_survived}'):format(wb.state))
         then return end
     if not gate(wb.abs_smm_x ~= -1, 'abs_smm_x set') then return end
     -- debugger-verified: land_holder>0 on the LAST resolved def skips
@@ -306,7 +231,7 @@ local function trace_sweep(nem, hf)
         dest = df.world_site.find(last_asg.st_id)
         print(('  [dest] st_id path (asg %d st_id=%d) -> site %s'):
             format(last_asg.id, last_asg.st_id, dest and dest.id or 'nil'))
-    elseif tostring(ent.type):find('CIVILIZATION') then
+    elseif ent.type == df.historical_entity_type.Civilization then
         for _, l in ipairs(ent.site_links) do
             if l.flags.capital then dest = df.world_site.find(l.target) end
         end
@@ -329,12 +254,17 @@ local function trace_sweep(nem, hf)
     gate(lm_hf ~= nil and lm_hf == lm_dest,
          ('landmass match %s == %s'):format(tostring(lm_hf), tostring(lm_dest)))
     local _, saddr = df.sizeof(dest)
-    local g = df.reinterpret_cast('int32_t', saddr + 0x348).value
-    gate(g == 0, ('site+0x348 == 0 [=%d]'):format(g))
+    local g = dest.min_depth
+    gate(g == 0, ('min_depth == 0 [=%d]'):format(g))
     local home = nil
     for _, l in ipairs(hf.site_links) do
         local t = l:getType()
-        if t >= 3 and t <= 7 and l.site ~= -1 then home = l.site break end
+        if (t == df.histfig_site_link_type.HOME_SITE_ABSTRACT_BUILDING or
+        t == df.histfig_site_link_type.HOME_SITE_REALIZATION_BUILDING or
+        t == df.histfig_site_link_type.LAIR or
+        t == df.histfig_site_link_type.HOME_SITE_REALIZATION_SUL or
+        t == df.histfig_site_link_type.HOME_SITE_SAVED_CIVZONE)
+        and l.site ~= -1 then home = l.site break end
     end
     if not home then home = wb.site_id end
     if not gate(home ~= dest.id,
@@ -342,13 +272,13 @@ local function trace_sweep(nem, hf)
         then return end
     for _, l in ipairs(hf.entity_links) do
         local t = l:getType()
-        if (t == 6 or t == 4) and l.link_strength ~= 0 then
+        if (t == df.histfig_entity_link_type.SLAVE or t == df.histfig_entity_link_type.PRISONER) and l.link_strength ~= 0 then
             gate(false, ('PRISONER/SLAVE link strength %d'):format(l.link_strength))
             return
         end
     end
     for _, l in ipairs(hf.histfig_links) do
-        if tostring(l._type):find('IMPRISONER') and l.link_strength ~= 0 then
+        if l._type == df.histfig_hf_link_type.IMPRISONER and l.link_strength ~= 0 then
             gate(false, 'IMPRISONER link')
             return
         end
@@ -545,10 +475,9 @@ local function queue_vacancy(entity, assignment)
 end
 
 local function new_remove_link_event(entity, hf, position_id)
-    df.global.hist_event_next_id = df.global.hist_event_next_id + 1
     world.history.events:insert('#', {
         new = df.history_event_remove_hf_entity_linkst,
-        id = df.global.hist_event_next_id - 1,
+        id = df.global.hist_event_next_id,
         year = df.global.cur_year,
         seconds = df.global.cur_year_tick,
         civ = entity.id,
@@ -556,13 +485,14 @@ local function new_remove_link_event(entity, hf, position_id)
         link_type = df.histfig_entity_link_type.POSITION,
         position_id = position_id,
     })
+    df.global.hist_event_next_id = df.global.hist_event_next_id + 1
+
 end
 
 local function new_add_link_event(entity, hf, assignment)
-    df.global.hist_event_next_id = df.global.hist_event_next_id + 1
     world.history.events:insert('#', {
         new = df.history_event_add_hf_entity_linkst,
-        id = df.global.hist_event_next_id - 1,
+        id = df.global.hist_event_next_id,
         year = df.global.cur_year,
         seconds = df.global.cur_year_tick,
         civ = entity.id,
@@ -570,13 +500,13 @@ local function new_add_link_event(entity, hf, assignment)
         link_type = df.histfig_entity_link_type.POSITION,
         position_id = assignment.id, -- native stores the assignment id here
     })
+    df.global.hist_event_next_id = df.global.hist_event_next_id + 1
 end
 
 local function new_add_member_event(entity, hf)
-    df.global.hist_event_next_id = df.global.hist_event_next_id + 1
     world.history.events:insert('#', {
         new = df.history_event_add_hf_entity_linkst,
-        id = df.global.hist_event_next_id - 1,
+        id = df.global.hist_event_next_id,
         year = df.global.cur_year,
         seconds = df.global.cur_year_tick,
         civ = entity.id,
@@ -584,11 +514,11 @@ local function new_add_member_event(entity, hf)
         link_type = df.histfig_entity_link_type.MEMBER,
         position_id = -1,
     })
+    df.global.hist_event_next_id = df.global.hist_event_next_id + 1
 end
 
 local function new_change_state_event(hf, state, site_id, reason)
     local site = site_id ~= -1 and df.world_site.find(site_id) or nil
-    df.global.hist_event_next_id = df.global.hist_event_next_id + 1
     local ev = df.history_event_change_hf_statest:new()
     ev.id = df.global.hist_event_next_id - 1
     ev.year = df.global.cur_year
@@ -601,6 +531,7 @@ local function new_change_state_event(hf, state, site_id, reason)
     ev.layer = -1
     if site then ev.region_pos:assign(site.pos) end
     world.history.events:insert('#', ev)
+    df.global.hist_event_next_id = df.global.hist_event_next_id + 1
 end
 
 -- strip `hf`'s POSITION link for `assignment`, mirroring
@@ -653,14 +584,13 @@ local function army_desc(a)
                 c and tostring(c.site_id) or '?')
 end
 
--- native gate at world_site+0x348 == mined_hours (FUN_14147d730 @0x14147e08c):
+-- native gate at world_site+0x348 == min_depth (FUN_14147d730 @0x14147e08c):
 -- must be 0 for the sweep to send a noble there
 local function probe_site_gate(site_id)
     local site = df.world_site.find(site_id)
     if not site then return end
-    local _, saddr = df.sizeof(site)
-    local gate = df.reinterpret_cast('int32_t', saddr + 0x348).value
-    print(('  site %d (%s, type %s): mined_hours+0x348 = %d, raw mined_hours=%d%s'):
+    local gate = site.min_depth
+    print(('  site %d (%s, type %s): min_depth = %d, raw min_depth=%d%s'):
         format(site_id,
                dfhack.df2utf(dfhack.translation.translateName(site.name)),
                tostring(site.type), gate, site.mined_hours,
@@ -752,8 +682,11 @@ local function cmd_army()
         -- HOME_SITE* site links (types 3-7): native treats the first as "home"
         for _, l in ipairs(hf.site_links) do
             local t = l:getType()
-            if t >= df.histfig_site_link_type.HOME_SITE_ABSTRACT_BUILDING
-                and t <= df.histfig_site_link_type.HOME_SITE_SAVED_CIVZONE
+            if (t == df.histfig_site_link_type.HOME_SITE_ABSTRACT_BUILDING or
+                t == df.histfig_site_link_type.HOME_SITE_REALIZATION_BUILDING or
+                t == df.histfig_site_link_type.LAIR or
+                t == df.histfig_site_link_type.HOME_SITE_REALIZATION_SUL or
+                t == df.histfig_site_link_type.HOME_SITE_SAVED_CIVZONE)
             then
                 print(('  home-site link: %s -> site %d'):
                     format(tostring(l._type), l.site))
