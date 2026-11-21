@@ -570,6 +570,29 @@ function Spreadsheet:init()
         refresh_headers=true,
     }
 
+    local goals_by_type = {}
+    goals_by_type[df.goal_type.MAINTAIN_ENTITY_STATUS]      = { value = 1, name = "--------", pen = COLOR_BROWN, pen_achieved = COLOR_YELLOW }
+    goals_by_type[df.goal_type.STAY_ALIVE]                  = { value = 2, name = "Alive", pen = COLOR_BROWN, pen_achieved = COLOR_YELLOW }
+    goals_by_type[df.goal_type.BATHE_WORLD_IN_CHAOS]        = { value = 3, name = "Chaos", pen = COLOR_BROWN, pen_achieved = COLOR_YELLOW }
+    goals_by_type[df.goal_type.RULE_THE_WORLD]              = { value = 4, name = "Rule Wld", pen = COLOR_BROWN, pen_achieved = COLOR_YELLOW }
+    goals_by_type[df.goal_type.BRING_PEACE_TO_THE_WORLD]    = { value = 5, name = "Peace", pen = COLOR_BROWN, pen_achieved = COLOR_YELLOW }
+    goals_by_type[df.goal_type.SEE_THE_GREAT_NATURAL_SITES] = { value = 6, name = "Travel", pen = COLOR_BROWN, pen_achieved = COLOR_YELLOW }
+    goals_by_type[df.goal_type.IMMORTALITY]                 = { value = 7, name = "Immortal", pen = COLOR_RED, pen_achieved = COLOR_GREEN }
+    goals_by_type[df.goal_type.ATTAIN_RANK_IN_SOCIETY]      = { value = 8, name = "Rank", pen = COLOR_RED, pen_achieved = COLOR_GREEN }
+    goals_by_type[df.goal_type.FALL_IN_LOVE]                = { value = 9, name = "Love", pen = COLOR_RED, pen_achieved = COLOR_GREEN }
+    goals_by_type[df.goal_type.START_A_FAMILY]              = { value = 10, name = "Family", pen = COLOR_RED, pen_achieved = COLOR_GREEN }
+    goals_by_type[df.goal_type.MAKE_A_GREAT_DISCOVERY]      = { value = 11, name = "Discvry"..string.char(15), pen = COLOR_LIGHTRED, pen_achieved = COLOR_LIGHTGREEN }
+    goals_by_type[df.goal_type.BECOME_A_LEGENDARY_WARRIOR]  = { value = 12, name = "Warrior"..string.char(15), pen = COLOR_LIGHTRED, pen_achieved = COLOR_LIGHTGREEN }
+    goals_by_type[df.goal_type.MASTER_A_SKILL]              = { value = 13, name = "Skill"..string.char(15), pen = COLOR_LIGHTRED, pen_achieved = COLOR_LIGHTGREEN }
+    goals_by_type[df.goal_type.CREATE_A_GREAT_WORK_OF_ART]  = { value = 14, name = "Art"..string.char(15), pen = COLOR_LIGHTRED, pen_achieved = COLOR_LIGHTGREEN }
+    goals_by_type[df.goal_type.CRAFT_A_MASTERWORK]          = { value = 15, name = "Craft"..string.char(15), pen = COLOR_LIGHTRED, pen_achieved = COLOR_LIGHTGREEN }
+
+    local goals_by_value = {}
+    for _, v in ipairs(goals_by_type) do
+        goals_by_value[v.value] = v
+    end
+
+
     local cols = Cols{}
     self.cols = cols
 
@@ -586,6 +609,7 @@ function Spreadsheet:init()
             end,
         },
         DataColumn{
+            view_id='stress',
             group='summary',
             label='Stress',
             shared=self.shared,
@@ -624,6 +648,84 @@ function Spreadsheet:init()
                     },
                 }
             end,
+        },
+        DataColumn{
+            view_id='arrival',
+            group='summary',
+            label='Arrival',
+            shared=self.shared,
+            data_fn=function(unit) return unit.curse.interaction.time_on_site end,
+            choice_fn=function(get_ordered_data_fn)
+                return {
+                    text={
+                        {
+                            text=function()
+                                local ordered_data = get_ordered_data_fn()
+                                local days = ordered_data // 1200
+                                local months = days // 28
+                                local years = months // 12
+                                if years > 9 then
+                                    return ('%3dy'):format(years)
+                                elseif years > 0 and (months % 12) > 9 then
+                                    return ('%dy%d'):format(years, months % 12)
+                                elseif years > 0 then
+                                    return ('%dy%dm'):format(years, months % 12)
+                                elseif months > 9 then
+                                    return ('%dm'):format(months)
+                                elseif days > 28 then
+                                    return ('%dm%d'):format(months, days % 28)
+                                else
+                                    return ('%dd'):format(days)
+                                end
+                            end,
+                            pen=function()
+                                local ordered_data = get_ordered_data_fn()
+                                local days = ordered_data // 1200
+                                local months = days // 28
+                                local years = months // 12
+                                if years > 9 then return COLOR_LIGHTCYAN end
+                                if years > 4 then return COLOR_LIGHTGREEN end
+                                if years > 0 then return COLOR_GREEN end
+                                if months > 5 then return COLOR_WHITE end
+                                if months > 2 then return COLOR_YELLOW end
+                                if days > 28 then return COLOR_LIGHTRED end
+                                return COLOR_RED
+                            end,
+                        },
+                    },
+                }
+            end,
+        },
+        DataColumn{
+            view_id='goal',
+            group='summary',
+            label='Goal',
+            shared=self.shared,
+            data_width=8,
+            data_fn=function(unit)
+                local goal = #unit.status.current_soul.personality.dreams > 0 and unit.status.current_soul.personality.dreams[0].type or df.goal_type.MAINTAIN_ENTITY_STATUS
+                local isAchieved = #unit.status.current_soul.personality.dreams > 0 and unit.status.current_soul.personality.dreams[0].flags.accomplished and 1 or -1
+                return isAchieved * (goals_by_type[goal].value or 1)
+            end,
+            choice_fn=function(get_ordered_data_fn)
+                return {
+                    text={
+                        {
+                            text=function()
+                                local ordered_data = get_ordered_data_fn()
+                                local goal_index = math.abs(ordered_data)
+                                return goals_by_value[goal_index].name
+                            end,
+                            pen=function()
+                                local ordered_data = get_ordered_data_fn()
+                                local isAchieved = ordered_data > 0
+                                local goal_index = math.abs(ordered_data)
+                                return isAchieved and goals_by_value[goal_index].pen_achieved or goals_by_value[goal_index].pen
+                            end,
+                        },
+                    },
+                }
+            end,
         }
     }
 
@@ -632,6 +734,7 @@ function Spreadsheet:init()
         if caption then
             cols:addviews{
                 DataColumn{
+                    view_id=caption:lower(),
                     group='skills',
                     label=caption,
                     shared=self.shared,
@@ -647,6 +750,7 @@ function Spreadsheet:init()
     for _, wd in ipairs(work_details) do
         cols:addviews{
             ToggleColumn{
+                view_id=wd.name:lower(),
                 group='work details',
                 label=wd.name,
                 shared=self.shared,
@@ -664,6 +768,7 @@ function Spreadsheet:init()
         for _, bld in ipairs(vec) do
             cols:addviews{
                 ToggleColumn{
+                    view_id=get_workshop_label(bld, type_enum, type_defs):lower(),
                     group='workshops',
                     label=get_workshop_label(bld, type_enum, type_defs),
                     shared=self.shared,
@@ -961,7 +1066,7 @@ function Spreadsheet:render(dc)
     local selected = self.namelist:getSelected()
     for _, col in ipairs(self.cols.subviews) do
         col.subviews.col_list.page_top = page_top
-        col.subviews.col_list:setSelected(selected)
+        col.subviews.col_list.selected = selected
     end
     Spreadsheet.super.render(self, dc)
     self.shared.cache = {}
