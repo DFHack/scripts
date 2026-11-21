@@ -40,6 +40,7 @@ local keybindings_raw = {
     {name='delete', key="CUSTOM_ALT_D",desc="Delete selected entry"},
     {name='reinterpret', key="CUSTOM_ALT_R",desc="Open selected entry as something else"},
     {name='start_filter', key="CUSTOM_S",desc="Start typing filter, Enter to finish"},
+    {name='toggle_sort', key="CUSTOM_SHIFT_S",desc="Toggle between alphabetical sorting"},
     {name='gotopos', key="CUSTOM_G",desc="Move map view to location of target"},
     {name='help', key="STRING_A063",desc="Show this help"},
     {name='displace', key="STRING_A093",desc="Open reference offseted by index"},
@@ -121,7 +122,7 @@ end
 GmEditorUi = defclass(GmEditorUi, widgets.Window)
 GmEditorUi.ATTRS{
     frame=sanitize_frame(copyall(config.data.frame or {})),
-    frame_title="GameMaster's editor",
+    frame_title="GameMaster's Editor",
     frame_inset=0,
     resizable=true,
     resize_min=RESIZE_MIN,
@@ -620,6 +621,11 @@ function GmEditorUi:onInput(keys)
     elseif keys[keybindings.help.key] then
         self.subviews.pages:setSelected(2)
         return true
+    elseif keys[keybindings.toggle_sort.key] then
+        self.sorting = not self.sorting
+        self:updateTitles()
+        self:updateTarget(true, true)
+        return true
     end
 end
 
@@ -660,8 +666,17 @@ function GmEditorUi:updateTitles()
     end
     for view,_ in pairs(views) do
         local window = view.subviews[1]
+        local window_title = title
+        if window.autoupdate then
+            window_title = window_title .. ' (Live updates)'
+        end
+
+        if window.sorting then
+            window_title = window_title .. ' (Sorted)'
+        end
+
         window.read_only = self.read_only
-        window.frame_title = title .. (window.autoupdate and ' (Live updates)' or '')
+        window.frame_title = window_title
     end
     save_config({read_only = self.read_only})
 end
@@ -690,6 +705,17 @@ function GmEditorUi:updateTarget(preserve_pos,reindex)
     end
     self.subviews.lbl_current_item:itemById('union').text = type(trg.target) == 'userdata' and trg.target._type._union and " [union structure]" or ""
     self.subviews.lbl_current_item:itemById('name').text=tostring(trg.target)
+
+    if self.sorting then
+        table.sort(trg.keys, function(a, b)
+            if type(a) == type(b) then
+                return a < b
+            end
+
+            return not(type(a) == "number")
+        end)
+    end
+
     local t={}
     for k,v in pairs(trg.keys) do
         table.insert(t,{text={{text=string.format("%-"..trg.kw.."s",tostring(v))},{gap=2,text=self:getStringValue(trg,v)}}})
