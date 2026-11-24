@@ -153,17 +153,17 @@ local function nemesis_of_hfid(hfid)
     end
 end
 
--- emulate FUN_14147d730's gate chain for one nemesis, printing each verdict
+-- emulate worldst;:evaluate_entity_strength's gate chain for one nemesis, printing each verdict
 local function trace_sweep(nem, hf)
     local function gate(ok, name)
         print(('  [%s] %s'):format(ok and 'PASS' or 'FAIL', name))
         return ok
     end
     if not gate(hf.died_year == -1,
-               ('figure+0x30 (died_year?) == -1 [=%d]'):format(rd_i32(hf, 0x30)))
+               ('died_year == -1 [=%d]'):format(rd_i32(hf, 0x30)))
         then return end
     if not gate(nem.group_leader_id == -1, 'group_leader_id == -1') then return end
-    local uok = nem.unit == nil or ((nem.unit.flags1.whole >> 31) & 1) == 0
+    local uok = nem.unit == nil or (nem.unit.flags1.important_historical_figure) == 0
     if not gate(uok, 'unit == NULL or unit.flags1 bit31 clear') then return end
     -- entity-link scan: POSITION link -> entity -> assignments[assignment_id]
     -- native quirk: RSP+0x70 (dest's st_id source) is the LAST resolved link's
@@ -253,7 +253,6 @@ local function trace_sweep(nem, hf)
     local lm_dest = site_landmass(dest)
     gate(lm_hf ~= nil and lm_hf == lm_dest,
          ('landmass match %s == %s'):format(tostring(lm_hf), tostring(lm_dest)))
-    local _, saddr = df.sizeof(dest)
     local g = dest.min_depth
     gate(g == 0, ('min_depth == 0 [=%d]'):format(g))
     local home = nil
@@ -278,7 +277,7 @@ local function trace_sweep(nem, hf)
         end
     end
     for _, l in ipairs(hf.histfig_links) do
-        if l._type == df.histfig_hf_link_type.IMPRISONER and l.link_strength ~= 0 then
+        if l:getType() == df.histfig_hf_link_type.IMPRISONER and l.link_strength ~= 0 then
             gate(false, 'IMPRISONER link')
             return
         end
@@ -987,14 +986,22 @@ local function cmd_fetch(opts)
                 goto continue
             end
 
+            -- mirrors evaluate_entity_strength's creation tail (army_controller_pool_get
+            -- [object_pool<army_controller>::get]) /
+            -- armyst::_create (armyst constructor) are the allocators that also insert into the
+            -- world vectors; set_goal/add_nemesis/place are the native
+            -- calls our struct writes stand in for).  Successor-traveler
+            -- controllers are entityless (entity_id=-1) and are NOT
+            -- pushed into entity->armies/army_controllers -- those
+            -- vectors are for entity-owned military ops only.
             local c = df.army_controller:new()
             c.id = df.global.army_controller_next_id
             df.global.army_controller_next_id = c.id + 1
             c.entity_id = -1
             c.site_id = plotinfo.site_id
             c.subregion_id = -1
-            c.pos_x = dst_x
-            c.pos_y = dst_y
+            c.pos_x = -1 -- native inits -1; march coords fill in later
+            c.pos_y = -1
             c.year = df.global.cur_year
             c.year_tick = df.global.cur_season_tick
             c.parent_id = -1
