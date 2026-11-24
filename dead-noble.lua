@@ -285,26 +285,6 @@ local function trace_sweep(nem, hf)
     print('  [OK] all gates pass -> native sweep SHOULD create MOVE_TO_SITE')
 end
 
--- which world.nemesis.* vector is at world+0x13cb8 (the sweep's iterate)?
-local function cmd_nemvecs()
-    local _, waddr = df.sizeof(world)
-    for _, name in ipairs{'all', 'independent_actor', 'civilized_actor',
-                          'plotter_actor', 'new_plotter_actor',
-                          'artist_actor', 'poet_actor', 'bard_actor',
-                          'dancer_actor', 'scholar_actor', 'hero_actor',
-                          'underbelly_actor', 'religious_actor',
-                          'merchant_actor', 'order_load'} do
-        local ok, a = pcall(function()
-            local _, x = df.sizeof(world.nemesis:_field(name))
-            return x
-        end)
-        if ok and a then
-            print(('  %-22s +0x%x %s'):format(name, a - waddr,
-                  (a - waddr) == 0x13cb8 and '<== sweep iterates THIS' or ''))
-        end
-    end
-end
-
 local function cmd_trace()
     local entity = civ()
     -- the native call needs cur_season_tick%120==50 AND the region_logic
@@ -640,6 +620,8 @@ local function cmd_army()
             print(('  ! %d nemesis records point at this hf'):format(nems))
         end
         -- is the nemesis in the civilized_actor sweep list?
+        -- (debugger-verified: the sweep's inner loop iterates this
+        --  vector, at world+0x13cb8 in the 0.53.17-steam build)
         local in_sweep = false
         for _, n in ipairs(world.nemesis.civilized_actor) do
             if n == nem then in_sweep = true break end
@@ -1266,7 +1248,7 @@ local function main(args)
     elseif cmd == 'settle' then cmd_settle(opts)
     elseif cmd == 'fetch' then cmd_fetch(opts)
     elseif cmd == 'trace' then cmd_trace()
-    elseif cmd == 'nemvecs' then cmd_nemvecs()
+
     elseif cmd == 'install' then cmd_install(opts)
     else qerr('unknown command %s', cmd) end
 end
