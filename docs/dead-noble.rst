@@ -128,16 +128,6 @@ Notes
   can be fetched with ``recall`` (native travel), or cleared with
   ``vacate --living``, after which ``claim`` or ``install`` will fill the
   slot.
-- ``recall`` for land-holder positions is limited by a native gate: the
-  successor-travel sweep skips any position whose definition has
-  ``land_holder > 0`` *before* reading the destination, so a baron,
-  count, or duke never gets a native travel army no matter what
-  ``st_id`` says.  The ``st_id`` write is still correct and consumed
-  by the same native path -- it just needs the one native check
-  bypassed for the target only.  A production fix should scope the
-  bypass (call the creation path for the single intended nemesis, or
-  patch for a single sweep window); a global patch makes every
-  stranded land-holder in the world travel at once.
 - ``st_id`` is the recall-destination field, not the site binding:
   every settled land-holder has ``st_id = -1``, and the site binding
   lives on the civilization's site link (``position_profile_id``).

@@ -160,7 +160,7 @@ local function trace_sweep(nem, hf)
         return ok
     end
     if not gate(hf.died_year == -1,
-               ('died_year == -1 [=%d]'):format(rd_i32(hf, 0x30)))
+               ('died_year == -1 [=%d]'):format(hf.died_year))
         then return end
     if not gate(nem.group_leader_id == -1, 'group_leader_id == -1') then return end
     local uok = nem.unit == nil or (nem.unit.flags1.important_historical_figure) == 0
@@ -563,7 +563,7 @@ local function army_desc(a)
                 c and tostring(c.site_id) or '?')
 end
 
--- native gate at world_site+0x348 == min_depth (FUN_14147d730 @0x14147e08c):
+-- native gate at world_site.min_depth (evaluate_entity_strength @0x14147e08c):
 -- must be 0 for the sweep to send a noble there
 local function probe_site_gate(site_id)
     local site = df.world_site.find(site_id)
@@ -572,7 +572,7 @@ local function probe_site_gate(site_id)
     print(('  site %d (%s, type %s): min_depth = %d, raw min_depth=%d%s'):
         format(site_id,
                dfhack.df2utf(dfhack.translation.translateName(site.name)),
-               tostring(site.type), gate, site.mined_hours,
+               tostring(site.type), gate, site.min_depth,
                gate ~= 0 and ' -- nonzero BLOCKS native travel' or ''))
 end
 
