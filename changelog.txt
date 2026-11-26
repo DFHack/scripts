@@ -31,6 +31,7 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `exterminate`: now works in arena mode; all active arena units are valid targets (there is no friendly/dangerous distinction in the arena), corpses are skipped, and the adventure arena player unit is never mass-exterminated
 
 ## Misc Improvements
 
