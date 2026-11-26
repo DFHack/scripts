@@ -8,6 +8,12 @@ exterminate
 Kills any individual unit, or all undead, or all units of a given race. Caged
 and chained creatures are ignored.
 
+In arena mode, every living unit is a valid target regardless of hostility
+(there is no friendly/dangerous distinction to protect), corpses are skipped,
+and the player-controlled unit in adventure arena is never killed by mass
+extermination. Since arena mode has no unit selection interface, ``exterminate
+this`` there targets the unit under the look-around cursor.
+
 Usage
 -----
 

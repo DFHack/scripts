@@ -25,7 +25,15 @@ local function checkUnit(opts, unit)
     if opts.only_visible and not dfhack.units.isVisible(unit) then
         return false
     end
-    if not opts.include_friendly and not dfhack.units.isDanger(unit) and not dfhack.units.isWildlife(unit) then
+    -- the friendly/dangerous distinction doesn't exist in arena mode, where
+    -- units carry no invader or wildlife markers; every active unit is a
+    -- valid target except corpses and the adventure arena player unit
+    if opts.arena then
+        local adventurer = dfhack.world.getAdventurer()
+        if unit.flags2.killed or (adventurer and unit.id == adventurer.id) then
+            return false
+        end
+    elseif not opts.include_friendly and not dfhack.units.isDanger(unit) and not dfhack.units.isWildlife(unit) then
         return false
     end
     if opts.selected_caste and opts.selected_caste ~= df.creature_raw.find(unit.race).caste[unit.caste].caste_id then
@@ -167,6 +175,7 @@ local options, args = {
     only_visible = false,
     include_friendly = false,
     limit = -1,
+    arena = dfhack.world.isArena(),
 }, {...}
 
 local positionals = argparse.processArgsGetopt(args, {
@@ -188,6 +197,18 @@ end
 
 if positionals[1] == "this" then
     local selected_unit = dfhack.gui.getSelectedUnit()
+    if not selected_unit and options.arena and df.global.cursor.x ~= -30000 then
+        -- arena mode has no unit selection UI, but there is a look cursor
+        local units = dfhack.units.getUnitsInBox(
+            df.global.cursor.x, df.global.cursor.y, df.global.cursor.z,
+            df.global.cursor.x, df.global.cursor.y, df.global.cursor.z)
+        for _, u in ipairs(units) do
+            if not u.flags2.killed then
+                selected_unit = u
+                break
+            end
+        end
+    end
     if not selected_unit then
         qerror("Select a unit and run the script again.")
     end
